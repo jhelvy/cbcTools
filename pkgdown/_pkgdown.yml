@@ -1,0 +1,44 @@
+url: https://jhelvy.github.io/cbcTools/
+
+home:
+  title: Tools For Designing Choice-Based Conjoint Survey Experiments.
+
+template:
+  params:
+    bootswatch: cosmo
+    twitter:
+      creator: "@JohnHelveston"
+      card: summary
+
+navbar:
+  title: "cbcTools"
+  left:
+    - icon: fa-home fa-lg
+      href: index.html
+    - text: "Reference"
+      href: reference/index.html
+    - text: "Changelog"
+      href: news/index.html
+  right:
+   - icon: fa-github
+     href: https://github.com/jhelvy/cbcTools
+
+reference:
+- title: "Survey Design"
+  desc: "Functions for creating different experiment designs and coded surveys."
+  contents:
+  - makeDoe
+  - evaluateDoe
+  - recodeDoe
+  - makeSurvey
+- title: "Simulate Choices"
+  desc: "Functions for simulating choices for a given survey design."
+  contents:
+  - simulateChoices
+  - randN
+  - randLN
+- title: "Power Analysis"
+  desc: "Functions for conducting a power analysis for a given survey design."
+  contents:
+  - estimateModels
+  - getModelResults
