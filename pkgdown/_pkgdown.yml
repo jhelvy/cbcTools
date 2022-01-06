@@ -24,21 +24,18 @@ navbar:
      href: https://github.com/jhelvy/cbcTools
 
 reference:
-- title: "Survey Design"
-  desc: "Functions for creating different experiment designs and coded surveys."
+- title: "Design"
+  desc: "Functions for generating survey designs."
   contents:
-  - makeDoe
-  - evaluateDoe
-  - recodeDoe
-  - makeSurvey
-- title: "Simulate Choices"
-  desc: "Functions for simulating choices for a given survey design."
+  - cbc_design
+- title: "Analysis"
+  desc: "Functions for analyzing survey designs."
   contents:
-  - simulateChoices
+  - cbc_choices
+  - cbc_power
   - randN
   - randLN
-- title: "Power Analysis"
-  desc: "Functions for conducting a power analysis for a given survey design."
+- title: "Methods"
+  desc: "Various methods."
   contents:
-  - estimateModels
-  - getModelResults
+  - print.cbc

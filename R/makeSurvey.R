@@ -18,7 +18,6 @@
 #' @return Returns a conjoint survey by randomly sampling from a design of
 #' experiment data frame. The sampling is done iteratively to remove the
 #' possibility of duplicate alternatives appearing in the same choice question.
-#' @export
 #' @examples
 #' # Define the attributes and levels
 #' levels <- list(

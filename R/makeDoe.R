@@ -30,7 +30,6 @@
 #' `levels = list(price = c(10, 20, 30)`, the doe would be encoded using
 #' `10, 20, 30` instead of `1, 2, 3`. Defaults to `TRUE`
 #' @return Returns a full factorial or fraction factorial design of experiment.
-#' @export
 #' @examples
 #' # Define the attributes and levels
 #' levels <- list(
@@ -142,7 +141,6 @@ aggregateDoeSearch <- function(results) {
 #' @return Returns a list of information about a given design, including the
 #' D-efficiency and whether or not the design is balanced.
 #' `levels` argument.
-#' @export
 #' @examples
 #' # Define the attributes and levels
 #' levels <- list(

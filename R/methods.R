@@ -1,17 +1,17 @@
-#' Methods for cjmodels objects
+#' Methods for cbc objects
 #'
-#' Miscellaneous methods for `cjmodels` class objects.
+#' Miscellaneous methods for `cbc` class objects.
 #'
-#' @name miscmethods.cjmodels
-#' @aliases print.cjmodels
-#' @param x is an object of class `cjmodels`.
+#' @name miscmethods.cbc
+#' @aliases print.cbc
+#' @param x is an object of class `cbc`.
 #' @param digits the number of digits for printing, defaults to `3`.
 #' @param width the width of the printing.
 #' @param ... further arguments.
 #'
-#' @rdname miscmethods.cjmodels
+#' @rdname miscmethods.cbc
 #' @export
-print.cjmodels <- function (
+print.cbc <- function (
   x,
   digits = max(3, getOption("digits") - 2),
   width = getOption("width"),
