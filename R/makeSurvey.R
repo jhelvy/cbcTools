@@ -8,11 +8,13 @@
 #' @param outsideGood Include an outside good in the choice sets? Defaults to
 #' `FALSE`. If included, the total number of alternatives per question will be
 #' one more than the provided `nAltsPerQ` argument.
-#' @param group The name of the variable to use in a "labeled" design
+#' @param label The name of the variable to use in a "labeled" design
 #' such that each set of alternatives contains one of each of the levels in
-#' the `group` attribute. If included, the `nAltsPerQ` argument will be
+#' the `label` attribute. If included, the `nAltsPerQ` argument will be
 #' ignored as its value is determined by the unique number of levels in the
-#' `group` variable. Defaults to `NULL`.
+#' `label` variable. Defaults to `NULL`.
+#' @param group No longer used as of v0.0.9 - if provided, this is passed
+#' to the `label` argument and a warning is displayed.
 #' @return Returns a conjoint survey by randomly sampling from a design of
 #' experiment data frame. The sampling is done iteratively to remove the
 #' possibility of duplicate alternatives appearing in the same choice question.
@@ -39,15 +41,29 @@
 #'   nQPerResp = 6     # Number of questions per respondent
 #' )
 makeSurvey <- function(
-    doe, nResp, nAltsPerQ, nQPerResp, outsideGood = FALSE, group = NULL
+    doe,
+    nResp,
+    nAltsPerQ,
+    nQPerResp,
+    outsideGood = FALSE,
+    label = NULL,
+    group
 ) {
+    # Argument names were changed in v0.0.9
+    calls <- names(sapply(match.call(), deparse))[-1]
+    if (any("group" %in% calls)) {
+        label <- group
+        warning(
+            "The 'group' argument is outdate as of v0.0.9. Use 'label' instead"
+        )
+    }
     doe <- as.data.frame(doe) # tibbles break things
     doe$rowID <- seq(nrow(doe)) # Have to set these now to remove dupes later
-    if (is.null(group)) {
+    if (is.null(label)) {
         return(randomizeSurvey(doe, nResp, nAltsPerQ, nQPerResp, outsideGood))
     }
-    return(randomizeSurveyByGroup(
-        doe, nResp, nAltsPerQ, nQPerResp, outsideGood, group))
+    return(randomizeSurveyLabeled(
+        doe, nResp, nAltsPerQ, nQPerResp, outsideGood, label))
 }
 
 repDf <- function(df, n) {
@@ -70,30 +86,30 @@ randomizeSurvey <- function(doe, nResp, nAltsPerQ, nQPerResp, outsideGood) {
     return(survey)
 }
 
-randomizeSurveyByGroup <- function(
-    doe, nResp, nAltsPerQ, nQPerResp, outsideGood, group
+randomizeSurveyLabeled <- function(
+    doe, nResp, nAltsPerQ, nQPerResp, outsideGood, label
 ) {
-    nGroupLevels <- length(unique(doe[,group]))
-    if (nGroupLevels != nAltsPerQ) {
+    nLabelLevels <- length(unique(doe[,label]))
+    if (nLabelLevels != nAltsPerQ) {
         warning(paste0(
-            "The nAltsPerQ argument is being set to ", nGroupLevels,
-            " to match the number of unique levels in the ", group, " variable"
+            "The nAltsPerQ argument is being set to ", nLabelLevels,
+            " to match the number of unique levels in the ", label, " variable"
         ))
-        # Over-ride user-provided nAltsPerQ as it is determined by the group
-        nAltsPerQ <- nGroupLevels
+        # Over-ride user-provided nAltsPerQ as it is determined by the label
+        nAltsPerQ <- nLabelLevels
     }
-    survey <- initializeSurvey(doe, nResp, nAltsPerQ, nQPerResp, group)
-    # Randomize rows by group
-    groups <- split(survey, survey[group])
-    for (i in seq_len(length(groups))) {
+    survey <- initializeSurvey(doe, nResp, nAltsPerQ, nQPerResp, label)
+    # Randomize rows by label
+    labels <- split(survey, survey[label])
+    for (i in seq_len(length(labels))) {
         n <- nResp*nQPerResp
-        survey_group <- randomizeRows(groups[[i]], n)
-        survey_group$groupID <- seq(nrow(survey_group))
-        groups[[i]] <- survey_group
+        survey_label <- randomizeRows(labels[[i]], n)
+        survey_label$labelID <- seq(nrow(survey_label))
+        labels[[i]] <- survey_label
     }
-    survey <- do.call(rbind, groups)
-    survey <- survey[order(survey$groupID),]
-    survey$groupID <- NULL
+    survey <- do.call(rbind, labels)
+    survey <- survey[order(survey$labelID),]
+    survey$labelID <- NULL
     # Add meta data and remove cases with double alternatives
     survey <- addMetaData(survey, nResp, nAltsPerQ, nQPerResp)
     # Re-order column names
@@ -104,18 +120,18 @@ randomizeSurveyByGroup <- function(
     return(survey)
 }
 
-initializeSurvey <- function(doe, nResp, nAltsPerQ, nQPerResp, group = NULL) {
+initializeSurvey <- function(doe, nResp, nAltsPerQ, nQPerResp, label = NULL) {
     # Replicate doe if the needed number of observations (n) is larger than
     # the number of observations in the doe (n_doe)
     n <- nResp*nAltsPerQ*nQPerResp
     n_doe <- nrow(doe)
     nReps <- ceiling(n / n_doe)
-    if (!is.null(group)) {
-        # If there is a group, then need to replicate based on the
-        # lowest number of any one group
-        n_groups <- min(table(doe[group]))
+    if (!is.null(label)) {
+        # If there is a label, then need to replicate based on the
+        # lowest number of any one label
+        n_labels <- min(table(doe[label]))
         n <- nResp*nQPerResp
-        nReps <- ceiling(n / n_groups)
+        nReps <- ceiling(n / n_labels)
     }
     survey <- doe
     if (nReps > 1) {
@@ -130,7 +146,7 @@ randomizeRows <- function(survey, n) {
     return(survey[sample_ids,])
 }
 
-addMetaData <- function(survey, nResp, nAltsPerQ, nQPerResp, group = NULL) {
+addMetaData <- function(survey, nResp, nAltsPerQ, nQPerResp) {
     nRowsPerResp      <- nAltsPerQ*nQPerResp
     survey$respID     <- rep(seq(nResp), each = nRowsPerResp)
     survey$qID        <- rep(rep(seq(nQPerResp), each = nAltsPerQ), nResp)

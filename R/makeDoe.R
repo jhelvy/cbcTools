@@ -3,7 +3,9 @@
 #' @param levels A named list of vectors defining each attribute (the names)
 #' and each level for each attribute (the vectors). For example, a design
 #' with two attributes, "price" and "type", that each had three levels should
-#' be defined as `levels = list(price = c(1, 2, 3), type = c(1, 2, 3))`.
+#' be defined as `levels = list(price = c(1, 2, 3), type = c("1", "2", "3"))`.
+#' Numeric values will be treated as continuous levels and character values
+#' will be treated as discrete levels.
 #' @param type The type of design. Defaults to `NULL`, which returns a full
 #' factorial design. Set to `"D"`, `"A"`, and `"I"` to obtain a fractional
 #' factorial design with either D, A, or I optimality criteria.
@@ -22,6 +24,11 @@
 #' @param nRepeats Number of times the design search using
 #' `AlgDesign::optFederov()` is repeated for any one instance of `nTrials`.
 #' Defaults to `5`.
+#' @param recode If `TRUE`, the returned doe will be encoded with the values
+#' provided in `levels`, otherwise it will be encoded with just the numeric
+#' sequence of the levels. For example, if
+#' `levels = list(price = c(10, 20, 30)`, the doe would be encoded using
+#' `10, 20, 30` instead of `1, 2, 3`. Defaults to `TRUE`
 #' @return Returns a full factorial or fraction factorial design of experiment.
 #' @export
 #' @examples
@@ -43,7 +50,8 @@ makeDoe <- function(
     nTrials   = NA,
     minTrials = NULL,
     search    = FALSE,
-    nRepeats  = 5
+    nRepeats  = 5,
+    recode    = TRUE
 ) {
     vars <- unlist(lapply(levels, length))
     doe <- getFullFactorial(vars)
@@ -64,6 +72,9 @@ makeDoe <- function(
             minLevels <- nTrials
         }
         doe <- searchDesigns(doe, nTrials, type, minLevels, nRepeats)
+    }
+    if (recode) {
+        doe <- recodeDoe(doe, levels)
     }
     return(doe)
 }
@@ -167,30 +178,6 @@ decodeDoe <- function(doe, vars) {
   return(doe)
 }
 
-#' Re-code the levels in a design of experiment
-#'
-#' @param doe A design of experiment data frame. Each row is an alternative,
-#' each column is an attribute.
-#' @param levels A named list of vectors defining each attribute (the names)
-#' and each level for each attribute (the vectors). For example, a design
-#' with two attributes, "price" and "type", that each had three levels should
-#' be defined as `levels = list(price = c(1, 2, 3), type = c(1, 2, 3))`.
-#' @return Returns a re-coded design of experiment using the labels in the
-#' `levels` argument.
-#' @export
-#' @examples
-#' # Define the attributes and levels
-#' levels <- list(
-#'   price     = seq(1, 4, 0.5), # $ per pound
-#'   type      = c('Fuji', 'Gala', 'Honeycrisp', 'Pink Lady', 'Red Delicious'),
-#'   freshness = c('Excellent', 'Average', 'Poor')
-#' )
-#'
-#' # Make a full-factorial design of experiment
-#' doe <- makeDoe(levels)
-#'
-#' # Re-code levels
-#' doe <- recodeDoe(doe, levels)
 recodeDoe <- function(doe, levels) {
   type_numeric <- unlist(lapply(levels, is.numeric))
   for (i in seq_len(length(levels))) {
