@@ -10,14 +10,17 @@ makeDoe(
   nTrials = NA,
   minTrials = NULL,
   search = FALSE,
-  nRepeats = 5
+  nRepeats = 5,
+  recode = TRUE
 )
 }
 \arguments{
 \item{levels}{A named list of vectors defining each attribute (the names)
 and each level for each attribute (the vectors). For example, a design
 with two attributes, "price" and "type", that each had three levels should
-be defined as \code{levels = list(price = c(1, 2, 3), type = c(1, 2, 3))}.}
+be defined as \code{levels = list(price = c(1, 2, 3), type = c("1", "2", "3"))}.
+Numeric values will be treated as continuous levels and character values
+will be treated as discrete levels.}
 
 \item{type}{The type of design. Defaults to \code{NULL}, which returns a full
 factorial design. Set to \code{"D"}, \code{"A"}, and \code{"I"} to obtain a fractional
@@ -41,6 +44,12 @@ search results is printed and the top-ranked d-efficient design is returned.}
 \item{nRepeats}{Number of times the design search using
 \code{AlgDesign::optFederov()} is repeated for any one instance of \code{nTrials}.
 Defaults to \code{5}.}
+
+\item{recode}{If \code{TRUE}, the returned doe will be encoded with the values
+provided in \code{levels}, otherwise it will be encoded with just the numeric
+sequence of the levels. For example, if
+\verb{levels = list(price = c(10, 20, 30)}, the doe would be encoded using
+\verb{10, 20, 30} instead of \verb{1, 2, 3}. Defaults to \code{TRUE}}
 }
 \value{
 Returns a full factorial or fraction factorial design of experiment.

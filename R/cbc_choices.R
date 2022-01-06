@@ -77,7 +77,7 @@ cbc_choices = function(
   survey,
   obsID = "obsID",
   truePars = NULL,
-  numDraws = 100,
+  numDraws = 100
 ) {
     if (is.null(truePars)) { return(simulateRandomChoices(survey, obsID)) }
     return(simulateUtilityChoices(survey, obsID, truePars, numDraws))

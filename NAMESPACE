@@ -2,11 +2,9 @@
 
 S3method(print,cjmodels)
 export(cbc_choices)
-export(estimateModels)
+export(cbc_power)
 export(evaluateDoe)
-export(getModelResults)
 export(makeDoe)
 export(makeSurvey)
 export(randLN)
 export(randN)
-export(recodeDoe)

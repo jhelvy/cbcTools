@@ -69,8 +69,8 @@
 #' residuals are not included in the returned object. Defaults to `TRUE`.
 #' @param options A list of options for controlling the `nloptr()` optimization.
 #' Run `nloptr::nloptr.print.options()` for details.
-#' @return A data frame of the estimated coefficients and standard errors for
-#' each parameter in each model.
+#' @return Returns a nested data frame with each estimated model object in
+#' the `model` column.
 #' @export
 #' @examples
 #' library(conjointTools)
@@ -115,16 +115,24 @@ cbc_power <- function(
   outcome,
   obsID,
   pars,
-  price          = NULL,
-  randPars       = NULL,
-  randPrice      = NULL,
-  modelSpace     = "pref",
-  panelID        = NULL,
-  clusterID      = NULL,
-  robust         = FALSE,
-  numMultiStarts = 1,
-  numDraws       = 50,
-  options        = list(
+  price           = NULL,
+  randPars        = NULL,
+  randPrice       = NULL,
+  modelSpace      = "pref",
+  weights         = NULL,
+  panelID         = NULL,
+  clusterID       = NULL,
+  robust          = FALSE,
+  startParBounds  = c(-1, 1),
+  startVals       = NULL,
+  numMultiStarts  = 1,
+  useAnalyticGrad = TRUE,
+  scaleInputs     = TRUE,
+  standardDraws   = NULL,
+  numDraws        = 50,
+  vcov            = FALSE,
+  predict         = FALSE,
+  options         = list(
     print_level = 0,
     xtol_rel    = 1.0e-6,
     xtol_abs    = 1.0e-6,
@@ -137,29 +145,29 @@ cbc_power <- function(
     dataList <- makeDataList(data, obsID, nbreaks, nQPerResp)
     suppressMessages(
       models <- lapply(
-          dataList,
-          logitr::logitr,
-          outcome         = outcome,
-          obsID           = obsID,
-          pars            = pars,
-          price           = price,
-          randPars        = randPars,
-          randPrice       = randPrice,
-          modelSpace      = modelSpace,
-          weights         = weights,
-          panelID         = panelID,
-          clusterID       = clusterID,
-          robust          = robust,
-          startParBounds  = startParBounds,
-          startVals       = startVals,
-          numMultiStarts  = numMultiStarts,
-          useAnalyticGrad = useAnalyticGrad,
-          scaleInputs     = scaleInputs,
-          standardDraws   = standardDraws,
-          numDraws        = numDraws,
-          vcov            = vcov,
-          predict         = predict,
-          options         = options
+        dataList,
+        logitr::logitr,
+        outcome         = outcome,
+        obsID           = obsID,
+        pars            = pars,
+        price           = price,
+        randPars        = randPars,
+        randPrice       = randPrice,
+        modelSpace      = modelSpace,
+        weights         = weights,
+        panelID         = panelID,
+        clusterID       = clusterID,
+        robust          = robust,
+        startParBounds  = startParBounds,
+        startVals       = startVals,
+        numMultiStarts  = numMultiStarts,
+        useAnalyticGrad = useAnalyticGrad,
+        scaleInputs     = scaleInputs,
+        standardDraws   = standardDraws,
+        numDraws        = numDraws,
+        vcov            = vcov,
+        predict         = predict,
+        options         = options
     ))
     return(getModelResults(models))
 }

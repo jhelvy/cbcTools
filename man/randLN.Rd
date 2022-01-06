@@ -2,7 +2,7 @@
 % Please edit documentation in R/cbc_choices.R
 \name{randLN}
 \alias{randLN}
-\title{Define "true" model parameters as normally-distributed.}
+\title{Define "true" (assumed) model parameters as normally-distributed.}
 \usage{
 randLN(mu = 0, sigma = 1)
 }
@@ -17,7 +17,7 @@ A list defining log-normally-distributed parameters of the "true"
 utility model used to simulate choices in the \code{cbc_choices()} function.
 }
 \description{
-Define "true" model parameters as normally-distributed. Used in the
+Define "true" (assumed) model parameters as normally-distributed. Used in the
 \code{cbc_choices()} function.
 }
 \examples{

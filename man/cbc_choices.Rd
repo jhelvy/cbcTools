@@ -4,7 +4,7 @@
 \alias{cbc_choices}
 \title{Simulate choices for a given survey}
 \usage{
-cbc_choices(survey, obsID = "obsID", pars = NULL, numDraws = 100)
+cbc_choices(survey, obsID = "obsID", truePars = NULL, numDraws = 100)
 }
 \arguments{
 \item{survey}{A survey data frame exported from the \code{makeSurvey()}
@@ -13,10 +13,10 @@ function.}
 \item{obsID}{The name of the column that identifies each choice observation.
 Defaults to \code{"obsID"}.}
 
-\item{pars}{A list of one or more parameters separated by commas that define
-the "true" utility model used to simulate choices for the \code{survey} data
-frame. If no parameters are included, choices will be randomly assigned.
-Defaults to \code{NULL}.}
+\item{truePars}{A list of one or more parameters separated by commas that
+define the "true" (assumed) utility model used to simulate choices for the
+\code{survey} data frame. If no parameters are included, choices will be randomly
+assigned. Defaults to \code{NULL}.}
 
 \item{numDraws}{The number of Halton draws to use for simulated choices
 based on mixed logit models. Defaults to \code{100}.}
@@ -66,7 +66,7 @@ data_random <- cbc_choices(
 data_mnl <- cbc_choices(
     survey = survey,
     obsID  = "obsID",
-    pars = list(
+    truePars = list(
         price     = 0.1,
         type      = c(0.1, 0.2, 0.3, 0.4),
         freshness = c(0.1, -0.1))
@@ -80,7 +80,7 @@ data_mnl <- cbc_choices(
 data_mxl <- cbc_choices(
     survey = survey,
     obsID  = "obsID",
-    pars = list(
+    truePars = list(
         price     = 0.1,
         type      = c(0.1, 0.2, 0.3, 0.4),
         freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
