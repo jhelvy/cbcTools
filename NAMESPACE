@@ -2,6 +2,7 @@
 
 S3method(print,cjmodels)
 export(cbc_choices)
+export(cbc_design)
 export(cbc_power)
 export(evaluateDoe)
 export(makeDoe)
