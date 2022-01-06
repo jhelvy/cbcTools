@@ -31,7 +31,7 @@
 #' )
 #'
 #' # Simulate random choices for the survey
-#' data <- simulateChoices(
+#' data <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID"
 #' )

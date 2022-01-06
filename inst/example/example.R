@@ -42,7 +42,7 @@ survey_labeled <- makeSurvey(
 )
 
 # Simulate random choices for the survey
-data <- simulateChoices(
+data <- cbc_choices(
     survey = survey,
     obsID  = "obsID"
 )
@@ -51,7 +51,7 @@ data <- simulateChoices(
 #   - 1 continuous "price" parameter
 #   - 4 discrete parameters for "type"
 #   - 2 discrete parameters for "freshness"
-data <- simulateChoices(
+data <- cbc_choices(
     survey = survey,
     obsID  = "obsID",
     pars = list(
@@ -65,7 +65,7 @@ data <- simulateChoices(
 # #   - 4 discrete parameters for "type"
 # #   - 2 random normal discrete parameters for "freshness"
 # #   - 2 interaction parameters between "price" and "freshness"
-# data <- simulateChoices(
+# data <- cbc_choices(
 #     survey = survey,
 #     obsID  = "obsID",
 #     pars = list(

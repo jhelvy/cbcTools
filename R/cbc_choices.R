@@ -41,7 +41,7 @@
 #' )
 #'
 #' # Simulate random choices for the survey
-#' data_random <- simulateChoices(
+#' data_random <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID"
 #' )
@@ -50,7 +50,7 @@
 #' #   - 1 continuous "price" parameter
 #' #   - 4 discrete parameters for "type"
 #' #   - 2 discrete parameters for "freshness"
-#' data_mnl <- simulateChoices(
+#' data_mnl <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID",
 #'     pars = list(
@@ -64,7 +64,7 @@
 #' #   - 4 discrete parameters for "type"
 #' #   - 2 random normal discrete parameters for "freshness"
 #' #   - 2 interaction parameters between "price" and "freshness"
-#' data_mxl <- simulateChoices(
+#' data_mxl <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID",
 #'     pars = list(
@@ -73,7 +73,7 @@
 #'         freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
 #'         `price*freshness` = c(1, 2))
 #' )
-simulateChoices = function(
+cbc_choices = function(
   survey,
   obsID = "obsID",
   pars = NULL,
@@ -213,12 +213,12 @@ getCoefficients <- function(pars, parNamesCoded, randPars, randParsCoded) {
 #' Define "true" model parameters as normally-distributed.
 #'
 #' Define "true" model parameters as normally-distributed. Used in the
-#' `simulateChoices()` function.
+#' `cbc_choices()` function.
 #'
 #' @param mu Vector of means, defaults to `0`.
 #' @param sigma Vector of standard deviations, defaults to `1`.
 #' @return A list defining normally-distributed parameters of the "true"
-#' utility model used to simulate choices in the `simulateChoices()` function.
+#' utility model used to simulate choices in the `cbc_choices()` function.
 #' @export
 #' @examples
 #' library(conjointTools)
@@ -248,7 +248,7 @@ getCoefficients <- function(pars, parNamesCoded, randPars, randParsCoded) {
 #' #   - 1 continuous "price" parameter
 #' #   - 4 discrete parameters for "type"
 #' #   - 2 random normal discrete parameters for "freshness"
-#' data_mxl <- simulateChoices(
+#' data_mxl <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID",
 #'     pars = list(
@@ -263,13 +263,13 @@ randN <- function(mu = 0, sigma = 1) {
 #' Define "true" model parameters as normally-distributed.
 #'
 #' Define "true" model parameters as normally-distributed. Used in the
-#' `simulateChoices()` function.
+#' `cbc_choices()` function.
 #'
 #' @param mu Mean of the distribution on the log scale, defaults to `0`.
 #' @param sigma Standard deviation of the distribution on the log scale,
 #' defaults to `1`.
 #' @return A list defining log-normally-distributed parameters of the "true"
-#' utility model used to simulate choices in the `simulateChoices()` function.
+#' utility model used to simulate choices in the `cbc_choices()` function.
 #' @export
 #' @examples
 #' library(conjointTools)
@@ -299,7 +299,7 @@ randN <- function(mu = 0, sigma = 1) {
 #' #   - 1 continuous "price" parameter
 #' #   - 4 discrete parameters for "type"
 #' #   - 2 random log-normal discrete parameters for "freshness"
-#' data_mxl <- simulateChoices(
+#' data_mxl <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID",
 #'     pars = list(
