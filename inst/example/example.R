@@ -9,6 +9,14 @@ levels <- list(
   freshness = c('Excellent', 'Average', 'Poor')
 )
 
+# Generate all profiles with all attributes dummy-coded
+profiles <- cbc_profiles(levels)
+
+# Generate all profiles with price as a continuous variable
+profiles <- cbc_profiles(levels, coding = c("C", "D", "D"))
+
+
+
 # Make a full-factorial design of experiment
 doe <- makeDoe(levels)
 

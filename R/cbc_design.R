@@ -226,3 +226,46 @@ getColumnTypes <- function(data) {
   test <- function(x) {x[1]}
   return(unlist(lapply(types, test)))
 }
+
+#' Make a coded matrix of all possible combinations of attribute levels
+#'
+#' This function is a wrapper for the `Profiles()` function from the `idefix`
+#' package, which creates a coded matrix of all possible combinations of
+#' attribute levels defined in the `levels` argument.
+#' @param levels A named list of vectors defining each attribute (the names)
+#' and each level for each attribute (the vectors). For example, a design
+#' with two attributes, `"price"` and `"type"`, that each had three levels
+#' should be defined as
+#' `levels = list(price = c(1, 2, 3), type = c("1", "2", "3"))`.
+#' @param coding The type of coding to be used for each attribute. Valid
+#' arguments for are `"C"` for continuous attributes, `"D"` for dummy-coded
+#' attributes, and `"E"` for effects-coded attributes When using `"C"` the
+#' values provided for the associated attribute will be directly used in the
+#' design matrix. Defaults to `NULL`, in which case all attributes are
+#' dummy-coded.
+#' @return A coded matrix of all possible combinations of attribute levels.
+#' @export
+#' @examples
+#' # Define the attributes and levels
+#' levels <- list(
+#'   price     = seq(1, 4, 0.5), # $ per pound
+#'   type      = c('Fuji', 'Gala', 'Honeycrisp', 'Pink Lady', 'Red Delicious'),
+#'   freshness = c('Excellent', 'Average', 'Poor')
+#' )
+#'
+#' # Generate all profiles with all attributes dummy-coded
+#' profiles <- cbc_profiles(levels)
+#'
+#' # Generate all profiles with price as a continuous variable
+#' profiles <- cbc_profiles(levels, coding = c("C", "D", "D"))
+cbc_profiles <- function(levels, coding = NULL) {
+    lvls <- unlist(lapply(levels, length))
+    if (is.null(coding)) {
+        coding <- rep("D", length(lvls))
+    }
+    if (any(coding == "C")) {
+        clvls <- levels[which(coding == "C")]
+        return(Profiles(lvls = lvls, coding = coding, c.lvls = clvls))
+    }
+    return(idefix::Profiles(lvls = lvls, coding = coding))
+}
