@@ -15,6 +15,42 @@ profiles <- cbc_profiles(levels)
 # Generate all profiles with price as a continuous variable
 profiles <- cbc_profiles(levels, coding = c("C", "D", "D"))
 
+# Make a fully random conjoint survey
+survey <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6   # Number of questions per respondent
+)
+
+# Make a D-efficient conjoint survey
+survey <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,    # Number of questions per respondent
+  d_eff    = TRUE
+)
+
+
+design <- idefix::Modfed(
+    cand.set = profiles,
+    n.sets = n_resp,
+    n.alts = n_alts,
+    par.draws = rep(0, ncol(profiles)),
+    n.start = 5
+)
+
+cs <- Profiles(lvls = c(4, 2, 3), coding = c("D", "D", "D"))
+mu <- c(-0.4, -1, -2, -1, 0.2, 1)
+sigma <- diag(length(mu))
+M <- MASS::mvrnorm(n = 500, mu = mu, Sigma = sigma)
+D <- Modfed(cand.set = cs, n.sets = 300, n.alts = 2, alt.cte = c(0, 0), par.draws = rep(0, ncol(cs)))
+
+
+
+
+
 
 
 # Make a full-factorial design of experiment
