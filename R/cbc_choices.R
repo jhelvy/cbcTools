@@ -7,7 +7,7 @@
 #' function.
 #' @param obsID The name of the column that identifies each choice observation.
 #' Defaults to `"obsID"`.
-#' @param truePars A list of one or more parameters separated by commas that
+#' @param pars A list of one or more parameters separated by commas that
 #' define the "true" (assumed) utility model used to simulate choices for the
 #' `survey` data frame. If no parameters are included, choices will be randomly
 #' assigned. Defaults to `NULL`.
@@ -53,7 +53,7 @@
 #' data_mnl <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID",
-#'     truePars = list(
+#'     pars = list(
 #'         price     = 0.1,
 #'         type      = c(0.1, 0.2, 0.3, 0.4),
 #'         freshness = c(0.1, -0.1))
@@ -67,7 +67,7 @@
 #' data_mxl <- cbc_choices(
 #'     survey = survey,
 #'     obsID  = "obsID",
-#'     truePars = list(
+#'     pars = list(
 #'         price     = 0.1,
 #'         type      = c(0.1, 0.2, 0.3, 0.4),
 #'         freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
@@ -76,11 +76,13 @@
 cbc_choices = function(
   survey,
   obsID = "obsID",
-  truePars = NULL,
+  pars = NULL,
   numDraws = 100
 ) {
-    if (is.null(truePars)) { return(simulateRandomChoices(survey, obsID)) }
-    return(simulateUtilityChoices(survey, obsID, truePars, numDraws))
+    if (is.null(pars)) {
+        return(simulateRandomChoices(survey, obsID))
+    }
+    return(simulateUtilityChoices(survey, obsID, pars, numDraws))
 }
 
 simulateRandomChoices <- function(survey, obsID) {
@@ -96,8 +98,8 @@ simulateRandomChoices <- function(survey, obsID) {
     return(survey)
 }
 
-simulateUtilityChoices <- function(survey, obsID, truePars, numDraws) {
-    model <- defineTrueModel(survey, truePars, numDraws)
+simulateUtilityChoices <- function(survey, obsID, pars, numDraws) {
+    model <- defineTrueModel(survey, pars, numDraws)
     result <- stats::predict(
       object = model,
       newdata = survey,
@@ -111,11 +113,11 @@ simulateUtilityChoices <- function(survey, obsID, truePars, numDraws) {
     return(result)
 }
 
-defineTrueModel <- function(survey, truePars, numDraws) {
-    parNamesFull <- names(truePars)
-    parNames <- dropInteractions(names(truePars))
+defineTrueModel <- function(survey, pars, numDraws) {
+    parNamesFull <- names(pars)
+    parNames <- dropInteractions(names(pars))
     # Separate out random and fixed parameters
-    parNamesRand <- names(truePars[lapply(truePars, class) == "list"])
+    parNamesRand <- names(pars[lapply(pars, class) == "list"])
     parNamesFixed <- parNames[! parNames %in% parNamesRand]
     # Make sure continuous survey vars are numeric
     cNames <- getContinuousParNames(survey, parNames)
@@ -123,13 +125,13 @@ defineTrueModel <- function(survey, truePars, numDraws) {
       survey[,cNames] <- lapply(survey[cNames], as.numeric)
     }
     # Define all other model objects
-    randPars <- unlist(lapply(truePars[parNamesRand], function(x) x$type))
+    randPars <- unlist(lapply(pars[parNamesRand], function(x) x$type))
     codedData <- logitr::recodeData(survey, parNamesFull, randPars)
     parNamesCoded <- codedData$pars
     randParsCoded <- codedData$randPars
     parSetup <- getParSetup(parNamesCoded, randParsCoded)
     parIDs <- getParIDs(parSetup)
-    coefs <- getCoefficients(truePars, parNamesCoded, randPars, randParsCoded)
+    coefs <- getCoefficients(pars, parNamesCoded, randPars, randParsCoded)
     return(structure(list(
       coefficients = coefs,
       modelType = ifelse(length(parNamesRand) > 0, "mxl", "mnl"),
