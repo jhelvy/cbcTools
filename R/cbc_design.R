@@ -134,18 +134,55 @@ cbc_design <- function(
 #     return(design)
 # }
 
+# Randomized design ----
+
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-    design <- sample_rows(profiles, n = n_resp*n_alts*n_q)
-    design <- remove_dups(design, n_resp, n_alts, n_q)
-    design <- reorder_cols(design)
-    if (no_choice) {
-        design <- add_no_choice(design, n_alts)
+    design <- design_rand(profiles, n_resp, n_alts, n_q)
+    if (!is.null(label)) {
+      design <- design_rand_label(profiles, n_resp, n_alts, n_q, label)
     }
+    if (no_choice) {
+       design <- add_no_choice(design, n_alts)
+    }
+    design <- reorder_cols(design)
     return(design)
 }
 
-sample_rows <- function(profiles, n) {
-    sample_ids <- sample(x = seq_len(nrow(profiles)), size = n, replace = TRUE)
+design_rand <- function(profiles, n_resp, n_alts, n_q) {
+  design <- sample_rows(profiles, size = n_resp*n_alts*n_q)
+  design <- remove_dups(design, n_resp, n_alts, n_q)
+  return(design)
+}
+
+design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
+    n_levels <- length(unique(profiles[,label]))
+    if (n_levels != n_alts) {
+        warning(paste0(
+            "The n_alts argument is being set to ", n_levels,
+            " to match the number of unique levels in the ", label,
+            " variable"
+        ))
+        # Over-ride user-provided n_alts as it is determined by the label
+        n_alts <- n_levels
+    }
+    # Randomize rows by label
+    labels <- split(profiles, profiles[label])
+    for (i in seq_len(n_levels)) {
+        design_label <- sample_rows(labels[[i]], size = n_resp*n_q)
+        design_label$labelID <- seq(nrow(design_label))
+        labels[[i]] <- design_label
+    }
+    design <- do.call(rbind, labels)
+    design <- design[order(design$labelID),]
+    design$labelID <- NULL
+    # Add meta data and remove cases with double alternatives
+    design <- remove_dups(design, n_resp, n_alts, n_q)
+    return(design)
+}
+
+sample_rows <- function(profiles, size) {
+    sample_ids <- sample(
+      x = seq_len(nrow(profiles)), size = size, replace = TRUE)
     return(profiles[sample_ids,])
 }
 
@@ -227,10 +264,6 @@ get_col_types <- function(data) {
 
 
 
-
-
-
-
 repDf <- function(df, n) {
     return(df[rep(seq_len(nrow(df)), n), ])
 }
@@ -251,39 +284,7 @@ randomizeSurvey <- function(doe, nResp, nAltsPerQ, nQPerResp, outsideGood) {
     return(survey)
 }
 
-randomizeSurveyLabeled <- function(
-    doe, nResp, nAltsPerQ, nQPerResp, outsideGood, label
-) {
-    nLabelLevels <- length(unique(doe[,label]))
-    if (nLabelLevels != nAltsPerQ) {
-        warning(paste0(
-            "The nAltsPerQ argument is being set to ", nLabelLevels,
-            " to match the number of unique levels in the ", label, " variable"
-        ))
-        # Over-ride user-provided nAltsPerQ as it is determined by the label
-        nAltsPerQ <- nLabelLevels
-    }
-    survey <- initializeSurvey(doe, nResp, nAltsPerQ, nQPerResp, label)
-    # Randomize rows by label
-    labels <- split(survey, survey[label])
-    for (i in seq_len(length(labels))) {
-        n <- nResp*nQPerResp
-        survey_label <- randomizeRows(labels[[i]], n)
-        survey_label$labelID <- seq(nrow(survey_label))
-        labels[[i]] <- survey_label
-    }
-    survey <- do.call(rbind, labels)
-    survey <- survey[order(survey$labelID),]
-    survey$labelID <- NULL
-    # Add meta data and remove cases with double alternatives
-    survey <- addMetaData(survey, nResp, nAltsPerQ, nQPerResp)
-    # Re-order column names
-    survey <- reorderSurveyCols(survey)
-    if (outsideGood) {
-        survey <- addOutsideGood(survey, nAltsPerQ)
-    }
-    return(survey)
-}
+
 
 initializeSurvey <- function(doe, nResp, nAltsPerQ, nQPerResp, label = NULL) {
     # Replicate doe if the needed number of observations (n) is larger than
