@@ -29,6 +29,17 @@ survey <- cbc_design(
   no_choice = TRUE
 )
 
+# Make randomized labeled survey with each "type" appearing in each
+# choice question
+survey_labeled <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 300, # Number of respondents
+  n_alts    = 3,   # Number of alternatives per question
+  n_q       = 6,   # Number of questions per respondent
+  label     = "type"
+)
+
+
 # # Make a D-efficient conjoint survey
 # survey <- cbc_design(
 #   profiles = profiles,
@@ -44,14 +55,6 @@ survey <- cbc_design(
 
 
 
-# # Make a labeled survey with each "type" appearing in each choice question
-# survey_labeled <- makeSurvey(
-#     doe       = doe,  # Design of experiment
-#     nResp     = 2000, # Total number of respondents (upper bound)
-#     nAltsPerQ = 3,    # Number of alternatives per question
-#     nQPerResp = 6,    # Number of questions per respondent
-#     group     = "type"
-# )
 
 
 

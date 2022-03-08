@@ -17,6 +17,7 @@ RoxygenNote: 7.1.2
 Imports:
     AlgDesign,
     fastDummies,
+    idefix,
     parallel,
     stats,
     logitr (>= 0.4.0)
