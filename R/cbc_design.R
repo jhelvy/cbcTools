@@ -1,35 +1,53 @@
-#' Make a choice-based conjoint survey design
+#' Make a coded matrix of all possible combinations of attribute levels
 #'
+#' This function is a wrapper for the `Profiles()` function from the `idefix`
+#' package, which creates a coded matrix of all possible combinations of
+#' attribute levels defined in the `levels` argument.
 #' @param levels A named list of vectors defining each attribute (the names)
 #' and each level for each attribute (the vectors). For example, a design
-#' with two attributes, `"price"` and `"type"`, that each had three levels
-#' should be defined as `levels = list(price = c(1, 2, 3), type = c("1", "2", "3"))`.
-#' Numeric values will be treated as continuous levels and character values
-#' will be treated as discrete levels.
-#' @param nResp Maximum number of survey respondents.
-#' @param nAltsPerQ Number of alternatives per question.
-#' @param nQPerResp Number of questions per respondent.
-#' @param outsideGood Include an outside good in the choice sets? Defaults to
+#' with two attributes, `"price"` (numeric) and `"type"` (categorical),
+#' that each had three levels could be defined as
+#' `levels = list(price = c(1, 2, 3), type = c("type1", "type2", "type3"))`.
+#' @return A data frame of all possible combinations of attribute levels.
+#' @export
+#' @examples
+#' # Define the attributes and levels
+#' levels <- list(
+#'   price     = seq(1, 4, 0.5), # $ per pound
+#'   type      = c('Fuji', 'Gala', 'Honeycrisp'),
+#'   freshness = c('Excellent', 'Average', 'Poor')
+#' )
+#'
+#' # Generate profiles of all possible combinations for each attribute and level
+#' profiles <- cbc_profiles(levels)
+cbc_profiles <- function(levels) {
+    return(expand.grid(levels))
+}
+
+#' Make a random or D-efficient choice-based conjoint survey design
+#'
+#' This function creates a data frame containing a choice-based conjoint survey
+#' design where each row is an alternative. Designs can be either fully
+#' randomized or D-efficient, in which case an implementation of the
+#' Modified Federov algorithm is used via the `idefix` package.
+#'
+#' @param profiles A numeric matrix in which each row is a possible profile.
+#' This can be generated using the `cbc_profiles()` function.
+#' @param n_resp Number of survey respondents.
+#' @param n_alts Number of alternatives per choice question.
+#' @param n_q Number of questions per respondent.
+#' @param no_choice Include a "none" option in the choice sets? Defaults to
 #' `FALSE`. If `TRUE`, the total number of alternatives per question will be
-#' one more than the provided `nAltsPerQ` argument.
-#' @param random Set to `TRUE` to return a fully randomized design, otherwise
-#' returns a D-efficient design. Defaults to `TRUE`.
+#' one more than the provided `n_alts` argument.
+#' @param d_eff Set to `TRUE` to return a D-efficient design, otherwise a fully
+#' randomized design is returned. Defaults to `FALSE`.
 #' @param label The name of the variable to use in a "labeled" design
 #' such that each set of alternatives contains one of each of the levels in
-#' the `label` attribute. If included, the `nAltsPerQ` argument will be
+#' the `label` attribute. If included, the `n_alts` argument will be
 #' ignored as its value is determined by the unique number of levels in the
 #' `label` variable. Defaults to `NULL`.
-#' @param maxTrials The maximum number of trials to be used in a fractional
-#' factorial design. Defaults to `NA`, in which case it is set to the number of
-#' alternatives in the full factorial design. If `search = TRUE`, then all
-#' feasible designs will be calculated up to `maxTrials` or until a perfect
-#' D-efficiency (1) is found.
-#' @param search If `TRUE`, all feasible designs are calculated up to
-#' `maxTrials` or until a perfect D-efficiency (1) is found, after which a
-#' summary of the search results is printed and the top-ranked D-efficient
-#' design is returned. Defaults to `FALSE`.
-#' @return Returns a data frame containing a choice-based conjoint survey
-#' design.
+#' @return A data frame containing a choice-based conjoint survey design where
+#' each row is an alternative.
 #' @export
 #' @examples
 #' # Define the attributes and levels
@@ -39,37 +57,44 @@
 #'   freshness = c('Excellent', 'Average', 'Poor')
 #' )
 #'
-#' # Make a full-factorial design of experiment
-#' doe <- makeDoe(levels)
+#' # Generate all profiles with price as a continuous variable
+#' profiles <- cbc_profiles(levels, coding = c("C", "D", "D"))
 #'
-#' # Re-code levels
-#' doe <- recodeDoe(doe, levels)
-#'
-#' # Make the conjoint survey by randomly sampling from the doe
+#' # Make a fully random conjoint survey
 #' survey <- cbc_design(
-#'   doe       = doe,  # Design of experiment
-#'   nResp     = 2000, # Total number of respondents (upper bound)
-#'   nAltsPerQ = 3,    # Number of alternatives per question
-#'   nQPerResp = 6     # Number of questions per respondent
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6    # Number of questions per respondent
+#' )
+#'
+#' # Make a D-efficient conjoint survey
+#' survey <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6,    # Number of questions per respondent
+#'   d_eff    = TRUE
 #' )
 cbc_design <- function(
-    levels,
-    nResp,
-    nAltsPerQ,
-    nQPerResp,
-    outsideGood = FALSE,
-    random = TRUE,
-    label = NULL,
-    maxTrials = NA,
-    search = FALSE
+    profiles,
+    n_resp,
+    n_alts,
+    n_q,
+    no_choice = FALSE,
+    d_eff = FALSE,
+    label = NULL
 ) {
-    doe <- as.data.frame(doe) # tibbles break things
-    doe$rowID <- seq(nrow(doe)) # Have to set these now to remove dupes later
-    if (is.null(label)) {
-        return(randomizeSurvey(doe, nResp, nAltsPerQ, nQPerResp, outsideGood))
+    profiles <- as.data.frame(profiles) # tibbles break things
+    profiles$id <- seq(nrow(profiles)) # Set these to remove dupes later
+    if (d_eff) {
+        design <- make_design_eff(
+            profiles, n_resp, n_alts, n_q, no_choice, label)
+    } else {
+        design <- make_design_rand(
+            profiles, n_resp, n_alts, n_q, no_choice, label)
     }
-    return(randomizeSurveyLabeled(
-        doe, nResp, nAltsPerQ, nQPerResp, outsideGood, label))
+    return(design)
 }
 
 repDf <- function(df, n) {
