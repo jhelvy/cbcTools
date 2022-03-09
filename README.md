@@ -82,12 +82,12 @@ dim(design)  # View dimensions
 #> [1] 5400    8
 head(design) # Preview first 6 rows
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1        60   2.5 Honeycrisp      Poor
-#> 2      1   1     2     1        29   1.0       Gala   Average
-#> 3      1   1     3     1        63   4.0 Honeycrisp      Poor
-#> 4      1   2     1     2        53   2.5       Gala      Poor
-#> 5      1   2     2     2        63   4.0 Honeycrisp      Poor
-#> 6      1   2     3     2        21   4.0 Honeycrisp Excellent
+#> 1      1   1     1     1         5   3.0       Fuji Excellent
+#> 2      1   1     2     1        18   2.5 Honeycrisp Excellent
+#> 3      1   1     3     1        45   2.0       Fuji      Poor
+#> 4      1   2     1     2         1   1.0       Fuji Excellent
+#> 5      1   2     2     2         4   2.5       Fuji Excellent
+#> 6      1   2     3     2        49   4.0       Fuji      Poor
 ```
 
 For now, the `cbc_design()` function only generates a randomized design.
@@ -130,11 +130,11 @@ dim(design_labeled)
 head(design_labeled)
 #>   respID qID altID obsID profileID price       type freshness
 #> 1      1   1     1     1        28   4.0       Fuji   Average
-#> 2      1   1     2     1         9   1.5       Gala Excellent
-#> 3      1   1     3     1        17   2.0 Honeycrisp Excellent
-#> 4      1   2     1     2        45   2.0       Fuji      Poor
+#> 2      1   1     2     1        30   1.5       Gala   Average
+#> 3      1   1     3     1        36   1.0 Honeycrisp   Average
+#> 4      1   2     1     2        47   3.0       Fuji      Poor
 #> 5      1   2     2     2        54   3.0       Gala      Poor
-#> 6      1   2     3     2        19   3.0 Honeycrisp Excellent
+#> 6      1   2     3     2        41   3.5 Honeycrisp   Average
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -162,19 +162,19 @@ dim(design_nochoice)
 #> [1] 7200   13
 head(design_nochoice)
 #>       respID qID altID obsID profileID price type_Fuji type_Gala
-#> 1          1   1     1     1        40   3.0         0         0
-#> 2          1   1     2     1        56   4.0         0         1
-#> 3          1   1     3     1        29   1.0         0         1
+#> 1          1   1     1     1        47   3.0         1         0
+#> 2          1   1     2     1         7   4.0         1         0
+#> 3          1   1     3     1        18   2.5         0         0
 #> 11000      1   1     4     1         0   0.0         0         0
-#> 4          1   2     1     2        44   1.5         1         0
-#> 5          1   2     2     2        47   3.0         1         0
+#> 4          1   2     1     2        39   2.5         0         0
+#> 5          1   2     2     2        14   4.0         0         1
 #>       type_Honeycrisp freshness_Excellent freshness_Average freshness_Poor
-#> 1                   1                   0                 1              0
-#> 2                   0                   0                 0              1
-#> 3                   0                   0                 1              0
+#> 1                   0                   0                 0              1
+#> 2                   0                   1                 0              0
+#> 3                   1                   1                 0              0
 #> 11000               0                   0                 0              0
-#> 4                   0                   0                 0              1
-#> 5                   0                   0                 0              1
+#> 4                   1                   0                 1              0
+#> 5                   0                   1                 0              0
 #>       no_choice
 #> 1             0
 #> 2             0
@@ -201,17 +201,17 @@ cbc_balance(design)
 #> price:
 #> 
 #>   1 1.5   2 2.5   3 3.5   4 
-#> 759 811 730 795 783 781 741 
+#> 780 780 730 723 793 787 807 
 #> 
 #> type:
 #> 
 #>       Fuji       Gala Honeycrisp 
-#>       1801       1805       1794 
+#>       1837       1842       1721 
 #> 
 #> freshness:
 #> 
 #> Excellent   Average      Poor 
-#>      1819      1740      1841 
+#>      1775      1791      1834 
 #> 
 #> ==============================
 #> Pairwise attribute counts:
@@ -219,31 +219,31 @@ cbc_balance(design)
 #> price & type:
 #>      
 #>       Fuji Gala Honeycrisp
-#>   1    245  253        261
-#>   1.5  289  271        251
-#>   2    253  239        238
-#>   2.5  250  278        267
-#>   3    266  264        253
-#>   3.5  257  259        265
-#>   4    241  241        259
+#>   1    254  286        240
+#>   1.5  267  266        247
+#>   2    251  243        236
+#>   2.5  238  240        245
+#>   3    284  259        250
+#>   3.5  283  263        241
+#>   4    260  285        262
 #> 
 #> price & freshness:
 #>      
 #>       Excellent Average Poor
-#>   1         253     245  261
-#>   1.5       282     261  268
-#>   2         247     242  241
-#>   2.5       254     264  277
-#>   3         291     239  253
-#>   3.5       256     245  280
-#>   4         236     244  261
+#>   1         272     259  249
+#>   1.5       234     295  251
+#>   2         239     260  231
+#>   2.5       251     233  239
+#>   3         267     243  283
+#>   3.5       224     257  306
+#>   4         288     244  275
 #> 
 #> type & freshness:
 #>             
 #>              Excellent Average Poor
-#>   Fuji             594     597  610
-#>   Gala             624     548  633
-#>   Honeycrisp       601     595  598
+#>   Fuji             611     628  598
+#>   Gala             620     594  628
+#>   Honeycrisp       544     569  608
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -263,17 +263,17 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   28  598 1174 
+#>   23  615 1162 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  178 1165  457 
+#>  181 1198  421 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  169 1193  438
+#>  171 1201  428
 ```
 
 ## Simulate choices
@@ -289,12 +289,12 @@ data <- cbc_choices(
 
 head(data)
 #>   respID qID altID obsID profileID price       type freshness choice
-#> 1      1   1     1     1        60   2.5 Honeycrisp      Poor      0
-#> 2      1   1     2     1        29   1.0       Gala   Average      0
-#> 3      1   1     3     1        63   4.0 Honeycrisp      Poor      1
-#> 4      1   2     1     2        53   2.5       Gala      Poor      0
-#> 5      1   2     2     2        63   4.0 Honeycrisp      Poor      0
-#> 6      1   2     3     2        21   4.0 Honeycrisp Excellent      1
+#> 1      1   1     1     1         5   3.0       Fuji Excellent      0
+#> 2      1   1     2     1        18   2.5 Honeycrisp Excellent      1
+#> 3      1   1     3     1        45   2.0       Fuji      Poor      0
+#> 4      1   2     1     2         1   1.0       Fuji Excellent      1
+#> 5      1   2     2     2         4   2.5       Fuji Excellent      0
+#> 6      1   2     3     2        49   4.0       Fuji      Poor      0
 ```
 
 You can also pass a list of prior parameters to define a utility model
@@ -375,21 +375,21 @@ results <- cbc_power(
 )
 
 head(results)
-#>   sampleSize             coef         est         se
-#> 1         30            price -0.03211473 0.09031357
-#> 2         30         typeGala  0.06683723 0.21162360
-#> 3         30   typeHoneycrisp -0.07162161 0.22758796
-#> 4         30 freshnessAverage  0.08871245 0.22554712
-#> 5         30    freshnessPoor  0.03834303 0.21885832
-#> 6         60            price -0.03049732 0.06611476
+#>   sampleSize             coef          est         se
+#> 1         30            price  0.040168091 0.09065817
+#> 2         30         typeGala  0.200132877 0.22043473
+#> 3         30   typeHoneycrisp  0.302388043 0.22559634
+#> 4         30 freshnessAverage  0.089309743 0.22409682
+#> 5         30    freshnessPoor  0.187173728 0.22217364
+#> 6         60            price -0.008665727 0.06194921
 tail(results)
-#>    sampleSize             coef         est         se
-#> 45        270    freshnessPoor -0.06524148 0.07323909
-#> 46        300            price -0.02074774 0.02898168
-#> 47        300         typeGala  0.03190660 0.06926574
-#> 48        300   typeHoneycrisp  0.01151495 0.06990006
-#> 49        300 freshnessAverage  0.03653863 0.07026287
-#> 50        300    freshnessPoor -0.05131187 0.06936986
+#>    sampleSize             coef          est         se
+#> 45        270    freshnessPoor  0.006020976 0.07251988
+#> 46        300            price  0.003517079 0.02817057
+#> 47        300         typeGala -0.022768295 0.06992489
+#> 48        300   typeHoneycrisp  0.048709964 0.07047344
+#> 49        300 freshnessAverage -0.091429629 0.07048173
+#> 50        300    freshnessPoor  0.010679873 0.06919329
 ```
 
 The `results` object is a data frame containing the coefficient
