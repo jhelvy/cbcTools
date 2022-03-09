@@ -15,10 +15,10 @@
 #' @param obsID The name of the column that identifies each observation.
 #' @param pars The names of the parameters to be estimated in the model.
 #' Must be the same as the column names in the `data` argument.
-#' @param randPars A named vector whose names are the random parameters and
+#' @param rand_pars A named vector whose names are the random parameters and
 #' values the distribution: `'n'` for normal or `'ln'` for log-normal.
 #' Defaults to `NULL`.
-#' @param returnModels If `TRUE`, a list of all estimated models is returned.
+#' @param return_models If `TRUE`, a list of all estimated models is returned.
 #' This can be useful if you want to extract other outputs from each model,
 #' such as the variance-covariance matrix, etc. Defaults to `FALSE`.
 #' @param panelID The name of the column that identifies the individual (for
@@ -33,6 +33,10 @@
 #' @param predict If `TRUE`, predicted probabilities, fitted values, and
 #' residuals are also included in the returned model objects. Defaults to
 #' `FALSE`.
+#' @param n_cores The number of cores to use for parallel processing.
+#' Set to `1` to run serially Defaults to `NULL`, in which case the number of
+#' cores is set to `parallel::detectCores() - 1`. Max cores allowed is capped
+#' at `parallel::detectCores()`.
 #' @param ... Other arguments that are passed to `logitr::logitr()` for model
 #' estimation. See the `logitr` documentation for details about other
 #' available arguments.
@@ -46,38 +50,112 @@ cbc_power <- function(
   outcome,
   obsID,
   pars,
-  randPars  = NULL,
-  returnModels = FALSE,
+  rand_pars  = NULL,
+  return_models = FALSE,
   panelID   = NULL,
   clusterID = NULL,
   robust    = FALSE,
   predict   = FALSE,
+  n_cores   = NULL,
   ...
 ) {
+    n_cores <- set_num_cores(n_cores)
     dataList <- make_data_list(data, obsID, nbreaks, n_q)
-    suppressMessages(
-      models <- lapply(
-        dataList,
-        logitr::logitr,
-        outcome   = outcome,
-        obsID     = obsID,
-        pars      = pars,
-        randPars  = randPars,
-        panelID   = panelID,
-        clusterID = clusterID,
-        robust    = robust,
-        predict   = predict,
-        ... = ...
-    ))
+    if (n_cores == 1) {
+      message("Estimating models...")
+      suppressMessages(suppressWarnings(
+        models <- lapply(
+          dataList,
+          logitr::logitr,
+          outcome   = outcome,
+          obsID     = obsID,
+          pars      = pars,
+          randPars  = rand_pars,
+          panelID   = panelID,
+          clusterID = clusterID,
+          robust    = robust,
+          predict   = predict,
+          ... = ...
+        )
+      ))
+    } else {
+      message("Estimating models using ", n_cores, " cores...")
+      if (Sys.info()[['sysname']] == 'Windows') {
+        cl <- parallel::makeCluster(n_cores, "PSOCK")
+        suppressMessages(suppressWarnings(
+          models <- parallel::parLapply(
+            cl = cl,
+            dataList,
+            logitr::logitr,
+            outcome   = outcome,
+            obsID     = obsID,
+            pars      = pars,
+            randPars  = rand_pars,
+            panelID   = panelID,
+            clusterID = clusterID,
+            robust    = robust,
+            predict   = predict,
+            ... = ...
+          )
+        ))
+        parallel::stopCluster(cl)
+      } else {
+        suppressMessages(suppressWarnings(
+          models <- parallel::mclapply(
+            dataList,
+            logitr::logitr,
+            outcome   = outcome,
+            obsID     = obsID,
+            pars      = pars,
+            randPars  = rand_pars,
+            panelID   = panelID,
+            clusterID = clusterID,
+            robust    = robust,
+            predict   = predict,
+            ... = ...,
+            mc.cores = n_cores
+          )
+        ))
+      }
+    }
+    message("done!")
     # Add sample size to each model
     sizes <- names(models)
     for (i in seq_len(length(models))) {
       models[[i]]$sampleSize <- as.numeric(sizes[i])
     }
-    if (returnModels) {
+    if (return_models) {
       return(models)
     }
-    return(cbc_extract_error(models))
+    return(extract_errors(models))
+}
+
+set_num_cores <- function(n_cores) {
+  cores_available <- parallel::detectCores()
+  max_cores <- cores_available - 1
+  # CRAN checks limits you to 2 cores, see this SO issue:
+  # https://stackoverflow.com/questions/50571325/r-cran-check-fail-when-using-parallel-functions
+  chk <- tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))
+  if (nzchar(chk) && (chk != "false")) {
+    # use 2 cores in CRAN/Travis/AppVeyor
+    return(2L)
+  }
+  if (is.null(n_cores)) {
+    return(max_cores)
+  } else if (!is.numeric(n_cores)) {
+    warning(
+      "Non-numeric value provided for n_cores...setting n_cores to ",
+      max_cores
+    )
+    return(max_cores)
+  } else if (n_cores > cores_available) {
+    warning(
+      "Cannot use ", n_cores, " cores because your machine only has ",
+      cores_available, " available...setting n_cores to ", max_cores
+    )
+    return(max_cores)
+  }
+  return(n_cores)
 }
 
 make_data_list <- function(data, obsID, nbreaks, n_q) {
@@ -94,7 +172,7 @@ make_data_list <- function(data, obsID, nbreaks, n_q) {
     return(dataList)
 }
 
-cbc_extract_error <- function(models) {
+extract_errors <- function(models) {
     sampleSize <- unlist(lapply(models, function(x) x$sampleSize))
     est <- lapply(models, function(x) stats::coef(x))
     se <- lapply(models, function(x) logitr::se(x))
