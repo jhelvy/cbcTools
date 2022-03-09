@@ -15,11 +15,11 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Imports:
-    AlgDesign,
     fastDummies,
     idefix,
+    logitr (>= 0.4.0),
     parallel,
     stats,
-    logitr (>= 0.4.0)
+    utils
 URL: https://github.com/jhelvy/cbcTools
 BugReports: https://github.com/jhelvy/cbcTools/issues

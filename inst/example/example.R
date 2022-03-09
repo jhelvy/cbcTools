@@ -58,6 +58,11 @@ design_rand_labeled_nochoice <- cbc_design(
 
 # Inspect survey design ----
 
+
+# View the attribute balance and pairwise attribute balance
+
+cbc_balance(design_rand)
+
 # View the amount of overlap in a design
 
 cbc_overlap(design_rand)

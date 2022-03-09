@@ -125,7 +125,7 @@ head(design_nochoice)
 
 The {cbcTools} package includes some functions to quickly inspect some basic metrics of a design.
 
-The `cbc_balance()` function prints out a summary of the counts of each level for each attribute across all choice questions as well as the two-way counts across all pairs of attributes:
+The `cbc_balance()` function prints out a summary of the counts of each level for each attribute across all choice questions as well as the two-way counts across all pairs of attributes for a given design:
 
 ```{r}
 cbc_balance(design)
@@ -142,48 +142,58 @@ cbc_overlap(design)
 You can simulate choices for a given `design` using the `cbc_choices()` function. By default, random choices are simulated:
 
 ```{r}
-data <- simulateChoices(
-    survey = survey,
-    obsID  = "obsID"
+data_rand <- cbc_choices(
+  design = design_rand,
+  obsID  = "obsID"
 )
+
 head(data)
 ```
 
-You can also pass a list of parameters to define a utility model that will be used to simulate choices. In the example below, the choices are simulated using a utility model with the following parameters:
+You can also pass a list of prior parameters to define a utility model that will be used to simulate choices. In the example below, the choices are simulated using a utility model with the following parameters:
 
-- 1 continuous `price` parameter
-- 4 discrete parameters for `type`
-- 2 discrete parameters for `freshness`
+- 1 continuous parameter for `price`
+- 2 categorical parameters for `type` (first level is reference)
+- 2 categorical parameters for `freshness` (first level is reference)
 
 ```{r, eval=FALSE}
-data <- simulateChoices(
-    survey = survey,
-    obsID  = "obsID",
-    pars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = c(0.1, -0.1))
+data <- cbc_choices(
+  design = design,
+  obsID = "obsID",
+  priors = list(
+    price     = 0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, -0.2)
+  )
 )
 ```
 
-You can also simulate data with more complex models, such as mixed logit models where parameters follow a normal or log-normal distribution across the population, or interaction between parameters. In the example below, the choices are simulated using a utility model with the following parameters:
-
-- 1 continuous "price" parameter
-- 4 discrete parameters for "type"
-- 2 random normal discrete parameters for "freshness"
-- 2 interaction parameters between "price" and "freshness"
-
-The `randN()` function is use to make the 2 `freshness` parameters follow a normal distribution with a specified mean (`mu`) and standard deviation (`sigma`).
+If you wish to include a prior model with an interaction, you can do so inside the `priors` list. For example, here is the same example as above but with an interaction between `price` and `type` added:
 
 ```{r, eval=FALSE}
-data <- simulateChoices(
-    survey = survey,
-    obsID  = "obsID",
-    pars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
-        `price*freshness` = c(1, 2))
+data <- cbc_choices(
+  design = design_rand,
+  obsID = "obsID",
+  priors = list(
+    price = 0.1,
+    type = c(0.1, 0.2),
+    freshness = c(0.1, -0.2),
+    `price*type` = c(0.1, 0.5)
+  )
+)
+```
+
+Finally, you can also simulate data for a mixed logit specification where parameters follow a normal or log-normal distribution across the population. In the example below, the `randN()` function is used to specify the `type` attribute with 2 random normal discrete parameters with a specified mean (`mu`) and standard deviation (`sigma`):
+
+```{r, eval=FALSE}
+data <- cbc_choices(
+  design = design_rand,
+  obsID = "obsID",
+  priors = list(
+    price = 0.1,
+    type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
+    freshness = c(0.1, -0.2)
+  )
 )
 ```
 
