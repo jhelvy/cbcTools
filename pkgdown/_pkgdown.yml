@@ -28,14 +28,23 @@ reference:
   desc: "Functions for generating survey designs."
   contents:
   - cbc_design
-- title: "Analysis"
-  desc: "Functions for analyzing survey designs."
+- title: "Inspect"
+  desc: "Functions for inspecting survey designs."
+  contents:
+  - cbc_balance
+  - cbc_overlap
+- title: "Simulate Choice"
+  desc: "Functions for simulating choices."
   contents:
   - cbc_choices
-  - cbc_power
   - randN
   - randLN
+- title: "Power Analysis"
+  desc: "Functions for conducting a power analysis."
+  contents:
+  - cbc_power
 - title: "Methods"
   desc: "Various methods."
   contents:
-  - print.cbc
+  - print.cbc_models
+  - plot.cbc_errors
