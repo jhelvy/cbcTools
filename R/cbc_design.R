@@ -74,7 +74,7 @@ cbc_profiles <- function(levels) {
 #' profiles <- cbc_profiles(levels)
 #'
 #' # Make a randomized survey design
-#' design <- cbc_design(
+#' design_rand <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
 #'   n_alts   = 3, # Number of alternatives per question
@@ -82,7 +82,7 @@ cbc_profiles <- function(levels) {
 #' )
 #'
 #' # Make a randomized survey design with a "no choice" option
-#' design <- cbc_design(
+#' design_rand_nochoice <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
 #'   n_alts    = 3, # Number of alternatives per question
@@ -92,7 +92,7 @@ cbc_profiles <- function(levels) {
 #'
 #' # Make randomized labeled survey design with each "type" appearing in each
 #' # choice question
-#' design_labeled <- cbc_design(
+#' design_rand_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
 #'   n_alts    = 3, # Number of alternatives per question
@@ -160,9 +160,9 @@ cbc_design <- function(
 # Randomized design ----
 
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-  design <- design_rand(profiles, n_resp, n_alts, n_q)
+  design <- get_design_rand(profiles, n_resp, n_alts, n_q)
   if (!is.null(label)) {
-    design <- design_rand_label(profiles, n_resp, n_alts, n_q, label)
+    design <- get_design_rand_label(profiles, n_resp, n_alts, n_q, label)
   }
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
@@ -171,13 +171,13 @@ make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
   return(design)
 }
 
-design_rand <- function(profiles, n_resp, n_alts, n_q) {
+get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
   design <- sample_rows(profiles, size = n_resp * n_alts * n_q)
   design <- remove_dups(design, n_resp, n_alts, n_q)
   return(design)
 }
 
-design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
+get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   n_levels <- length(unique(profiles[, label]))
   if (n_levels != n_alts) {
     warning(paste0(

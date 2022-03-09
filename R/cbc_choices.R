@@ -37,19 +37,19 @@
 #'   n_q      = 6 # Number of questions per respondent
 #' )
 cbc_choices <- function(
-  survey,
+  design,
   obsID = "obsID",
-  truePars = NULL,
-  numDraws = 100
+  priors = NULL,
+  n_draws = 100
 ) {
-  if (is.null(truePars)) {
-    return(simulateRandomChoices(survey, obsID))
+  if (is.null(priors)) {
+    return(sim_choices_rand(design, obsID))
   }
-  return(simulateUtilityChoices(survey, obsID, truePars, numDraws))
+  return(sim_choices_prior(design, obsID, priors, n_draws))
 }
 
-simulateRandomChoices <- function(survey, obsID) {
-  nrows <- table(survey[obsID])
+sim_choices_rand <- function(design, obsID) {
+  nrows <- table(design[obsID])
   choices <- list()
   for (i in seq_len(length(nrows))) {
     n <- nrows[i]
@@ -57,45 +57,45 @@ simulateRandomChoices <- function(survey, obsID) {
     choice[sample(seq(n), 1)] <- 1
     choices[[i]] <- choice
   }
-  survey$choice <- unlist(choices)
-  return(survey)
+  design$choice <- unlist(choices)
+  return(design)
 }
 
-simulateUtilityChoices <- function(survey, obsID, truePars, numDraws) {
-  model <- defineTrueModel(survey, truePars, numDraws)
+sim_choices_prior <- function(design, obsID, priors, n_draws) {
+  model <- def_model_prior(design, priors, n_draws)
   result <- stats::predict(
     object = model,
-    newdata = survey,
+    newdata = design,
     obsID = obsID,
     type = "outcome",
     returnData = TRUE
   )
   result$choice <- result$predicted_outcome # Rename choice column
   result$predicted_outcome <- NULL
-  # Revert variable order to that of the original survey
-  result <- result[c(names(survey), "choice")]
+  # Revert variable order to that of the original design
+  result <- result[c(names(design), "choice")]
   return(result)
 }
 
-defineTrueModel <- function(survey, truePars, numDraws) {
-  parNamesFull <- names(truePars)
-  parNames <- dropInteractions(names(truePars))
+def_model_prior <- function(design, priors, n_draws) {
+  parNamesFull <- names(priors)
+  parNames <- drop_interactions(names(priors))
   # Separate out random and fixed parameters
-  parNamesRand <- names(truePars[lapply(truePars, class) == "list"])
+  parNamesRand <- names(priors[lapply(priors, class) == "list"])
   parNamesFixed <- parNames[!parNames %in% parNamesRand]
-  # Make sure continuous survey vars are numeric
-  cNames <- getContinuousParNames(survey, parNames)
+  # Make sure continuous vars are numeric
+  cNames <- get_continuous_names(design, parNames)
   if (length(cNames) > 0) {
-    survey[, cNames] <- lapply(survey[cNames], as.numeric)
+    design[, cNames] <- lapply(design[cNames], as.numeric)
   }
   # Define all other model objects
-  randPars <- unlist(lapply(truePars[parNamesRand], function(x) x$type))
-  codedData <- logitr::recodeData(survey, parNamesFull, randPars)
+  randPars <- unlist(lapply(priors[parNamesRand], function(x) x$type))
+  codedData <- logitr::recodeData(design, parNamesFull, randPars)
   parNamesCoded <- codedData$pars
   randParsCoded <- codedData$randPars
-  parSetup <- getParSetup(parNamesCoded, randParsCoded)
-  parIDs <- getParIDs(parSetup)
-  coefs <- getCoefficients(truePars, parNamesCoded, randPars, randParsCoded)
+  parSetup <- get_parSetup(parNamesCoded, randParsCoded)
+  parIDs <- get_parIDs(parSetup)
+  coefs <- get_coefs(priors, parNamesCoded, randPars, randParsCoded)
   return(structure(list(
     coefficients = coefs,
     modelType = ifelse(length(parNamesRand) > 0, "mxl", "mnl"),
@@ -105,13 +105,13 @@ defineTrueModel <- function(survey, truePars, numDraws) {
       pars = parNamesFull,
       price = NULL,
       randPars = randPars,
-      numDraws = numDraws,
+      numDraws = n_draws,
       modelSpace = "pref"
     )
   ), class = "logitr"))
 }
 
-dropInteractions <- function(parNames) {
+drop_interactions <- function(parNames) {
   ints <- grepl("\\*", parNames)
   if (any(ints)) {
     return(parNames[ints == FALSE])
@@ -119,14 +119,14 @@ dropInteractions <- function(parNames) {
   return(parNames)
 }
 
-getContinuousParNames <- function(survey, parNames) {
-  levels <- lapply(survey[parNames], function(x) unique(x))
+get_continuous_names <- function(design, parNames) {
+  levels <- lapply(design[parNames], function(x) unique(x))
   type_numeric <- unlist(lapply(levels, is.numeric))
   return(names(type_numeric[type_numeric]))
 }
 
 # Modified from {logitr}
-getParSetup <- function(parNames, randPars) {
+get_parSetup <- function(parNames, randPars) {
   parSetup <- rep("f", length(parNames))
   for (i in seq_len(length(parNames))) {
     name <- parNames[i]
@@ -139,7 +139,7 @@ getParSetup <- function(parNames, randPars) {
 }
 
 # Modified from {logitr}
-getParIDs <- function(parSetup) {
+get_parIDs <- function(parSetup) {
   return(list(
     fixed     = which(parSetup == "f"),
     random    = which(parSetup != "f"),
@@ -148,7 +148,7 @@ getParIDs <- function(parSetup) {
   ))
 }
 
-getCoefficients <- function(pars, parNamesCoded, randPars, randParsCoded) {
+get_coefs <- function(pars, parNamesCoded, randPars, randParsCoded) {
   # Define random parameter names
   parNamesRand <- names(randPars)
   parNamesRandCoded <- names(randParsCoded)
@@ -179,105 +179,37 @@ getCoefficients <- function(pars, parNamesCoded, randPars, randParsCoded) {
   return(coefs)
 }
 
-#' Define "true" (assumed) model parameters as normally-distributed.
+#' Define a prior (assumed) model parameter as normally-distributed.
 #'
-#' Define "true" (assumed) model parameters as normally-distributed. Used in the
-#' `cbc_choices()` function.
+#' Define a prior (assumed) model parameter as normally-distributed.
+#' Used in the `cbc_choices()` function.
 #'
 #' @param mu Vector of means, defaults to `0`.
 #' @param sigma Vector of standard deviations, defaults to `1`.
-#' @return A list defining normally-distributed parameters of the "true"
-#' utility model used to simulate choices in the `cbc_choices()` function.
+#' @return A list defining normally-distributed parameters of the prior
+#' (assumed) utility model used to simulate choices in the `cbc_choices()`
+#' function.
 #' @export
 #' @examples
-#' library(conjointTools)
-#'
-#' # Define the attributes and levels
-#' levels <- list(
-#'   price     = seq(1, 4, 0.5), # $ per pound
-#'   type      = c("Fuji", "Gala", "Honeycrisp", "Pink Lady", "Red Delicious"),
-#'   freshness = c("Excellent", "Average", "Poor")
-#' )
-#'
-#' # Make a full-factorial design of experiment
-#' doe <- makeDoe(levels)
-#'
-#' # Re-code levels
-#' doe <- recodeDoe(doe, levels)
-#'
-#' # Make the conjoint survey by randomly sampling from the doe
-#' survey <- makeSurvey(
-#'   doe       = doe, # Design of experiment
-#'   nResp     = 2000, # Total number of respondents (upper bound)
-#'   nAltsPerQ = 3, # Number of alternatives per question
-#'   nQPerResp = 6 # Number of questions per respondent
-#' )
-#'
-#' # Simulate choices based on a utility model with the following parameters:
-#' #   - 1 continuous "price" parameter
-#' #   - 4 discrete parameters for "type"
-#' #   - 2 random normal discrete parameters for "freshness"
-#' data_mxl <- cbc_choices(
-#'   survey = survey,
-#'   obsID = "obsID",
-#'   pars = list(
-#'     price     = 0.1,
-#'     type      = c(0.1, 0.2, 0.3, 0.4),
-#'     freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2))
-#'   )
-#' )
+#' # Insert example
 randN <- function(mu = 0, sigma = 1) {
   return(list(pars = list(mu = mu, sigma = sigma), type = "n"))
 }
 
-#' Define "true" (assumed) model parameters as normally-distributed.
+#' Define prior (assumed) model parameter as log-normally-distributed.
 #'
-#' Define "true" (assumed) model parameters as normally-distributed. Used in the
-#' `cbc_choices()` function.
+#' Define prior (assumed) model parameter as log-normally-distributed.
+#' Used in the `cbc_choices()` function.
 #'
 #' @param mu Mean of the distribution on the log scale, defaults to `0`.
 #' @param sigma Standard deviation of the distribution on the log scale,
 #' defaults to `1`.
-#' @return A list defining log-normally-distributed parameters of the "true"
-#' utility model used to simulate choices in the `cbc_choices()` function.
+#' @return A list defining log-normally-distributed parameters of the prior
+#' (assumed) utility model used to simulate choices in the `cbc_choices()`
+#' function.
 #' @export
 #' @examples
-#' library(conjointTools)
-#'
-#' # Define the attributes and levels
-#' levels <- list(
-#'   price     = seq(1, 4, 0.5), # $ per pound
-#'   type      = c("Fuji", "Gala", "Honeycrisp", "Pink Lady", "Red Delicious"),
-#'   freshness = c("Excellent", "Average", "Poor")
-#' )
-#'
-#' # Make a full-factorial design of experiment
-#' doe <- makeDoe(levels)
-#'
-#' # Re-code levels
-#' doe <- recodeDoe(doe, levels)
-#'
-#' # Make the conjoint survey by randomly sampling from the doe
-#' survey <- makeSurvey(
-#'   doe       = doe, # Design of experiment
-#'   nResp     = 2000, # Total number of respondents (upper bound)
-#'   nAltsPerQ = 3, # Number of alternatives per question
-#'   nQPerResp = 6 # Number of questions per respondent
-#' )
-#'
-#' # Simulate choices based on a utility model with the following parameters:
-#' #   - 1 continuous "price" parameter
-#' #   - 4 discrete parameters for "type"
-#' #   - 2 random log-normal discrete parameters for "freshness"
-#' data_mxl <- cbc_choices(
-#'   survey = survey,
-#'   obsID = "obsID",
-#'   pars = list(
-#'     price     = 0.1,
-#'     type      = c(0.1, 0.2, 0.3, 0.4),
-#'     freshness = randLN(mu = c(0.1, 0.2), sigma = c(0.1, 0.2))
-#'   )
-#' )
+#' # Insert example
 randLN <- function(mu = 0, sigma = 1) {
   return(list(pars = list(mu = mu, sigma = sigma), type = "ln"))
 }

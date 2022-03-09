@@ -13,7 +13,7 @@ levels <- list(
 profiles <- cbc_profiles(levels)
 
 # Make a randomized survey design
-design <- cbc_design(
+design_rand <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
   n_alts   = 3, # Number of alternatives per question
@@ -21,7 +21,7 @@ design <- cbc_design(
 )
 
 # Make a randomized survey design with a "no choice" option
-design <- cbc_design(
+design_rand_nochoice <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
   n_alts    = 3, # Number of alternatives per question
@@ -31,7 +31,7 @@ design <- cbc_design(
 
 # Make randomized labeled survey design with each "type" appearing in each
 # choice question
-design_labeled <- cbc_design(
+design_rand_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
   n_alts    = 3, # Number of alternatives per question
@@ -39,41 +39,69 @@ design_labeled <- cbc_design(
   label     = "type"
 )
 
-# Simulate random choices for the design
-data <- cbc_choices(
-  design = design,
+# Make randomized labeled survey design with each "type" appearing in each
+# choice question and with a "no choice" option
+design_rand_labeled_nochoice <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 300, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  no_choice = TRUE,
+  label     = "type"
+)
+
+# Simulate random choices for a survey design
+data_rand <- cbc_choices(
+  design = design_rand,
   obsID  = "obsID"
 )
 
 # Simulate choices based on a utility model with the following parameters:
 #   - 1 continuous "price" parameter
-#   - 2 categorical parameters for "type" (first level is reference level)
-#   - 2 categorical parameters for "freshness" (first level is reference level)
-data <- cbc_choices(
-  design = design,
+#   - 2 categorical parameters for "type" (first level is reference)
+#   - 2 categorical parameters for "freshness" (first level is reference)
+data_prior <- cbc_choices(
+  design = design_rand,
   obsID = "obsID",
   priors = list(
     price     = 0.1,
     type      = c(0.1, 0.2),
-    freshness = c(0.1, -0.1)
+    freshness = c(0.1, -0.2)
   )
 )
 
 # Simulate choices based on a utility model with the following parameters:
 #   - 1 continuous "price" parameter
-#   - 2 categorical parameters for "type" (first level is reference level)
-#   - 2 random normal discrete parameters for "freshness"
-#   - 2 interaction parameters between "price" and "freshness"
-data <- cbc_choices(
-  design = design,
+#   - 2 categorical parameters for "type" (first level is reference)
+#   - 2 categorical parameters for "freshness" (first level is reference)
+#   - 2 interaction parameters between "price" and "type"
+data_prior_int <- cbc_choices(
+  design = design_rand,
   obsID = "obsID",
   priors = list(
     price = 0.1,
     type = c(0.1, 0.2),
-    freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
-    `price*freshness` = c(1, 2)
+    freshness = c(0.1, -0.2),
+    `price*type` = c(0.1, 0.5)
   )
 )
+
+# Simulate choices based on a utility model with the following parameters:
+#   - 1 continuous "price" parameter
+#   - 2 random normal discrete parameters for "type" (first level is reference)
+#   - 2 categorical parameters for "freshness" (first level is reference)
+data_prior_mixed <- cbc_choices(
+  design = design_rand,
+  obsID = "obsID",
+  priors = list(
+    price = 0.1,
+    type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
+    freshness = c(0.1, -0.2)
+  )
+)
+
+
+
 
 # # Estimate models with different sample sizes
 # models <- estimateModels(
