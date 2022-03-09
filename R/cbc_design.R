@@ -22,9 +22,9 @@
 #' profiles <- cbc_profiles(levels)
 cbc_profiles <- function(levels) {
     profiles <- expand.grid(levels)
-    profiles$profile_id <- seq(nrow(profiles))
-    varNames <- varNames <- setdiff(names(profiles), "profile_id")
-    profiles <- profiles[,c("profile_id", varNames)]
+    profiles$profileID <- seq(nrow(profiles))
+    varNames <- varNames <- setdiff(names(profiles), "profileID")
+    profiles <- profiles[,c("profileID", varNames)]
     return(profiles)
 }
 
@@ -212,7 +212,7 @@ add_metadata <- function(design, n_resp, n_alts, n_q) {
 
 get_dups <- function(design, n_alts) {
     counts <- tapply(
-      design$profile_id, design$obsID,
+      design$profileID, design$obsID,
       FUN = function(x) length(unique(x))
     )
     dup_ids <- which(counts != n_alts)
