@@ -17,6 +17,8 @@ knitr::opts_chunk$set(
 
 # cbcTools
 
+# logitr <a href='https://jhelvy.github.io/cbcTools/'><img src='man/figures/logo.png' align="right" style="height:139px;"/></a>
+
 <!-- badges: start -->
 [![CRAN
 status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.org/package=cbcTools)
