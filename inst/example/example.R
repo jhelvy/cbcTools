@@ -5,93 +5,76 @@ library(cbcTools)
 # Define the attributes and levels
 levels <- list(
   price     = seq(1, 4, 0.5), # $ per pound
-  type      = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Excellent', 'Average', 'Poor')
+  type      = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c("Excellent", "Average", "Poor")
 )
 
-# Generate all profiles with all attributes dummy-coded
+# Generate all all possible profiles
 profiles <- cbc_profiles(levels)
 
-# Make a fully random conjoint survey
-survey <- cbc_design(
+# Make a randomized survey design
+design <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6   # Number of questions per respondent
+  n_alts   = 3, # Number of alternatives per question
+  n_q      = 6 # Number of questions per respondent
 )
 
-# Make a fully random conjoint survey with a "no choice" option
-survey <- cbc_design(
+# Make a randomized survey design with a "no choice" option
+design <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
-  n_alts    = 3,   # Number of alternatives per question
-  n_q       = 6,   # Number of questions per respondent
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
   no_choice = TRUE
 )
 
-# Make randomized labeled survey with each "type" appearing in each
+# Make randomized labeled survey design with each "type" appearing in each
 # choice question
-survey_labeled <- cbc_design(
+design_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
-  n_alts    = 3,   # Number of alternatives per question
-  n_q       = 6,   # Number of questions per respondent
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
   label     = "type"
 )
 
-
-# # Make a D-efficient conjoint survey
-# survey <- cbc_design(
-#   profiles = profiles,
-#   n_resp   = 300, # Number of respondents
-#   n_alts   = 3,   # Number of alternatives per question
-#   n_q      = 6,    # Number of questions per respondent
-#   d_eff    = TRUE
-# )
-
-
-
-
-
-
-
-
-
-
-# Simulate random choices for the survey
+# Simulate random choices for the design
 data <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID"
+  design = design,
+  obsID  = "obsID"
 )
 
 # Simulate choices based on a utility model with the following parameters:
 #   - 1 continuous "price" parameter
-#   - 4 discrete parameters for "type"
-#   - 2 discrete parameters for "freshness"
+#   - 2 categorical parameters for "type" (first level is reference level)
+#   - 2 categorical parameters for "freshness" (first level is reference level)
 data <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID",
-    pars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = c(0.1, -0.1))
+  design = design,
+  obsID = "obsID",
+  priors = list(
+    price     = 0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, -0.1)
+  )
 )
 
 # Simulate choices based on a utility model with the following parameters:
 #   - 1 continuous "price" parameter
-#   - 4 discrete parameters for "type"
+#   - 2 categorical parameters for "type" (first level is reference level)
 #   - 2 random normal discrete parameters for "freshness"
 #   - 2 interaction parameters between "price" and "freshness"
 data <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID",
-    pars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
-        `price*freshness` = c(1, 2))
+  design = design,
+  obsID = "obsID",
+  priors = list(
+    price = 0.1,
+    type = c(0.1, 0.2),
+    freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
+    `price*freshness` = c(1, 2)
+  )
 )
-#
+
 # # Estimate models with different sample sizes
 # models <- estimateModels(
 #     nbreaks = 10,

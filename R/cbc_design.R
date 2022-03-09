@@ -18,18 +18,18 @@
 #' # Define the attributes and levels
 #' levels <- list(
 #'   price     = seq(1, 4, 0.5), # $ per pound
-#'   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-#'   freshness = c('Excellent', 'Average', 'Poor')
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c("Excellent", "Average", "Poor")
 #' )
 #'
 #' # Generate all profiles with all attributes dummy-coded
 #' profiles <- cbc_profiles(levels)
 cbc_profiles <- function(levels) {
-    profiles <- expand.grid(levels)
-    profiles$profileID <- seq(nrow(profiles))
-    varNames <- varNames <- setdiff(names(profiles), "profileID")
-    profiles <- profiles[,c("profileID", varNames)]
-    return(profiles)
+  profiles <- expand.grid(levels)
+  profiles$profileID <- seq(nrow(profiles))
+  varNames <- varNames <- setdiff(names(profiles), "profileID")
+  profiles <- profiles[, c("profileID", varNames)]
+  return(profiles)
 }
 
 #' Make a random or D-efficient choice-based conjoint survey design
@@ -66,57 +66,59 @@ cbc_profiles <- function(levels) {
 #' # Define the attributes and levels
 #' levels <- list(
 #'   price     = seq(1, 4, 0.5), # $ per pound
-#'   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-#'   freshness = c('Excellent', 'Average', 'Poor')
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c("Excellent", "Average", "Poor")
 #' )
 #'
-#' # Generate all profiles with all attributes dummy-coded
+#' # Generate all all possible profiles
 #' profiles <- cbc_profiles(levels)
 #'
-#' # Make a fully random conjoint survey
-#' survey <- cbc_design(
+#' # Make a randomized survey design
+#' design <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6   # Number of questions per respondent
+#'   n_alts   = 3, # Number of alternatives per question
+#'   n_q      = 6 # Number of questions per respondent
 #' )
 #'
-#' # Make a fully random conjoint survey with a "no choice" option
-#' survey <- cbc_design(
+#' # Make a randomized survey design with a "no choice" option
+#' design <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
-#'   n_alts    = 3,   # Number of alternatives per question
-#'   n_q       = 6,   # Number of questions per respondent
+#'   n_alts    = 3, # Number of alternatives per question
+#'   n_q       = 6, # Number of questions per respondent
 #'   no_choice = TRUE
 #' )
 #'
-#' # Make randomized labeled survey with each "type" appearing in each
+#' # Make randomized labeled survey design with each "type" appearing in each
 #' # choice question
-#' survey_labeled <- cbc_design(
+#' design_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
-#'   n_alts    = 3,   # Number of alternatives per question
-#'   n_q       = 6,   # Number of questions per respondent
+#'   n_alts    = 3, # Number of alternatives per question
+#'   n_q       = 6, # Number of questions per respondent
 #'   label     = "type"
 #' )
 cbc_design <- function(
-    profiles,
-    n_resp,
-    n_alts,
-    n_q,
-    no_choice = FALSE,
-    label = NULL,
-    d_eff = FALSE
+  profiles,
+  n_resp,
+  n_alts,
+  n_q,
+  no_choice = FALSE,
+  label = NULL,
+  d_eff = FALSE
 ) {
-    profiles <- as.data.frame(profiles) # tibbles break things
-    if (d_eff) {
-        design <- make_design_eff(
-            profiles, n_resp, n_alts, n_q, no_choice, label)
-    } else {
-        design <- make_design_rand(
-            profiles, n_resp, n_alts, n_q, no_choice, label)
-    }
-    return(design)
+  profiles <- as.data.frame(profiles) # tibbles break things
+  if (d_eff) {
+    design <- make_design_eff(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
+  } else {
+    design <- make_design_rand(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
+  }
+  return(design)
 }
 
 # D-efficient design ----
@@ -158,124 +160,129 @@ cbc_design <- function(
 # Randomized design ----
 
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-    design <- design_rand(profiles, n_resp, n_alts, n_q)
-    if (!is.null(label)) {
-      design <- design_rand_label(profiles, n_resp, n_alts, n_q, label)
-    }
-    if (no_choice) {
-       design <- add_no_choice(design, n_alts)
-    }
-    design <- reorder_cols(design)
-    return(design)
+  design <- design_rand(profiles, n_resp, n_alts, n_q)
+  if (!is.null(label)) {
+    design <- design_rand_label(profiles, n_resp, n_alts, n_q, label)
+  }
+  if (no_choice) {
+    design <- add_no_choice(design, n_alts)
+  }
+  design <- reorder_cols(design)
+  return(design)
 }
 
 design_rand <- function(profiles, n_resp, n_alts, n_q) {
-  design <- sample_rows(profiles, size = n_resp*n_alts*n_q)
+  design <- sample_rows(profiles, size = n_resp * n_alts * n_q)
   design <- remove_dups(design, n_resp, n_alts, n_q)
   return(design)
 }
 
 design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
-    n_levels <- length(unique(profiles[,label]))
-    if (n_levels != n_alts) {
-        warning(paste0(
-            "The n_alts argument is being set to ", n_levels,
-            " to match the number of unique levels in the ", label,
-            " variable"
-        ))
-        # Over-ride user-provided n_alts as it is determined by the label
-        n_alts <- n_levels
-    }
-    # Randomize rows by label
-    labels <- split(profiles, profiles[label])
-    for (i in seq_len(n_levels)) {
-        design_label <- sample_rows(labels[[i]], size = n_resp*n_q)
-        design_label$labelID <- seq(nrow(design_label))
-        labels[[i]] <- design_label
-    }
-    design <- do.call(rbind, labels)
-    design <- design[order(design$labelID),]
-    design$labelID <- NULL
-    # Add meta data and remove cases with double alternatives
-    design <- remove_dups(design, n_resp, n_alts, n_q)
-    return(design)
+  n_levels <- length(unique(profiles[, label]))
+  if (n_levels != n_alts) {
+    warning(paste0(
+      "The n_alts argument is being set to ", n_levels,
+      " to match the number of unique levels in the ", label,
+      " variable"
+    ))
+    # Over-ride user-provided n_alts as it is determined by the label
+    n_alts <- n_levels
+  }
+  # Randomize rows by label
+  labels <- split(profiles, profiles[label])
+  for (i in seq_len(n_levels)) {
+    design_label <- sample_rows(labels[[i]], size = n_resp * n_q)
+    design_label$labelID <- seq(nrow(design_label))
+    labels[[i]] <- design_label
+  }
+  design <- do.call(rbind, labels)
+  design <- design[order(design$labelID), ]
+  design$labelID <- NULL
+  # Add meta data and remove cases with double alternatives
+  design <- remove_dups(design, n_resp, n_alts, n_q)
+  return(design)
 }
 
 sample_rows <- function(profiles, size) {
-    sample_ids <- sample(
-      x = seq_len(nrow(profiles)), size = size, replace = TRUE)
-    return(profiles[sample_ids,])
+  sample_ids <- sample(
+    x = seq_len(nrow(profiles)), size = size, replace = TRUE
+  )
+  return(profiles[sample_ids, ])
 }
 
 remove_dups <- function(design, n_resp, n_alts, n_q) {
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  dup_rows <- get_dups(design, n_alts)
+  while (length(dup_rows) > 0) {
+    # cat('Number repeated: ', length(dup_rows), '\n')
+    new_rows <- sample(
+      x = seq(nrow(design)), size = length(dup_rows), replace = F
+    )
+    design[dup_rows, ] <- design[new_rows, ]
     design <- add_metadata(design, n_resp, n_alts, n_q)
     dup_rows <- get_dups(design, n_alts)
-    while (length(dup_rows) > 0) {
-        # cat('Number repeated: ', length(dup_rows), '\n')
-        new_rows <- sample(
-            x = seq(nrow(design)), size = length(dup_rows), replace = F)
-        design[dup_rows,] <- design[new_rows,]
-        design <- add_metadata(design, n_resp, n_alts, n_q)
-        dup_rows <- get_dups(design, n_alts)
-    }
-    return(design)
+  }
+  return(design)
 }
 
 add_metadata <- function(design, n_resp, n_alts, n_q) {
-    n_rows_per_resp   <- n_alts*n_q
-    design$respID     <- rep(seq(n_resp), each = n_rows_per_resp)
-    design$qID        <- rep(rep(seq(n_q), each = n_alts), n_resp)
-    design$altID      <- rep(seq(n_alts), n_resp*n_q)
-    design$obsID      <- rep(seq(n_resp * n_q), each = n_alts)
-    row.names(design) <- NULL
-    return(design)
+  n_rows_per_resp <- n_alts * n_q
+  design$respID <- rep(seq(n_resp), each = n_rows_per_resp)
+  design$qID <- rep(rep(seq(n_q), each = n_alts), n_resp)
+  design$altID <- rep(seq(n_alts), n_resp * n_q)
+  design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
+  row.names(design) <- NULL
+  return(design)
 }
 
 get_dups <- function(design, n_alts) {
-    counts <- tapply(
-      design$profileID, design$obsID,
-      FUN = function(x) length(unique(x))
-    )
-    dup_ids <- which(counts != n_alts)
-    dup_rows <- which(design$obsID %in% dup_ids)
-    return(dup_rows)
+  counts <- tapply(
+    design$profileID, design$obsID,
+    FUN = function(x) length(unique(x))
+  )
+  dup_ids <- which(counts != n_alts)
+  dup_rows <- which(design$obsID %in% dup_ids)
+  return(dup_rows)
 }
 
 reorder_cols <- function(design) {
-    metaNames <- c("respID", "qID", "altID", "obsID")
-    varNames <- setdiff(names(design), metaNames)
-    design <- as.data.frame(design)[,c(metaNames, varNames)]
-    return(design)
+  metaNames <- c("respID", "qID", "altID", "obsID")
+  varNames <- setdiff(names(design), metaNames)
+  design <- as.data.frame(design)[, c(metaNames, varNames)]
+  return(design)
 }
 
 add_no_choice <- function(design, n_alts) {
-    # Must dummy code categorical variables to include an outside good
-    design <- dummy_code(design)
-    # Create outside good rows
-    design_og <- design[which(design$altID == 1),]
-    design_og[
-        , !names(design_og) %in% c("respID", "qID", "altID", "obsID")] <- 0
-    design_og$altID <- n_alts + 1
-    design_og$no_choice <- 1
-    # Insert outside good rows into design
-    design$no_choice <- 0
-    design <- rbind(design, design_og)
-    design <- design[order(design$obsID),]
-    return(design)
+  # Must dummy code categorical variables to include an outside good
+  design <- dummy_code(design)
+  # Create outside good rows
+  design_og <- design[which(design$altID == 1), ]
+  design_og[
+    , !names(design_og) %in% c("respID", "qID", "altID", "obsID")
+  ] <- 0
+  design_og$altID <- n_alts + 1
+  design_og$no_choice <- 1
+  # Insert outside good rows into design
+  design$no_choice <- 0
+  design <- rbind(design, design_og)
+  design <- design[order(design$obsID), ]
+  return(design)
 }
 
 dummy_code <- function(design) {
-    types <- get_col_types(design)
-    nonnumeric <- names(types[!types %in% c("integer", "numeric")])
-    if (length(nonnumeric) > 0) {
-        design <- fastDummies::dummy_cols(design, nonnumeric)
-        design[,nonnumeric] <- NULL
-    }
-    return(design)
+  types <- get_col_types(design)
+  nonnumeric <- names(types[!types %in% c("integer", "numeric")])
+  if (length(nonnumeric) > 0) {
+    design <- fastDummies::dummy_cols(design, nonnumeric)
+    design[, nonnumeric] <- NULL
+  }
+  return(design)
 }
 
 get_col_types <- function(data) {
   types <- lapply(data, class)
-  test <- function(x) {x[1]}
+  test <- function(x) {
+    x[1]
+  }
   return(unlist(lapply(types, test)))
 }
