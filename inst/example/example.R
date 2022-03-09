@@ -100,6 +100,15 @@ data_prior_mixed <- cbc_choices(
   )
 )
 
+# Estimate models with different sample sizes
+models <- cbc_power(
+    nbreaks = 10,
+    n_q = 6,
+    data    = data_rand,
+    pars    = c("price", "type", "freshness"),
+    outcome = "choice",
+    obsID   = "obsID"
+)
 
 
 
