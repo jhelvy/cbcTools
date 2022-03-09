@@ -32,11 +32,13 @@ print.cbc_models <- function (
 #' @aliases plot.cbc_errors
 #' @param x is an object of class `cbc_errors`.
 #' @param ... further arguments.
+#' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
+#' theme element_blank labs
 #'
 #' @rdname miscmethods.cbc_errors
 #' @export
 plot.cbc_errors <- function (x, ...) {
-  plot <- ggplot(x) +
+  plot <- ggplot2::ggplot(x) +
     geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
     geom_point(aes(x = sampleSize, y = se, color = coef), size = 1.8) +
     expand_limits(y = 0) +
