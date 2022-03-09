@@ -20,7 +20,7 @@ print.cbc_models <- function (
   cat("A list of models estimated with the following sample sizes:")
   cat("\n\n", paste0(names(x), "\n"), "\n")
   cat("Each model contains estimates for the following parameters:")
-  cat("\n\n", paste0(names(coef(x[[1]])), "\n"))
+  cat("\n\n", paste0(names(stats::coef(x[[1]])), "\n"))
   invisible(x)
 }
 
@@ -34,13 +34,17 @@ print.cbc_models <- function (
 #' @param ... further arguments.
 #' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
 #' theme element_blank labs
+#' @importFrom rlang .data
 #'
 #' @rdname miscmethods.cbc_errors
 #' @export
 plot.cbc_errors <- function (x, ...) {
   plot <- ggplot2::ggplot(x) +
     geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
-    geom_point(aes(x = sampleSize, y = se, color = coef), size = 1.8) +
+    geom_point(
+      aes(x = .data$sampleSize, y = .data$se, color = .data$coef),
+      size = 1.8
+    ) +
     expand_limits(y = 0) +
     theme_bw(base_size = 14) +
     theme(panel.grid.minor = element_blank()) +

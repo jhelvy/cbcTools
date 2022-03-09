@@ -121,7 +121,12 @@ cbc_design <- function(
 }
 
 # D-efficient design ----
-# (still under development, will likely refer to the {idefix} package)
+
+# still under development, will likely refer to the {idefix} package
+
+make_design_eff <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
+  return(make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label))
+}
 
 # make_design_eff <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
 #     survey <- get_eff_design(profiles, n_resp, n_alts, n_q, no_choice, label)
