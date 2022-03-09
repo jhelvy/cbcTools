@@ -2,7 +2,7 @@
 % Please edit documentation in R/cbc_choices.R
 \name{randN}
 \alias{randN}
-\title{Define "true" (assumed) model parameters as normally-distributed.}
+\title{Define a prior (assumed) model parameter as normally-distributed.}
 \usage{
 randN(mu = 0, sigma = 1)
 }
@@ -12,47 +12,14 @@ randN(mu = 0, sigma = 1)
 \item{sigma}{Vector of standard deviations, defaults to \code{1}.}
 }
 \value{
-A list defining normally-distributed parameters of the "true"
-utility model used to simulate choices in the \code{cbc_choices()} function.
+A list defining normally-distributed parameters of the prior
+(assumed) utility model used to simulate choices in the \code{cbc_choices()}
+function.
 }
 \description{
-Define "true" (assumed) model parameters as normally-distributed. Used in the
-\code{cbc_choices()} function.
+Define a prior (assumed) model parameter as normally-distributed.
+Used in the \code{cbc_choices()} function.
 }
 \examples{
-library(conjointTools)
-
-# Define the attributes and levels
-levels <- list(
-  price     = seq(1, 4, 0.5), # $ per pound
-  type      = c('Fuji', 'Gala', 'Honeycrisp', 'Pink Lady', 'Red Delicious'),
-  freshness = c('Excellent', 'Average', 'Poor')
-)
-
-# Make a full-factorial design of experiment
-doe <- makeDoe(levels)
-
-# Re-code levels
-doe <- recodeDoe(doe, levels)
-
-# Make the conjoint survey by randomly sampling from the doe
-survey <- makeSurvey(
-  doe       = doe,  # Design of experiment
-  nResp     = 2000, # Total number of respondents (upper bound)
-  nAltsPerQ = 3,    # Number of alternatives per question
-  nQPerResp = 6     # Number of questions per respondent
-)
-
-# Simulate choices based on a utility model with the following parameters:
-#   - 1 continuous "price" parameter
-#   - 4 discrete parameters for "type"
-#   - 2 random normal discrete parameters for "freshness"
-data_mxl <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID",
-    pars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)))
-)
+# Insert example
 }

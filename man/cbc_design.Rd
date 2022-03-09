@@ -2,84 +2,91 @@
 % Please edit documentation in R/cbc_design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Make a choice-based conjoint survey design}
+\title{Make a random or D-efficient choice-based conjoint survey design}
 \usage{
 cbc_design(
-  levels,
-  nResp,
-  nAltsPerQ,
-  nQPerResp,
-  outsideGood = FALSE,
-  random = TRUE,
+  profiles,
+  n_resp,
+  n_alts,
+  n_q,
+  no_choice = FALSE,
   label = NULL,
-  maxTrials = NA,
-  search = FALSE
+  d_eff = FALSE
 )
 }
 \arguments{
-\item{levels}{A named list of vectors defining each attribute (the names)
-and each level for each attribute (the vectors). For example, a design
-with two attributes, \code{"price"} and \code{"type"}, that each had three levels
-should be defined as \code{levels = list(price = c(1, 2, 3), type = c("1", "2", "3"))}.
-Numeric values will be treated as continuous levels and character values
-will be treated as discrete levels.}
+\item{profiles}{A data frame in which each row is a possible profile.
+This can be generated using the \code{cbc_profiles()} function.}
 
-\item{nResp}{Maximum number of survey respondents.}
+\item{n_resp}{Number of survey respondents.}
 
-\item{nAltsPerQ}{Number of alternatives per question.}
+\item{n_alts}{Number of alternatives per choice question.}
 
-\item{nQPerResp}{Number of questions per respondent.}
+\item{n_q}{Number of questions per respondent.}
 
-\item{outsideGood}{Include an outside good in the choice sets? Defaults to
+\item{no_choice}{Include a "none" option in the choice sets? Defaults to
 \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
-one more than the provided \code{nAltsPerQ} argument.}
-
-\item{random}{Set to \code{TRUE} to return a fully randomized design, otherwise
-returns a D-efficient design. Defaults to \code{TRUE}.}
+one more than the provided \code{n_alts} argument.}
 
 \item{label}{The name of the variable to use in a "labeled" design
-such that each set of alternatives contains one of each of the levels in
-the \code{label} attribute. If included, the \code{nAltsPerQ} argument will be
-ignored as its value is determined by the unique number of levels in the
-\code{label} variable. Defaults to \code{NULL}.}
+(also called an "alternative-specific design") such that each set of
+alternatives contains one of each of the levels in the \code{label} attribute.
+If used, the \code{n_alts} argument will be ignored as its value is defined by
+the unique number of levels in the \code{label} variable. Defaults to \code{NULL}.}
 
-\item{maxTrials}{The maximum number of trials to be used in a fractional
-factorial design. Defaults to \code{NA}, in which case it is set to the number of
-alternatives in the full factorial design. If \code{search = TRUE}, then all
-feasible designs will be calculated up to \code{maxTrials} or until a perfect
-D-efficiency (1) is found.}
-
-\item{search}{If \code{TRUE}, all feasible designs are calculated up to
-\code{maxTrials} or until a perfect D-efficiency (1) is found, after which a
-summary of the search results is printed and the top-ranked D-efficient
-design is returned. Defaults to \code{FALSE}.}
+\item{d_eff}{If \code{TRUE}, returns a D-efficient design where each respondent
+is shown the same design, otherwise a fully randomized design is returned.
+Defaults to \code{FALSE}. \strong{This feature is not yet implemented}}
 }
 \value{
-Returns a data frame containing a choice-based conjoint survey
-design.
+A data frame containing a choice-based conjoint survey design where
+each row is an alternative.
 }
 \description{
-Make a choice-based conjoint survey design
+This function creates a data frame containing a choice-based conjoint survey
+design where each row is an alternative. Designs can be either fully
+randomized or D-efficient, in which case an implementation of the
+Modified Federov algorithm is used via the \code{idefix} package.
 }
 \examples{
+library(cbcTools)
+
+# A simple conjoint experiment about apples
+
 # Define the attributes and levels
 levels <- list(
   price     = seq(1, 4, 0.5), # $ per pound
-  type      = c('Fuji', 'Gala', 'Honeycrisp', 'Pink Lady', 'Red Delicious'),
-  freshness = c('Excellent', 'Average', 'Poor')
+  type      = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c("Excellent", "Average", "Poor")
 )
 
-# Make a full-factorial design of experiment
-doe <- makeDoe(levels)
+# Generate all all possible profiles
+profiles <- cbc_profiles(levels)
 
-# Re-code levels
-doe <- recodeDoe(doe, levels)
+# Make a randomized survey design
+design_rand <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3, # Number of alternatives per question
+  n_q      = 6 # Number of questions per respondent
+)
 
-# Make the conjoint survey by randomly sampling from the doe
-survey <- cbc_design(
-  doe       = doe,  # Design of experiment
-  nResp     = 2000, # Total number of respondents (upper bound)
-  nAltsPerQ = 3,    # Number of alternatives per question
-  nQPerResp = 6     # Number of questions per respondent
+# Make a randomized survey design with a "no choice" option
+design_rand_nochoice <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 300, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  no_choice = TRUE
+)
+
+# Make randomized labeled survey design with each "type" appearing in each
+# choice question
+design_rand_labeled <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 300, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  label     = "type"
 )
 }

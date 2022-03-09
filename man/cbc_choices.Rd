@@ -2,88 +2,51 @@
 % Please edit documentation in R/cbc_choices.R
 \name{cbc_choices}
 \alias{cbc_choices}
-\title{Simulate choices for a given survey}
+\title{Simulate choices for a survey design}
 \usage{
-cbc_choices(survey, obsID = "obsID", truePars = NULL, numDraws = 100)
+cbc_choices(design, obsID = "obsID", priors = NULL, n_draws = 100)
 }
 \arguments{
-\item{survey}{A survey data frame exported from the \code{makeSurvey()}
-function.}
+\item{design}{A data frame of a survey design.}
 
-\item{obsID}{The name of the column that identifies each choice observation.
-Defaults to \code{"obsID"}.}
+\item{obsID}{The name of the column in \code{design} that identifies each choice
+observation. Defaults to \code{"obsID"}.}
 
-\item{truePars}{A list of one or more parameters separated by commas that
-define the "true" (assumed) utility model used to simulate choices for the
-\code{survey} data frame. If no parameters are included, choices will be randomly
-assigned. Defaults to \code{NULL}.}
+\item{priors}{A list of one or more prior parameters that define a prior
+(assumed) utility model used to simulate choices for the \code{survey} data frame.
+If \code{NULL} (the default), choices will be randomly assigned.}
 
-\item{numDraws}{The number of Halton draws to use for simulated choices
-based on mixed logit models. Defaults to \code{100}.}
+\item{n_draws}{The number of Halton draws to use for simulated choices
+for mixed logit models. Defaults to \code{100}.}
 }
 \value{
-Returns the \code{survey} data frame with an additional \code{choice} column
+Returns the \code{design} data frame with an additional \code{choice} column
 identifying the simulated choices.
 }
 \description{
-Simulate choices for a given \code{survey} data frame, either randomly or
-according to a utility model defined by user-provided parameters.
+Simulate choices for a survey design, either randomly or according to a
+utility model defined by user-provided prior parameters.
 }
 \examples{
-library(conjointTools)
+library(cbcTools)
+
+# A simple conjoint experiment about apples
 
 # Define the attributes and levels
 levels <- list(
   price     = seq(1, 4, 0.5), # $ per pound
-  type      = c('Fuji', 'Gala', 'Honeycrisp', 'Pink Lady', 'Red Delicious'),
-  freshness = c('Excellent', 'Average', 'Poor')
+  type      = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c("Excellent", "Average", "Poor")
 )
 
-# Make a full-factorial design of experiment
-doe <- makeDoe(levels)
+# Generate all all possible profiles
+profiles <- cbc_profiles(levels)
 
-# Re-code levels
-doe <- recodeDoe(doe, levels)
-
-# Make the conjoint survey by randomly sampling from the doe
-survey <- makeSurvey(
-  doe       = doe,  # Design of experiment
-  nResp     = 2000, # Total number of respondents (upper bound)
-  nAltsPerQ = 3,    # Number of alternatives per question
-  nQPerResp = 6     # Number of questions per respondent
-)
-
-# Simulate random choices for the survey
-data_random <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID"
-)
-
-# Simulate choices based on a utility model with the following parameters:
-#   - 1 continuous "price" parameter
-#   - 4 discrete parameters for "type"
-#   - 2 discrete parameters for "freshness"
-data_mnl <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID",
-    truePars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = c(0.1, -0.1))
-)
-
-# Simulate choices based on a utility model with the following parameters:
-#   - 1 continuous "price" parameter
-#   - 4 discrete parameters for "type"
-#   - 2 random normal discrete parameters for "freshness"
-#   - 2 interaction parameters between "price" and "freshness"
-data_mxl <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID",
-    truePars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = randN(mu = c(0.1, -0.1), sigma = c(1, 2)),
-        `price*freshness` = c(1, 2))
+# Make a randomized survey design
+design <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3, # Number of alternatives per question
+  n_q      = 6 # Number of questions per respondent
 )
 }
