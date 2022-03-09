@@ -1,23 +1,21 @@
-#' Simulate choices for a given survey
+#' Simulate choices for a survey design
 #'
-#' Simulate choices for a given `survey` data frame, either randomly or
-#' according to a utility model defined by user-provided parameters.
+#' Simulate choices for a survey design, either randomly or according to a
+#' utility model defined by user-provided prior parameters.
 #'
-#' @param survey A survey data frame exported from the `makeSurvey()`
-#' function.
-#' @param obsID The name of the column that identifies each choice observation.
-#' Defaults to `"obsID"`.
-#' @param truePars A list of one or more parameters separated by commas that
-#' define the "true" (assumed) utility model used to simulate choices for the
-#' `survey` data frame. If no parameters are included, choices will be randomly
-#' assigned. Defaults to `NULL`.
-#' @param numDraws The number of Halton draws to use for simulated choices
-#' based on mixed logit models. Defaults to `100`.
-#' @return Returns the `survey` data frame with an additional `choice` column
+#' @param design A data frame of a survey design.
+#' @param obsID The name of the column in `design` that identifies each choice
+#' observation. Defaults to `"obsID"`.
+#' @param priors A list of one or more prior parameters that define a prior
+#' (assumed) utility model used to simulate choices for the `survey` data frame.
+#' If `NULL` (the default), choices will be randomly assigned.
+#' @param n_draws The number of Halton draws to use for simulated choices
+#' for mixed logit models. Defaults to `100`.
+#' @return Returns the `design` data frame with an additional `choice` column
 #' identifying the simulated choices.
 #' @export
 #' @examples
-#' library(conjointTools)
+#' library(cbcTools)
 #'
 #' # Define the attributes and levels
 #' levels <- list(

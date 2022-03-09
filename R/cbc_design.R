@@ -11,6 +11,10 @@
 #' @return A data frame of all possible combinations of attribute levels.
 #' @export
 #' @examples
+#' library(cbcTools)
+#'
+#' # A simple conjoint experiment about apples
+#'
 #' # Define the attributes and levels
 #' levels <- list(
 #'   price     = seq(1, 4, 0.5), # $ per pound
@@ -18,7 +22,7 @@
 #'   freshness = c('Excellent', 'Average', 'Poor')
 #' )
 #'
-#' # Generate profiles of all combinations for each attribute and level
+#' # Generate all profiles with all attributes dummy-coded
 #' profiles <- cbc_profiles(levels)
 cbc_profiles <- function(levels) {
     profiles <- expand.grid(levels)
@@ -43,18 +47,22 @@ cbc_profiles <- function(levels) {
 #' @param no_choice Include a "none" option in the choice sets? Defaults to
 #' `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #' one more than the provided `n_alts` argument.
+#' @param label The name of the variable to use in a "labeled" design
+#' (also called an "alternative-specific design") such that each set of
+#' alternatives contains one of each of the levels in the `label` attribute.
+#' If used, the `n_alts` argument will be ignored as its value is defined by
+#' the unique number of levels in the `label` variable. Defaults to `NULL`.
 #' @param d_eff If `TRUE`, returns a D-efficient design where each respondent
 #' is shown the same design, otherwise a fully randomized design is returned.
-#' Defaults to `FALSE`.
-#' @param label The name of the variable to use in a "labeled" design
-#' such that each set of alternatives contains one of each of the levels in
-#' the `label` attribute. If used, the `n_alts` argument will be ignored as its
-#' value is determined by the unique number of levels in the `label` variable.
-#' Defaults to `NULL`.
+#' Defaults to `FALSE`. **This feature is not yet implemented**
 #' @return A data frame containing a choice-based conjoint survey design where
 #' each row is an alternative.
 #' @export
 #' @examples
+#' library(cbcTools)
+#'
+#' # A simple conjoint experiment about apples
+#'
 #' # Define the attributes and levels
 #' levels <- list(
 #'   price     = seq(1, 4, 0.5), # $ per pound
@@ -62,7 +70,7 @@ cbc_profiles <- function(levels) {
 #'   freshness = c('Excellent', 'Average', 'Poor')
 #' )
 #'
-#' # Generate profiles of all combinations for each attribute and level
+#' # Generate all profiles with all attributes dummy-coded
 #' profiles <- cbc_profiles(levels)
 #'
 #' # Make a fully random conjoint survey
@@ -70,16 +78,26 @@ cbc_profiles <- function(levels) {
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
+#'   n_q      = 6   # Number of questions per respondent
 #' )
 #'
-#' # Make a D-efficient conjoint survey
+#' # Make a fully random conjoint survey with a "no choice" option
 #' survey <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6,    # Number of questions per respondent
-#'   d_eff    = TRUE
+#'   profiles  = profiles,
+#'   n_resp    = 300, # Number of respondents
+#'   n_alts    = 3,   # Number of alternatives per question
+#'   n_q       = 6,   # Number of questions per respondent
+#'   no_choice = TRUE
+#' )
+#'
+#' # Make randomized labeled survey with each "type" appearing in each
+#' # choice question
+#' survey_labeled <- cbc_design(
+#'   profiles  = profiles,
+#'   n_resp    = 300, # Number of respondents
+#'   n_alts    = 3,   # Number of alternatives per question
+#'   n_q       = 6,   # Number of questions per respondent
+#'   label     = "type"
 #' )
 cbc_design <- function(
     profiles,
@@ -87,8 +105,8 @@ cbc_design <- function(
     n_alts,
     n_q,
     no_choice = FALSE,
-    d_eff = FALSE,
-    label = NULL
+    label = NULL,
+    d_eff = FALSE
 ) {
     profiles <- as.data.frame(profiles) # tibbles break things
     if (d_eff) {
@@ -100,6 +118,9 @@ cbc_design <- function(
     }
     return(design)
 }
+
+# D-efficient design ----
+# (still under development, will likely refer to the {idefix} package)
 
 # make_design_eff <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
 #     survey <- get_eff_design(profiles, n_resp, n_alts, n_q, no_choice, label)
