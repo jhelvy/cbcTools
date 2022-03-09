@@ -27,6 +27,7 @@ reference:
 - title: "Design"
   desc: "Functions for generating survey designs."
   contents:
+  - cbc_profiles
   - cbc_design
 - title: "Inspect"
   desc: "Functions for inspecting survey designs."
