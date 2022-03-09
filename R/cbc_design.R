@@ -1,7 +1,6 @@
-#' Make a coded matrix of all possible combinations of attribute levels
+#' Make a data frame of all combinations of attribute levels
 #'
-#' This function is a wrapper for the `Profiles()` function from the `idefix`
-#' package, which creates a coded matrix of all possible combinations of
+#' This function creates a data frame of of all possible combinations of
 #' attribute levels defined in the `levels` argument.
 #' @param levels A named list of vectors defining each attribute (the names)
 #' and each level for each attribute (the vectors). For example, a design
@@ -246,7 +245,7 @@ get_dups <- function(design, n_alts) {
 }
 
 reorder_cols <- function(design) {
-  metaNames <- c("respID", "qID", "altID", "obsID")
+  metaNames <- c("respID", "qID", "altID", "obsID", "profileID")
   varNames <- setdiff(names(design), metaNames)
   design <- as.data.frame(design)[, c(metaNames, varNames)]
   return(design)

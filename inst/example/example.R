@@ -2,6 +2,10 @@ library(cbcTools)
 
 # A simple conjoint experiment about apples
 
+
+
+# Design the survey ----
+
 # Define the attributes and levels
 levels <- list(
   price     = seq(1, 4, 0.5), # $ per pound
@@ -49,6 +53,18 @@ design_rand_labeled_nochoice <- cbc_design(
   no_choice = TRUE,
   label     = "type"
 )
+
+
+
+# Inspect survey design ----
+
+# View the amount of overlap in a design
+
+cbc_overlap(design_rand)
+
+
+
+# Simulate choices ----
 
 # Simulate random choices for a survey design
 data_rand <- cbc_choices(
@@ -100,6 +116,10 @@ data_prior_mixed <- cbc_choices(
   )
 )
 
+
+
+# Power analysis on a design ----
+
 # Estimate models with different sample sizes
 results <- cbc_power(
     nbreaks = 10,
@@ -114,5 +134,5 @@ results <- cbc_power(
 head(results)
 tail(results)
 
-# Plot
+# Visualize
 plot(results)

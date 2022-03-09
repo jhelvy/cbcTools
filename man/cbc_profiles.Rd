@@ -2,7 +2,7 @@
 % Please edit documentation in R/cbc_design.R
 \name{cbc_profiles}
 \alias{cbc_profiles}
-\title{Make a coded matrix of all possible combinations of attribute levels}
+\title{Make a data frame of all combinations of attribute levels}
 \usage{
 cbc_profiles(levels)
 }
@@ -17,8 +17,7 @@ that each had three levels could be defined as
 A data frame of all possible combinations of attribute levels.
 }
 \description{
-This function is a wrapper for the \code{Profiles()} function from the \code{idefix}
-package, which creates a coded matrix of all possible combinations of
+This function creates a data frame of of all possible combinations of
 attribute levels defined in the \code{levels} argument.
 }
 \examples{
