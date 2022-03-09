@@ -101,51 +101,18 @@ data_prior_mixed <- cbc_choices(
 )
 
 # Estimate models with different sample sizes
-models <- cbc_power(
+results <- cbc_power(
     nbreaks = 10,
-    n_q = 6,
+    n_q     = 6,
     data    = data_rand,
     pars    = c("price", "type", "freshness"),
     outcome = "choice",
     obsID   = "obsID"
 )
 
+# Preview
+head(results)
+tail(results)
 
-
-# # Estimate models with different sample sizes
-# models <- estimateModels(
-#     nbreaks = 10,
-#     data    = data,
-#     pars    = c("price", "type", "freshness"),
-#     outcome = "choice",
-#     obsID   = "obsID"
-# )
-#
-# # Extract coefficients and standard errors from models
-# results <- getModelResults(models)
-# head(results)
-# tail(results)
-#
-# # View summary of standard errors for each sample size
-# library(ggplot2)
-#
-# ggplot(results) +
-#   geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
-#   geom_point(aes(x = sampleSize, y = se, color = coef)) +
-#   expand_limits(y = 0) +
-#   theme_bw()
-#
-# # Compare estimated coefficients to true parameters for each sample size
-# truePars <- data.frame(
-#   coef = c(
-#     "price", "typeGala", "typeHoneycrisp", "typePink Lady",
-#     "typeRed Delicious", "freshnessExcellent", "freshnessPoor"),
-#   est_true = c(0.1, 0.1, 0.2, 0.3, 0.4, 0.1, -0.1))
-#
-# compare <- merge(results, truePars, by = "coef")
-# compare$diff = abs(compare$est_true - compare$est)
-#
-# ggplot(compare) +
-#   geom_point(aes(x = sampleSize, y = diff)) +
-#   facet_wrap(vars(coef)) +
-#   theme_bw()
+# Plot
+plot(results)

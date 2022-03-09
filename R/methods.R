@@ -1,23 +1,51 @@
-#' Methods for cbc objects
+#' Methods for cbc_models objects
 #'
-#' Miscellaneous methods for `cbc` class objects.
+#' Miscellaneous methods for `cbc_models` class objects.
 #'
-#' @name miscmethods.cbc
-#' @aliases print.cbc
-#' @param x is an object of class `cbc`.
+#' @name miscmethods.cbc_models
+#' @aliases print.cbc_models
+#' @param x is an object of class `cbc_models`.
 #' @param digits the number of digits for printing, defaults to `3`.
 #' @param width the width of the printing.
 #' @param ... further arguments.
 #'
-#' @rdname miscmethods.cbc
+#' @rdname miscmethods.cbc_models
 #' @export
-print.cbc <- function (
+print.cbc_models <- function (
   x,
   digits = max(3, getOption("digits") - 2),
   width = getOption("width"),
   ...
 ) {
-  cat("A list of models estimated with the following sample sizes:\n")
-  cat(names(x), "\n")
+  cat("A list of models estimated with the following sample sizes:")
+  cat("\n\n", paste0(names(x), "\n"), "\n")
+  cat("Each model contains estimates for the following parameters:")
+  cat("\n\n", paste0(names(coef(x[[1]])), "\n"))
   invisible(x)
+}
+
+#' Methods for cbc_errors objects
+#'
+#' Miscellaneous methods for `cbc_errors` class objects.
+#'
+#' @name miscmethods.cbc_errors
+#' @aliases plot.cbc_errors
+#' @param x is an object of class `cbc_errors`.
+#' @param ... further arguments.
+#'
+#' @rdname miscmethods.cbc_errors
+#' @export
+plot.cbc_errors <- function (x, ...) {
+  plot <- ggplot(x) +
+    geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
+    geom_point(aes(x = sampleSize, y = se, color = coef), size = 1.8) +
+    expand_limits(y = 0) +
+    theme_bw(base_size = 14) +
+    theme(panel.grid.minor = element_blank()) +
+    labs(
+      color = "Coefficient",
+      x = "Sample size",
+      y = "Standard error"
+    )
+  return(plot)
 }

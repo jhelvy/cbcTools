@@ -2,7 +2,7 @@
 % Please edit documentation in R/cbc_choices.R
 \name{randLN}
 \alias{randLN}
-\title{Define "true" (assumed) model parameters as normally-distributed.}
+\title{Define prior (assumed) model parameter as log-normally-distributed.}
 \usage{
 randLN(mu = 0, sigma = 1)
 }
@@ -13,47 +13,14 @@ randLN(mu = 0, sigma = 1)
 defaults to \code{1}.}
 }
 \value{
-A list defining log-normally-distributed parameters of the "true"
-utility model used to simulate choices in the \code{cbc_choices()} function.
+A list defining log-normally-distributed parameters of the prior
+(assumed) utility model used to simulate choices in the \code{cbc_choices()}
+function.
 }
 \description{
-Define "true" (assumed) model parameters as normally-distributed. Used in the
-\code{cbc_choices()} function.
+Define prior (assumed) model parameter as log-normally-distributed.
+Used in the \code{cbc_choices()} function.
 }
 \examples{
-library(conjointTools)
-
-# Define the attributes and levels
-levels <- list(
-  price     = seq(1, 4, 0.5), # $ per pound
-  type      = c('Fuji', 'Gala', 'Honeycrisp', 'Pink Lady', 'Red Delicious'),
-  freshness = c('Excellent', 'Average', 'Poor')
-)
-
-# Make a full-factorial design of experiment
-doe <- makeDoe(levels)
-
-# Re-code levels
-doe <- recodeDoe(doe, levels)
-
-# Make the conjoint survey by randomly sampling from the doe
-survey <- makeSurvey(
-  doe       = doe,  # Design of experiment
-  nResp     = 2000, # Total number of respondents (upper bound)
-  nAltsPerQ = 3,    # Number of alternatives per question
-  nQPerResp = 6     # Number of questions per respondent
-)
-
-# Simulate choices based on a utility model with the following parameters:
-#   - 1 continuous "price" parameter
-#   - 4 discrete parameters for "type"
-#   - 2 random log-normal discrete parameters for "freshness"
-data_mxl <- cbc_choices(
-    survey = survey,
-    obsID  = "obsID",
-    pars = list(
-        price     = 0.1,
-        type      = c(0.1, 0.2, 0.3, 0.4),
-        freshness = randLN(mu = c(0.1, 0.2), sigma = c(0.1, 0.2)))
-)
+# Insert example
 }

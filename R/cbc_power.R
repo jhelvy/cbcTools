@@ -125,9 +125,12 @@ cbc_power <- function(
       models[[i]]$sampleSize <- as.numeric(sizes[i])
     }
     if (return_models) {
+      class(models) <- c("cbc_models", "list")
       return(models)
     }
-    return(extract_errors(models))
+    errors <- extract_errors(models)
+    class(errors) <- c("cbc_errors", "data.frame")
+    return(errors)
 }
 
 set_num_cores <- function(n_cores) {
