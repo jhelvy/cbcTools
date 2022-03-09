@@ -1,11 +1,12 @@
 #' Counts of attribute overlap
 #'
-#' This function helps understand the degree of overlap for each level of each
-#' attribute in a given survey design. The list that is returned shows the
-#' number of choice questions that contain a given number of unique levels. For
-#' example, the number under `"1"` means the number of questions where the
-#' same attribute level was shown across all alternatives (because there was
-#' only one level shown).
+#' This function prints out a summary of the amount of "overlap" across
+#' attributes within the choice questions. For example, for each attribute, the
+#' count under `"1"` is the number of choice questions in which the same level
+#' was shown across all alternatives for that attribute (because there was only
+#' one level shown). Likewise, the count under `"2"` is the number of choice
+#' questions in which only two unique levels of that attribute were shown, and
+#' so on:
 #' @param design A data frame of a survey design.
 #' @param atts A vector of attributes. Defaults to `NULL`, in which case all
 #' of the column names of the `design` data frame are used except for those
@@ -31,5 +32,5 @@ cbc_overlap <- function(design, atts = NULL) {
     results[[i]] <- counts
   }
   names(results) <- atts
-  return(results)
+  print(results)
 }
