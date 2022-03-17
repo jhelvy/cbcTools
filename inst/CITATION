@@ -5,7 +5,7 @@ citEntry(
   title    = "cbcTools: Tools For Designing Choice-Based Conjoint Survey Experiments",
   author   = "John Paul Helveston",
   year     = "2022",
-  note     = "R package version 0.0.1",
+  note     = "R package version 0.0.2",
   url      = "https://jhelvy.github.io/cbcTools/",
   textVersion = "John Paul Helveston (2022). cbcTools: Tools For Designing Conjoint Survey Experiments."
 )

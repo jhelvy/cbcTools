@@ -1,6 +1,6 @@
 Package: cbcTools
 Title: Tools For Designing Choice-Based Conjoint Survey Experiments
-Version: 0.0.1.9000
+Version: 0.0.2
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",

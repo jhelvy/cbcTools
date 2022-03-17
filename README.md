@@ -67,8 +67,75 @@ could significantly impact your ability to identify effects. As a
 result, it is recommended that you avoid eliminating profiles if
 possible.
 
-With these profiles, a randomized conjoint survey can then be generated
-using the `cbc_design()` function:
+If you do wish to set some levels conditional on those of other
+attributes, you can do so by setting each level of an attribute to
+another list that defines these constraints. In the example below, the
+`type` attribute has constraints such that only certain price levels
+will be shown for each level. In addition, for the `"Honeycrisp"` level,
+only two of the three `freshness` levels are included: `"Excellent"` and
+`"Average"`. Note that both the other attributes (`price` and
+`freshness`) should contain all of the possible levels:
+
+``` r
+levels <- list(
+  price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+  freshness = c("Excellent", "Average", "Poor"),
+  type = list(
+    "Fuji" = list(
+        price = c(2, 2.5, 3)
+    ),
+    "Gala" = list(
+        price = c(1, 1.5, 2)
+    ),
+    "Honeycrisp" = list(
+        price = c(2.5, 3, 3.5, 4, 4.5, 5),
+        freshness = c("Excellent", "Average")
+    )
+  )
+)
+```
+
+When these levels are used, you can see that the results set of profiles
+contains these constraints:
+
+``` r
+profiles <- cbc_profiles(levels)
+profiles
+#>    profileID price freshness       type
+#> 1          1   2.0 Excellent       Fuji
+#> 2          2   2.5 Excellent       Fuji
+#> 3          3   3.0 Excellent       Fuji
+#> 4          4   2.0   Average       Fuji
+#> 5          5   2.5   Average       Fuji
+#> 6          6   3.0   Average       Fuji
+#> 7          7   2.0      Poor       Fuji
+#> 8          8   2.5      Poor       Fuji
+#> 9          9   3.0      Poor       Fuji
+#> 10        10   1.0 Excellent       Gala
+#> 11        11   1.5 Excellent       Gala
+#> 12        12   2.0 Excellent       Gala
+#> 13        13   1.0   Average       Gala
+#> 14        14   1.5   Average       Gala
+#> 15        15   2.0   Average       Gala
+#> 16        16   1.0      Poor       Gala
+#> 17        17   1.5      Poor       Gala
+#> 18        18   2.0      Poor       Gala
+#> 19        19   2.5 Excellent Honeycrisp
+#> 20        20   3.0 Excellent Honeycrisp
+#> 21        21   3.5 Excellent Honeycrisp
+#> 22        22   4.0 Excellent Honeycrisp
+#> 23        23   4.5 Excellent Honeycrisp
+#> 24        24   5.0 Excellent Honeycrisp
+#> 25        25   2.5   Average Honeycrisp
+#> 26        26   3.0   Average Honeycrisp
+#> 27        27   3.5   Average Honeycrisp
+#> 28        28   4.0   Average Honeycrisp
+#> 29        29   4.5   Average Honeycrisp
+#> 30        30   5.0   Average Honeycrisp
+```
+
+Once a set of profiles is obtained, a randomized conjoint survey can
+then be generated using the `cbc_design()` function:
 
 ``` r
 design <- cbc_design(
@@ -82,12 +149,12 @@ dim(design)  # View dimensions
 #> [1] 5400    8
 head(design) # Preview first 6 rows
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1         4   2.5       Fuji Excellent
-#> 2      1   1     2     1        24   2.0       Fuji   Average
-#> 3      1   1     3     1        53   2.5       Gala      Poor
-#> 4      1   2     1     2        15   1.0 Honeycrisp Excellent
-#> 5      1   2     2     2        37   1.5 Honeycrisp   Average
-#> 6      1   2     3     2        45   2.0       Fuji      Poor
+#> 1      1   1     1     1        10   2.0       Gala Excellent
+#> 2      1   1     2     1        37   1.5 Honeycrisp   Average
+#> 3      1   1     3     1        40   3.0 Honeycrisp   Average
+#> 4      1   2     1     2        16   1.5 Honeycrisp Excellent
+#> 5      1   2     2     2         6   3.5       Fuji Excellent
+#> 6      1   2     3     2        55   3.5       Gala      Poor
 ```
 
 For now, the `cbc_design()` function only generates a randomized design.
@@ -129,12 +196,12 @@ dim(design_labeled)
 #> [1] 5400    8
 head(design_labeled)
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1         1   1.0       Fuji Excellent
-#> 2      1   1     2     1        54   3.0       Gala      Poor
-#> 3      1   1     3     1        60   2.5 Honeycrisp      Poor
-#> 4      1   2     1     2        25   2.5       Fuji   Average
-#> 5      1   2     2     2        34   3.5       Gala   Average
-#> 6      1   2     3     2        57   1.0 Honeycrisp      Poor
+#> 1      1   1     1     1         3   2.0       Fuji Excellent
+#> 2      1   1     2     1         9   1.5       Gala Excellent
+#> 3      1   1     3     1        39   2.5 Honeycrisp   Average
+#> 4      1   2     1     2        26   3.0       Fuji   Average
+#> 5      1   2     2     2        53   2.5       Gala      Poor
+#> 6      1   2     3     2        18   2.5 Honeycrisp Excellent
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -162,19 +229,19 @@ dim(design_nochoice)
 #> [1] 7200   13
 head(design_nochoice)
 #>       respID qID altID obsID profileID price type_Fuji type_Gala
-#> 1          1   1     1     1        18   2.5         0         0
-#> 2          1   1     2     1        37   1.5         0         0
-#> 3          1   1     3     1        10   2.0         0         1
+#> 1          1   1     1     1        62   3.5         0         0
+#> 2          1   1     2     1        16   1.5         0         0
+#> 3          1   1     3     1        42   4.0         0         0
 #> 11000      1   1     4     1         0   0.0         0         0
-#> 4          1   2     1     2        27   3.5         1         0
-#> 5          1   2     2     2        33   3.0         0         1
+#> 4          1   2     1     2        60   2.5         0         0
+#> 5          1   2     2     2        50   1.0         0         1
 #>       type_Honeycrisp freshness_Excellent freshness_Average freshness_Poor
-#> 1                   1                   1                 0              0
-#> 2                   1                   0                 1              0
-#> 3                   0                   1                 0              0
+#> 1                   1                   0                 0              1
+#> 2                   1                   1                 0              0
+#> 3                   1                   0                 1              0
 #> 11000               0                   0                 0              0
-#> 4                   0                   0                 1              0
-#> 5                   0                   0                 1              0
+#> 4                   1                   0                 0              1
+#> 5                   0                   0                 0              1
 #>       no_choice
 #> 1             0
 #> 2             0
@@ -201,17 +268,17 @@ cbc_balance(design)
 #> price:
 #> 
 #>   1 1.5   2 2.5   3 3.5   4 
-#> 754 804 790 783 752 786 731 
+#> 743 790 751 777 799 755 785 
 #> 
 #> type:
 #> 
 #>       Fuji       Gala Honeycrisp 
-#>       1791       1802       1807 
+#>       1851       1721       1828 
 #> 
 #> freshness:
 #> 
 #> Excellent   Average      Poor 
-#>      1786      1815      1799 
+#>      1822      1812      1766 
 #> 
 #> ==============================
 #> Pairwise attribute counts:
@@ -219,31 +286,31 @@ cbc_balance(design)
 #> price & type:
 #>      
 #>       Fuji Gala Honeycrisp
-#>   1    255  233        266
-#>   1.5  250  275        279
-#>   2    262  288        240
-#>   2.5  267  256        260
-#>   3    242  257        253
-#>   3.5  275  246        265
-#>   4    240  247        244
+#>   1    246  241        256
+#>   1.5  269  260        261
+#>   2    263  230        258
+#>   2.5  284  242        251
+#>   3    276  258        265
+#>   3.5  241  242        272
+#>   4    272  248        265
 #> 
 #> price & freshness:
 #>      
 #>       Excellent Average Poor
-#>   1         251     250  253
-#>   1.5       251     278  275
-#>   2         259     295  236
-#>   2.5       254     275  254
-#>   3         270     231  251
-#>   3.5       249     268  269
-#>   4         252     218  261
+#>   1         230     251  262
+#>   1.5       305     236  249
+#>   2         251     244  256
+#>   2.5       259     279  239
+#>   3         263     277  259
+#>   3.5       261     263  231
+#>   4         253     262  270
 #> 
 #> type & freshness:
 #>             
 #>              Excellent Average Poor
-#>   Fuji             595     608  588
-#>   Gala             593     593  616
-#>   Honeycrisp       598     614  595
+#>   Fuji             604     634  613
+#>   Gala             596     587  538
+#>   Honeycrisp       622     591  615
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -263,17 +330,17 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   22  604 1174 
+#>   20  645 1135 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  182 1189  429 
+#>  181 1208  411 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  190 1195  415
+#>  175 1192  433
 ```
 
 ## Simulate choices
@@ -289,12 +356,12 @@ data <- cbc_choices(
 
 head(data)
 #>   respID qID altID obsID profileID price       type freshness choice
-#> 1      1   1     1     1         4   2.5       Fuji Excellent      0
-#> 2      1   1     2     1        24   2.0       Fuji   Average      1
-#> 3      1   1     3     1        53   2.5       Gala      Poor      0
-#> 4      1   2     1     2        15   1.0 Honeycrisp Excellent      1
-#> 5      1   2     2     2        37   1.5 Honeycrisp   Average      0
-#> 6      1   2     3     2        45   2.0       Fuji      Poor      0
+#> 1      1   1     1     1        10   2.0       Gala Excellent      0
+#> 2      1   1     2     1        37   1.5 Honeycrisp   Average      0
+#> 3      1   1     3     1        40   3.0 Honeycrisp   Average      1
+#> 4      1   2     1     2        16   1.5 Honeycrisp Excellent      0
+#> 5      1   2     2     2         6   3.5       Fuji Excellent      0
+#> 6      1   2     3     2        55   3.5       Gala      Poor      1
 ```
 
 You can also pass a list of prior parameters to define a utility model
@@ -375,21 +442,21 @@ results <- cbc_power(
 )
 
 head(results)
-#>   sampleSize             coef          est         se
-#> 1         30            price -0.006224101 0.09468067
-#> 2         30         typeGala  0.369026379 0.22383557
-#> 3         30   typeHoneycrisp -0.091744318 0.22568818
-#> 4         30 freshnessAverage  0.035948707 0.22621849
-#> 5         30    freshnessPoor  0.143719159 0.22633967
-#> 6         60            price  0.011099730 0.06568333
+#>   sampleSize             coef        est         se
+#> 1         30            price  0.1534221 0.09645810
+#> 2         30         typeGala  0.1219447 0.22572772
+#> 3         30   typeHoneycrisp -0.2430120 0.23849085
+#> 4         30 freshnessAverage  0.1779184 0.22907040
+#> 5         30    freshnessPoor -0.0529720 0.22115734
+#> 6         60            price  0.1212531 0.06665478
 tail(results)
-#>    sampleSize             coef          est         se
-#> 45        270    freshnessPoor  0.052243028 0.07466345
-#> 46        300            price -0.039799782 0.02882047
-#> 47        300         typeGala  0.155510830 0.06979850
-#> 48        300   typeHoneycrisp -0.007908001 0.07019365
-#> 49        300 freshnessAverage  0.031537565 0.07021348
-#> 50        300    freshnessPoor  0.088142396 0.07085686
+#>    sampleSize             coef         est         se
+#> 45        270    freshnessPoor  0.04013373 0.07309725
+#> 46        300            price  0.08740256 0.02904799
+#> 47        300         typeGala -0.01397266 0.07027812
+#> 48        300   typeHoneycrisp -0.05978079 0.06955951
+#> 49        300 freshnessAverage -0.01397303 0.07047802
+#> 50        300    freshnessPoor  0.05325166 0.06933214
 ```
 
 The `results` object is a data frame containing the coefficient
@@ -401,7 +468,7 @@ level of parameter precision by using the `plot()` method:
 plot(results)
 ```
 
-<img src="man/figures/README-unnamed-chunk-16-1.png" width="672" />
+<img src="man/figures/README-unnamed-chunk-19-1.png" width="672" />
 
 ## Author, Version, and License Information
 
@@ -421,7 +488,7 @@ citation("cbcTools")
 #> 
 #> To cite cbcTools in publications use:
 #> 
-#>   John Paul Helveston (2021). cbcTools: Tools For Designing Conjoint
+#>   John Paul Helveston (2022). cbcTools: Tools For Designing Conjoint
 #>   Survey Experiments.
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -429,8 +496,8 @@ citation("cbcTools")
 #>   @Manual{,
 #>     title = {cbcTools: Tools For Designing Choice-Based Conjoint Survey Experiments},
 #>     author = {John Paul Helveston},
-#>     year = {2021},
-#>     note = {R package version 0.0.1},
+#>     year = {2022},
+#>     note = {R package version 0.0.2},
 #>     url = {https://jhelvy.github.io/cbcTools/},
 #>   }
 ```

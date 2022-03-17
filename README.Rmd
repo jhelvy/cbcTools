@@ -61,7 +61,45 @@ head(profiles)
 
 Depending on the context of your survey, you may wish to eliminate or modify some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic), though doing so could significantly impact your ability to identify effects. As a result, it is recommended that you avoid eliminating profiles if possible.
 
-With these profiles, a randomized conjoint survey can then be generated using the `cbc_design()` function:
+If you do wish to set some levels conditional on those of other attributes, you can do so by setting each level of an attribute to another list that defines these constraints. In the example below, the `type` attribute has constraints such that only certain price levels will be shown for each level. In addition, for the `"Honeycrisp"` level, only two of the three `freshness` levels are included: `"Excellent"` and `"Average"`. Note that both the other attributes (`price` and `freshness`) should contain all of the possible levels:
+
+```{r}
+levels <- list(
+  price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+  freshness = c("Excellent", "Average", "Poor"),
+  type = list(
+    "Fuji" = list(
+        price = c(2, 2.5, 3)
+    ),
+    "Gala" = list(
+        price = c(1, 1.5, 2)
+    ),
+    "Honeycrisp" = list(
+        price = c(2.5, 3, 3.5, 4, 4.5, 5),
+        freshness = c("Excellent", "Average")
+    )
+  )
+)
+```
+
+When these levels are used, you can see that the results set of profiles contains these constraints:
+
+```{r}
+profiles <- cbc_profiles(levels)
+profiles
+```
+
+```{r, include=FALSE}
+levels <- list(
+  price     = seq(1, 4, 0.5), # $ per pound
+  type      = c('Fuji', 'Gala', 'Honeycrisp'),
+  freshness = c('Excellent', 'Average', 'Poor')
+)
+profiles <- cbc_profiles(levels)
+head(profiles)
+```
+
+Once a set of profiles is obtained, a randomized conjoint survey can then be generated using the `cbc_design()` function:
 
 ```{r}
 design <- cbc_design(

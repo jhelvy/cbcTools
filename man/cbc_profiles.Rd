@@ -8,10 +8,9 @@ cbc_profiles(levels)
 }
 \arguments{
 \item{levels}{A named list of vectors defining each attribute (the names)
-and each level for each attribute (the vectors). For example, a design
-with two attributes, \code{"price"} (numeric) and \code{"type"} (categorical),
-that each had three levels could be defined as
-\code{levels = list(price = c(1, 2, 3), type = c("type1", "type2", "type3"))}.}
+and each level for each attribute (the vectors). Conditional levels can
+also be included by setting each level of an attribute to another named list
+that determines the levels for other attributes for that specific level.}
 }
 \value{
 A data frame of all possible combinations of attribute levels.
@@ -27,11 +26,33 @@ library(cbcTools)
 
 # Define the attributes and levels
 levels <- list(
-  price     = seq(1, 4, 0.5), # $ per pound
-  type      = c("Fuji", "Gala", "Honeycrisp"),
-  freshness = c("Excellent", "Average", "Poor")
+  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+  freshness = c("Excellent", "Average", "Poor"),
+  type      = c("Fuji", "Gala", "Honeycrisp")
 )
 
-# Generate all profiles with all attributes dummy-coded
+# Generate profiles
 profiles <- cbc_profiles(levels)
+
+# Define attributes and levels containing conditional levels
+levels <- list(
+  price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+  freshness = c("Excellent", "Average", "Poor"),
+  type = list(
+    "Fuji" = list(
+        price = c(2, 2.5, 3)
+    ),
+    "Gala" = list(
+        price = c(1, 1.5, 2)
+    ),
+    "Honeycrisp" = list(
+        price = c(2.5, 3, 3.5, 4, 4.5, 5),
+        freshness = c("Excellent", "Average")
+    )
+  )
+)
+
+# Generate profiles
+profiles <- cbc_profiles(levels)
+
 }
