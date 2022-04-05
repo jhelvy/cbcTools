@@ -181,6 +181,8 @@ cbc_design <- function(
       profiles, n_resp, n_alts, n_q, no_choice, label
     )
   }
+  # Reset row numbers
+  row.names(design) <- NULL
   return(design)
 }
 
