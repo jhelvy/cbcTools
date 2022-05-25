@@ -6,9 +6,6 @@
 #' sample sizes. All models are estimated models using the {logitr} package.
 #' @keywords logitr, mnl, mxl, logit, sample size, power
 #'
-#' @param nbreaks The number of different sample size groups.
-#' @param n_q Number of questions per respondent. Defaults to `1` if not
-#' specified.
 #' @param data The data, formatted as a `data.frame` object.
 #' @param outcome The name of the column that identifies the outcome variable,
 #' which should be coded with a `1` for `TRUE` and `0` for `FALSE`.
@@ -18,6 +15,9 @@
 #' @param rand_pars A named vector whose names are the random parameters and
 #' values the distribution: `'n'` for normal or `'ln'` for log-normal.
 #' Defaults to `NULL`.
+#' @param nbreaks The number of different sample size groups.
+#' @param n_q Number of questions per respondent. Defaults to `1` if not
+#' specified.
 #' @param return_models If `TRUE`, a list of all estimated models is returned.
 #' This can be useful if you want to extract other outputs from each model,
 #' such as the variance-covariance matrix, etc. Defaults to `FALSE`.
@@ -42,15 +42,48 @@
 #' available arguments.
 #' @export
 #' @examples
-#' # Insert examples
+#' library(cbcTools)
+#'
+#' # A simple conjoint experiment about apples
+#'
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   freshness = c("Excellent", "Average", "Poor"),
+#'   type      = c("Fuji", "Gala", "Honeycrisp")
+#' )
+#'
+#' # Make a randomized survey design
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3, # Number of alternatives per question
+#'   n_q      = 6 # Number of questions per respondent
+#' )
+#'
+#' # Simulate random choices
+#' data <- cbc_choices(
+#'   design = design,
+#'   obsID  = "obsID"
+#' )
+#'
+#' # Conduct a power analysis
+#' power <- cbc_power(
+#'   data    = data,
+#'   pars    = c("price", "type", "freshness"),
+#'   outcome = "choice",
+#'   obsID   = "obsID",
+#'   nbreaks = 10,
+#'   n_q     = 6
+#' )
 cbc_power <- function(
-  nbreaks = 10,
-  n_q = 1,
   data,
   outcome,
   obsID,
   pars,
   rand_pars  = NULL,
+  nbreaks = 10,
+  n_q = 1,
   return_models = FALSE,
   panelID   = NULL,
   clusterID = NULL,

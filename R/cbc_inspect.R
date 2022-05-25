@@ -11,7 +11,30 @@
 #' the unique number of levels for each attribute.
 #' @export
 #' @examples
-#' # Insert examples
+#' library(cbcTools)
+#'
+#' # A simple conjoint experiment about apples
+#'
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   freshness = c("Excellent", "Average", "Poor"),
+#'   type      = c("Fuji", "Gala", "Honeycrisp")
+#' )
+#'
+#' # Make a randomized survey design
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3, # Number of alternatives per question
+#'   n_q      = 6 # Number of questions per respondent
+#' )
+#'
+#' # Inspect the design balance
+#' cbc_balance(design)
+#'
+#' # Inspect the design overlap
+#' cbc_overlap(design)
 cbc_balance <- function(design, atts = NULL) {
   if (is.null(atts)) {
     atts <- setdiff(
@@ -54,7 +77,30 @@ cbc_balance <- function(design, atts = NULL) {
 #' the unique number of levels for each attribute.
 #' @export
 #' @examples
-#' # Insert examples
+#' library(cbcTools)
+#'
+#' # A simple conjoint experiment about apples
+#'
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   freshness = c("Excellent", "Average", "Poor"),
+#'   type      = c("Fuji", "Gala", "Honeycrisp")
+#' )
+#'
+#' # Make a randomized survey design
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3, # Number of alternatives per question
+#'   n_q      = 6 # Number of questions per respondent
+#' )
+#'
+#' # Inspect the design balance
+#' cbc_balance(design)
+#'
+#' # Inspect the design overlap
+#' cbc_overlap(design)
 cbc_overlap <- function(design, atts = NULL) {
   if (is.null(atts)) {
     atts <- setdiff(

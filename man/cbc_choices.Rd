@@ -32,15 +32,12 @@ library(cbcTools)
 
 # A simple conjoint experiment about apples
 
-# Define the attributes and levels
-levels <- list(
-  price     = seq(1, 4, 0.5), # $ per pound
-  type      = c("Fuji", "Gala", "Honeycrisp"),
-  freshness = c("Excellent", "Average", "Poor")
+# Generate all possible profiles
+profiles <- cbc_profiles(
+  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+  freshness = c("Excellent", "Average", "Poor"),
+  type      = c("Fuji", "Gala", "Honeycrisp")
 )
-
-# Generate all all possible profiles
-profiles <- cbc_profiles(levels)
 
 # Make a randomized survey design
 design <- cbc_design(
@@ -48,5 +45,45 @@ design <- cbc_design(
   n_resp   = 300, # Number of respondents
   n_alts   = 3, # Number of alternatives per question
   n_q      = 6 # Number of questions per respondent
+)
+
+# Simulate random choices
+data <- cbc_choices(
+  design = design,
+  obsID  = "obsID"
+)
+
+# Simulate choices according to a prior utility model
+data <- cbc_choices(
+  design = design,
+  obsID = "obsID",
+  priors = list(
+    price     = 0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, -0.2)
+  )
+)
+
+# Simulate choices according to a prior model with interactions
+data <- cbc_choices(
+  design = design,
+  obsID = "obsID",
+  priors = list(
+    price     = 0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, -0.2),
+    `price*type` = c(0.1, 0.5)
+  )
+)
+
+# Simulate choices according to a prior utility model with random parameters
+data <- cbc_choices(
+  design = design,
+  obsID = "obsID",
+  priors = list(
+    price = 0.1,
+    type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
+    freshness = c(0.1, -0.2)
+  )
 )
 }

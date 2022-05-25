@@ -1,100 +1,3 @@
-#' Make a data frame of all combinations of attribute levels
-#'
-#' This function creates a data frame of of all possible combinations of
-#' attribute levels defined in the `levels` argument.
-#' @param levels A named list of vectors defining each attribute (the names)
-#' and each level for each attribute (the vectors). Conditional levels can
-#' also be included by setting each level of an attribute to another named list
-#' that determines the levels for other attributes for that specific level.
-#' @return A data frame of all possible combinations of attribute levels.
-#' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Define the attributes and levels
-#' levels <- list(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   freshness = c("Excellent", "Average", "Poor"),
-#'   type      = c("Fuji", "Gala", "Honeycrisp")
-#' )
-#'
-#' # Generate profiles
-#' profiles <- cbc_profiles(levels)
-#'
-#' # Define attributes and levels containing conditional levels
-#' levels <- list(
-#'   price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   freshness = c("Excellent", "Average", "Poor"),
-#'   type = list(
-#'     "Fuji" = list(
-#'         price = c(2, 2.5, 3)
-#'     ),
-#'     "Gala" = list(
-#'         price = c(1, 1.5, 2)
-#'     ),
-#'     "Honeycrisp" = list(
-#'         price = c(2.5, 3, 3.5, 4, 4.5, 5),
-#'         freshness = c("Excellent", "Average")
-#'     )
-#'   )
-#' )
-#'
-#' # Generate profiles
-#' profiles <- cbc_profiles(levels)
-#'
-cbc_profiles <- function(levels) {
-  # Check for conditional levels
-  cond <- lapply(levels, function(x) names(x))
-  cond_check <- unlist(lapply(cond, function(x) is.null(x)))
-  if (! all(cond_check)) {
-    return(cbc_profiles_conditional(levels, cond_check))
-  }
-  # No conditional levels, so return full set of combinations
-  profiles <- expand.grid(levels)
-  profiles <- add_profile_ids(profiles)
-  return(profiles)
-}
-
-cbc_profiles_conditional <- function(levels, cond_check) {
-  # Make all possible profiles
-  new_levels <- levels
-  cond_indices <- which(cond_check == FALSE)
-  for (i in seq_len(length(cond_indices))) {
-    att <- levels[[cond_indices[i]]]
-    new_levels[[cond_indices[i]]] <- names(att)
-  }
-  profiles <- expand.grid(new_levels)
-  # Now filter out profiles based on conditionals
-  for (i in seq_len(length(cond_indices))) {
-    att_name <- names(cond_indices[i])
-    att <- levels[[cond_indices[i]]]
-    for (j in seq_len(length(att))) {
-      att_level <- names(att)[[j]]
-      conditions <- att[[j]]
-      for (k in seq_len(length(conditions))) {
-        cond_att <- names(conditions)[k]
-        cond_levels <- conditions[[k]]
-        indices_att <- which(profiles[[att_name]] == att_level)
-        indices_cond <- which(profiles[[cond_att]] %in% cond_levels)
-        indices_drop <- setdiff(indices_att, indices_cond)
-        profiles <- profiles[-indices_drop,]
-      }
-    }
-  }
-  row.names(profiles) <- NULL
-  profiles <- add_profile_ids(profiles)
-  return(profiles)
-}
-
-add_profile_ids <- function(profiles) {
-  profiles$profileID <- seq(nrow(profiles))
-  varNames <- varNames <- setdiff(names(profiles), "profileID")
-  profiles <- profiles[, c("profileID", varNames)]
-  return(profiles)
-}
-
 #' Make a random or D-efficient choice-based conjoint survey design
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
@@ -126,15 +29,12 @@ add_profile_ids <- function(profiles) {
 #'
 #' # A simple conjoint experiment about apples
 #'
-#' # Define the attributes and levels
-#' levels <- list(
-#'   price     = seq(1, 4, 0.5), # $ per pound
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c("Excellent", "Average", "Poor")
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   freshness = c("Excellent", "Average", "Poor"),
+#'   type      = c("Fuji", "Gala", "Honeycrisp")
 #' )
-#'
-#' # Generate all all possible profiles
-#' profiles <- cbc_profiles(levels)
 #'
 #' # Make a randomized survey design
 #' design_rand <- cbc_design(

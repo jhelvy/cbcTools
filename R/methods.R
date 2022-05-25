@@ -38,6 +38,44 @@ print.cbc_models <- function (
 #'
 #' @rdname miscmethods.cbc_errors
 #' @export
+#' @examples
+#' library(cbcTools)
+#'
+#' # A simple conjoint experiment about apples
+#'
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   freshness = c("Excellent", "Average", "Poor"),
+#'   type      = c("Fuji", "Gala", "Honeycrisp")
+#' )
+#'
+#' # Make a randomized survey design
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3, # Number of alternatives per question
+#'   n_q      = 6 # Number of questions per respondent
+#' )
+#'
+#' # Simulate random choices
+#' data <- cbc_choices(
+#'   design = design,
+#'   obsID  = "obsID"
+#' )
+#'
+#' # Conduct a power analysis
+#' power <- cbc_power(
+#'   data    = data,
+#'   pars    = c("price", "type", "freshness"),
+#'   outcome = "choice",
+#'   obsID   = "obsID",
+#'   nbreaks = 10,
+#'   n_q     = 6
+#' )
+#'
+#' # Visualize the results
+#' plot(power)
 plot.cbc_errors <- function (x, ...) {
   plot <- ggplot2::ggplot(x) +
     geom_hline(yintercept = 0.05, color = "red", linetype = 2) +

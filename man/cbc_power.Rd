@@ -5,13 +5,13 @@
 \title{Estimate the same model on different size subsets of data}
 \usage{
 cbc_power(
-  nbreaks = 10,
-  n_q = 1,
   data,
   outcome,
   obsID,
   pars,
   rand_pars = NULL,
+  nbreaks = 10,
+  n_q = 1,
   return_models = FALSE,
   panelID = NULL,
   clusterID = NULL,
@@ -22,11 +22,6 @@ cbc_power(
 )
 }
 \arguments{
-\item{nbreaks}{The number of different sample size groups.}
-
-\item{n_q}{Number of questions per respondent. Defaults to \code{1} if not
-specified.}
-
 \item{data}{The data, formatted as a \code{data.frame} object.}
 
 \item{outcome}{The name of the column that identifies the outcome variable,
@@ -40,6 +35,11 @@ Must be the same as the column names in the \code{data} argument.}
 \item{rand_pars}{A named vector whose names are the random parameters and
 values the distribution: \code{'n'} for normal or \code{'ln'} for log-normal.
 Defaults to \code{NULL}.}
+
+\item{nbreaks}{The number of different sample size groups.}
+
+\item{n_q}{Number of questions per respondent. Defaults to \code{1} if not
+specified.}
 
 \item{return_models}{If \code{TRUE}, a list of all estimated models is returned.
 This can be useful if you want to extract other outputs from each model,
@@ -77,7 +77,40 @@ subsets of a set of choice data. The number of models to run is set by the
 sample sizes. All models are estimated models using the {logitr} package.
 }
 \examples{
-# Insert examples
+library(cbcTools)
+
+# A simple conjoint experiment about apples
+
+# Generate all possible profiles
+profiles <- cbc_profiles(
+  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+  freshness = c("Excellent", "Average", "Poor"),
+  type      = c("Fuji", "Gala", "Honeycrisp")
+)
+
+# Make a randomized survey design
+design <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3, # Number of alternatives per question
+  n_q      = 6 # Number of questions per respondent
+)
+
+# Simulate random choices
+data <- cbc_choices(
+  design = design,
+  obsID  = "obsID"
+)
+
+# Conduct a power analysis
+power <- cbc_power(
+  data    = data,
+  pars    = c("price", "type", "freshness"),
+  outcome = "choice",
+  obsID   = "obsID",
+  nbreaks = 10,
+  n_q     = 6
+)
 }
 \keyword{logit,}
 \keyword{logitr,}

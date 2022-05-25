@@ -9,8 +9,12 @@
 status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.org/package=cbcTools)
 <!-- badges: end -->
 
-This package contains tools for designing surveys and conducting power
-analyses for choice based conjoint survey experiments in R.
+This package provides a set of tools for designing surveys and
+conducting power analyses for choice-based conjoint survey experiments
+in R. Each function in the package begins with `cbc_` and supports a
+step in the following process for designing and analyzing surveys:
+
+!()\[man/figures/process.png\]
 
 ## Installation
 
@@ -25,31 +29,30 @@ remotes::install_github("jhelvy/cbcTools")
 Load the library with:
 
 ``` r
-library("cbcTools")
+library(cbcTools)
 ```
 
 ## Make survey designs
 
+### Generating profiles
+
 The first step in designing an experiment is to define the attributes
-and levels for your experiment. Many of the functions in {cbcTools} are
-more convenient to use if you define these as a separate object. For
-example, let’s say you’re designing a conjoint experiment about apples.
-You might have the following attributes and levels:
+and levels for your experiment and then generate all of the `profiles`
+of each possible combination of those attributes and levels. For
+example, let’s say you’re designing a conjoint experiment about apples
+and you want to include `price`, `type`, and `freshness` as attributes.
+You can obtain all of the possible profiles for these attributes using
+the `cbc_profiles()` function:
 
 ``` r
-levels <- list(
+profiles <- cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Excellent', 'Average', 'Poor')
 )
-```
 
-With these levels defined, you can then obtain all of the `profiles` of
-each possible combination of the attributes and levels using the
-`cbc_profiles()` function:
-
-``` r
-profiles <- cbc_profiles(levels)
+nrow(profiles)
+#> [1] 63
 head(profiles)
 #>   profileID price type freshness
 #> 1         1   1.0 Fuji Excellent
@@ -58,6 +61,14 @@ head(profiles)
 #> 4         4   2.5 Fuji Excellent
 #> 5         5   3.0 Fuji Excellent
 #> 6         6   3.5 Fuji Excellent
+tail(profiles)
+#>    profileID price       type freshness
+#> 58        58   1.5 Honeycrisp      Poor
+#> 59        59   2.0 Honeycrisp      Poor
+#> 60        60   2.5 Honeycrisp      Poor
+#> 61        61   3.0 Honeycrisp      Poor
+#> 62        62   3.5 Honeycrisp      Poor
+#> 63        63   4.0 Honeycrisp      Poor
 ```
 
 Depending on the context of your survey, you may wish to eliminate or
@@ -68,16 +79,16 @@ result, it is recommended that you avoid eliminating profiles if
 possible.
 
 If you do wish to set some levels conditional on those of other
-attributes, you can do so by setting each level of an attribute to
-another list that defines these constraints. In the example below, the
-`type` attribute has constraints such that only certain price levels
-will be shown for each level. In addition, for the `"Honeycrisp"` level,
-only two of the three `freshness` levels are included: `"Excellent"` and
+attributes, you can do so by setting each level of an attribute to a
+list that defines these constraints. In the example below, the `type`
+attribute has constraints such that only certain price levels will be
+shown for each level. In addition, for the `"Honeycrisp"` level, only
+two of the three `freshness` levels are included: `"Excellent"` and
 `"Average"`. Note that both the other attributes (`price` and
 `freshness`) should contain all of the possible levels:
 
 ``` r
-levels <- list(
+profiles <- cbc_profiles(
   price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
   freshness = c("Excellent", "Average", "Poor"),
   type = list(
@@ -93,39 +104,19 @@ levels <- list(
     )
   )
 )
-```
 
-When these levels are used, you can see that the results set of profiles
-contains these constraints:
-
-``` r
-profiles <- cbc_profiles(levels)
-profiles
+nrow(profiles)
+#> [1] 30
+head(profiles)
+#>   profileID price freshness type
+#> 1         1   2.0 Excellent Fuji
+#> 2         2   2.5 Excellent Fuji
+#> 3         3   3.0 Excellent Fuji
+#> 4         4   2.0   Average Fuji
+#> 5         5   2.5   Average Fuji
+#> 6         6   3.0   Average Fuji
+tail(profiles)
 #>    profileID price freshness       type
-#> 1          1   2.0 Excellent       Fuji
-#> 2          2   2.5 Excellent       Fuji
-#> 3          3   3.0 Excellent       Fuji
-#> 4          4   2.0   Average       Fuji
-#> 5          5   2.5   Average       Fuji
-#> 6          6   3.0   Average       Fuji
-#> 7          7   2.0      Poor       Fuji
-#> 8          8   2.5      Poor       Fuji
-#> 9          9   3.0      Poor       Fuji
-#> 10        10   1.0 Excellent       Gala
-#> 11        11   1.5 Excellent       Gala
-#> 12        12   2.0 Excellent       Gala
-#> 13        13   1.0   Average       Gala
-#> 14        14   1.5   Average       Gala
-#> 15        15   2.0   Average       Gala
-#> 16        16   1.0      Poor       Gala
-#> 17        17   1.5      Poor       Gala
-#> 18        18   2.0      Poor       Gala
-#> 19        19   2.5 Excellent Honeycrisp
-#> 20        20   3.0 Excellent Honeycrisp
-#> 21        21   3.5 Excellent Honeycrisp
-#> 22        22   4.0 Excellent Honeycrisp
-#> 23        23   4.5 Excellent Honeycrisp
-#> 24        24   5.0 Excellent Honeycrisp
 #> 25        25   2.5   Average Honeycrisp
 #> 26        26   3.0   Average Honeycrisp
 #> 27        27   3.5   Average Honeycrisp
@@ -133,6 +124,14 @@ profiles
 #> 29        29   4.5   Average Honeycrisp
 #> 30        30   5.0   Average Honeycrisp
 ```
+
+When these constraints you can see that there are fewer profiles
+available (only 30 compared to 63 without constraints). **WARNING:
+including hard constraints in your designs can substantially reduce the
+statistical power of your design, so use them cautiously and avoid them
+if possible**.
+
+### Generating random designs
 
 Once a set of profiles is obtained, a randomized conjoint survey can
 then be generated using the `cbc_design()` function:
@@ -149,12 +148,12 @@ dim(design)  # View dimensions
 #> [1] 5400    8
 head(design) # Preview first 6 rows
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1        10   2.0       Gala Excellent
-#> 2      1   1     2     1        37   1.5 Honeycrisp   Average
-#> 3      1   1     3     1        40   3.0 Honeycrisp   Average
-#> 4      1   2     1     2        16   1.5 Honeycrisp Excellent
-#> 5      1   2     2     2         6   3.5       Fuji Excellent
-#> 6      1   2     3     2        55   3.5       Gala      Poor
+#> 1      1   1     1     1        32   2.5       Gala   Average
+#> 2      1   1     2     1        38   2.0 Honeycrisp   Average
+#> 3      1   1     3     1        29   1.0       Gala   Average
+#> 4      1   2     1     2        29   1.0       Gala   Average
+#> 5      1   2     2     2        35   4.0       Gala   Average
+#> 6      1   2     3     2        27   3.5       Fuji   Average
 ```
 
 For now, the `cbc_design()` function only generates a randomized design.
@@ -196,12 +195,12 @@ dim(design_labeled)
 #> [1] 5400    8
 head(design_labeled)
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1         3   2.0       Fuji Excellent
-#> 2      1   1     2     1         9   1.5       Gala Excellent
-#> 3      1   1     3     1        39   2.5 Honeycrisp   Average
-#> 4      1   2     1     2        26   3.0       Fuji   Average
-#> 5      1   2     2     2        53   2.5       Gala      Poor
-#> 6      1   2     3     2        18   2.5 Honeycrisp Excellent
+#> 1      1   1     1     1         6   3.5       Fuji Excellent
+#> 2      1   1     2     1        29   1.0       Gala   Average
+#> 3      1   1     3     1        57   1.0 Honeycrisp      Poor
+#> 4      1   2     1     2        48   3.5       Fuji      Poor
+#> 5      1   2     2     2        13   3.5       Gala Excellent
+#> 6      1   2     3     2        19   3.0 Honeycrisp Excellent
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -228,30 +227,23 @@ design_nochoice <- cbc_design(
 dim(design_nochoice)
 #> [1] 7200   13
 head(design_nochoice)
-#>       respID qID altID obsID profileID price type_Fuji type_Gala
-#> 1          1   1     1     1        62   3.5         0         0
-#> 2          1   1     2     1        16   1.5         0         0
-#> 3          1   1     3     1        42   4.0         0         0
-#> 11000      1   1     4     1         0   0.0         0         0
-#> 4          1   2     1     2        60   2.5         0         0
-#> 5          1   2     2     2        50   1.0         0         1
-#>       type_Honeycrisp freshness_Excellent freshness_Average freshness_Poor
-#> 1                   1                   0                 0              1
-#> 2                   1                   1                 0              0
-#> 3                   1                   0                 1              0
-#> 11000               0                   0                 0              0
-#> 4                   1                   0                 0              1
-#> 5                   0                   0                 0              1
-#>       no_choice
-#> 1             0
-#> 2             0
-#> 3             0
-#> 11000         1
-#> 4             0
-#> 5             0
+#>   respID qID altID obsID profileID price type_Fuji type_Gala type_Honeycrisp
+#> 1      1   1     1     1        37   1.5         0         0               1
+#> 2      1   1     2     1        61   3.0         0         0               1
+#> 3      1   1     3     1        12   3.0         0         1               0
+#> 4      1   1     4     1         0   0.0         0         0               0
+#> 5      1   2     1     2         1   1.0         1         0               0
+#> 6      1   2     2     2        60   2.5         0         0               1
+#>   freshness_Excellent freshness_Average freshness_Poor no_choice
+#> 1                   0                 1              0         0
+#> 2                   0                 0              1         0
+#> 3                   1                 0              0         0
+#> 4                   0                 0              0         1
+#> 5                   1                 0              0         0
+#> 6                   0                 0              1         0
 ```
 
-## Inspect survey design
+## Inspecting survey designs
 
 The {cbcTools} package includes some functions to quickly inspect some
 basic metrics of a design.
@@ -268,17 +260,17 @@ cbc_balance(design)
 #> price:
 #> 
 #>   1 1.5   2 2.5   3 3.5   4 
-#> 743 790 751 777 799 755 785 
+#> 789 747 743 812 760 794 755 
 #> 
 #> type:
 #> 
 #>       Fuji       Gala Honeycrisp 
-#>       1851       1721       1828 
+#>       1830       1798       1772 
 #> 
 #> freshness:
 #> 
 #> Excellent   Average      Poor 
-#>      1822      1812      1766 
+#>      1821      1793      1786 
 #> 
 #> ==============================
 #> Pairwise attribute counts:
@@ -286,31 +278,31 @@ cbc_balance(design)
 #> price & type:
 #>      
 #>       Fuji Gala Honeycrisp
-#>   1    246  241        256
-#>   1.5  269  260        261
-#>   2    263  230        258
-#>   2.5  284  242        251
-#>   3    276  258        265
-#>   3.5  241  242        272
-#>   4    272  248        265
+#>   1    274  273        242
+#>   1.5  239  267        241
+#>   2    229  242        272
+#>   2.5  268  266        278
+#>   3    266  243        251
+#>   3.5  279  265        250
+#>   4    275  242        238
 #> 
 #> price & freshness:
 #>      
 #>       Excellent Average Poor
-#>   1         230     251  262
-#>   1.5       305     236  249
-#>   2         251     244  256
-#>   2.5       259     279  239
-#>   3         263     277  259
-#>   3.5       261     263  231
-#>   4         253     262  270
+#>   1         272     258  259
+#>   1.5       247     255  245
+#>   2         241     261  241
+#>   2.5       269     246  297
+#>   3         249     262  249
+#>   3.5       267     266  261
+#>   4         276     245  234
 #> 
 #> type & freshness:
 #>             
 #>              Excellent Average Poor
-#>   Fuji             604     634  613
-#>   Gala             596     587  538
-#>   Honeycrisp       622     591  615
+#>   Fuji             601     622  607
+#>   Gala             587     610  601
+#>   Honeycrisp       633     561  578
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -330,20 +322,20 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   20  645 1135 
+#>   30  619 1151 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  181 1208  411 
+#>  167 1217  416 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  175 1192  433
+#>  181 1204  415
 ```
 
-## Simulate choices
+## Simulating choices
 
 You can simulate choices for a given `design` using the `cbc_choices()`
 function. By default, random choices are simulated:
@@ -356,12 +348,12 @@ data <- cbc_choices(
 
 head(data)
 #>   respID qID altID obsID profileID price       type freshness choice
-#> 1      1   1     1     1        10   2.0       Gala Excellent      0
-#> 2      1   1     2     1        37   1.5 Honeycrisp   Average      0
-#> 3      1   1     3     1        40   3.0 Honeycrisp   Average      1
-#> 4      1   2     1     2        16   1.5 Honeycrisp Excellent      0
-#> 5      1   2     2     2         6   3.5       Fuji Excellent      0
-#> 6      1   2     3     2        55   3.5       Gala      Poor      1
+#> 1      1   1     1     1        32   2.5       Gala   Average      1
+#> 2      1   1     2     1        38   2.0 Honeycrisp   Average      0
+#> 3      1   1     3     1        29   1.0       Gala   Average      0
+#> 4      1   2     1     2        29   1.0       Gala   Average      0
+#> 5      1   2     2     2        35   4.0       Gala   Average      1
+#> 6      1   2     3     2        27   3.5       Fuji   Average      0
 ```
 
 You can also pass a list of prior parameters to define a utility model
@@ -419,7 +411,7 @@ data <- cbc_choices(
 )
 ```
 
-## Conduct a power analysis
+## Conducting a power analysis
 
 The simulated choice data can be used to conduct a power analysis by
 estimating the same model multiple times with incrementally increasing
@@ -433,30 +425,30 @@ estimated using the [{logitr}](https://jhelvy.github.io/logitr) package:
 
 ``` r
 results <- cbc_power(
-    nbreaks = 10,
-    n_q     = 6,
-    data    = data,
-    pars    = c("price", "type", "freshness"),
-    outcome = "choice",
-    obsID   = "obsID"
+  data    = data,
+  pars    = c("price", "type", "freshness"),
+  outcome = "choice",
+  obsID   = "obsID",
+  nbreaks = 10,
+  n_q     = 6
 )
 
 head(results)
 #>   sampleSize             coef        est         se
-#> 1         30            price  0.1534221 0.09645810
-#> 2         30         typeGala  0.1219447 0.22572772
-#> 3         30   typeHoneycrisp -0.2430120 0.23849085
-#> 4         30 freshnessAverage  0.1779184 0.22907040
-#> 5         30    freshnessPoor -0.0529720 0.22115734
-#> 6         60            price  0.1212531 0.06665478
+#> 1         30            price 0.23334650 0.09530587
+#> 2         30         typeGala 0.09621803 0.22031408
+#> 3         30   typeHoneycrisp 0.30386191 0.22944870
+#> 4         30 freshnessAverage 0.18255883 0.22940608
+#> 5         30    freshnessPoor 0.20622399 0.22436391
+#> 6         60            price 0.11241994 0.06525733
 tail(results)
 #>    sampleSize             coef         est         se
-#> 45        270    freshnessPoor  0.04013373 0.07309725
-#> 46        300            price  0.08740256 0.02904799
-#> 47        300         typeGala -0.01397266 0.07027812
-#> 48        300   typeHoneycrisp -0.05978079 0.06955951
-#> 49        300 freshnessAverage -0.01397303 0.07047802
-#> 50        300    freshnessPoor  0.05325166 0.06933214
+#> 45        270    freshnessPoor -0.01987296 0.07323306
+#> 46        300            price  0.04031228 0.02877961
+#> 47        300         typeGala  0.03099731 0.07019711
+#> 48        300   typeHoneycrisp  0.11803237 0.06992097
+#> 49        300 freshnessAverage -0.08026328 0.06995029
+#> 50        300    freshnessPoor -0.04115621 0.06951151
 ```
 
 The `results` object is a data frame containing the coefficient
@@ -468,7 +460,47 @@ level of parameter precision by using the `plot()` method:
 plot(results)
 ```
 
-<img src="man/figures/README-unnamed-chunk-19-1.png" width="672" />
+<img src="man/figures/README-unnamed-chunk-17-1.png" width="672" />
+
+## Piping it all together!
+
+One of the convenient features of how the package is written is that the
+object generated in each step is used as the first argument to the
+function for the next step. Thus, just like in the overall program
+diagram, the functions can be piped together:
+
+!()\[man/figures/process.png\]
+
+``` r
+cbc_profiles(
+  price     = seq(1, 4, 0.5), # $ per pound
+  type      = c('Fuji', 'Gala', 'Honeycrisp'),
+  freshness = c('Excellent', 'Average', 'Poor')
+) |>
+cbc_design(
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6    # Number of questions per respondent
+) |>
+cbc_choices(
+  obsID = "obsID",
+  priors = list(
+    price     = 0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, -0.2)
+  )
+) |>
+cbc_power(
+    pars    = c("price", "type", "freshness"),
+    outcome = "choice",
+    obsID   = "obsID",
+    nbreaks = 10,
+    n_q     = 6
+) |>
+plot()
+```
+
+<img src="man/figures/README-unnamed-chunk-18-1.png" width="672" />
 
 ## Author, Version, and License Information
 
