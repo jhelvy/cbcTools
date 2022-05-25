@@ -20,7 +20,7 @@ sample sizes. All models are estimated models using the logitr package."><meta p
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.3</span>
       </span>
     </div>
 
@@ -66,13 +66,13 @@ sample sizes. All models are estimated models using the logitr package.</p>
 
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">cbc_power</span><span class="op">(</span>
-  nbreaks <span class="op">=</span> <span class="fl">10</span>,
-  n_q <span class="op">=</span> <span class="fl">1</span>,
   <span class="va">data</span>,
   <span class="va">outcome</span>,
   <span class="va">obsID</span>,
   <span class="va">pars</span>,
   rand_pars <span class="op">=</span> <span class="cn">NULL</span>,
+  nbreaks <span class="op">=</span> <span class="fl">10</span>,
+  n_q <span class="op">=</span> <span class="fl">1</span>,
   return_models <span class="op">=</span> <span class="cn">FALSE</span>,
   panelID <span class="op">=</span> <span class="cn">NULL</span>,
   clusterID <span class="op">=</span> <span class="cn">NULL</span>,
@@ -85,12 +85,7 @@ sample sizes. All models are estimated models using the logitr package.</p>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>nbreaks</dt>
-<dd><p>The number of different sample size groups.</p></dd>
-<dt>n_q</dt>
-<dd><p>Number of questions per respondent. Defaults to <code>1</code> if not
-specified.</p></dd>
-<dt>data</dt>
+    <dl><dt>data</dt>
 <dd><p>The data, formatted as a <code>data.frame</code> object.</p></dd>
 <dt>outcome</dt>
 <dd><p>The name of the column that identifies the outcome variable,
@@ -104,6 +99,11 @@ Must be the same as the column names in the <code>data</code> argument.</p></dd>
 <dd><p>A named vector whose names are the random parameters and
 values the distribution: <code>'n'</code> for normal or <code>'ln'</code> for log-normal.
 Defaults to <code>NULL</code>.</p></dd>
+<dt>nbreaks</dt>
+<dd><p>The number of different sample size groups.</p></dd>
+<dt>n_q</dt>
+<dd><p>Number of questions per respondent. Defaults to <code>1</code> if not
+specified.</p></dd>
 <dt>return_models</dt>
 <dd><p>If <code>TRUE</code>, a list of all estimated models is returned.
 This can be useful if you want to extract other outputs from each model,
@@ -137,8 +137,42 @@ available arguments.</p></dd>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="co"># Insert examples</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span>
 <span class="r-in"></span>
+<span class="r-in"><span class="co"># A simple conjoint experiment about apples</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Generate all possible profiles</span></span>
+<span class="r-in"><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
+<span class="r-in">  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span>
+<span class="r-in">  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Excellent"</span>, <span class="st">"Average"</span>, <span class="st">"Poor"</span><span class="op">)</span>,</span>
+<span class="r-in">  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span></span>
+<span class="r-in"><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Make a randomized survey design</span></span>
+<span class="r-in"><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
+<span class="r-in">  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
+<span class="r-in">  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span>
+<span class="r-in">  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span>
+<span class="r-in">  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span>
+<span class="r-in"><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Simulate random choices</span></span>
+<span class="r-in"><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_choices.html">cbc_choices</a></span><span class="op">(</span></span>
+<span class="r-in">  design <span class="op">=</span> <span class="va">design</span>,</span>
+<span class="r-in">  obsID  <span class="op">=</span> <span class="st">"obsID"</span></span>
+<span class="r-in"><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Conduct a power analysis</span></span>
+<span class="r-in"><span class="va">power</span> <span class="op">&lt;-</span> <span class="fu">cbc_power</span><span class="op">(</span></span>
+<span class="r-in">  data    <span class="op">=</span> <span class="va">data</span>,</span>
+<span class="r-in">  pars    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"price"</span>, <span class="st">"type"</span>, <span class="st">"freshness"</span><span class="op">)</span>,</span>
+<span class="r-in">  outcome <span class="op">=</span> <span class="st">"choice"</span>,</span>
+<span class="r-in">  obsID   <span class="op">=</span> <span class="st">"obsID"</span>,</span>
+<span class="r-in">  nbreaks <span class="op">=</span> <span class="fl">10</span>,</span>
+<span class="r-in">  n_q     <span class="op">=</span> <span class="fl">6</span></span>
+<span class="r-in"><span class="op">)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating models using 2 cores...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> done!</span>
 </code></pre></div>
     </div>
   </div>
@@ -153,7 +187,7 @@ available arguments.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
 </div>
 
       </footer></div>

@@ -19,7 +19,7 @@ all pairs of attributes for a given design."><meta property="og:image" content="
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.3</span>
       </span>
     </div>
 
@@ -83,8 +83,103 @@ the unique number of levels for each attribute.</p>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="co"># Insert examples</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span>
 <span class="r-in"></span>
+<span class="r-in"><span class="co"># A simple conjoint experiment about apples</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Generate all possible profiles</span></span>
+<span class="r-in"><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
+<span class="r-in">  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span>
+<span class="r-in">  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Excellent"</span>, <span class="st">"Average"</span>, <span class="st">"Poor"</span><span class="op">)</span>,</span>
+<span class="r-in">  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span></span>
+<span class="r-in"><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Make a randomized survey design</span></span>
+<span class="r-in"><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
+<span class="r-in">  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
+<span class="r-in">  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span>
+<span class="r-in">  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span>
+<span class="r-in">  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span>
+<span class="r-in"><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Inspect the design balance</span></span>
+<span class="r-in"><span class="fu">cbc_balance</span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ==============================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Attribute counts:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 1.5   2 2.5   3 3.5   4 4.5   5 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 581 606 604 631 593 596 578 592 619 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Excellent   Average      Poor </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      1808      1771      1821 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Fuji       Gala Honeycrisp </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       1843       1800       1757 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ==============================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Pairwise attribute counts:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> price &amp; freshness:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Excellent Average Poor</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1         186     215  180</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1.5       215     186  205</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2         214     201  189</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2.5       214     213  204</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3         209     186  198</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3.5       213     184  199</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4         185     185  208</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4.5       189     187  216</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   5         183     214  222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> price &amp; type:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Fuji Gala Honeycrisp</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1    192  188        201</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1.5  231  190        185</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2    212  209        183</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2.5  189  206        236</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3    212  195        186</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3.5  206  198        192</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4    195  188        195</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4.5  188  219        185</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   5    218  207        194</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshness &amp; type:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             Fuji Gala Honeycrisp</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Excellent  584  624        600</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Average    651  546        574</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Poor       608  630        583</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"></span>
+<span class="r-in"><span class="co"># Inspect the design overlap</span></span>
+<span class="r-in"><span class="fu"><a href="cbc_overlap.html">cbc_overlap</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ==============================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Counts of attribute overlap:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (# of questions with N unique levels)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   13  502 1285 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  192 1189  419 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  183 1167  450 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
   </div>
@@ -99,7 +194,7 @@ the unique number of levels for each attribute.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
 </div>
 
       </footer></div>
