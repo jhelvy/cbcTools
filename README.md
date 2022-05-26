@@ -144,12 +144,12 @@ dim(design)  # View dimensions
 #> [1] 16200     8
 head(design) # Preview first 6 rows
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1        42   4.0 Honeycrisp   Average
-#> 2      1   1     2     1        56   4.0       Gala Excellent
-#> 3      1   1     3     1        27   3.5       Fuji   Average
-#> 4      1   2     1     2        57   1.0 Honeycrisp Excellent
-#> 5      1   2     2     2        10   2.0       Gala      Poor
-#> 6      1   2     3     2        37   1.5 Honeycrisp   Average
+#> 1      1   1     1     1        40   3.0 Honeycrisp   Average
+#> 2      1   1     2     1         2   1.5       Fuji      Poor
+#> 3      1   1     3     1        48   3.5       Fuji Excellent
+#> 4      1   2     1     2        24   2.0       Fuji   Average
+#> 5      1   2     2     2        34   3.5       Gala   Average
+#> 6      1   2     3     2        16   1.5 Honeycrisp      Poor
 ```
 
 For now, the `cbc_design()` function only generates a randomized design.
@@ -191,12 +191,12 @@ dim(design_labeled)
 #> [1] 16200     8
 head(design_labeled)
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1        48   3.5       Fuji Excellent
-#> 2      1   1     2     1        29   1.0       Gala   Average
-#> 3      1   1     3     1        39   2.5 Honeycrisp   Average
+#> 1      1   1     1     1         1   1.0       Fuji      Poor
+#> 2      1   1     2     1        54   3.0       Gala Excellent
+#> 3      1   1     3     1        17   2.0 Honeycrisp      Poor
 #> 4      1   2     1     2        23   1.5       Fuji   Average
 #> 5      1   2     2     2        53   2.5       Gala Excellent
-#> 6      1   2     3     2        58   1.5 Honeycrisp Excellent
+#> 6      1   2     3     2        21   4.0 Honeycrisp      Poor
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -224,18 +224,18 @@ dim(design_nochoice)
 #> [1] 21600    13
 head(design_nochoice)
 #>   respID qID altID obsID profileID price type_Fuji type_Gala type_Honeycrisp
-#> 1      1   1     1     1        27   3.5         1         0               0
-#> 2      1   1     2     1        20   3.5         0         0               1
-#> 3      1   1     3     1        12   3.0         0         1               0
+#> 1      1   1     1     1        20   3.5         0         0               1
+#> 2      1   1     2     1        32   2.5         0         1               0
+#> 3      1   1     3     1        26   3.0         1         0               0
 #> 4      1   1     4     1         0   0.0         0         0               0
-#> 5      1   2     1     2        24   2.0         1         0               0
-#> 6      1   2     2     2        44   1.5         1         0               0
+#> 5      1   2     1     2         3   2.0         1         0               0
+#> 6      1   2     2     2        43   1.0         1         0               0
 #>   freshness_Poor freshness_Average freshness_Excellent no_choice
-#> 1              0                 1                   0         0
-#> 2              1                 0                   0         0
-#> 3              1                 0                   0         0
+#> 1              1                 0                   0         0
+#> 2              0                 1                   0         0
+#> 3              0                 1                   0         0
 #> 4              0                 0                   0         1
-#> 5              0                 1                   0         0
+#> 5              1                 0                   0         0
 #> 6              0                 0                   1         0
 ```
 
@@ -244,61 +244,44 @@ head(design_nochoice)
 The package includes some functions to quickly inspect some basic
 metrics of a design.
 
-The `cbc_balance()` function prints out a summary of the counts of each
-level for each attribute across all choice questions as well as the
-two-way counts across all pairs of attributes for a given design:
+The `cbc_balance()` function prints out a summary of the individual and
+pairwise counts of each level of each attribute across all choice
+questions:
 
 ``` r
 cbc_balance(design)
 #> ==============================
-#> Attribute counts:
+#> price x type 
 #> 
-#> price:
+#>          Fuji Gala Honeycrisp
+#>       NA 5375 5440       5385
+#> 1   2344  796  784        764
+#> 1.5 2237  742  760        735
+#> 2   2384  778  792        814
+#> 2.5 2329  782  764        783
+#> 3   2287  750  770        767
+#> 3.5 2273  767  745        761
+#> 4   2346  760  825        761
 #> 
-#>    1  1.5    2  2.5    3  3.5    4 
-#> 2296 2294 2330 2342 2261 2278 2399 
+#> price x freshness 
 #> 
-#> type:
+#>          Poor Average Excellent
+#>       NA 5474    5321      5405
+#> 1   2344  780     777       787
+#> 1.5 2237  781     725       731
+#> 2   2384  812     791       781
+#> 2.5 2329  782     784       763
+#> 3   2287  776     733       778
+#> 3.5 2273  756     750       767
+#> 4   2346  787     761       798
 #> 
-#>       Fuji       Gala Honeycrisp 
-#>       5417       5430       5353 
+#> type x freshness 
 #> 
-#> freshness:
-#> 
-#>      Poor   Average Excellent 
-#>      5434      5429      5337 
-#> 
-#> ==============================
-#> Pairwise attribute counts:
-#> 
-#> price & type:
-#>      
-#>       Fuji Gala Honeycrisp
-#>   1    808  759        729
-#>   1.5  761  767        766
-#>   2    748  810        772
-#>   2.5  761  761        820
-#>   3    745  783        733
-#>   3.5  777  757        744
-#>   4    817  793        789
-#> 
-#> price & freshness:
-#>      
-#>       Poor Average Excellent
-#>   1    763     785       748
-#>   1.5  746     793       755
-#>   2    796     779       755
-#>   2.5  812     767       763
-#>   3    734     747       780
-#>   3.5  770     775       733
-#>   4    813     783       803
-#> 
-#> type & freshness:
-#>             
-#>              Poor Average Excellent
-#>   Fuji       1826    1821      1770
-#>   Gala       1789    1855      1786
-#>   Honeycrisp 1819    1753      1781
+#>                 Poor Average Excellent
+#>              NA 5474    5321      5405
+#> Fuji       5375 1776    1769      1830
+#> Gala       5440 1845    1771      1824
+#> Honeycrisp 5385 1853    1781      1751
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -318,17 +301,17 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   79 1892 3429 
+#>   71 1823 3506 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  544 3574 1282 
+#>  535 3631 1234 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  549 3561 1290
+#>  521 3605 1274
 ```
 
 ## Simulating choices
@@ -344,12 +327,12 @@ data <- cbc_choices(
 
 head(data)
 #>   respID qID altID obsID profileID price       type freshness choice
-#> 1      1   1     1     1        42   4.0 Honeycrisp   Average      0
-#> 2      1   1     2     1        56   4.0       Gala Excellent      1
-#> 3      1   1     3     1        27   3.5       Fuji   Average      0
-#> 4      1   2     1     2        57   1.0 Honeycrisp Excellent      1
-#> 5      1   2     2     2        10   2.0       Gala      Poor      0
-#> 6      1   2     3     2        37   1.5 Honeycrisp   Average      0
+#> 1      1   1     1     1        40   3.0 Honeycrisp   Average      1
+#> 2      1   1     2     1         2   1.5       Fuji      Poor      0
+#> 3      1   1     3     1        48   3.5       Fuji Excellent      0
+#> 4      1   2     1     2        24   2.0       Fuji   Average      0
+#> 5      1   2     2     2        34   3.5       Gala   Average      0
+#> 6      1   2     3     2        16   1.5 Honeycrisp      Poor      1
 ```
 
 You can also pass a list of prior parameters to define a utility model
@@ -405,7 +388,7 @@ Finally, you can also simulate data for a mixed logit model where
 parameters follow a normal or log-normal distribution across the
 population. In the example below, the `randN()` function is used to
 specify the `type` attribute with 2 random normal parameters with a
-specified vector of means (`mu`) and standard deviations (`sigma`) for
+specified vector of means (`mean`) and standard deviations (`sd`) for
 each level of `type`. Log-normal parameters are specified using
 `randLN()`.
 
@@ -415,7 +398,7 @@ data <- cbc_choices(
   obsID = "obsID",
   priors = list(
     price = 0.1,
-    type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
+    type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
     freshness = c(0.1, 0.2)
   )
 )
@@ -445,20 +428,20 @@ power <- cbc_power(
 
 head(power)
 #>   sampleSize               coef          est         se
-#> 1         90              price  0.005143147 0.05230155
-#> 2         90           typeGala -0.034420995 0.13224139
-#> 3         90     typeHoneycrisp  0.030760930 0.12774097
-#> 4         90   freshnessAverage  0.082043470 0.12911466
-#> 5         90 freshnessExcellent  0.052048811 0.12903831
-#> 6        180              price  0.055646337 0.03650679
+#> 1         90              price  0.035466110 0.05262747
+#> 2         90           typeGala -0.102497751 0.13110846
+#> 3         90     typeHoneycrisp -0.009299835 0.12906407
+#> 4         90   freshnessAverage -0.095797625 0.12655224
+#> 5         90 freshnessExcellent  0.004249639 0.12695171
+#> 6        180              price -0.020938831 0.03684148
 tail(power)
 #>    sampleSize               coef          est         se
-#> 45        810 freshnessExcellent -0.066116023 0.04294321
-#> 46        900              price  0.054298690 0.01649641
-#> 47        900           typeGala -0.020000504 0.04034574
-#> 48        900     typeHoneycrisp -0.021436584 0.04039965
-#> 49        900   freshnessAverage -0.000641108 0.04011179
-#> 50        900 freshnessExcellent -0.056331796 0.04077737
+#> 45        810 freshnessExcellent 0.0003538739 0.04232078
+#> 46        900              price 0.0065705481 0.01642144
+#> 47        900           typeGala 0.0466318145 0.04043431
+#> 48        900     typeHoneycrisp 0.0739920749 0.04079825
+#> 49        900   freshnessAverage 0.0369850947 0.04037146
+#> 50        900 freshnessExcellent 0.0020227584 0.04012070
 ```
 
 The `power` data frame contains the coefficient estimates and standard
@@ -498,7 +481,7 @@ summary(models[[10]])
 #> 
 #> Frequencies of alternatives:
 #>       1       2       3 
-#> 0.33296 0.34056 0.32648 
+#> 0.34019 0.33074 0.32907 
 #> 
 #> Exit Status: 3, Optimization stopped because ftol_rel or ftol_abs was reached.
 #>                                 
@@ -506,27 +489,27 @@ summary(models[[10]])
 #> Model Space:          Preference
 #> Model Run:                1 of 1
 #> Iterations:                    8
-#> Elapsed Time:        0h:0m:0.02s
+#> Elapsed Time:        0h:0m:0.03s
 #> Algorithm:        NLOPT_LD_LBFGS
 #> Weights Used?:             FALSE
 #> Robust?                    FALSE
 #> 
 #> Model Coefficients: 
-#>                       Estimate  Std. Error z-value  Pr(>|z|)    
-#> price               0.05429869  0.01649641  3.2915 0.0009964 ***
-#> typeGala           -0.02000050  0.04034574 -0.4957 0.6200865    
-#> typeHoneycrisp     -0.02143658  0.04039965 -0.5306 0.5956869    
-#> freshnessAverage   -0.00064111  0.04011179 -0.0160 0.9872479    
-#> freshnessExcellent -0.05633180  0.04077737 -1.3814 0.1671414    
+#>                     Estimate Std. Error z-value Pr(>|z|)  
+#> price              0.0065705  0.0164214  0.4001  0.68907  
+#> typeGala           0.0466318  0.0404343  1.1533  0.24880  
+#> typeHoneycrisp     0.0739921  0.0407982  1.8136  0.06974 .
+#> freshnessAverage   0.0369851  0.0403715  0.9161  0.35960  
+#> freshnessExcellent 0.0020228  0.0401207  0.0504  0.95979  
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #>                                      
-#> Log-Likelihood:         -5.925669e+03
+#> Log-Likelihood:         -5.930202e+03
 #> Null Log-Likelihood:    -5.932506e+03
-#> AIC:                     1.186134e+04
-#> BIC:                     1.189431e+04
-#> McFadden R2:             1.152481e-03
-#> Adj McFadden R2:         3.096665e-04
+#> AIC:                     1.187040e+04
+#> BIC:                     1.190337e+04
+#> McFadden R2:             3.884371e-04
+#> Adj McFadden R2:        -4.543770e-04
 #> Number of Observations:  5.400000e+03
 ```
 
@@ -595,7 +578,7 @@ citation("cbcTools")
 #>     title = {cbcTools: Tools For Designing Choice-Based Conjoint Survey Experiments},
 #>     author = {John Paul Helveston},
 #>     year = {2022},
-#>     note = {R package version 0.0.2},
+#>     note = {R package version 0.0.3},
 #>     url = {https://jhelvy.github.io/cbcTools/},
 #>   }
 ```

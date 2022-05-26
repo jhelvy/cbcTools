@@ -161,7 +161,7 @@ head(design_nochoice)
 
 The package includes some functions to quickly inspect some basic metrics of a design.
 
-The `cbc_balance()` function prints out a summary of the counts of each level for each attribute across all choice questions as well as the two-way counts across all pairs of attributes for a given design:
+The `cbc_balance()` function prints out a summary of the individual and pairwise counts of each level of each attribute across all choice questions:
 
 ```{r}
 cbc_balance(design)

@@ -31,7 +31,7 @@
 #'
 #' # Inspect the design overlap
 #' cbc_overlap(design)
-cbc_balance <- function(design, atts = NULL) {
+cbc_balance <- function(design) {
   atts <- setdiff(
       names(design),
       c("respID", "qID", "altID", "obsID", "profileID")
@@ -66,10 +66,7 @@ cbc_balance <- function(design, atts = NULL) {
 #' questions in which only two unique levels of that attribute were shown, and
 #' so on.
 #' @param design A data frame of a survey design.
-#' @param atts A vector of attributes. Defaults to `NULL`, in which case all
-#' of the column names of the `design` data frame are used except for those
-#' that end in `"ID"`.
-#' @return A list showing counts of the number of choice questions that contain
+#' @return Prints the counts of the number of choice questions that contain
 #' the unique number of levels for each attribute.
 #' @export
 #' @examples
