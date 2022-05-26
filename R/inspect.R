@@ -1,14 +1,10 @@
 #' Counts of attribute balance
 #'
-#' This function prints out a summary of the counts of each level for each
-#' attribute across all choice questions as well as the two-way counts across
-#' all pairs of attributes for a given design.
+#' This function prints out a summary of the individual and pairwise counts of
+#' each level for each attribute across all choice questions in the design.
 #' @param design A data frame of a survey design.
-#' @param atts A vector of attributes. Defaults to `NULL`, in which case all
-#' of the column names of the `design` data frame are used except for those
-#' that end in `"ID"`.
-#' @return A list showing counts of the number of choice questions that contain
-#' the unique number of levels for each attribute.
+#' @return Prints the individual and pairwise counts of the number of times
+#' each attribute levels in shown in the design.
 #' @export
 #' @examples
 #' library(cbcTools)
@@ -36,27 +32,27 @@
 #' # Inspect the design overlap
 #' cbc_overlap(design)
 cbc_balance <- function(design, atts = NULL) {
-  if (is.null(atts)) {
-    atts <- setdiff(
-      names(design), c("respID", "qID", "altID", "obsID", "profileID"))
-  }
-  cat("==============================\n")
-  cat("Attribute counts:\n\n")
-  for (i in seq_len(length(atts))) {
-    counts <- table(design[[atts[i]]])
-    cat(atts[i], ":\n", sep = "")
-    print(counts)
-    cat("\n")
-  }
-  cat("==============================\n")
-  cat("Pairwise attribute counts:\n\n")
+  atts <- setdiff(
+      names(design),
+      c("respID", "qID", "altID", "obsID", "profileID")
+  )
+  # Get counts of each individual attribute
+  counts <- lapply(atts, function(x) table(design[[x]]))
+  names(counts) <- atts
+  # Get pairwise counts matrix for each pair of attributes
   pairs <- data.frame(utils::combn(atts, 2))
-  for (i in seq_len(ncol(pairs))) {
-    vars <- pairs[, i]
-    counts <- table(design[[vars[1]]], design[[vars[2]]])
-    cat(vars[1], " & ", vars[2], ":\n", sep = "")
-    print(counts)
-    cat("\n")
+  counts_pair <- lapply(pairs, function(x) table(design[[x[1]]], design[[x[2]]]))
+  cat("==============================\n")
+  for (i in 1:ncol(pairs)) {
+      pair_names <- pairs[,i]
+      counts1 <- counts[[pair_names[1]]]
+      counts2 <- counts[[pair_names[2]]]
+      cat(paste0(pair_names, collapse = " x "), "\n\n")
+      print(rbind(
+          c(NA, counts2),
+          cbind(counts1, counts_pair[[i]])
+      ))
+      cat("\n")
   }
 }
 
@@ -101,23 +97,28 @@ cbc_balance <- function(design, atts = NULL) {
 #'
 #' # Inspect the design overlap
 #' cbc_overlap(design)
-cbc_overlap <- function(design, atts = NULL) {
-  if (is.null(atts)) {
-    atts <- setdiff(
-      names(design), c("respID", "qID", "altID", "obsID", "profileID"))
-  }
+cbc_overlap <- function(design) {
+  atts <- setdiff(
+      names(design),
+      c("respID", "qID", "altID", "obsID", "profileID")
+  )
+  counts <- lapply(atts, function(x) get_att_overlap_counts(x, design))
   cat("==============================\n")
   cat("Counts of attribute overlap:\n")
   cat("(# of questions with N unique levels)\n\n")
-  for (i in 1:length(atts)) {
-    counts <- tapply(
-      design[[atts[i]]], design$obsID,
-      FUN = function(x) length(unique(x))
-    )
-    counts <- as.vector(table(counts))
-    names(counts) <- seq(length(counts))
+  for (i in 1:length(counts)) {
     cat(atts[i], ":\n\n", sep = "")
-    print(counts)
+    print(counts[[i]])
     cat("\n")
   }
+}
+
+get_att_overlap_counts <- function(x, design) {
+  counts <- tapply(
+    design[[x]], design$obsID,
+    FUN = function(x) length(unique(x))
+  )
+  counts <- as.vector(table(counts))
+  names(counts) <- seq(length(counts))
+  return(counts)
 }
