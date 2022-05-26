@@ -94,8 +94,8 @@ identifying the simulated choices.</p>
 <span class="r-in"><span class="co"># Generate all possible profiles</span></span>
 <span class="r-in"><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
 <span class="r-in">  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span>
-<span class="r-in">  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Excellent"</span>, <span class="st">"Average"</span>, <span class="st">"Poor"</span><span class="op">)</span>,</span>
-<span class="r-in">  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span></span>
+<span class="r-in">  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span>
+<span class="r-in">  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span>
 <span class="r-in"><span class="op">)</span></span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co"># Make a randomized survey design</span></span>
@@ -119,7 +119,7 @@ identifying the simulated choices.</p>
 <span class="r-in">  priors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span class="r-in">    price     <span class="op">=</span> <span class="fl">0.1</span>,</span>
 <span class="r-in">    type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
-<span class="r-in">    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span></span>
+<span class="r-in">    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span></span>
 <span class="r-in">  <span class="op">)</span></span>
 <span class="r-in"><span class="op">)</span></span>
 <span class="r-in"></span>
@@ -130,7 +130,7 @@ identifying the simulated choices.</p>
 <span class="r-in">  priors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span class="r-in">    price     <span class="op">=</span> <span class="fl">0.1</span>,</span>
 <span class="r-in">    type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
-<span class="r-in">    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span>,</span>
+<span class="r-in">    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span class="r-in">    `price*type` <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span></span>
 <span class="r-in">  <span class="op">)</span></span>
 <span class="r-in"><span class="op">)</span></span>
@@ -141,11 +141,10 @@ identifying the simulated choices.</p>
 <span class="r-in">  obsID <span class="op">=</span> <span class="st">"obsID"</span>,</span>
 <span class="r-in">  priors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span class="r-in">    price <span class="op">=</span> <span class="fl">0.1</span>,</span>
-<span class="r-in">    type <span class="op">=</span> <span class="fu"><a href="randN.html">randN</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>, sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
-<span class="r-in">    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span></span>
+<span class="r-in">    type <span class="op">=</span> <span class="fu"><a href="randN.html">randN</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>, sd <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span class="r-in">    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span></span>
 <span class="r-in">  <span class="op">)</span></span>
 <span class="r-in"><span class="op">)</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)):</span> unused arguments (mu = c(0.1, 0.2), sigma = c(0.5, 1))</span>
 </code></pre></div>
     </div>
   </div>
