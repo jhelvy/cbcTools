@@ -22,8 +22,8 @@
 #' # Generate all possible profiles
 #' profiles <- cbc_profiles(
 #'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   freshness = c("Excellent", "Average", "Poor"),
-#'   type      = c("Fuji", "Gala", "Honeycrisp")
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
 #' # Make a randomized survey design
@@ -47,7 +47,7 @@
 #'   priors = list(
 #'     price     = 0.1,
 #'     type      = c(0.1, 0.2),
-#'     freshness = c(0.1, -0.2)
+#'     freshness = c(0.1, 0.2)
 #'   )
 #' )
 #'
@@ -58,7 +58,7 @@
 #'   priors = list(
 #'     price     = 0.1,
 #'     type      = c(0.1, 0.2),
-#'     freshness = c(0.1, -0.2),
+#'     freshness = c(0.1, 0.2),
 #'     `price*type` = c(0.1, 0.5)
 #'   )
 #' )
@@ -69,8 +69,8 @@
 #'   obsID = "obsID",
 #'   priors = list(
 #'     price = 0.1,
-#'     type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
-#'     freshness = c(0.1, -0.2)
+#'     type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
+#'     freshness = c(0.1, 0.2)
 #'   )
 #' )
 cbc_choices <- function(
@@ -101,10 +101,10 @@ sim_choices_rand <- function(design, obsID) {
 sim_choices_prior <- function(design, obsID, priors, n_draws) {
   model <- def_model_prior(design, priors, n_draws)
   result <- stats::predict(
-    object = model,
-    newdata = design,
-    obsID = obsID,
-    type = "outcome",
+    object     = model,
+    newdata    = design,
+    obsID      = obsID,
+    type       = "outcome",
     returnData = TRUE
   )
   result$choice <- result$predicted_outcome # Rename choice column
@@ -135,15 +135,16 @@ def_model_prior <- function(design, priors, n_draws) {
   coefs <- get_coefs(priors, parNamesCoded, randPars, randParsCoded)
   return(structure(list(
     coefficients = coefs,
-    modelType = ifelse(length(parNamesRand) > 0, "mxl", "mnl"),
-    parSetup = parSetup,
-    parIDs = parIDs,
+    modelType    = ifelse(length(parNamesRand) > 0, "mxl", "mnl"),
+    parSetup     = parSetup,
+    parIDs       = parIDs,
     inputs = list(
-      pars = parNamesFull,
-      price = NULL,
-      randPars = randPars,
-      numDraws = n_draws,
-      modelSpace = "pref"
+      pars       = parNamesFull,
+      price      = NULL,
+      randPars   = randPars,
+      numDraws   = n_draws,
+      modelSpace = "pref",
+      numMultiStarts = 1
     )
   ), class = "logitr"))
 }
@@ -196,23 +197,15 @@ get_coefs <- function(pars, parNamesCoded, randPars, randParsCoded) {
     return(parsFixed)
   }
   # Get all the random parameters
-  parsRand_mu <- unlist(lapply(pars[parNamesRand], function(x) x$pars$mu))
-  names(parsRand_mu) <- parNamesRandCoded
-  parsRand_sigma <- unlist(
-    lapply(pars[parNamesRand], function(x) x$pars$sigma)
-  )
-  names(parsRand_sigma) <- paste(parNamesRandCoded, "sigma", sep = "_")
+  parsRand_mean <- unlist(lapply(pars[parNamesRand], function(x) x$pars$mean))
+  names(parsRand_mean) <- parNamesRandCoded
+  parsRand_sd <- unlist(lapply(pars[parNamesRand], function(x) x$pars$sd))
+  names(parsRand_sd) <- paste0("sd_", parNamesRandCoded)
   # Order and rename the coefficients
-  coefs <- c(parsFixed, parsRand_mu)
+  coefs <- c(parsFixed, parsRand_mean)
   coefs <- coefs[parNamesCoded]
-  newNames <- parNamesCoded
-  newNames[which(newNames %in% parNamesRandCoded)] <- paste(
-    parNamesRandCoded, "mu",
-    sep = "_"
-  )
-  names(coefs) <- newNames
   # Add the sigma coefficients
-  coefs <- c(coefs, parsRand_sigma)
+  coefs <- c(coefs, parsRand_sd)
   return(coefs)
 }
 
@@ -221,16 +214,16 @@ get_coefs <- function(pars, parNamesCoded, randPars, randParsCoded) {
 #' Define a prior (assumed) model parameter as normally-distributed.
 #' Used in the `cbc_choices()` function.
 #'
-#' @param mu Vector of means, defaults to `0`.
-#' @param sigma Vector of standard deviations, defaults to `1`.
+#' @param mean Vector of means, defaults to `0`.
+#' @param sd Vector of standard deviations, defaults to `1`.
 #' @return A list defining normally-distributed parameters of the prior
 #' (assumed) utility model used to simulate choices in the `cbc_choices()`
 #' function.
 #' @export
 #' @examples
 #' # Insert example
-randN <- function(mu = 0, sigma = 1) {
-  return(list(pars = list(mu = mu, sigma = sigma), type = "n"))
+randN <- function(mean = 0, sd = 1) {
+  return(list(pars = list(mean = mean, sd = sd), type = "n"))
 }
 
 #' Define prior (assumed) model parameter as log-normally-distributed.
@@ -238,8 +231,8 @@ randN <- function(mu = 0, sigma = 1) {
 #' Define prior (assumed) model parameter as log-normally-distributed.
 #' Used in the `cbc_choices()` function.
 #'
-#' @param mu Mean of the distribution on the log scale, defaults to `0`.
-#' @param sigma Standard deviation of the distribution on the log scale,
+#' @param mean Mean of the distribution on the log scale, defaults to `0`.
+#' @param sd Standard deviation of the distribution on the log scale,
 #' defaults to `1`.
 #' @return A list defining log-normally-distributed parameters of the prior
 #' (assumed) utility model used to simulate choices in the `cbc_choices()`
@@ -247,6 +240,6 @@ randN <- function(mu = 0, sigma = 1) {
 #' @export
 #' @examples
 #' # Insert example
-randLN <- function(mu = 0, sigma = 1) {
-  return(list(pars = list(mu = mu, sigma = sigma), type = "ln"))
+randLN <- function(mean = 0, sd = 1) {
+  return(list(pars = list(mean = mean, sd = sd), type = "ln"))
 }

@@ -46,8 +46,8 @@ print.cbc_models <- function (
 #' # Generate all possible profiles
 #' profiles <- cbc_profiles(
 #'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   freshness = c("Excellent", "Average", "Poor"),
-#'   type      = c("Fuji", "Gala", "Honeycrisp")
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
 #' # Make a randomized survey design

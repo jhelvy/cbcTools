@@ -225,7 +225,7 @@ data <- cbc_choices(
 )
 ```
 
-Finally, you can also simulate data for a mixed logit model where parameters follow a normal or log-normal distribution across the population. In the example below, the `randN()` function is used to specify the `type` attribute with 2 random normal parameters with a specified vector of means (`mu`) and standard deviations (`sigma`) for each level of `type`. Log-normal parameters are specified using `randLN()`.
+Finally, you can also simulate data for a mixed logit model where parameters follow a normal or log-normal distribution across the population. In the example below, the `randN()` function is used to specify the `type` attribute with 2 random normal parameters with a specified vector of means (`mean`) and standard deviations (`sd`) for each level of `type`. Log-normal parameters are specified using `randLN()`.
 
 ```{r, eval=FALSE}
 data <- cbc_choices(
@@ -233,7 +233,7 @@ data <- cbc_choices(
   obsID = "obsID",
   priors = list(
     price = 0.1,
-    type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
+    type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
     freshness = c(0.1, 0.2)
   )
 )
