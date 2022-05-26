@@ -4,12 +4,12 @@
 \alias{randLN}
 \title{Define prior (assumed) model parameter as log-normally-distributed.}
 \usage{
-randLN(mu = 0, sigma = 1)
+randLN(mean = 0, sd = 1)
 }
 \arguments{
-\item{mu}{Mean of the distribution on the log scale, defaults to \code{0}.}
+\item{mean}{Mean of the distribution on the log scale, defaults to \code{0}.}
 
-\item{sigma}{Standard deviation of the distribution on the log scale,
+\item{sd}{Standard deviation of the distribution on the log scale,
 defaults to \code{1}.}
 }
 \value{

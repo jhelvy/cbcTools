@@ -35,8 +35,8 @@ library(cbcTools)
 # Generate all possible profiles
 profiles <- cbc_profiles(
   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  freshness = c("Excellent", "Average", "Poor"),
-  type      = c("Fuji", "Gala", "Honeycrisp")
+  type      = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c('Poor', 'Average', 'Excellent')
 )
 
 # Make a randomized survey design
@@ -60,7 +60,7 @@ data <- cbc_choices(
   priors = list(
     price     = 0.1,
     type      = c(0.1, 0.2),
-    freshness = c(0.1, -0.2)
+    freshness = c(0.1, 0.2)
   )
 )
 
@@ -71,7 +71,7 @@ data <- cbc_choices(
   priors = list(
     price     = 0.1,
     type      = c(0.1, 0.2),
-    freshness = c(0.1, -0.2),
+    freshness = c(0.1, 0.2),
     `price*type` = c(0.1, 0.5)
   )
 )
@@ -82,8 +82,8 @@ data <- cbc_choices(
   obsID = "obsID",
   priors = list(
     price = 0.1,
-    type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
-    freshness = c(0.1, -0.2)
+    type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
+    freshness = c(0.1, 0.2)
   )
 )
 }

@@ -4,12 +4,12 @@
 \alias{randN}
 \title{Define a prior (assumed) model parameter as normally-distributed.}
 \usage{
-randN(mu = 0, sigma = 1)
+randN(mean = 0, sd = 1)
 }
 \arguments{
-\item{mu}{Vector of means, defaults to \code{0}.}
+\item{mean}{Vector of means, defaults to \code{0}.}
 
-\item{sigma}{Vector of standard deviations, defaults to \code{1}.}
+\item{sd}{Vector of standard deviations, defaults to \code{1}.}
 }
 \value{
 A list defining normally-distributed parameters of the prior

@@ -9,7 +9,7 @@ cbc_power(
   outcome,
   obsID,
   pars,
-  rand_pars = NULL,
+  randPars = NULL,
   nbreaks = 10,
   n_q = 1,
   return_models = FALSE,
@@ -32,7 +32,7 @@ which should be coded with a \code{1} for \code{TRUE} and \code{0} for \code{FAL
 \item{pars}{The names of the parameters to be estimated in the model.
 Must be the same as the column names in the \code{data} argument.}
 
-\item{rand_pars}{A named vector whose names are the random parameters and
+\item{randPars}{A named vector whose names are the random parameters and
 values the distribution: \code{'n'} for normal or \code{'ln'} for log-normal.
 Defaults to \code{NULL}.}
 
@@ -84,8 +84,8 @@ library(cbcTools)
 # Generate all possible profiles
 profiles <- cbc_profiles(
   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  freshness = c("Excellent", "Average", "Poor"),
-  type      = c("Fuji", "Gala", "Honeycrisp")
+  type      = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c('Poor', 'Average', 'Excellent')
 )
 
 # Make a randomized survey design
