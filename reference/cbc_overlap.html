@@ -56,7 +56,7 @@ so on.'><meta property="og:image" content="https://jhelvy.github.io/cbcTools/log
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Counts of attribute overlap</h1>
-    <small class="dont-index">Source: <a href="https://github.com/jhelvy/cbcTools/blob/HEAD/R/cbc_inspect.R" class="external-link"><code>R/cbc_inspect.R</code></a></small>
+    <small class="dont-index">Source: <a href="https://github.com/jhelvy/cbcTools/blob/HEAD/R/inspect.R" class="external-link"><code>R/inspect.R</code></a></small>
     <div class="hidden name"><code>cbc_overlap.Rd</code></div>
     </div>
 
@@ -71,21 +71,17 @@ so on.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">cbc_overlap</span><span class="op">(</span><span class="va">design</span>, atts <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">cbc_overlap</span><span class="op">(</span><span class="va">design</span><span class="op">)</span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>design</dt>
 <dd><p>A data frame of a survey design.</p></dd>
-<dt>atts</dt>
-<dd><p>A vector of attributes. Defaults to <code>NULL</code>, in which case all
-of the column names of the <code>design</code> data frame are used except for those
-that end in <code>"ID"</code>.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>A list showing counts of the number of choice questions that contain
+    <p>Prints the counts of the number of choice questions that contain
 the unique number of levels for each attribute.</p>
     </div>
 
@@ -116,38 +112,38 @@ the unique number of levels for each attribute.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price x freshness </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Excellent Average Poor</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      NA      1872    1736 1792</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   565       194     186  185</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 615       210     202  203</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   591       222     184  185</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 604       216     199  189</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   570       189     182  199</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 563       197     175  191</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   684       223     237  224</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 611       207     188  216</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   597       214     183  200</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      NA      1806    1816 1778</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   610       212     217  181</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 561       191     212  158</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   584       180     206  198</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 631       214     198  219</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   611       199     207  205</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 617       199     211  207</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   555       185     173  197</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 609       208     203  198</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   622       218     189  215</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price x type </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Fuji Gala Honeycrisp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1791 1858       1751</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   565  190  206        169</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 615  221  204        190</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   591  169  209        213</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 604  192  212        200</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   570  196  197        177</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 563  192  185        186</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   684  226  244        214</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 611  202  206        203</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   597  203  195        199</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1773 1777       1850</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   610  201  205        204</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 561  178  186        197</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   584  171  198        215</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 631  206  206        219</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   611  194  195        222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 617  203  217        197</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   555  188  181        186</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 609  208  189        212</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   622  224  200        198</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness x type </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                Fuji Gala Honeycrisp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             NA 1791 1858       1751</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Excellent 1872  601  645        626</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Average   1736  612  606        518</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Poor      1792  578  607        607</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             NA 1773 1777       1850</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Excellent 1806  580  602        624</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Average   1816  591  606        619</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Poor      1778  602  569        607</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"></span>
 <span class="r-in"><span class="co"># Inspect the design overlap</span></span>
@@ -159,17 +155,17 @@ the unique number of levels for each attribute.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   19  460 1321 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   13  480 1307 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  171 1237  392 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  183 1201  416 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  187 1205  408 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  177 1190  433 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
