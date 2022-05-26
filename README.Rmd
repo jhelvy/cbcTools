@@ -24,7 +24,7 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 
 This package provides a set of tools for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing surveys:
 
-![](man/figures/process.png)
+![](man/figures/program_diagram.png)
 
 ## Installation
 
@@ -52,7 +52,7 @@ The first step in designing an experiment is to define the attributes and levels
 profiles <- cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Excellent', 'Average', 'Poor')
+  freshness = c('Poor', 'Average', 'Excellent')
 )
 
 nrow(profiles)
@@ -60,14 +60,14 @@ head(profiles)
 tail(profiles)
 ```
 
-Depending on the context of your survey, you may wish to eliminate or modify some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic), though doing so could significantly impact your ability to identify effects. As a result, it is recommended that you avoid eliminating profiles if possible.
+Depending on the context of your survey, you may wish to eliminate or modify some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). **WARNING: including hard constraints in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
 
-If you do wish to set some levels conditional on those of other attributes, you can do so by setting each level of an attribute to a list that defines these constraints. In the example below, the `type` attribute has constraints such that only certain price levels will be shown for each level. In addition, for the `"Honeycrisp"` level, only two of the three `freshness` levels are included: `"Excellent"` and `"Average"`. Note that both the other attributes (`price` and `freshness`) should contain all of the possible levels:
+If you do wish to set some levels conditional on those of other attributes, you can do so by setting each level of an attribute to a list that defines these constraints. In the example below, the `type` attribute has constraints such that only certain price levels will be shown for each level. In addition, for the `"Honeycrisp"` level, only two of the three `freshness` levels are included: `"Excellent"` and `"Average"`. Note that both the other attributes (`price` and `freshness`) should contain all of the possible levels. When these constraints you can see that there are only 30 profiles compared to 63 without constraints:
 
 ```{r}
 profiles <- cbc_profiles(
   price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  freshness = c("Excellent", "Average", "Poor"),
+  freshness = c('Poor', 'Average', 'Excellent'),
   type = list(
     "Fuji" = list(
         price = c(2, 2.5, 3)
@@ -77,7 +77,7 @@ profiles <- cbc_profiles(
     ),
     "Honeycrisp" = list(
         price = c(2.5, 3, 3.5, 4, 4.5, 5),
-        freshness = c("Excellent", "Average")
+        freshness = c("Average", "Excellent")
     )
   )
 )
@@ -87,13 +87,11 @@ head(profiles)
 tail(profiles)
 ```
 
-When these constraints you can see that there are fewer profiles available (only 30 compared to 63 without constraints). **WARNING: including hard constraints in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
-
 ```{r, include=FALSE}
 profiles <- cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Excellent', 'Average', 'Poor')
+  freshness = c('Poor', 'Average', 'Excellent')
 )
 ```
 
@@ -104,7 +102,7 @@ Once a set of profiles is obtained, a randomized conjoint survey can then be gen
 ```{r}
 design <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
+  n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 )
@@ -113,7 +111,7 @@ dim(design)  # View dimensions
 head(design) # Preview first 6 rows
 ```
 
-For now, the `cbc_design()` function only generates a randomized design. Other packages, such as the [{idefix}](https://github.com/traets/idefix) package, are able to generate other types of designs, such as D-efficient designs. The randomized design simply samples from the set of `profiles`. It also ensures that no two alternatives are the same in any choice question.
+For now, the `cbc_design()` function only generates a randomized design. Other packages, such as the [{idefix}](https://github.com/traets/idefix) package, are able to generate other types of designs, such as Bayesian D-efficient designs. The randomized design simply samples from the set of `profiles`. It also ensures that no two profiles are the same in any choice question.
 
 The resulting `design` data frame includes the following columns:
 
@@ -130,7 +128,7 @@ You can also make a "labeled" design (also known as "alternative-specific" desig
 ```{r}
 design_labeled <- cbc_design(
   profiles  = profiles,
-  n_resp    = 300, # Number of respondents
+  n_resp    = 900, # Number of respondents
   n_alts    = 3,   # Number of alternatives per question
   n_q       = 6,   # Number of questions per respondent
   label     = "type" # Set the "type" attribute as the label
@@ -149,7 +147,7 @@ You can include a "no choice" (also known as "outside good" option in your surve
 ```{r}
 design_nochoice <- cbc_design(
   profiles  = profiles,
-  n_resp    = 300, # Number of respondents
+  n_resp    = 900, # Number of respondents
   n_alts    = 3, # Number of alternatives per question
   n_q       = 6, # Number of questions per respondent
   no_choice = TRUE
@@ -161,7 +159,7 @@ head(design_nochoice)
 
 ## Inspecting survey designs
 
-The {cbcTools} package includes some functions to quickly inspect some basic metrics of a design.
+The package includes some functions to quickly inspect some basic metrics of a design.
 
 The `cbc_balance()` function prints out a summary of the counts of each level for each attribute across all choice questions as well as the two-way counts across all pairs of attributes for a given design:
 
@@ -191,8 +189,14 @@ head(data)
 You can also pass a list of prior parameters to define a utility model that will be used to simulate choices. In the example below, the choices are simulated using a utility model with the following parameters:
 
 - 1 continuous parameter for `price`
-- 2 categorical parameters for `type` (first level is reference)
-- 2 categorical parameters for `freshness` (first level is reference)
+- 2 categorical parameters for `type` (`'Gala'` and `'Honeycrisp'`)
+- 2 categorical parameters for `freshness` (`"Average"` and `"Excellent"`)
+
+Note that for categorical variables (`type` and `freshness` in this example), the first level defined when using `cbc_profiles()` is set as the reference level. The example below defines the following utility model for simulating choices for each alternative _j_:
+
+$$
+u_j = 0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
+$$
 
 ```{r, eval=FALSE}
 data <- cbc_choices(
@@ -201,7 +205,7 @@ data <- cbc_choices(
   priors = list(
     price     = 0.1,
     type      = c(0.1, 0.2),
-    freshness = c(0.1, -0.2)
+    freshness = c(0.1, 0.2)
   )
 )
 ```
@@ -215,13 +219,13 @@ data <- cbc_choices(
   priors = list(
     price = 0.1,
     type = c(0.1, 0.2),
-    freshness = c(0.1, -0.2),
+    freshness = c(0.1, 0.2),
     `price*type` = c(0.1, 0.5)
   )
 )
 ```
 
-Finally, you can also simulate data for a mixed logit specification where parameters follow a normal or log-normal distribution across the population. In the example below, the `randN()` function is used to specify the `type` attribute with 2 random normal discrete parameters with a specified mean (`mu`) and standard deviation (`sigma`):
+Finally, you can also simulate data for a mixed logit model where parameters follow a normal or log-normal distribution across the population. In the example below, the `randN()` function is used to specify the `type` attribute with 2 random normal parameters with a specified vector of means (`mu`) and standard deviations (`sigma`) for each level of `type`. Log-normal parameters are specified using `randLN()`.
 
 ```{r, eval=FALSE}
 data <- cbc_choices(
@@ -230,17 +234,17 @@ data <- cbc_choices(
   priors = list(
     price = 0.1,
     type = randN(mu = c(0.1, 0.2), sigma = c(0.5, 1)),
-    freshness = c(0.1, -0.2)
+    freshness = c(0.1, 0.2)
   )
 )
 ```
 
 ## Conducting a power analysis
 
-The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors should decrease (i.e. coefficient estimates become more precise). The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the [{logitr}](https://jhelvy.github.io/logitr) package:
+The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease (i.e. coefficient estimates become more precise). The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the [{logitr}](https://jhelvy.github.io/logitr) package:
 
 ```{r}
-results <- cbc_power(
+power <- cbc_power(
   data    = data,
   pars    = c("price", "type", "freshness"),
   outcome = "choice",
@@ -249,30 +253,46 @@ results <- cbc_power(
   n_q     = 6
 )
 
-head(results)
-tail(results)
+head(power)
+tail(power)
 ```
 
-The `results` object is a data frame containing the coefficient estimates and standard errors for each sample size. You can quickly visualize the outcome to identify a required sample size for a desired level of parameter precision by using the `plot()` method:
+The `power` data frame contains the coefficient estimates and standard errors for each sample size. You can quickly visualize the outcome to identify a required sample size for a desired level of parameter precision by using the `plot()` method:
+
+```{r power}
+plot(power)
+```
+
+If you want to examine any other aspects of the models other than the standard errors, you can set `return_models = TRUE` and `cbc_power()` will return a list of estimated models. The example below prints a summary of the last model in the list of models:
 
 ```{r}
-plot(results)
+library(logitr)
+
+models <- cbc_power(
+  data    = data,
+  pars    = c("price", "type", "freshness"),
+  outcome = "choice",
+  obsID   = "obsID",
+  nbreaks = 10,
+  n_q     = 6,
+  return_models = TRUE
+)
+
+summary(models[[10]])
 ```
 
 ## Piping it all together!
 
 One of the convenient features of how the package is written is that the object generated in each step is used as the first argument to the function for the next step. Thus, just like in the overall program diagram, the functions can be piped together:
 
-![](man/figures/process.png)
-
-```{r}
+```{r, eval=FALSE}
 cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Excellent', 'Average', 'Poor')
+  freshness = c('Poor', 'Average', 'Excellent')
 ) |>
 cbc_design(
-  n_resp   = 300, # Number of respondents
+  n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 ) |>
@@ -281,7 +301,7 @@ cbc_choices(
   priors = list(
     price     = 0.1,
     type      = c(0.1, 0.2),
-    freshness = c(0.1, -0.2)
+    freshness = c(0.1, 0.2)
   )
 ) |>
 cbc_power(
@@ -292,6 +312,9 @@ cbc_power(
     n_q     = 6
 ) |>
 plot()
+```
+
+```{r, ref.label='power', echo=FALSE}
 ```
 
 ## Author, Version, and License Information

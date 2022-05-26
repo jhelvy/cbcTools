@@ -12,7 +12,7 @@
 #' @param obsID The name of the column that identifies each observation.
 #' @param pars The names of the parameters to be estimated in the model.
 #' Must be the same as the column names in the `data` argument.
-#' @param rand_pars A named vector whose names are the random parameters and
+#' @param randPars A named vector whose names are the random parameters and
 #' values the distribution: `'n'` for normal or `'ln'` for log-normal.
 #' Defaults to `NULL`.
 #' @param nbreaks The number of different sample size groups.
@@ -81,7 +81,7 @@ cbc_power <- function(
   outcome,
   obsID,
   pars,
-  rand_pars  = NULL,
+  randPars  = NULL,
   nbreaks = 10,
   n_q = 1,
   return_models = FALSE,
@@ -103,7 +103,7 @@ cbc_power <- function(
           outcome   = outcome,
           obsID     = obsID,
           pars      = pars,
-          randPars  = rand_pars,
+          randPars  = randPars,
           panelID   = panelID,
           clusterID = clusterID,
           robust    = robust,
@@ -123,7 +123,7 @@ cbc_power <- function(
             outcome   = outcome,
             obsID     = obsID,
             pars      = pars,
-            randPars  = rand_pars,
+            randPars  = randPars,
             panelID   = panelID,
             clusterID = clusterID,
             robust    = robust,
@@ -140,7 +140,7 @@ cbc_power <- function(
             outcome   = outcome,
             obsID     = obsID,
             pars      = pars,
-            randPars  = rand_pars,
+            randPars  = randPars,
             panelID   = panelID,
             clusterID = clusterID,
             robust    = robust,
