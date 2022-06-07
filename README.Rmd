@@ -142,7 +142,7 @@ In the above example, you can see in the first six rows of the survey that the `
 
 ### Adding a "no choice" option (a.k.a. "outside good")
 
-You can include a "no choice" (also known as "outside good" option in your survey by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
+You can include a "no choice" (also known as "outside good") option in your survey by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
 
 ```{r}
 design_nochoice <- cbc_design(
