@@ -144,12 +144,12 @@ dim(design)  # View dimensions
 #> [1] 16200     8
 head(design) # Preview first 6 rows
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1        52   2.0       Gala Excellent
-#> 2      1   1     2     1        49   4.0       Fuji Excellent
-#> 3      1   1     3     1         5   3.0       Fuji      Poor
-#> 4      1   2     1     2        41   3.5 Honeycrisp   Average
-#> 5      1   2     2     2        48   3.5       Fuji Excellent
-#> 6      1   2     3     2        18   2.5 Honeycrisp      Poor
+#> 1      1   1     1     1         8   1.0       Gala      Poor
+#> 2      1   1     2     1        53   2.5       Gala Excellent
+#> 3      1   1     3     1        40   3.0 Honeycrisp   Average
+#> 4      1   2     1     2        20   3.5 Honeycrisp      Poor
+#> 5      1   2     2     2        10   2.0       Gala      Poor
+#> 6      1   2     3     2        24   2.0       Fuji   Average
 ```
 
 For now, the `cbc_design()` function only generates a randomized design.
@@ -191,12 +191,12 @@ dim(design_labeled)
 #> [1] 16200     8
 head(design_labeled)
 #>   respID qID altID obsID profileID price       type freshness
-#> 1      1   1     1     1         6   3.5       Fuji      Poor
-#> 2      1   1     2     1        13   3.5       Gala      Poor
-#> 3      1   1     3     1        61   3.0 Honeycrisp Excellent
-#> 4      1   2     1     2         7   4.0       Fuji      Poor
-#> 5      1   2     2     2        32   2.5       Gala   Average
-#> 6      1   2     3     2        63   4.0 Honeycrisp Excellent
+#> 1      1   1     1     1        47   3.0       Fuji Excellent
+#> 2      1   1     2     1         8   1.0       Gala      Poor
+#> 3      1   1     3     1        17   2.0 Honeycrisp      Poor
+#> 4      1   2     1     2        43   1.0       Fuji Excellent
+#> 5      1   2     2     2        50   1.0       Gala Excellent
+#> 6      1   2     3     2        58   1.5 Honeycrisp Excellent
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -224,19 +224,19 @@ dim(design_nochoice)
 #> [1] 21600    13
 head(design_nochoice)
 #>   respID qID altID obsID profileID price type_Fuji type_Gala type_Honeycrisp
-#> 1      1   1     1     1        20   3.5         0         0               1
-#> 2      1   1     2     1         1   1.0         1         0               0
-#> 3      1   1     3     1        55   3.5         0         1               0
+#> 1      1   1     1     1        49   4.0         1         0               0
+#> 2      1   1     2     1        51   1.5         0         1               0
+#> 3      1   1     3     1        36   1.0         0         0               1
 #> 4      1   1     4     1         0   0.0         0         0               0
-#> 5      1   2     1     2         5   3.0         1         0               0
-#> 6      1   2     2     2        63   4.0         0         0               1
+#> 5      1   2     1     2        46   2.5         1         0               0
+#> 6      1   2     2     2        28   4.0         1         0               0
 #>   freshness_Poor freshness_Average freshness_Excellent no_choice
-#> 1              1                 0                   0         0
-#> 2              1                 0                   0         0
-#> 3              0                 0                   1         0
+#> 1              0                 0                   1         0
+#> 2              0                 0                   1         0
+#> 3              0                 1                   0         0
 #> 4              0                 0                   0         1
-#> 5              1                 0                   0         0
-#> 6              0                 0                   1         0
+#> 5              0                 0                   1         0
+#> 6              0                 1                   0         0
 ```
 
 ## Inspecting survey designs
@@ -254,34 +254,34 @@ cbc_balance(design)
 #> price x type 
 #> 
 #>          Fuji Gala Honeycrisp
-#>       NA 5374 5325       5501
-#> 1   2310  794  736        780
-#> 1.5 2424  783  796        845
-#> 2   2296  746  758        792
-#> 2.5 2246  795  736        715
-#> 3   2345  745  817        783
-#> 3.5 2235  715  719        801
-#> 4   2344  796  763        785
+#>       NA 5364 5397       5439
+#> 1   2264  736  755        773
+#> 1.5 2359  754  774        831
+#> 2   2339  799  763        777
+#> 2.5 2368  791  776        801
+#> 3   2334  810  766        758
+#> 3.5 2238  754  759        725
+#> 4   2298  720  804        774
 #> 
 #> price x freshness 
 #> 
 #>          Poor Average Excellent
-#>       NA 5353    5422      5425
-#> 1   2310  713     809       788
-#> 1.5 2424  816     807       801
-#> 2   2296  752     802       742
-#> 2.5 2246  772     740       734
-#> 3   2345  750     764       831
-#> 3.5 2235  749     727       759
-#> 4   2344  801     773       770
+#>       NA 5481    5343      5376
+#> 1   2264  754     724       786
+#> 1.5 2359  810     799       750
+#> 2   2339  799     772       768
+#> 2.5 2368  790     810       768
+#> 3   2334  789     736       809
+#> 3.5 2238  737     754       747
+#> 4   2298  802     748       748
 #> 
 #> type x freshness 
 #> 
 #>                 Poor Average Excellent
-#>              NA 5353    5422      5425
-#> Fuji       5374 1801    1767      1806
-#> Gala       5325 1743    1832      1750
-#> Honeycrisp 5501 1809    1823      1869
+#>              NA 5481    5343      5376
+#> Fuji       5364 1836    1756      1772
+#> Gala       5397 1775    1829      1793
+#> Honeycrisp 5439 1870    1758      1811
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -301,17 +301,17 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   71 1871 3458 
+#>   91 1853 3456 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  525 3596 1279 
+#>  530 3617 1253 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  536 3613 1251
+#>  553 3589 1258
 ```
 
 ## Simulating choices
@@ -327,12 +327,12 @@ data <- cbc_choices(
 
 head(data)
 #>   respID qID altID obsID profileID price       type freshness choice
-#> 1      1   1     1     1        52   2.0       Gala Excellent      0
-#> 2      1   1     2     1        49   4.0       Fuji Excellent      0
-#> 3      1   1     3     1         5   3.0       Fuji      Poor      1
-#> 4      1   2     1     2        41   3.5 Honeycrisp   Average      0
-#> 5      1   2     2     2        48   3.5       Fuji Excellent      0
-#> 6      1   2     3     2        18   2.5 Honeycrisp      Poor      1
+#> 1      1   1     1     1         8   1.0       Gala      Poor      0
+#> 2      1   1     2     1        53   2.5       Gala Excellent      0
+#> 3      1   1     3     1        40   3.0 Honeycrisp   Average      1
+#> 4      1   2     1     2        20   3.5 Honeycrisp      Poor      0
+#> 5      1   2     2     2        10   2.0       Gala      Poor      1
+#> 6      1   2     3     2        24   2.0       Fuji   Average      0
 ```
 
 You can also pass a list of prior parameters to define a utility model
@@ -349,11 +349,9 @@ example), the first level defined when using `cbc_profiles()` is set as
 the reference level. The example below defines the following utility
 model for simulating choices for each alternative *j*:
 
-![
-u_j = 0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \\varepsilon_j
-](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0Au_j%20%3D%200.1price_j%20%2B%200.1typeGala_j%20%2B%200.2typeHoneycrisp_j%20%2B%200.1freshnessAverage_j%20%2B%200.2freshnessExcellent_j%20%2B%20%5Cvarepsilon_j%0A "
+$$
 u_j = 0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
-")
+$$
 
 ``` r
 data <- cbc_choices(
@@ -427,21 +425,21 @@ power <- cbc_power(
 )
 
 head(power)
-#>   sampleSize               coef        est         se
-#> 1         90              price 0.04222236 0.05310222
-#> 2         90           typeGala 0.10037577 0.13063472
-#> 3         90     typeHoneycrisp 0.05663034 0.12934244
-#> 4         90   freshnessAverage 0.01852680 0.13003491
-#> 5         90 freshnessExcellent 0.08556831 0.13040448
-#> 6        180              price 0.01209548 0.03719768
+#>   sampleSize               coef          est         se
+#> 1         90              price  0.059100275 0.05355244
+#> 2         90           typeGala  0.086638491 0.12738712
+#> 3         90     typeHoneycrisp  0.048171450 0.12811675
+#> 4         90   freshnessAverage  0.146950632 0.12869842
+#> 5         90 freshnessExcellent  0.122825059 0.12774457
+#> 6        180              price -0.007340841 0.03746124
 tail(power)
 #>    sampleSize               coef          est         se
-#> 45        810 freshnessExcellent  0.054345472 0.04277605
-#> 46        900              price  0.007252448 0.01643380
-#> 47        900           typeGala -0.046650236 0.04061660
-#> 48        900     typeHoneycrisp  0.024182574 0.04023145
-#> 49        900   freshnessAverage  0.024929792 0.04049144
-#> 50        900 freshnessExcellent  0.040201910 0.04057510
+#> 45        810 freshnessExcellent  0.045353237 0.04271695
+#> 46        900              price  0.021581802 0.01680005
+#> 47        900           typeGala -0.005864412 0.04044297
+#> 48        900     typeHoneycrisp -0.072816654 0.04055494
+#> 49        900   freshnessAverage  0.059181159 0.04044227
+#> 50        900 freshnessExcellent  0.047257238 0.04052068
 ```
 
 The `power` data frame contains the coefficient estimates and standard
@@ -476,43 +474,45 @@ models <- cbc_power(
 summary(models[[10]])
 #> =================================================
 #> 
-#> Model estimated on: Tue Jun 07 12:03:30 2022 
+#> Model estimated on: Fri Sep 02 17:30:02 2022 
 #> 
-#> Using logitr version: 0.6.0 
+#> Using logitr version: 0.7.2 
 #> 
 #> Call:
 #> FUN(data = X[[i]], outcome = ..1, obsID = ..2, pars = ..3, randPars = ..4, 
 #>     panelID = ..5, clusterID = ..6, robust = ..7, predict = ..8)
 #> 
 #> Frequencies of alternatives:
-#>      1      2      3 
-#> 0.3300 0.3313 0.3387 
+#>       1       2       3 
+#> 0.32296 0.34056 0.33648 
 #> 
 #> Exit Status: 3, Optimization stopped because ftol_rel or ftol_abs was reached.
 #>                                 
 #> Model Type:    Multinomial Logit
 #> Model Space:          Preference
 #> Model Run:                1 of 1
-#> Iterations:                   10
+#> Iterations:                    9
 #> Elapsed Time:        0h:0m:0.04s
 #> Algorithm:        NLOPT_LD_LBFGS
 #> Weights Used?:             FALSE
 #> Robust?                    FALSE
 #> 
 #> Model Coefficients: 
-#>                      Estimate Std. Error z-value Pr(>|z|)
-#> price               0.0072524  0.0164338  0.4413   0.6590
-#> typeGala           -0.0466502  0.0406166 -1.1486   0.2507
-#> typeHoneycrisp      0.0241826  0.0402315  0.6011   0.5478
-#> freshnessAverage    0.0249298  0.0404914  0.6157   0.5381
-#> freshnessExcellent  0.0402019  0.0405751  0.9908   0.3218
+#>                      Estimate Std. Error z-value Pr(>|z|)  
+#> price               0.0215818  0.0168001  1.2846  0.19892  
+#> typeGala           -0.0058644  0.0404430 -0.1450  0.88471  
+#> typeHoneycrisp     -0.0728167  0.0405549 -1.7955  0.07257 .
+#> freshnessAverage    0.0591812  0.0404423  1.4633  0.14337  
+#> freshnessExcellent  0.0472572  0.0405207  1.1662  0.24351  
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #>                                      
-#> Log-Likelihood:         -5.930310e+03
+#> Log-Likelihood:         -5.928414e+03
 #> Null Log-Likelihood:    -5.932506e+03
-#> AIC:                     1.187062e+04
-#> BIC:                     1.190359e+04
-#> McFadden R2:             3.702147e-04
-#> Adj McFadden R2:        -4.725994e-04
+#> AIC:                     1.186683e+04
+#> BIC:                     1.189980e+04
+#> McFadden R2:             6.897615e-04
+#> Adj McFadden R2:        -1.530526e-04
 #> Number of Observations:  5.400000e+03
 ```
 

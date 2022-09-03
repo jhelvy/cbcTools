@@ -136,15 +136,25 @@ def_model_prior <- function(design, priors, n_draws) {
   return(structure(list(
     coefficients = coefs,
     modelType    = ifelse(length(parNamesRand) > 0, "mxl", "mnl"),
+    modelSpace   = "pref",
     parSetup     = parSetup,
     parIDs       = parIDs,
+    standardDraws = getStandardDraws(parIDs, n_draws),
+    # Create n object, which stores counts of various variables
+    n = list(
+      vars       = length(parSetup),
+      parsFixed  = length(which(parSetup == "f")),
+      parsRandom = length(which(parSetup != "f")),
+      draws      = n_draws,
+      pars       = length(coefs)
+    ),
     inputs = list(
       pars       = parNamesFull,
       price      = NULL,
       randPars   = randPars,
       numDraws   = n_draws,
-      modelSpace = "pref",
-      numMultiStarts = 1
+      numMultiStarts = 1,
+      correlation = FALSE
     )
   ), class = "logitr"))
 }
@@ -179,10 +189,11 @@ get_parSetup <- function(parNames, randPars) {
 # Modified from {logitr}
 get_parIDs <- function(parSetup) {
   return(list(
-    fixed     = which(parSetup == "f"),
-    random    = which(parSetup != "f"),
-    normal    = which(parSetup == "n"),
-    logNormal = which(parSetup == "ln")
+    f  = which(parSetup == "f"),
+    r  = which(parSetup != "f"),
+    n  = which(parSetup == "n"),
+    ln = which(parSetup == "ln"),
+    cn = which(parSetup == "cn")
   ))
 }
 
@@ -207,6 +218,14 @@ get_coefs <- function(pars, parNamesCoded, randPars, randParsCoded) {
   # Add the sigma coefficients
   coefs <- c(coefs, parsRand_sd)
   return(coefs)
+}
+
+# Modified from {logitr}
+getStandardDraws <- function(parIDs, numDraws) {
+    numBetas <- length(parIDs$f) + length(parIDs$r)
+    draws <- as.matrix(randtoolbox::halton(numDraws, numBetas, normal = TRUE))
+    draws[, parIDs$f] <- 0 * draws[, parIDs$f]
+    return(draws)
 }
 
 #' Define a prior (assumed) model parameter as normally-distributed.
