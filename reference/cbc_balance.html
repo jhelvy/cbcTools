@@ -18,7 +18,7 @@ each level for each attribute across all choice questions in the design."><meta 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.4</span>
       </span>
     </div>
 
@@ -61,83 +61,86 @@ each level for each attribute across all choice questions in the design.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">cbc_balance</span><span class="op">(</span><span class="va">design</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">cbc_balance</span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>design</dt>
 <dd><p>A data frame of a survey design.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Prints the individual and pairwise counts of the number of times
+    
+
+<p>Prints the individual and pairwise counts of the number of times
 each attribute levels in shown in the design.</p>
     </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># A simple conjoint experiment about apples</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Generate all possible profiles</span></span>
-<span class="r-in"><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
-<span class="r-in">  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span>
-<span class="r-in">  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span>
-<span class="r-in">  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span>
-<span class="r-in"><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Make a randomized survey design</span></span>
-<span class="r-in"><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
-<span class="r-in">  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
-<span class="r-in">  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span>
-<span class="r-in">  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span>
-<span class="r-in">  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span>
-<span class="r-in"><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Inspect the design balance</span></span>
-<span class="r-in"><span class="fu">cbc_balance</span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A simple conjoint experiment about apples</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Generate all possible profiles</span></span></span>
+<span class="r-in"><span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Make a randomized survey design</span></span></span>
+<span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
+<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Inspect the design balance</span></span></span>
+<span class="r-in"><span><span class="fu">cbc_balance</span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ==============================</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price x type </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Fuji Gala Honeycrisp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1767 1823       1810</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   608  170  222        216</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 616  201  219        196</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   599  208  196        195</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 577  203  176        198</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   639  209  199        231</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 596  202  193        201</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   597  193  224        180</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 590  198  195        197</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   578  183  199        196</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1768 1858       1774</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   600  198  219        183</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 610  206  205        199</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   551  174  206        171</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 611  182  203        226</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   610  198  201        211</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 627  210  195        222</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   558  182  197        179</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 619  206  217        196</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   614  212  215        187</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price x freshness </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Poor Average Excellent</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1769    1783      1848</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   608  223     193       192</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 616  209     187       220</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   599  207     186       206</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 577  194     194       189</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   639  216     208       215</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 596  185     204       207</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   597  175     207       215</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 590  185     191       214</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   578  175     213       190</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1847    1851      1702</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   600  193     220       187</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 610  186     221       203</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   551  195     170       186</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 611  208     216       187</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   610  219     198       193</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 627  222     214       191</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   558  188     195       175</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 619  236     206       177</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   614  200     211       203</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type x freshness </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 Poor Average Excellent</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              NA 1769    1783      1848</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Fuji       1767  601     543       623</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Gala       1823  577     618       628</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Honeycrisp 1810  591     622       597</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              NA 1847    1851      1702</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Fuji       1768  620     595       553</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Gala       1858  637     638       583</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Honeycrisp 1774  590     618       566</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Inspect the design overlap</span></span>
-<span class="r-in"><span class="fu"><a href="cbc_overlap.html">cbc_overlap</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Inspect the design overlap</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="cbc_overlap.html">cbc_overlap</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ==============================</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Counts of attribute overlap:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> (# of questions with N unique levels)</span>
@@ -145,17 +148,17 @@ each attribute levels in shown in the design.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   13  475 1312 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   16  510 1274 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  170 1224  406 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  163 1204  433 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  174 1244  382 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  197 1198  405 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
@@ -171,7 +174,7 @@ each attribute levels in shown in the design.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

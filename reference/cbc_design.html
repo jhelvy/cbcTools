@@ -20,7 +20,7 @@ Modified Federov algorithm is used via the idefix package."><meta property="og:i
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.4</span>
       </span>
     </div>
 
@@ -65,15 +65,15 @@ Modified Federov algorithm is used via the <code>idefix</code> package.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">cbc_design</span><span class="op">(</span>
-  <span class="va">profiles</span>,
-  <span class="va">n_resp</span>,
-  <span class="va">n_alts</span>,
-  <span class="va">n_q</span>,
-  no_choice <span class="op">=</span> <span class="cn">FALSE</span>,
-  label <span class="op">=</span> <span class="cn">NULL</span>,
-  d_eff <span class="op">=</span> <span class="cn">FALSE</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">cbc_design</span><span class="op">(</span></span>
+<span>  <span class="va">profiles</span>,</span>
+<span>  <span class="va">n_resp</span>,</span>
+<span>  <span class="va">n_alts</span>,</span>
+<span>  <span class="va">n_q</span>,</span>
+<span>  no_choice <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  label <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  d_eff <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -81,72 +81,87 @@ Modified Federov algorithm is used via the <code>idefix</code> package.</p>
     <dl><dt>profiles</dt>
 <dd><p>A data frame in which each row is a possible profile.
 This can be generated using the <code><a href="cbc_profiles.html">cbc_profiles()</a></code> function.</p></dd>
+
+
 <dt>n_resp</dt>
 <dd><p>Number of survey respondents.</p></dd>
+
+
 <dt>n_alts</dt>
 <dd><p>Number of alternatives per choice question.</p></dd>
+
+
 <dt>n_q</dt>
 <dd><p>Number of questions per respondent.</p></dd>
+
+
 <dt>no_choice</dt>
 <dd><p>Include a "none" option in the choice sets? Defaults to
 <code>FALSE</code>. If <code>TRUE</code>, the total number of alternatives per question will be
 one more than the provided <code>n_alts</code> argument.</p></dd>
+
+
 <dt>label</dt>
 <dd><p>The name of the variable to use in a "labeled" design
 (also called an "alternative-specific design") such that each set of
 alternatives contains one of each of the levels in the <code>label</code> attribute.
 If used, the <code>n_alts</code> argument will be ignored as its value is defined by
 the unique number of levels in the <code>label</code> variable. Defaults to <code>NULL</code>.</p></dd>
+
+
 <dt>d_eff</dt>
 <dd><p>If <code>TRUE</code>, returns a D-efficient design where each respondent
 is shown the same design, otherwise a fully randomized design is returned.
 Defaults to <code>FALSE</code>. <strong>This feature is not yet implemented</strong></p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>A data frame containing a choice-based conjoint survey design where
+    
+
+<p>A data frame containing a choice-based conjoint survey design where
 each row is an alternative.</p>
     </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># A simple conjoint experiment about apples</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Generate all possible profiles</span></span>
-<span class="r-in"><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
-<span class="r-in">  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span>
-<span class="r-in">  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span>
-<span class="r-in">  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span>
-<span class="r-in"><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Make a randomized survey design</span></span>
-<span class="r-in"><span class="va">design_rand</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span>
-<span class="r-in">  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
-<span class="r-in">  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span>
-<span class="r-in">  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span>
-<span class="r-in">  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span>
-<span class="r-in"><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Make a randomized survey design with a "no choice" option</span></span>
-<span class="r-in"><span class="va">design_rand_nochoice</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span>
-<span class="r-in">  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span>
-<span class="r-in">  n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span>
-<span class="r-in">  n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span>
-<span class="r-in">  n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span>
-<span class="r-in">  no_choice <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span class="r-in"><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># Make randomized labeled survey design with each "type" appearing in each</span></span>
-<span class="r-in"><span class="co"># choice question</span></span>
-<span class="r-in"><span class="va">design_rand_labeled</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span>
-<span class="r-in">  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span>
-<span class="r-in">  n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span>
-<span class="r-in">  n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span>
-<span class="r-in">  n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span>
-<span class="r-in">  label     <span class="op">=</span> <span class="st">"type"</span></span>
-<span class="r-in"><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A simple conjoint experiment about apples</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Generate all possible profiles</span></span></span>
+<span class="r-in"><span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Make a randomized survey design</span></span></span>
+<span class="r-in"><span><span class="va">design_rand</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
+<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Make a randomized survey design with a "no choice" option</span></span></span>
+<span class="r-in"><span><span class="va">design_rand_nochoice</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>  n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
+<span class="r-in"><span>  n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  no_choice <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Make randomized labeled survey design with each "type" appearing in each</span></span></span>
+<span class="r-in"><span><span class="co"># choice question</span></span></span>
+<span class="r-in"><span><span class="va">design_rand_labeled</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>  n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
+<span class="r-in"><span>  n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  label     <span class="op">=</span> <span class="st">"type"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -161,7 +176,7 @@ each row is an alternative.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.3.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>
