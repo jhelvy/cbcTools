@@ -3,7 +3,8 @@
 #' This function creates a data frame containing a choice-based conjoint survey
 #' design where each row is an alternative. Designs can be either fully
 #' randomized or D-efficient, in which case an implementation of the
-#' Modified Federov algorithm is used via the `idefix` package.
+#' Modified Federov algorithm is used via the `idefix` package (still in
+#' development).
 #'
 #' @param profiles A data frame in which each row is a possible profile.
 #' This can be generated using the `cbc_profiles()` function.

@@ -1,6 +1,6 @@
 Package: cbcTools
 Title: Tools For Designing Choice-Based Conjoint Survey Experiments
-Version: 0.0.4
+Version: 0.0.5
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",
@@ -17,9 +17,9 @@ RoxygenNote: 7.2.1
 Imports:
     fastDummies,
     ggplot2,
-    idefix,
-    logitr (>= 0.7.2),
+    logitr (>= 0.8.0),
     parallel,
+    randtoolbox,
     rlang,
     stats,
     utils

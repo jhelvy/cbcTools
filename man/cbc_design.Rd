@@ -46,7 +46,8 @@ each row is an alternative.
 This function creates a data frame containing a choice-based conjoint survey
 design where each row is an alternative. Designs can be either fully
 randomized or D-efficient, in which case an implementation of the
-Modified Federov algorithm is used via the \code{idefix} package.
+Modified Federov algorithm is used via the \code{idefix} package (still in
+development).
 }
 \examples{
 library(cbcTools)

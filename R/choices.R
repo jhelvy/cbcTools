@@ -146,7 +146,8 @@ def_model_prior <- function(design, priors, n_draws) {
       parsFixed  = length(which(parSetup == "f")),
       parsRandom = length(which(parSetup != "f")),
       draws      = n_draws,
-      pars       = length(coefs)
+      pars       = length(coefs),
+      multiStarts = 1
     ),
     inputs = list(
       pars       = parNamesFull,
