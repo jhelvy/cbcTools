@@ -76,14 +76,27 @@
 #'   no_choice = TRUE
 #' )
 #'
-#' # Make randomized labeled survey design with each "type" appearing in each
-#' # choice question
+#' # Make a randomized labeled survey design with each "type" appearing in
+#' # each choice question
 #' design_rand_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
 #'   n_alts    = 3, # Number of alternatives per question
 #'   n_q       = 6, # Number of questions per respondent
 #'   label     = "type"
+#' )
+#'
+#' # Make a Bayesian D-efficient design with a prior model specified
+#' design_db_eff <- cbc_design(
+#'     profiles  = profiles,
+#'     n_resp    = 300, # Number of respondents
+#'     n_alts    = 3, # Number of alternatives per question
+#'     n_q       = 6, # Number of questions per respondent
+#'     priors = list(
+#'         price     = -0.1,
+#'         type      = c(0.1, 0.2),
+#'         freshness = c(0.1, 0.2)
+#'     )
 #' )
 cbc_design <- function(
   profiles,
@@ -102,6 +115,23 @@ cbc_design <- function(
   max_iter = 50,
   parallel = TRUE
 ) {
+  check_inputs_design(
+    profiles,
+    n_resp,
+    n_alts,
+    n_q,
+    n_blocks,
+    n_draws,
+    no_choice,
+    n_start,
+    label,
+    priors,
+    prior_no_choice,
+    probs,
+    method,
+    max_iter,
+    parallel
+  )
   profiles <- as.data.frame(profiles) # tibbles break things
   if (is.null(priors)) {
     design <- make_design_rand(
@@ -305,7 +335,7 @@ make_design_eff <- function(
             alt.cte = alt_cte,
             parallel = parallel
         )
-    } else if (method == "Modfed") {
+    } else {
         D <- idefix::Modfed(
             cand.set = idefix::Profiles(
                 lvls = lvls,
@@ -320,8 +350,6 @@ make_design_eff <- function(
             alt.cte = alt_cte,
             parallel = parallel
         )
-    } else {
-        stop('The method argument must be either "CEA" or "Modfed"')
     }
 
     # Decode the design
