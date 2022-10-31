@@ -26,7 +26,7 @@ This package provides a set of tools for designing surveys and conducting power 
 
 ![](man/figures/program_diagram.png)
 
-## Installation
+# Installation
 
 The current version is not yet on CRAN, but you can install it from
 Github using the {remotes} library:
@@ -42,9 +42,7 @@ Load the library with:
 library(cbcTools)
 ```
 
-## Make survey designs
-
-### Generating profiles
+# Generate profiles
 
 The first step in designing an experiment is to define the attributes and levels for your experiment and then generate all of the `profiles` of each possible combination of those attributes and levels. For example, let's say you're designing a conjoint experiment about apples and you want to include `price`, `type`, and `freshness` as attributes. You can obtain all of the possible profiles for these attributes using the `cbc_profiles()` function:
 
@@ -95,9 +93,24 @@ profiles <- cbc_profiles(
 )
 ```
 
-### Generating random designs
+# Generate survey designs
 
-Once a set of profiles is obtained, a randomized conjoint survey can then be generated using the `cbc_design()` function:
+Once a set of profiles is obtained, a conjoint survey can then be generated using the `cbc_design()` function. A variety of survey designs can be generated, including:
+
+- Random designs
+- Labeled designs (a.k.a. "alternative-specific" designs)
+- Designs with a "no choice" option (a.k.a. "outside good")
+- Bayesian D-efficient designs
+
+## Random designs
+
+The randomized design simply samples from the set of `profiles`, ensuring that no two profiles are the same in any choice question. The resulting `design` data frame includes the following columns:
+
+- `profileID`: Identifies the profile in `profiles`.
+- `respID`: Identifies each survey respondent.
+- `qID`: Identifies the choice question answered by the respondent.
+- `altID`:Identifies the alternative in any one choice observation.
+- `obsID`: Identifies each unique choice observation across all respondents.
 
 ```{r}
 design <- cbc_design(
@@ -111,15 +124,7 @@ dim(design)  # View dimensions
 head(design) # Preview first 6 rows
 ```
 
-The randomized design simply samples from the set of `profiles`, ensuring that no two profiles are the same in any choice question. The resulting `design` data frame includes the following columns:
-
-- `profileID`: Identifies the profile in `profiles`.
-- `respID`: Identifies each survey respondent.
-- `qID`: Identifies the choice question answered by the respondent.
-- `altID`:Identifies the alternative in any one choice observation.
-- `obsID`: Identifies each unique choice observation across all respondents.
-
-### Labeled designs (a.k.a. "alternative-specific" designs)
+## Labeled designs (a.k.a. "alternative-specific" designs)
 
 You can also make a "labeled" design (also known as "alternative-specific" design) where the levels of one attribute is used as a label by setting the `label` argument to that attribute. This by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, so the `n_alts` argument is overridden. Here is an example labeled survey using the `type` attribute as the label:
 
@@ -138,7 +143,7 @@ head(design_labeled)
 
 In the above example, you can see in the first six rows of the survey that the `type` attribute is always fixed to be the same order, ensuring that each level in the `type` attribute will always be shown in each choice question.
 
-### Adding a "no choice" option (a.k.a. "outside good")
+## Designs with a "no choice" option (a.k.a. "outside good")
 
 You can include a "no choice" (also known as "outside good") option in your survey by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
 
@@ -155,7 +160,7 @@ dim(design_nochoice)
 head(design_nochoice)
 ```
 
-### Bayesian D-efficient designs
+## Bayesian D-efficient designs
 
 A Bayesian D-efficient design can be obtained by providing a list of prior parameters to define an expected prior utility model. These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://www.jstatsoft.org/article/view/v096i03). For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use "labeled" designs.
 
@@ -203,7 +208,7 @@ dim(design_db_eff_no_choice)
 head(design_db_eff_no_choice)
 ```
 
-## Inspecting survey designs
+# Inspect survey designs
 
 The package includes some functions to quickly inspect some basic metrics of a design.
 
@@ -219,9 +224,13 @@ The `cbc_overlap()` function prints out a summary of the amount of "overlap" acr
 cbc_overlap(design)
 ```
 
-## Simulating choices
+# Simulate choices
 
-You can simulate choices for a given `design` using the `cbc_choices()` function. By default, random choices are simulated:
+You can simulate choices for a given `design` using the `cbc_choices()` function. 
+
+## Random choices
+
+By default, random choices are simulated:
 
 ```{r}
 data <- cbc_choices(
@@ -231,6 +240,8 @@ data <- cbc_choices(
 
 head(data)
 ```
+
+## Choices according to a prior 
 
 You can also pass a list of prior parameters to define a utility model that will be used to simulate choices. In the example below, the choices are simulated using a utility model with the following parameters:
 
@@ -285,7 +296,7 @@ data <- cbc_choices(
 )
 ```
 
-## Conducting a power analysis
+# Conduct a power analysis
 
 The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease (i.e. coefficient estimates become more precise). The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the [{logitr}](https://jhelvy.github.io/logitr) package:
 
@@ -327,12 +338,12 @@ models <- cbc_power(
 summary(models[[10]])
 ```
 
-## Piping it all together!
+## Pipe it all together!
 
-One of the convenient features of how the package is written is that the object generated in each step is used as the first argument to the function for the next step. Thus, just like in the overall program diagram, the functions can be piped together:
+One of the convenient features of how the package is written is that the object generated in each step is used as the first argument to the function for the next step. Thus, just like in the overall program diagram, the functions can be piped together. For example, the "pipeline" below uses the Base R pipe operator (`|>`) to generate profiles, generate a design, simulate choices according to a prior utility model, conduct a power analysis, and then finally plot the results:
 
 ```{r, eval=FALSE}
-cbc_profiles(
+design <- cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')

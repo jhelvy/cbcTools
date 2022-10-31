@@ -96,7 +96,8 @@
 #'         price     = -0.1,
 #'         type      = c(0.1, 0.2),
 #'         freshness = c(0.1, 0.2)
-#'     )
+#'     ),
+#'     parallel = FALSE
 #' )
 cbc_design <- function(
   profiles,

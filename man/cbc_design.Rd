@@ -15,6 +15,7 @@ cbc_design(
   n_start = 5,
   label = NULL,
   priors = NULL,
+  prior_no_choice = NULL,
   probs = FALSE,
   method = "CEA",
   max_iter = 50,
@@ -38,8 +39,8 @@ respondent sees the same set of choice questions.}
 \item{n_draws}{Number of draws used in simulating the prior distribution
 used in Baysian D-efficient designs. Defaults to \code{50}.}
 
-\item{no_choice}{Include a "none" option in the choice sets? Defaults to
-\code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
+\item{no_choice}{Include a "no choice" option in the choice sets? Defaults
+to \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
 one more than the provided \code{n_alts} argument.}
 
 \item{n_start}{A numeric value indicating the number of random start designs
@@ -56,6 +57,9 @@ the unique number of levels in the \code{label} variable. Defaults to \code{NULL
 \item{priors}{A list of one or more assumed prior parameters used to
 generate a Bayesian D-efficient design. If \code{NULL} (the default), a randomized
 design will be generated.}
+
+\item{prior_no_choice}{Prior utility value for the "no choice" alternative.
+Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
 
 \item{probs}{If \code{TRUE}, for Bayesian D-efficient designs the resulting
 design includes average predicted probabilities for each alternative in each
@@ -112,13 +116,27 @@ design_rand_nochoice <- cbc_design(
   no_choice = TRUE
 )
 
-# Make randomized labeled survey design with each "type" appearing in each
-# choice question
+# Make a randomized labeled survey design with each "type" appearing in
+# each choice question
 design_rand_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
   n_alts    = 3, # Number of alternatives per question
   n_q       = 6, # Number of questions per respondent
   label     = "type"
+)
+
+# Make a Bayesian D-efficient design with a prior model specified
+design_db_eff <- cbc_design(
+    profiles  = profiles,
+    n_resp    = 300, # Number of respondents
+    n_alts    = 3, # Number of alternatives per question
+    n_q       = 6, # Number of questions per respondent
+    priors = list(
+        price     = -0.1,
+        type      = c(0.1, 0.2),
+        freshness = c(0.1, 0.2)
+    ),
+    parallel = FALSE
 )
 }
