@@ -230,8 +230,8 @@ make_design_eff <- function(
 ) {
     mu <- unlist(priors)
     profile_lvls <- profiles[,2:ncol(profiles)]
-    lvl.names <- lapply(profile_lvls, function(x) unique(x))
-    lvls <- unlist(lapply(lvl.names, function(x) length(x)))
+    lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
+    lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(levels))
     # Generate candidate set using idefix::Profiles
     types <- get_col_types(profile_lvls)
@@ -252,38 +252,37 @@ make_design_eff <- function(
         alt_cte <- c(alt_cte, 1)
     }
     sigma <- diag(length(mu))
-    par_draws <- MASS::mvrnorm(n = 500, mu = mu, Sigma = sigma)
+    par_draws <- MASS::mvrnorm(n = 50, mu = mu, Sigma = sigma)
     n_alt_cte <- sum(alt_cte)
     if (n_alt_cte >= 1) {
         par_draws <- list(
             par_draws[, 1:n_alt_cte],
             par_draws[, (n_alt_cte + 1):ncol(par_draws)])
     }
-    D <- idefix::Modfed(
-        cand.set = cs,
-        n.sets = 10,
-        n.alts = n_alts,
-        n.start = 5,
-        alt.cte = alt_cte,
-        no.choice = no_choice,
-        par.draws = par_draws,
-        max.iter = max_iter
-    )
-    head(D$design)
-    dim(D$design)
-
-    for (i in 1:length(lvl.names)) {
-        lvl.names[[i]] <- as.character(lvl.names[[i]])
-    }
-    lvl.names
-
-    DD <- idefix::Decode(
-        des = D$design,
-        lvl.names = lvl.names,
-        c.lvls = c.lvls,
+    # Make the design
+    D <- idefix::CEA(
+        lvls = lvls,
         coding = coding,
-        n.alts = n_alts
+        par.draws = par_draws,
+        c.lvls = c.lvls,
+        n.alts = n_alts,
+        n.sets = n_q
     )
-    design_deff <- DD$design
+    # Decode the design
+
+    des <- D$design[rep(seq(1, n_alts*n_q), n_resp),]
+    y <- rep(c(1, rep(0, n_alts - 1)), n_q*n_resp)
+    # Prep for logitr
+    design <- idefix::Datatrans(
+        pkg = "logitr",
+        des = des,
+        y = y,
+        n.alts = n_alts,
+        n.sets = n_q,
+        n.resp = n_resp,
+        bin = TRUE
+    )
+    design$choice <- NULL
+
     return(design)
 }
