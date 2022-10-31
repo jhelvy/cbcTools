@@ -157,6 +157,33 @@ dim(design_nochoice)
 head(design_nochoice)
 ```
 
+### Bayesian D-Efficient designs
+
+A Bayesian D-Efficient design can be obtained by providing a list of prior parameters to define an expected prior utility model. These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://www.jstatsoft.org/article/view/v096i03), which provides even more flexible designs.
+
+In the example below, the prior model assumes the following parameters:
+
+- 1 continuous parameter for `price`
+- 2 categorical parameters for `type` (`'Gala'` and `'Honeycrisp'`)
+- 2 categorical parameters for `freshness` (`"Average"` and `"Excellent"`)
+
+```{r}
+design_db_eff <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 900, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  priors = list(
+    price     = -0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, 0.2)
+  )
+)
+
+dim(design_db_eff)
+head(design_db_eff)
+```
+
 ## Inspecting survey designs
 
 The package includes some functions to quickly inspect some basic metrics of a design.
@@ -195,7 +222,7 @@ You can also pass a list of prior parameters to define a utility model that will
 Note that for categorical variables (`type` and `freshness` in this example), the first level defined when using `cbc_profiles()` is set as the reference level. The example below defines the following utility model for simulating choices for each alternative _j_:
 
 $$
-u_j = 0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
+u_j = -0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
 $$
 
 ```{r, eval=FALSE}
@@ -203,7 +230,7 @@ data <- cbc_choices(
   design = design,
   obsID = "obsID",
   priors = list(
-    price     = 0.1,
+    price     = -0.1,
     type      = c(0.1, 0.2),
     freshness = c(0.1, 0.2)
   )
@@ -232,7 +259,7 @@ data <- cbc_choices(
   design = design,
   obsID = "obsID",
   priors = list(
-    price = 0.1,
+    price = -0.1,
     type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
     freshness = c(0.1, 0.2)
   )
@@ -299,7 +326,7 @@ cbc_design(
 cbc_choices(
   obsID = "obsID",
   priors = list(
-    price     = 0.1,
+    price     = -0.1,
     type      = c(0.1, 0.2),
     freshness = c(0.1, 0.2)
   )
