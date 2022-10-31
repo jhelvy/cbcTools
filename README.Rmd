@@ -111,15 +111,13 @@ dim(design)  # View dimensions
 head(design) # Preview first 6 rows
 ```
 
-For now, the `cbc_design()` function only generates a randomized design. Other packages, such as the [{idefix}](https://github.com/traets/idefix) package, are able to generate other types of designs, such as Bayesian D-efficient designs. The randomized design simply samples from the set of `profiles`. It also ensures that no two profiles are the same in any choice question.
+The randomized design simply samples from the set of `profiles`, ensuring that no two profiles are the same in any choice question. The resulting `design` data frame includes the following columns:
 
-The resulting `design` data frame includes the following columns:
-
+- `profileID`: Identifies the profile in `profiles`.
 - `respID`: Identifies each survey respondent.
 - `qID`: Identifies the choice question answered by the respondent.
 - `altID`:Identifies the alternative in any one choice observation.
 - `obsID`: Identifies each unique choice observation across all respondents.
-- `profileID`: Identifies the profile in `profiles`.
 
 ### Labeled designs (a.k.a. "alternative-specific" designs)
 
@@ -157,9 +155,9 @@ dim(design_nochoice)
 head(design_nochoice)
 ```
 
-### Bayesian D-Efficient designs
+### Bayesian D-efficient designs
 
-A Bayesian D-Efficient design can be obtained by providing a list of prior parameters to define an expected prior utility model. These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://www.jstatsoft.org/article/view/v096i03), which provides even more flexible designs.
+A Bayesian D-efficient design can be obtained by providing a list of prior parameters to define an expected prior utility model. These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://www.jstatsoft.org/article/view/v096i03). For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use "labeled" designs.
 
 In the example below, the prior model assumes the following parameters:
 
@@ -182,6 +180,27 @@ design_db_eff <- cbc_design(
 
 dim(design_db_eff)
 head(design_db_eff)
+```
+
+Bayesian D-efficient designs that include a "no choice" option should set `no_choice = TRUE` and also define a prior for the "no choice" option using `prior_no_choice`, e.g.:
+
+```{r}
+design_db_eff_no_choice <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 900, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  no_choice = TRUE,
+  priors = list(
+    price     = -0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, 0.2)
+  ), 
+  prior_no_choice = -0.1
+)
+
+dim(design_db_eff_no_choice)
+head(design_db_eff_no_choice)
 ```
 
 ## Inspecting survey designs

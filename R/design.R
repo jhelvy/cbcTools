@@ -19,8 +19,8 @@
 #' to use in obtaining a Bayesian D-efficient design. The default is `5`.
 #' Increasing `n_start` can result in a more efficient design at the expense
 #' of increased computational time.
-#' @param no_choice Include a "none" option in the choice sets? Defaults to
-#' `FALSE`. If `TRUE`, the total number of alternatives per question will be
+#' @param no_choice Include a "no choice" option in the choice sets? Defaults
+#' to `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #' one more than the provided `n_alts` argument.
 #' @param label The name of the variable to use in a "labeled" design
 #' (also called an "alternative-specific design") such that each set of
@@ -30,6 +30,8 @@
 #' @param priors A list of one or more assumed prior parameters used to
 #' generate a Bayesian D-efficient design. If `NULL` (the default), a randomized
 #' design will be generated.
+#' @param prior_no_choice Prior utility value for the "no choice" alternative.
+#' Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting
 #' design includes average predicted probabilities for each alternative in each
 #' choice set given the sample from the prior preference distribution.
@@ -94,6 +96,7 @@ cbc_design <- function(
   n_start = 5,
   label = NULL,
   priors = NULL,
+  prior_no_choice = NULL,
   probs = FALSE,
   method = "CEA",
   max_iter = 50,
@@ -107,7 +110,7 @@ cbc_design <- function(
   } else {
     design <- make_design_eff(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-      label, priors, probs, method, max_iter, parallel
+      label, priors, prior_no_choice, probs, method, max_iter, parallel
     )
   }
   # Reset row numbers
@@ -249,10 +252,13 @@ reorder_cols <- function(design) {
 
 make_design_eff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-    label, priors, probs, method, max_iter, parallel
+    label, priors, prior_no_choice, probs, method, max_iter, parallel
 ) {
     # Set up initial parameters for creating design
     mu <- unlist(priors)
+    if (no_choice) {
+        mu <- c(prior_no_choice, mu)
+    }
     profile_lvls <- profiles[,2:ncol(profiles)]
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
@@ -329,9 +335,9 @@ make_design_eff <- function(
         no.choice = no_choice_alt
     )
     des <- des$design
+    varnames <- names(priors)
     if (no_choice) {
         # First join on the profileIDs to the raw de-coded design
-        varnames <- names(priors)[2:length(priors)]
         des_raw <- des
         names(des_raw) <- varnames
         des_raw$row_id <- seq(nrow(des_raw))
@@ -350,7 +356,6 @@ make_design_eff <- function(
         des$no_choice <- as.vector(D$design[,1])
     } else {
         # Join on profileIDs
-        varnames <- names(priors)
         names(des) <- varnames
         des <- merge(des, profiles, by = varnames)
         des <- des[c('profileID', varnames)]
