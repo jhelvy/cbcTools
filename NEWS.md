@@ -1,6 +1,6 @@
 # cbcTools 0.1.0
 
--
+- Added initial integration with {idefix} packages for Bayesian D-efficient designs
 
 # cbcTools 0.0.5
 
