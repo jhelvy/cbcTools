@@ -328,7 +328,12 @@ make_design_eff <- function(
     # Add metadata
     design <- add_metadata(design, n_resp, n_alts, n_q)
     design <- reorder_cols(design)
-    design$error <- D$error
+
+    # Print error
+    message(
+        "Bayesian D-efficient design found with DB-error of ",
+        round(D$error, 5)
+    )
 
     return(design)
 }
