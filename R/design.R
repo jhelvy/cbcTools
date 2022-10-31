@@ -11,6 +11,11 @@
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
+#' @param n_blocks Number of blocks used in D-efficient design. Max allowable
+#' is one block per respondent, defaults to `1`, meaning every respondent
+#' sees the same set of choice questions.
+#' @param n_draws Number of draws used in simulating the prior distribution
+#' used in D-efficient designs. Defaults to `50`.
 #' @param no_choice Include a "none" option in the choice sets? Defaults to
 #' `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #' one more than the provided `n_alts` argument.
@@ -24,6 +29,8 @@
 #' design will be generated.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #' iterations when searching for a D-efficient design. The default is 50.
+#' @param parallel Logical value indicating whether computations should be done
+#' over multiple cores. The default is `TRUE`.
 #' @return A data frame containing a choice-based conjoint survey design where
 #' each row is an alternative.
 #' @export
@@ -70,10 +77,13 @@ cbc_design <- function(
   n_resp,
   n_alts,
   n_q,
+  n_blocks = 1,
+  n_draws = 50,
   no_choice = FALSE,
   label = NULL,
   priors = NULL,
-  max_iter = 50
+  max_iter = 50,
+  parallel = TRUE
 ) {
   profiles <- as.data.frame(profiles) # tibbles break things
   if (is.null(priors)) {
@@ -82,7 +92,8 @@ cbc_design <- function(
     )
   } else {
     design <- make_design_eff(
-      profiles, n_resp, n_alts, n_q, no_choice, label, priors, max_iter
+      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, label,
+      priors, max_iter, parallel
     )
   }
   # Reset row numbers
@@ -178,13 +189,6 @@ get_dups <- function(design, n_alts) {
   return(dup_rows)
 }
 
-reorder_cols <- function(design) {
-  metaNames <- c("respID", "qID", "altID", "obsID", "profileID")
-  varNames <- setdiff(names(design), metaNames)
-  design <- as.data.frame(design)[, c(metaNames, varNames)]
-  return(design)
-}
-
 add_no_choice <- function(design, n_alts) {
   # Must dummy code categorical variables to include an outside good
   design <- dummy_code(design)
@@ -220,19 +224,28 @@ get_col_types <- function(data) {
   return(unlist(lapply(types, test)))
 }
 
+reorder_cols <- function(design) {
+    metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
+    varNames <- setdiff(names(design), metaNames)
+    design <- as.data.frame(design)[, c(metaNames, varNames)]
+    return(design)
+}
 
 # D-efficient design ----
 
 # still under development, will likely refer to the {idefix} package
 
 make_design_eff <- function(
-  profiles, n_resp, n_alts, n_q, no_choice, label, priors, max_iter
+    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, label,
+    priors, max_iter, parallel
 ) {
+    # Set up initial parameters
     mu <- unlist(priors)
     profile_lvls <- profiles[,2:ncol(profiles)]
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(levels))
+
     # Generate candidate set using idefix::Profiles
     types <- get_col_types(profile_lvls)
     id_discrete <- types %in% c("factor", "character")
@@ -242,9 +255,12 @@ make_design_eff <- function(
         c.lvls <- lvl.names[id_continuous]
     }
     if (any(id_discrete)) {
+        lvl.names[id_discrete] <- lapply(lvl.names[id_discrete], function(x) as.character(x))
         coding[id_discrete] <- "D"
     }
     cs <- idefix::Profiles(lvls = lvls, coding = coding, c.lvls = c.lvls)
+
+    # Other settings for creating design
     alt_cte <- rep(0, n_alts)
     if (no_choice) {
         n_alts <- n_alts + 1
@@ -252,13 +268,14 @@ make_design_eff <- function(
         alt_cte <- c(alt_cte, 1)
     }
     sigma <- diag(length(mu))
-    par_draws <- MASS::mvrnorm(n = 50, mu = mu, Sigma = sigma)
+    par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
     n_alt_cte <- sum(alt_cte)
     if (n_alt_cte >= 1) {
         par_draws <- list(
             par_draws[, 1:n_alt_cte],
             par_draws[, (n_alt_cte + 1):ncol(par_draws)])
     }
+
     # Make the design
     D <- idefix::CEA(
         lvls = lvls,
@@ -266,23 +283,34 @@ make_design_eff <- function(
         par.draws = par_draws,
         c.lvls = c.lvls,
         n.alts = n_alts,
-        n.sets = n_q
+        n.sets = n_q*n_blocks,
+        no.choice = no_choice,
+        alt.cte = alt_cte,
+        parallel = parallel
     )
-    # Decode the design
 
-    des <- D$design[rep(seq(1, n_alts*n_q), n_resp),]
-    y <- rep(c(1, rep(0, n_alts - 1)), n_q*n_resp)
-    # Prep for logitr
-    design <- idefix::Datatrans(
-        pkg = "logitr",
-        des = des,
-        y = y,
+    # Decode the design
+    des <- idefix::Decode(
+        des = D$design,
         n.alts = n_alts,
-        n.sets = n_q,
-        n.resp = n_resp,
-        bin = TRUE
+        lvl.names = lvl.names,
+        c.lvls = c.lvls,
+        coding = coding
     )
-    design$choice <- NULL
+    des <- des$design
+    names(des) <- names(priors)
+
+    # Join on profileIDs
+    des <- merge(des, profiles, by = names(priors))
+    des <- des[c('profileID', names(priors))]
+
+    # Repeat design to match number of respondents
+    design <- des[rep(seq_len(nrow(des)), n_resp / n_blocks), ]
+    row.names(design) <- NULL
+
+    # Add metadata
+    design <- add_metadata(design, n_resp, n_alts, n_q)
+    design <- reorder_cols(design)
 
     return(design)
 }
