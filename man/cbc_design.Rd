@@ -132,6 +132,7 @@ design_db_eff <- cbc_design(
     n_resp    = 300, # Number of respondents
     n_alts    = 3, # Number of alternatives per question
     n_q       = 6, # Number of questions per respondent
+    n_start   = 1,
     priors = list(
         price     = -0.1,
         type      = c(0.1, 0.2),

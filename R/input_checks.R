@@ -34,4 +34,16 @@ check_inputs_design <- function(
         stop('The method argument must be either "CEA" or "Modfed"')
     }
 
+    if (!is.null(priors)) {
+        prior_names <- names(priors)
+        profile_names <- names(profiles[,2:ncol(profiles)])
+        missing <- setdiff(profile_names, prior_names)
+        if (length(missing) > 0) {
+            stop(
+                "'priors' is missing the following variables: \n\n",
+                paste(missing, collapse = "\n")
+            )
+        }
+    }
+
 }

@@ -92,6 +92,7 @@
 #'     n_resp    = 300, # Number of respondents
 #'     n_alts    = 3, # Number of alternatives per question
 #'     n_q       = 6, # Number of questions per respondent
+#'     n_start   = 1,
 #'     priors = list(
 #'         price     = -0.1,
 #'         type      = c(0.1, 0.2),
@@ -301,6 +302,7 @@ make_design_eff <- function(
     if (any(id_continuous)) {
         c.lvls <- lvl.names[id_continuous]
     }
+    # Discrete variables must be characters not factors
     if (any(id_discrete)) {
         lvl.names[id_discrete] <- lapply(lvl.names[id_discrete], function(x) as.character(x))
         coding[id_discrete] <- "D"
