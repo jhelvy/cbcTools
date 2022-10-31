@@ -1,21 +1,20 @@
-#' Make a random or D-efficient choice-based conjoint survey design
+#' Make a random or Baysian D-efficient choice-based conjoint survey design
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
-#' design where each row is an alternative. Designs can be either fully
-#' randomized or D-efficient, in which case an implementation of the
-#' Modified Federov algorithm is used via the `idefix` package (still in
-#' development).
+#' design where each row is an alternative. Designs can be either a
+#' randomized or Baysian D-efficient, in which case an implementation of the
+#' CEA or Modfed Federov algorithm is used via the `idefix` package
 #'
 #' @param profiles A data frame in which each row is a possible profile.
 #' This can be generated using the `cbc_profiles()` function.
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used in D-efficient design. Max allowable
-#' is one block per respondent, defaults to `1`, meaning every respondent
-#' sees the same set of choice questions.
+#' @param n_blocks Number of blocks used in Baysian D-efficient design.
+#' Max allowable is one block per respondent, defaults to `1`, meaning every
+#' respondent sees the same set of choice questions.
 #' @param n_draws Number of draws used in simulating the prior distribution
-#' used in D-efficient designs. Defaults to `50`.
+#' used in Baysian D-efficient designs. Defaults to `50`.
 #' @param no_choice Include a "none" option in the choice sets? Defaults to
 #' `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #' one more than the provided `n_alts` argument.
@@ -25,10 +24,14 @@
 #' If used, the `n_alts` argument will be ignored as its value is defined by
 #' the unique number of levels in the `label` variable. Defaults to `NULL`.
 #' @param priors A list of one or more assumed prior parameters used to
-#' generate a D-efficient design. If `NULL` (the default), a randomized
+#' generate a Baysian D-efficient design. If `NULL` (the default), a randomized
 #' design will be generated.
+#' @param method Which method to use for obtaining a Bayesian D-efficient
+#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `idefix::CEA` and
+#' `idefix::Modfed` for more details.
 #' @param max_iter A numeric value indicating the maximum number allowed
-#' iterations when searching for a D-efficient design. The default is 50.
+#' iterations when searching for a Baysian D-efficient design. The default is
+#' 50.
 #' @param parallel Logical value indicating whether computations should be done
 #' over multiple cores. The default is `TRUE`.
 #' @return A data frame containing a choice-based conjoint survey design where
@@ -82,6 +85,7 @@ cbc_design <- function(
   no_choice = FALSE,
   label = NULL,
   priors = NULL,
+  method = "CEA",
   max_iter = 50,
   parallel = TRUE
 ) {
@@ -93,7 +97,7 @@ cbc_design <- function(
   } else {
     design <- make_design_eff(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, label,
-      priors, max_iter, parallel
+      priors, method, max_iter, parallel
     )
   }
   # Reset row numbers
@@ -101,7 +105,7 @@ cbc_design <- function(
   return(design)
 }
 
-# Randomized design ----
+# Randomized Design ----
 
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
   design <- get_design_rand(profiles, n_resp, n_alts, n_q)
@@ -231,13 +235,11 @@ reorder_cols <- function(design) {
     return(design)
 }
 
-# D-efficient design ----
-
-# still under development, will likely refer to the {idefix} package
+# Baysian D-efficient Design ----
 
 make_design_eff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, label,
-    priors, max_iter, parallel
+    priors, method, max_iter, parallel
 ) {
     # Set up initial parameters
     mu <- unlist(priors)
@@ -277,17 +279,32 @@ make_design_eff <- function(
     }
 
     # Make the design
-    D <- idefix::CEA(
-        lvls = lvls,
-        coding = coding,
-        par.draws = par_draws,
-        c.lvls = c.lvls,
-        n.alts = n_alts,
-        n.sets = n_q*n_blocks,
-        no.choice = no_choice,
-        alt.cte = alt_cte,
-        parallel = parallel
-    )
+
+    if (method == "CEA") {
+        D <- idefix::CEA(
+            lvls = lvls,
+            coding = coding,
+            par.draws = par_draws,
+            c.lvls = c.lvls,
+            n.alts = n_alts,
+            n.sets = n_q*n_blocks,
+            no.choice = no_choice,
+            alt.cte = alt_cte,
+            parallel = parallel
+        )
+    } else if (method == "Modfed") {
+        D <- idefix::Modfed(
+            cand.set = cs,
+            par.draws = par_draws,
+            n.alts = n_alts,
+            n.sets = n_q*n_blocks,
+            no.choice = no_choice,
+            alt.cte = alt_cte,
+            parallel = parallel
+        )
+    } else {
+        stop('The method argument must be either "CEA" or "Modfed"')
+    }
 
     # Decode the design
     des <- idefix::Decode(
@@ -311,6 +328,7 @@ make_design_eff <- function(
     # Add metadata
     design <- add_metadata(design, n_resp, n_alts, n_q)
     design <- reorder_cols(design)
+    design$error <- D$error
 
     return(design)
 }
