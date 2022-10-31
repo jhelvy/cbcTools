@@ -16,7 +16,7 @@ step in the following process for designing and analyzing surveys:
 
 ![](man/figures/program_diagram.png)
 
-## Installation
+# Installation
 
 The current version is not yet on CRAN, but you can install it from
 Github using the {remotes} library:
@@ -32,9 +32,7 @@ Load the library with:
 library(cbcTools)
 ```
 
-## Make survey designs
-
-### Generating profiles
+# Generate profiles
 
 The first step in designing an experiment is to define the attributes
 and levels for your experiment and then generate all of the `profiles`
@@ -127,10 +125,29 @@ tail(profiles)
 #> 30        30   5.0 Excellent Honeycrisp
 ```
 
-### Generating random designs
+# Generate survey designs
 
-Once a set of profiles is obtained, a randomized conjoint survey can
-then be generated using the `cbc_design()` function:
+Once a set of profiles is obtained, a conjoint survey can then be
+generated using the `cbc_design()` function. A variety of survey designs
+can be generated, including:
+
+-   Random designs
+-   Labeled designs (a.k.a. “alternative-specific” designs)
+-   Designs with a “no choice” option (a.k.a. “outside good”)
+-   Bayesian D-efficient designs
+
+## Random designs
+
+The randomized design simply samples from the set of `profiles`,
+ensuring that no two profiles are the same in any choice question. The
+resulting `design` data frame includes the following columns:
+
+-   `profileID`: Identifies the profile in `profiles`.
+-   `respID`: Identifies each survey respondent.
+-   `qID`: Identifies the choice question answered by the respondent.
+-   `altID`:Identifies the alternative in any one choice observation.
+-   `obsID`: Identifies each unique choice observation across all
+    respondents.
 
 ``` r
 design <- cbc_design(
@@ -144,31 +161,15 @@ dim(design)  # View dimensions
 #> [1] 16200     8
 head(design) # Preview first 6 rows
 #>   profileID respID qID altID obsID price       type freshness
-#> 1        13      1   1     1     1   3.5       Gala      Poor
-#> 2        46      1   1     2     1   2.5       Fuji Excellent
-#> 3        60      1   1     3     1   2.5 Honeycrisp Excellent
-#> 4        40      1   2     1     2   3.0 Honeycrisp   Average
-#> 5        15      1   2     2     2   1.0 Honeycrisp      Poor
-#> 6         1      1   2     3     2   1.0       Fuji      Poor
+#> 1        61      1   1     1     1   3.0 Honeycrisp Excellent
+#> 2        25      1   1     2     1   2.5       Fuji   Average
+#> 3        12      1   1     3     1   3.0       Gala      Poor
+#> 4        36      1   2     1     2   1.0 Honeycrisp   Average
+#> 5        39      1   2     2     2   2.5 Honeycrisp   Average
+#> 6        60      1   2     3     2   2.5 Honeycrisp Excellent
 ```
 
-For now, the `cbc_design()` function only generates a randomized design.
-Other packages, such as the [{idefix}](https://github.com/traets/idefix)
-package, are able to generate other types of designs, such as Bayesian
-D-efficient designs. The randomized design simply samples from the set
-of `profiles`. It also ensures that no two profiles are the same in any
-choice question.
-
-The resulting `design` data frame includes the following columns:
-
--   `respID`: Identifies each survey respondent.
--   `qID`: Identifies the choice question answered by the respondent.
--   `altID`:Identifies the alternative in any one choice observation.
--   `obsID`: Identifies each unique choice observation across all
-    respondents.
--   `profileID`: Identifies the profile in `profiles`.
-
-### Labeled designs (a.k.a. “alternative-specific” designs)
+## Labeled designs (a.k.a. “alternative-specific” designs)
 
 You can also make a “labeled” design (also known as
 “alternative-specific” design) where the levels of one attribute is used
@@ -191,12 +192,12 @@ dim(design_labeled)
 #> [1] 16200     8
 head(design_labeled)
 #>   profileID respID qID altID obsID price       type freshness
-#> 1         2      1   1     1     1   1.5       Fuji      Poor
-#> 2        32      1   1     2     1   2.5       Gala   Average
-#> 3        15      1   1     3     1   1.0 Honeycrisp      Poor
-#> 4         6      1   2     1     2   3.5       Fuji      Poor
-#> 5        31      1   2     2     2   2.0       Gala   Average
-#> 6        59      1   2     3     2   2.0 Honeycrisp Excellent
+#> 1        26      1   1     1     1   3.0       Fuji   Average
+#> 2         9      1   1     2     1   1.5       Gala      Poor
+#> 3        58      1   1     3     1   1.5 Honeycrisp Excellent
+#> 4        23      1   2     1     2   1.5       Fuji   Average
+#> 5        14      1   2     2     2   4.0       Gala      Poor
+#> 6        20      1   2     3     2   3.5 Honeycrisp      Poor
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -204,7 +205,7 @@ that the `type` attribute is always fixed to be the same order, ensuring
 that each level in the `type` attribute will always be shown in each
 choice question.
 
-### Adding a “no choice” option (a.k.a. “outside good”)
+## Designs with a “no choice” option (a.k.a. “outside good”)
 
 You can include a “no choice” (also known as “outside good”) option in
 your survey by setting `no_choice = TRUE`. If included, all categorical
@@ -224,29 +225,32 @@ dim(design_nochoice)
 #> [1] 21600    13
 head(design_nochoice)
 #>   profileID respID qID altID obsID price type_Fuji type_Gala type_Honeycrisp
-#> 1        50      1   1     1     1   1.0         0         1               0
-#> 2        43      1   1     2     1   1.0         1         0               0
-#> 3        37      1   1     3     1   1.5         0         0               1
+#> 1        38      1   1     1     1   2.0         0         0               1
+#> 2        39      1   1     2     1   2.5         0         0               1
+#> 3        55      1   1     3     1   3.5         0         1               0
 #> 4         0      1   1     4     1   0.0         0         0               0
-#> 5        49      1   2     1     2   4.0         1         0               0
-#> 6        37      1   2     2     2   1.5         0         0               1
+#> 5        36      1   2     1     2   1.0         0         0               1
+#> 6        57      1   2     2     2   1.0         0         0               1
 #>   freshness_Poor freshness_Average freshness_Excellent no_choice
-#> 1              0                 0                   1         0
-#> 2              0                 0                   1         0
-#> 3              0                 1                   0         0
+#> 1              0                 1                   0         0
+#> 2              0                 1                   0         0
+#> 3              0                 0                   1         0
 #> 4              0                 0                   0         1
-#> 5              0                 0                   1         0
-#> 6              0                 1                   0         0
+#> 5              0                 1                   0         0
+#> 6              0                 0                   1         0
 ```
 
-### Bayesian D-Efficient designs
+## Bayesian D-efficient designs
 
-A Bayesian D-Efficient design can be obtained by providing a list of
+A Bayesian D-efficient design can be obtained by providing a list of
 prior parameters to define an expected prior utility model. These
 designs are optimized to minimize the D-error of the design given a
 prior model. The optimization is handled using the [{idefix}
-package](https://www.jstatsoft.org/article/view/v096i03), which provides
-even more flexible designs.
+package](https://www.jstatsoft.org/article/view/v096i03). For now,
+designs are limited to multinomial logit priors (the {idefix} package
+can generate designs with mixed logit priors). These designs also
+currently do not support the ability to specify interaction terms in the
+prior model or use “labeled” designs.
 
 In the example below, the prior model assumes the following parameters:
 
@@ -273,14 +277,52 @@ dim(design_db_eff)
 head(design_db_eff)
 #>   profileID respID qID altID obsID price       type freshness
 #> 1        43      1   1     1     1     1       Fuji Excellent
-#> 2        50      1   1     2     1     1       Gala Excellent
-#> 3         8      1   1     3     1     1       Gala      Poor
-#> 4        57      1   2     1     2     1 Honeycrisp Excellent
-#> 5        23      1   2     2     2   1.5       Fuji   Average
-#> 6         2      1   2     3     2   1.5       Fuji      Poor
+#> 2        43      1   1     2     1     1       Fuji Excellent
+#> 3         1      1   1     3     1     1       Fuji      Poor
+#> 4        29      1   2     1     2     1       Gala   Average
+#> 5         8      1   2     2     2     1       Gala      Poor
+#> 6        36      1   2     3     2     1 Honeycrisp   Average
 ```
 
-## Inspecting survey designs
+Bayesian D-efficient designs that include a “no choice” option should
+set `no_choice = TRUE` and also define a prior for the “no choice”
+option using `prior_no_choice`, e.g.:
+
+``` r
+design_db_eff_no_choice <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 900, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  no_choice = TRUE,
+  priors = list(
+    price     = -0.1,
+    type      = c(0.1, 0.2),
+    freshness = c(0.1, 0.2)
+  ), 
+  prior_no_choice = -0.1
+)
+
+dim(design_db_eff_no_choice)
+#> [1] 21600    11
+head(design_db_eff_no_choice)
+#>   profileID respID qID altID obsID price type_Gala type_Honeycrisp
+#> 1         1      1   1     1     1     1         0               0
+#> 2        39      1   1     2     1     4         0               1
+#> 3        11      1   1     3     1     4         1               0
+#> 4        NA      1   1     4     1     0         0               0
+#> 5        29      1   2     1     2     1         1               0
+#> 6        57      1   2     2     2     1         0               1
+#>   freshness_Average freshness_Excellent no_choice
+#> 1                 0                   0         0
+#> 2                 1                   0         0
+#> 3                 0                   0         0
+#> 4                 0                   0         1
+#> 5                 1                   0         0
+#> 6                 0                   1         0
+```
+
+# Inspect survey designs
 
 The package includes some functions to quickly inspect some basic
 metrics of a design.
@@ -295,34 +337,34 @@ cbc_balance(design)
 #> price x type 
 #> 
 #>          Fuji Gala Honeycrisp
-#>       NA 5443 5298       5459
-#> 1   2303  745  774        784
-#> 1.5 2323  796  716        811
-#> 2   2331  799  709        823
-#> 2.5 2279  780  765        734
-#> 3   2355  778  791        786
-#> 3.5 2360  797  811        752
-#> 4   2249  748  732        769
+#>       NA 5355 5425       5420
+#> 1   2351  771  754        826
+#> 1.5 2363  808  803        752
+#> 2   2321  736  820        765
+#> 2.5 2344  787  762        795
+#> 3   2292  772  755        765
+#> 3.5 2169  713  728        728
+#> 4   2360  768  803        789
 #> 
 #> price x freshness 
 #> 
 #>          Poor Average Excellent
-#>       NA 5430    5492      5278
-#> 1   2303  776     765       762
-#> 1.5 2323  756     805       762
-#> 2   2331  791     774       766
-#> 2.5 2279  756     785       738
-#> 3   2355  811     809       735
-#> 3.5 2360  816     767       777
-#> 4   2249  724     787       738
+#>       NA 5426    5320      5454
+#> 1   2351  789     768       794
+#> 1.5 2363  798     771       794
+#> 2   2321  773     745       803
+#> 2.5 2344  791     748       805
+#> 3   2292  752     758       782
+#> 3.5 2169  711     742       716
+#> 4   2360  812     788       760
 #> 
 #> type x freshness 
 #> 
 #>                 Poor Average Excellent
-#>              NA 5430    5492      5278
-#> Fuji       5443 1803    1894      1746
-#> Gala       5298 1767    1785      1746
-#> Honeycrisp 5459 1860    1813      1786
+#>              NA 5426    5320      5454
+#> Fuji       5355 1808    1757      1790
+#> Gala       5425 1794    1821      1810
+#> Honeycrisp 5420 1824    1742      1854
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -342,23 +384,27 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   73 1859 3468 
+#>   83 1776 3541 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  549 3611 1240 
+#>  539 3562 1299 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  559 3598 1243
+#>  541 3625 1234
 ```
 
-## Simulating choices
+# Simulate choices
 
 You can simulate choices for a given `design` using the `cbc_choices()`
-function. By default, random choices are simulated:
+function.
+
+## Random choices
+
+By default, random choices are simulated:
 
 ``` r
 data <- cbc_choices(
@@ -368,13 +414,15 @@ data <- cbc_choices(
 
 head(data)
 #>   profileID respID qID altID obsID price       type freshness choice
-#> 1        13      1   1     1     1   3.5       Gala      Poor      0
-#> 2        46      1   1     2     1   2.5       Fuji Excellent      0
-#> 3        60      1   1     3     1   2.5 Honeycrisp Excellent      1
-#> 4        40      1   2     1     2   3.0 Honeycrisp   Average      0
-#> 5        15      1   2     2     2   1.0 Honeycrisp      Poor      1
-#> 6         1      1   2     3     2   1.0       Fuji      Poor      0
+#> 1        61      1   1     1     1   3.0 Honeycrisp Excellent      1
+#> 2        25      1   1     2     1   2.5       Fuji   Average      0
+#> 3        12      1   1     3     1   3.0       Gala      Poor      0
+#> 4        36      1   2     1     2   1.0 Honeycrisp   Average      0
+#> 5        39      1   2     2     2   2.5 Honeycrisp   Average      1
+#> 6        60      1   2     3     2   2.5 Honeycrisp Excellent      0
 ```
+
+## Choices according to a prior
 
 You can also pass a list of prior parameters to define a utility model
 that will be used to simulate choices. In the example below, the choices
@@ -443,7 +491,7 @@ data <- cbc_choices(
 )
 ```
 
-## Conducting a power analysis
+# Conduct a power analysis
 
 The simulated choice data can be used to conduct a power analysis by
 estimating the same model multiple times with incrementally increasing
@@ -466,21 +514,21 @@ power <- cbc_power(
 )
 
 head(power)
-#>   sampleSize               coef          est         se
-#> 1         90              price -0.047211522 0.05395527
-#> 2         90           typeGala  0.032711772 0.13023665
-#> 3         90     typeHoneycrisp  0.146116973 0.12856371
-#> 4         90   freshnessAverage -0.111692807 0.13226114
-#> 5         90 freshnessExcellent -0.181352943 0.12873063
-#> 6        180              price  0.001894538 0.03766355
+#>   sampleSize               coef           est         se
+#> 1         90              price  0.0260803668 0.05334739
+#> 2         90           typeGala -0.1077339529 0.12327980
+#> 3         90     typeHoneycrisp  0.1860517343 0.12618483
+#> 4         90   freshnessAverage  0.0328069051 0.12660726
+#> 5         90 freshnessExcellent  0.1120991243 0.12684269
+#> 6        180              price -0.0002419905 0.03754835
 tail(power)
-#>    sampleSize               coef         est         se
-#> 45        810 freshnessExcellent  0.03964492 0.04302649
-#> 46        900              price -0.01900892 0.01664332
-#> 47        900           typeGala -0.02621508 0.04045574
-#> 48        900     typeHoneycrisp -0.06018091 0.04054780
-#> 49        900   freshnessAverage -0.02393608 0.04055085
-#> 50        900 freshnessExcellent  0.03491236 0.04078029
+#>    sampleSize               coef           est         se
+#> 45        810 freshnessExcellent -0.0511880850 0.04259193
+#> 46        900              price  0.0003218516 0.01655349
+#> 47        900           typeGala  0.0725488744 0.04038253
+#> 48        900     typeHoneycrisp  0.0355241735 0.04052658
+#> 49        900   freshnessAverage -0.0312887069 0.04053670
+#> 50        900 freshnessExcellent -0.0611011941 0.04045519
 ```
 
 The `power` data frame contains the coefficient estimates and standard
@@ -515,7 +563,7 @@ models <- cbc_power(
 summary(models[[10]])
 #> =================================================
 #> 
-#> Model estimated on: Mon Oct 31 11:32:51 2022 
+#> Model estimated on: Mon Oct 31 14:03:40 2022 
 #> 
 #> Using logitr version: 0.8.0 
 #> 
@@ -525,45 +573,51 @@ summary(models[[10]])
 #> 
 #> Frequencies of alternatives:
 #>       1       2       3 
-#> 0.33019 0.33315 0.33667 
+#> 0.33630 0.32741 0.33630 
 #> 
 #> Exit Status: 3, Optimization stopped because ftol_rel or ftol_abs was reached.
 #>                                 
 #> Model Type:    Multinomial Logit
 #> Model Space:          Preference
 #> Model Run:                1 of 1
-#> Iterations:                    9
-#> Elapsed Time:        0h:0m:0.03s
+#> Iterations:                    8
+#> Elapsed Time:        0h:0m:0.02s
 #> Algorithm:        NLOPT_LD_LBFGS
 #> Weights Used?:             FALSE
 #> Robust?                    FALSE
 #> 
 #> Model Coefficients: 
-#>                     Estimate Std. Error z-value Pr(>|z|)
-#> price              -0.019009   0.016643 -1.1421   0.2534
-#> typeGala           -0.026215   0.040456 -0.6480   0.5170
-#> typeHoneycrisp     -0.060181   0.040548 -1.4842   0.1378
-#> freshnessAverage   -0.023936   0.040551 -0.5903   0.5550
-#> freshnessExcellent  0.034912   0.040780  0.8561   0.3919
+#>                       Estimate  Std. Error z-value Pr(>|z|)  
+#> price               0.00032185  0.01655349  0.0194  0.98449  
+#> typeGala            0.07254887  0.04038253  1.7965  0.07241 .
+#> typeHoneycrisp      0.03552417  0.04052658  0.8766  0.38072  
+#> freshnessAverage   -0.03128871  0.04053670 -0.7719  0.44020  
+#> freshnessExcellent -0.06110119  0.04045519 -1.5103  0.13096  
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #>                                      
-#> Log-Likelihood:         -5.929698e+03
+#> Log-Likelihood:         -5.929763e+03
 #> Null Log-Likelihood:    -5.932506e+03
-#> AIC:                     1.186940e+04
-#> BIC:                     1.190237e+04
-#> McFadden R2:             4.734139e-04
-#> Adj McFadden R2:        -3.694002e-04
+#> AIC:                     1.186953e+04
+#> BIC:                     1.190250e+04
+#> McFadden R2:             4.624314e-04
+#> Adj McFadden R2:        -3.803827e-04
 #> Number of Observations:  5.400000e+03
 ```
 
-## Piping it all together!
+## Pipe it all together!
 
 One of the convenient features of how the package is written is that the
 object generated in each step is used as the first argument to the
 function for the next step. Thus, just like in the overall program
-diagram, the functions can be piped together:
+diagram, the functions can be piped together. For example, the
+“pipeline” below uses the Base R pipe operator (`|>`) to generate
+profiles, generate a design, simulate choices according to a prior
+utility model, conduct a power analysis, and then finally plot the
+results:
 
 ``` r
-cbc_profiles(
+design <- cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')
@@ -591,7 +645,7 @@ cbc_power(
 plot()
 ```
 
-<img src="man/figures/README-unnamed-chunk-20-1.png" width="672" />
+<img src="man/figures/README-unnamed-chunk-21-1.png" width="672" />
 
 ## Author, Version, and License Information
 
