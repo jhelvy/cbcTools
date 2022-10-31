@@ -15,6 +15,10 @@
 #' respondent sees the same set of choice questions.
 #' @param n_draws Number of draws used in simulating the prior distribution
 #' used in Baysian D-efficient designs. Defaults to `50`.
+#' @param n_start A numeric value indicating the number of random start designs
+#' to use in obtaining a Bayesian D-efficient design. The default is `5`.
+#' Increasing `n_start` can result in a more efficient design at the expense
+#' of increased computational time.
 #' @param no_choice Include a "none" option in the choice sets? Defaults to
 #' `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #' one more than the provided `n_alts` argument.
@@ -83,6 +87,7 @@ cbc_design <- function(
   n_blocks = 1,
   n_draws = 50,
   no_choice = FALSE,
+  n_start = 5,
   label = NULL,
   priors = NULL,
   method = "CEA",
@@ -96,8 +101,8 @@ cbc_design <- function(
     )
   } else {
     design <- make_design_eff(
-      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, label,
-      priors, method, max_iter, parallel
+      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
+      label, priors, method, max_iter, parallel
     )
   }
   # Reset row numbers
@@ -238,8 +243,8 @@ reorder_cols <- function(design) {
 # Baysian D-efficient Design ----
 
 make_design_eff <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, label,
-    priors, method, max_iter, parallel
+    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
+    label, priors, method, max_iter, parallel
 ) {
     # Set up initial parameters
     mu <- unlist(priors)
@@ -289,6 +294,7 @@ make_design_eff <- function(
             n.alts = n_alts,
             n.sets = n_q*n_blocks,
             no.choice = no_choice,
+            n.start = n_start,
             alt.cte = alt_cte,
             parallel = parallel
         )
@@ -299,6 +305,7 @@ make_design_eff <- function(
             n.alts = n_alts,
             n.sets = n_q*n_blocks,
             no.choice = no_choice,
+            n.start = n_start,
             alt.cte = alt_cte,
             parallel = parallel
         )
