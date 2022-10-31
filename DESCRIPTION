@@ -17,7 +17,9 @@ RoxygenNote: 7.2.1
 Imports:
     fastDummies,
     ggplot2,
+    idefix,
     logitr (>= 0.8.0),
+    MASS,
     parallel,
     randtoolbox,
     rlang,
