@@ -161,12 +161,12 @@ dim(design)  # View dimensions
 #> [1] 16200     8
 head(design) # Preview first 6 rows
 #>   profileID respID qID altID obsID price       type freshness
-#> 1        61      1   1     1     1   3.0 Honeycrisp Excellent
-#> 2        25      1   1     2     1   2.5       Fuji   Average
-#> 3        12      1   1     3     1   3.0       Gala      Poor
-#> 4        36      1   2     1     2   1.0 Honeycrisp   Average
-#> 5        39      1   2     2     2   2.5 Honeycrisp   Average
-#> 6        60      1   2     3     2   2.5 Honeycrisp Excellent
+#> 1        60      1   1     1     1   2.5 Honeycrisp Excellent
+#> 2        17      1   1     2     1   2.0 Honeycrisp      Poor
+#> 3        21      1   1     3     1   4.0 Honeycrisp      Poor
+#> 4        24      1   2     1     2   2.0       Fuji   Average
+#> 5        49      1   2     2     2   4.0       Fuji Excellent
+#> 6        20      1   2     3     2   3.5 Honeycrisp      Poor
 ```
 
 ## Labeled designs (a.k.a. “alternative-specific” designs)
@@ -193,11 +193,11 @@ dim(design_labeled)
 head(design_labeled)
 #>   profileID respID qID altID obsID price       type freshness
 #> 1        26      1   1     1     1   3.0       Fuji   Average
-#> 2         9      1   1     2     1   1.5       Gala      Poor
-#> 3        58      1   1     3     1   1.5 Honeycrisp Excellent
-#> 4        23      1   2     1     2   1.5       Fuji   Average
-#> 5        14      1   2     2     2   4.0       Gala      Poor
-#> 6        20      1   2     3     2   3.5 Honeycrisp      Poor
+#> 2        55      1   1     2     1   3.5       Gala Excellent
+#> 3        16      1   1     3     1   1.5 Honeycrisp      Poor
+#> 4         1      1   2     1     2   1.0       Fuji      Poor
+#> 5        29      1   2     2     2   1.0       Gala   Average
+#> 6        42      1   2     3     2   4.0 Honeycrisp   Average
 ```
 
 In the above example, you can see in the first six rows of the survey
@@ -225,19 +225,19 @@ dim(design_nochoice)
 #> [1] 21600    13
 head(design_nochoice)
 #>   profileID respID qID altID obsID price type_Fuji type_Gala type_Honeycrisp
-#> 1        38      1   1     1     1   2.0         0         0               1
-#> 2        39      1   1     2     1   2.5         0         0               1
-#> 3        55      1   1     3     1   3.5         0         1               0
+#> 1        18      1   1     1     1   2.5         0         0               1
+#> 2        22      1   1     2     1   1.0         1         0               0
+#> 3        28      1   1     3     1   4.0         1         0               0
 #> 4         0      1   1     4     1   0.0         0         0               0
-#> 5        36      1   2     1     2   1.0         0         0               1
-#> 6        57      1   2     2     2   1.0         0         0               1
+#> 5        51      1   2     1     2   1.5         0         1               0
+#> 6        25      1   2     2     2   2.5         1         0               0
 #>   freshness_Poor freshness_Average freshness_Excellent no_choice
-#> 1              0                 1                   0         0
+#> 1              1                 0                   0         0
 #> 2              0                 1                   0         0
-#> 3              0                 0                   1         0
+#> 3              0                 1                   0         0
 #> 4              0                 0                   0         1
-#> 5              0                 1                   0         0
-#> 6              0                 0                   1         0
+#> 5              0                 0                   1         0
+#> 6              0                 1                   0         0
 ```
 
 ## Bayesian D-efficient designs
@@ -276,12 +276,12 @@ dim(design_db_eff)
 #> [1] 16200     8
 head(design_db_eff)
 #>   profileID respID qID altID obsID price       type freshness
-#> 1        43      1   1     1     1     1       Fuji Excellent
-#> 2        43      1   1     2     1     1       Fuji Excellent
-#> 3         1      1   1     3     1     1       Fuji      Poor
-#> 4        29      1   2     1     2     1       Gala   Average
-#> 5         8      1   2     2     2     1       Gala      Poor
-#> 6        36      1   2     3     2     1 Honeycrisp   Average
+#> 1        22      1   1     1     1     1       Fuji   Average
+#> 2        29      1   1     2     1     1       Gala   Average
+#> 3        50      1   1     3     1     1       Gala Excellent
+#> 4         8      1   2     1     2     1       Gala      Poor
+#> 5        36      1   2     2     2     1 Honeycrisp   Average
+#> 6        23      1   2     3     2   1.5       Fuji   Average
 ```
 
 Bayesian D-efficient designs that include a “no choice” option should
@@ -307,19 +307,19 @@ dim(design_db_eff_no_choice)
 #> [1] 21600    11
 head(design_db_eff_no_choice)
 #>   profileID respID qID altID obsID price type_Gala type_Honeycrisp
-#> 1         1      1   1     1     1     1         0               0
-#> 2        39      1   1     2     1     4         0               1
-#> 3        11      1   1     3     1     4         1               0
+#> 1        43      1   1     1     1     1         0               0
+#> 2        22      1   1     2     1     1         0               0
+#> 3        16      1   1     3     1     2         0               1
 #> 4        NA      1   1     4     1     0         0               0
-#> 5        29      1   2     1     2     1         1               0
-#> 6        57      1   2     2     2     1         0               1
+#> 5        57      1   2     1     2     1         0               1
+#> 6        29      1   2     2     2     1         1               0
 #>   freshness_Average freshness_Excellent no_choice
-#> 1                 0                   0         0
+#> 1                 0                   1         0
 #> 2                 1                   0         0
 #> 3                 0                   0         0
 #> 4                 0                   0         1
-#> 5                 1                   0         0
-#> 6                 0                   1         0
+#> 5                 0                   1         0
+#> 6                 1                   0         0
 ```
 
 # Inspect survey designs
@@ -337,34 +337,34 @@ cbc_balance(design)
 #> price x type 
 #> 
 #>          Fuji Gala Honeycrisp
-#>       NA 5355 5425       5420
-#> 1   2351  771  754        826
-#> 1.5 2363  808  803        752
-#> 2   2321  736  820        765
-#> 2.5 2344  787  762        795
-#> 3   2292  772  755        765
-#> 3.5 2169  713  728        728
-#> 4   2360  768  803        789
+#>       NA 5435 5385       5380
+#> 1   2323  791  728        804
+#> 1.5 2334  770  776        788
+#> 2   2319  797  777        745
+#> 2.5 2289  773  751        765
+#> 3   2298  748  786        764
+#> 3.5 2369  816  777        776
+#> 4   2268  740  790        738
 #> 
 #> price x freshness 
 #> 
 #>          Poor Average Excellent
-#>       NA 5426    5320      5454
-#> 1   2351  789     768       794
-#> 1.5 2363  798     771       794
-#> 2   2321  773     745       803
-#> 2.5 2344  791     748       805
-#> 3   2292  752     758       782
-#> 3.5 2169  711     742       716
-#> 4   2360  812     788       760
+#>       NA 5364    5418      5418
+#> 1   2323  754     765       804
+#> 1.5 2334  754     793       787
+#> 2   2319  811     737       771
+#> 2.5 2289  726     793       770
+#> 3   2298  771     761       766
+#> 3.5 2369  767     810       792
+#> 4   2268  781     759       728
 #> 
 #> type x freshness 
 #> 
 #>                 Poor Average Excellent
-#>              NA 5426    5320      5454
-#> Fuji       5355 1808    1757      1790
-#> Gala       5425 1794    1821      1810
-#> Honeycrisp 5420 1824    1742      1854
+#>              NA 5364    5418      5418
+#> Fuji       5435 1829    1811      1795
+#> Gala       5385 1774    1811      1800
+#> Honeycrisp 5380 1761    1796      1823
 ```
 
 The `cbc_overlap()` function prints out a summary of the amount of
@@ -384,17 +384,17 @@ cbc_overlap(design)
 #> price:
 #> 
 #>    1    2    3 
-#>   83 1776 3541 
+#>   80 1867 3453 
 #> 
 #> type:
 #> 
 #>    1    2    3 
-#>  539 3562 1299 
+#>  576 3613 1211 
 #> 
 #> freshness:
 #> 
 #>    1    2    3 
-#>  541 3625 1234
+#>  535 3590 1275
 ```
 
 # Simulate choices
@@ -414,12 +414,12 @@ data <- cbc_choices(
 
 head(data)
 #>   profileID respID qID altID obsID price       type freshness choice
-#> 1        61      1   1     1     1   3.0 Honeycrisp Excellent      1
-#> 2        25      1   1     2     1   2.5       Fuji   Average      0
-#> 3        12      1   1     3     1   3.0       Gala      Poor      0
-#> 4        36      1   2     1     2   1.0 Honeycrisp   Average      0
-#> 5        39      1   2     2     2   2.5 Honeycrisp   Average      1
-#> 6        60      1   2     3     2   2.5 Honeycrisp Excellent      0
+#> 1        60      1   1     1     1   2.5 Honeycrisp Excellent      0
+#> 2        17      1   1     2     1   2.0 Honeycrisp      Poor      1
+#> 3        21      1   1     3     1   4.0 Honeycrisp      Poor      0
+#> 4        24      1   2     1     2   2.0       Fuji   Average      0
+#> 5        49      1   2     2     2   4.0       Fuji Excellent      1
+#> 6        20      1   2     3     2   3.5 Honeycrisp      Poor      0
 ```
 
 ## Choices according to a prior
@@ -501,7 +501,8 @@ precise). The `cbc_power()` function achieves this by partitioning the
 choice data into multiple sizes (defined by the `nbreaks` argument) and
 then estimating a user-defined choice model on each data subset. In the
 example below, 10 different sample sizes are used. All models are
-estimated using the [{logitr}](https://jhelvy.github.io/logitr) package:
+estimated using the [{logitr}](https://jhelvy.github.io/logitr/)
+package:
 
 ``` r
 power <- cbc_power(
@@ -514,21 +515,21 @@ power <- cbc_power(
 )
 
 head(power)
-#>   sampleSize               coef           est         se
-#> 1         90              price  0.0260803668 0.05334739
-#> 2         90           typeGala -0.1077339529 0.12327980
-#> 3         90     typeHoneycrisp  0.1860517343 0.12618483
-#> 4         90   freshnessAverage  0.0328069051 0.12660726
-#> 5         90 freshnessExcellent  0.1120991243 0.12684269
-#> 6        180              price -0.0002419905 0.03754835
+#>   sampleSize               coef         est         se
+#> 1         90              price  0.05582323 0.05402057
+#> 2         90           typeGala -0.08587780 0.12933189
+#> 3         90     typeHoneycrisp -0.05025257 0.12813734
+#> 4         90   freshnessAverage -0.19860588 0.12800209
+#> 5         90 freshnessExcellent -0.02857241 0.12661228
+#> 6        180              price  0.02887836 0.03768179
 tail(power)
-#>    sampleSize               coef           est         se
-#> 45        810 freshnessExcellent -0.0511880850 0.04259193
-#> 46        900              price  0.0003218516 0.01655349
-#> 47        900           typeGala  0.0725488744 0.04038253
-#> 48        900     typeHoneycrisp  0.0355241735 0.04052658
-#> 49        900   freshnessAverage -0.0312887069 0.04053670
-#> 50        900 freshnessExcellent -0.0611011941 0.04045519
+#>    sampleSize               coef          est         se
+#> 45        810 freshnessExcellent  0.013311936 0.04271193
+#> 46        900              price  0.036916296 0.01662546
+#> 47        900           typeGala -0.000188905 0.04057381
+#> 48        900     typeHoneycrisp  0.010180138 0.04057511
+#> 49        900   freshnessAverage -0.033374250 0.04060837
+#> 50        900 freshnessExcellent  0.011159461 0.04044693
 ```
 
 The `power` data frame contains the coefficient estimates and standard
@@ -563,7 +564,7 @@ models <- cbc_power(
 summary(models[[10]])
 #> =================================================
 #> 
-#> Model estimated on: Mon Oct 31 14:03:40 2022 
+#> Model estimated on: Mon Oct 31 14:13:51 2022 
 #> 
 #> Using logitr version: 0.8.0 
 #> 
@@ -573,7 +574,7 @@ summary(models[[10]])
 #> 
 #> Frequencies of alternatives:
 #>       1       2       3 
-#> 0.33630 0.32741 0.33630 
+#> 0.33148 0.33444 0.33407 
 #> 
 #> Exit Status: 3, Optimization stopped because ftol_rel or ftol_abs was reached.
 #>                                 
@@ -587,21 +588,21 @@ summary(models[[10]])
 #> Robust?                    FALSE
 #> 
 #> Model Coefficients: 
-#>                       Estimate  Std. Error z-value Pr(>|z|)  
-#> price               0.00032185  0.01655349  0.0194  0.98449  
-#> typeGala            0.07254887  0.04038253  1.7965  0.07241 .
-#> typeHoneycrisp      0.03552417  0.04052658  0.8766  0.38072  
-#> freshnessAverage   -0.03128871  0.04053670 -0.7719  0.44020  
-#> freshnessExcellent -0.06110119  0.04045519 -1.5103  0.13096  
+#>                      Estimate Std. Error z-value Pr(>|z|)  
+#> price               0.0369163  0.0166255  2.2205  0.02639 *
+#> typeGala           -0.0001889  0.0405738 -0.0047  0.99629  
+#> typeHoneycrisp      0.0101801  0.0405751  0.2509  0.80189  
+#> freshnessAverage   -0.0333743  0.0406084 -0.8219  0.41116  
+#> freshnessExcellent  0.0111595  0.0404469  0.2759  0.78262  
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #>                                      
-#> Log-Likelihood:         -5.929763e+03
+#> Log-Likelihood:         -5.929330e+03
 #> Null Log-Likelihood:    -5.932506e+03
-#> AIC:                     1.186953e+04
-#> BIC:                     1.190250e+04
-#> McFadden R2:             4.624314e-04
-#> Adj McFadden R2:        -3.803827e-04
+#> AIC:                     1.186866e+04
+#> BIC:                     1.190163e+04
+#> McFadden R2:             5.353430e-04
+#> Adj McFadden R2:        -3.074711e-04
 #> Number of Observations:  5.400000e+03
 ```
 
@@ -671,10 +672,10 @@ citation("cbcTools")
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{,
-#>     title = {cbcTools: Tools For Designing Choice-Based Conjoint Survey Experiments},
+#>     title = {cbcTools: Tools for Designing Choice-Based Conjoint Survey Experiments},
 #>     author = {John Paul Helveston},
 #>     year = {2022},
-#>     note = {R package version 0.0.3},
+#>     note = {R package},
 #>     url = {https://jhelvy.github.io/cbcTools/},
 #>   }
 ```

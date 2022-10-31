@@ -5,6 +5,7 @@
 #' randomized or Baysian D-efficient, in which case an implementation of the
 #' CEA or Modfed Federov algorithm is used via the `idefix` package
 #'
+#' @keywords logitr mnl mxl mixed logit design
 #' @param profiles A data frame in which each row is a possible profile.
 #' This can be generated using the `cbc_profiles()` function.
 #' @param n_resp Number of survey respondents.

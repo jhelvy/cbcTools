@@ -2,6 +2,8 @@
 #'
 #' This function prints out a summary of the individual and pairwise counts of
 #' each level for each attribute across all choice questions in the design.
+#' @keywords logitr mnl mxl mixed logit balance overlap
+#'
 #' @param design A data frame of a survey design.
 #' @return Prints the individual and pairwise counts of the number of times
 #' each attribute levels in shown in the design.

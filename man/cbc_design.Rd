@@ -141,3 +141,9 @@ design_db_eff <- cbc_design(
     parallel = FALSE
 )
 }
+\keyword{design}
+\keyword{logit}
+\keyword{logitr}
+\keyword{mixed}
+\keyword{mnl}
+\keyword{mxl}

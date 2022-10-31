@@ -4,7 +4,7 @@
 #' subsets of a set of choice data. The number of models to run is set by the
 #' `nbreaks` argument, which breaks up the data into groups of increasing
 #' sample sizes. All models are estimated models using the {logitr} package.
-#' @keywords logitr, mnl, mxl, logit, sample size, power
+#' @keywords logitr mnl mxl mixed logit sample size power
 #'
 #' @param data The data, formatted as a `data.frame` object.
 #' @param outcome The name of the column that identifies the outcome variable,

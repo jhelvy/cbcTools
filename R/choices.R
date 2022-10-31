@@ -2,6 +2,7 @@
 #'
 #' Simulate choices for a survey design, either randomly or according to a
 #' utility model defined by user-provided prior parameters.
+#' @keywords logitr mnl mxl mixed logit simulation
 #'
 #' @param design A data frame of a survey design.
 #' @param obsID The name of the column in `design` that identifies each choice
