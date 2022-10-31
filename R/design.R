@@ -362,8 +362,10 @@ make_design_eff <- function(
     }
 
     # Repeat design to match number of respondents
-    design <- des[rep(seq_len(nrow(des)), n_resp / n_blocks), ]
+    n_reps <- ceiling(n_resp / n_blocks)
+    design <- des[rep(seq_len(nrow(des)), n_reps), ]
     row.names(design) <- NULL
+    design <- design[1:(n_resp*n_q*n_alts), ]
 
     # Add metadata
     design <- add_metadata(design, n_resp, n_alts, n_q)
