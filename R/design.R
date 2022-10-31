@@ -28,8 +28,12 @@
 #' If used, the `n_alts` argument will be ignored as its value is defined by
 #' the unique number of levels in the `label` variable. Defaults to `NULL`.
 #' @param priors A list of one or more assumed prior parameters used to
-#' generate a Baysian D-efficient design. If `NULL` (the default), a randomized
+#' generate a Bayesian D-efficient design. If `NULL` (the default), a randomized
 #' design will be generated.
+#' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting
+#' design includes average predicted probabilities for each alternative in each
+#' choice set given the sample from the prior preference distribution.
+#' Defaults to `FALSE`.
 #' @param method Which method to use for obtaining a Bayesian D-efficient
 #' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `idefix::CEA` and
 #' `idefix::Modfed` for more details.
@@ -90,6 +94,7 @@ cbc_design <- function(
   n_start = 5,
   label = NULL,
   priors = NULL,
+  probs = FALSE,
   method = "CEA",
   max_iter = 50,
   parallel = TRUE
@@ -102,7 +107,7 @@ cbc_design <- function(
   } else {
     design <- make_design_eff(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-      label, priors, method, max_iter, parallel
+      label, priors, probs, method, max_iter, parallel
     )
   }
   # Reset row numbers
@@ -244,7 +249,7 @@ reorder_cols <- function(design) {
 
 make_design_eff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-    label, priors, method, max_iter, parallel
+    label, priors, probs, method, max_iter, parallel
 ) {
     # Set up initial parameters
     mu <- unlist(priors)
@@ -327,6 +332,11 @@ make_design_eff <- function(
     # Join on profileIDs
     des <- merge(des, profiles, by = names(priors))
     des <- des[c('profileID', names(priors))]
+
+    # Include probs?
+    if (probs) {
+        des$probs <- as.vector(t(D$probs))
+    }
 
     # Repeat design to match number of respondents
     design <- des[rep(seq_len(nrow(des)), n_resp / n_blocks), ]
