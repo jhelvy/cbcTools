@@ -251,14 +251,12 @@ make_design_eff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
     label, priors, probs, method, max_iter, parallel
 ) {
-    # Set up initial parameters
+    # Set up initial parameters for creating design
     mu <- unlist(priors)
     profile_lvls <- profiles[,2:ncol(profiles)]
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(levels))
-
-    # Generate candidate set using idefix::Profiles
     types <- get_col_types(profile_lvls)
     id_discrete <- types %in% c("factor", "character")
     id_continuous <- !id_discrete
@@ -270,14 +268,12 @@ make_design_eff <- function(
         lvl.names[id_discrete] <- lapply(lvl.names[id_discrete], function(x) as.character(x))
         coding[id_discrete] <- "D"
     }
-    cs <- idefix::Profiles(lvls = lvls, coding = coding, c.lvls = c.lvls)
-
-    # Other settings for creating design
+    no_choice_alt <- NULL
     alt_cte <- rep(0, n_alts)
     if (no_choice) {
         n_alts <- n_alts + 1
-        mu <- c(0, mu)
         alt_cte <- c(alt_cte, 1)
+        no_choice_alt <- n_alts
     }
     sigma <- diag(length(mu))
     par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
@@ -305,7 +301,11 @@ make_design_eff <- function(
         )
     } else if (method == "Modfed") {
         D <- idefix::Modfed(
-            cand.set = cs,
+            cand.set = idefix::Profiles(
+                lvls = lvls,
+                coding = coding,
+                c.lvls = c.lvls
+            ),
             par.draws = par_draws,
             n.alts = n_alts,
             n.sets = n_q*n_blocks,
@@ -322,16 +322,39 @@ make_design_eff <- function(
     des <- idefix::Decode(
         des = D$design,
         n.alts = n_alts,
+        alt.cte = alt_cte,
         lvl.names = lvl.names,
         c.lvls = c.lvls,
-        coding = coding
+        coding = coding,
+        no.choice = no_choice_alt
     )
     des <- des$design
-    names(des) <- names(priors)
-
-    # Join on profileIDs
-    des <- merge(des, profiles, by = names(priors))
-    des <- des[c('profileID', names(priors))]
+    if (no_choice) {
+        # First join on the profileIDs to the raw de-coded design
+        varnames <- names(priors)[2:length(priors)]
+        des_raw <- des
+        names(des_raw) <- varnames
+        des_raw$row_id <- seq(nrow(des_raw))
+        des_raw <- merge(des_raw, profiles, by = varnames, all.x = TRUE)
+        des_raw <- des_raw[c('row_id', 'profileID')]
+        # Now use dummy-coded design and add on profileIDs
+        des <- as.data.frame(D$design)
+        codednames <- encode_names(des, varnames, lvl.names, id_discrete)
+        names(des) <- c("no_choice", codednames)
+        des <- des[c(codednames, "no_choice")]
+        row.names(des) <- NULL
+        des$row_id <- seq(nrow(des))
+        des <- merge(des, des_raw, by = 'row_id')
+        des$row_id <- NULL
+        des <- des[c('profileID', codednames)]
+        des$no_choice <- as.vector(D$design[,1])
+    } else {
+        # Join on profileIDs
+        varnames <- names(priors)
+        names(des) <- varnames
+        des <- merge(des, profiles, by = varnames)
+        des <- des[c('profileID', varnames)]
+    }
 
     # Include probs?
     if (probs) {
@@ -353,4 +376,20 @@ make_design_eff <- function(
     )
 
     return(design)
+}
+
+encode_names <- function(des, varnames, lvl.names, id_discrete) {
+    codednames <- list()
+    for (i in 1:length(varnames)) {
+        if (id_discrete[i]) {
+            varlevels <- lvl.names[[i]]
+            codednames[[i]] <- paste(
+                varnames[i],
+                varlevels[2:length(varlevels)], sep = "_"
+            )
+        } else {
+            codednames[[i]] <- varnames[i]
+        }
+    }
+    return(unlist(codednames))
 }
