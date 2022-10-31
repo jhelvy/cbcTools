@@ -295,7 +295,7 @@ make_design_eff <- function(
     profile_lvls <- profiles[,2:ncol(profiles)]
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
-    coding <- rep("C", length(levels))
+    coding <- rep("C", length(lvls))
     types <- get_col_types(profile_lvls)
     id_discrete <- types %in% c("factor", "character")
     id_continuous <- !id_discrete
@@ -303,9 +303,9 @@ make_design_eff <- function(
     if (any(id_continuous)) {
         c.lvls <- lvl.names[id_continuous]
     }
-    # Discrete variables must be characters not factors
+    # lvl.names must be all characters for decoding process
+    lvl.names <- lapply(lvl.names, function(x) as.character(x))
     if (any(id_discrete)) {
-        lvl.names[id_discrete] <- lapply(lvl.names[id_discrete], function(x) as.character(x))
         coding[id_discrete] <- "D"
     }
     no_choice_alt <- NULL
@@ -390,6 +390,10 @@ make_design_eff <- function(
         # Join on profileIDs
         names(des) <- varnames
         des <- merge(des, profiles, by = varnames)
+        # Convert numeric columns to actual numbers
+        des[,which(id_continuous)] <- lapply(
+            des[,which(id_continuous)], function(x) as.numeric(x)
+        )
         des <- des[c('profileID', varnames)]
     }
 
