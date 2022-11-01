@@ -389,7 +389,9 @@ make_design_eff <- function(
     } else {
         # Join on profileIDs
         names(des) <- varnames
+        des$row_id <- seq(nrow(des)) # Keep track of row
         des <- merge(des, profiles, by = varnames)
+        des <- des[order(des$row_id),]
         # Convert numeric columns to actual numbers
         des[,which(id_continuous)] <- lapply(
             des[,which(id_continuous)], function(x) as.numeric(x)
