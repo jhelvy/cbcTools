@@ -1,8 +1,8 @@
-#' Make a random or Baysian D-efficient choice-based conjoint survey design
+#' Make a random or Bayesian D-efficient choice-based conjoint survey design
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
 #' design where each row is an alternative. Designs can be either a
-#' randomized or Baysian D-efficient, in which case an implementation of the
+#' randomized or Bayesian D-efficient, in which case an implementation of the
 #' CEA or Modfed Federov algorithm is used via the `idefix` package
 #'
 #' @keywords logitr mnl mxl mixed logit design
@@ -11,11 +11,11 @@
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used in Baysian D-efficient design.
+#' @param n_blocks Number of blocks used in Bayesian D-efficient design.
 #' Max allowable is one block per respondent, defaults to `1`, meaning every
 #' respondent sees the same set of choice questions.
 #' @param n_draws Number of draws used in simulating the prior distribution
-#' used in Baysian D-efficient designs. Defaults to `50`.
+#' used in Bayesian D-efficient designs. Defaults to `50`.
 #' @param n_start A numeric value indicating the number of random start designs
 #' to use in obtaining a Bayesian D-efficient design. The default is `5`.
 #' Increasing `n_start` can result in a more efficient design at the expense
@@ -26,8 +26,9 @@
 #' @param label The name of the variable to use in a "labeled" design
 #' (also called an "alternative-specific design") such that each set of
 #' alternatives contains one of each of the levels in the `label` attribute.
-#' If used, the `n_alts` argument will be ignored as its value is defined by
-#' the unique number of levels in the `label` variable. Defaults to `NULL`.
+#' Currently only compatible with randomized designs. If used, the `n_alts`
+#' argument will be ignored as its value is defined by the unique number of
+#' levels in the `label` variable. Defaults to `NULL`.
 #' @param priors A list of one or more assumed prior parameters used to
 #' generate a Bayesian D-efficient design. If `NULL` (the default), a randomized
 #' design will be generated.
@@ -38,10 +39,10 @@
 #' choice set given the sample from the prior preference distribution.
 #' Defaults to `FALSE`.
 #' @param method Which method to use for obtaining a Bayesian D-efficient
-#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `idefix::CEA` and
-#' `idefix::Modfed` for more details.
+#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `?idefix::CEA` and
+#' `?idefix::Modfed` for more details.
 #' @param max_iter A numeric value indicating the maximum number allowed
-#' iterations when searching for a Baysian D-efficient design. The default is
+#' iterations when searching for a Bayesian D-efficient design. The default is
 #' 50.
 #' @param parallel Logical value indicating whether computations should be done
 #' over multiple cores. The default is `TRUE`.
@@ -88,7 +89,7 @@
 #' )
 #'
 #' # Make a Bayesian D-efficient design with a prior model specified
-#' design_db_eff <- cbc_design(
+#' design_deff <- cbc_design(
 #'     profiles  = profiles,
 #'     n_resp    = 300, # Number of respondents
 #'     n_alts    = 3, # Number of alternatives per question
@@ -140,8 +141,18 @@ cbc_design <- function(
     design <- make_design_rand(
       profiles, n_resp, n_alts, n_q, no_choice, label
     )
+  } else if (!is.null(label)) {
+    if (!is.null(priors)) {
+      message(
+        "The use of the 'label' argument is currently only compatible with ",
+        "randomized designs, so the provided priors are being ignored.\n"
+      )
+    }
+    design <- make_design_rand(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
   } else {
-    design <- make_design_eff(
+    design <- make_design_deff(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
       label, priors, prior_no_choice, probs, method, max_iter, parallel
     )
@@ -174,11 +185,11 @@ get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
 get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   n_levels <- length(unique(profiles[, label]))
   if (n_levels != n_alts) {
-    warning(paste0(
-      "The n_alts argument is being set to ", n_levels,
+    message(
+      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
       " to match the number of unique levels in the ", label,
-      " variable"
-    ))
+      " variable.\n"
+    )
     # Over-ride user-provided n_alts as it is determined by the label
     n_alts <- n_levels
   }
@@ -281,9 +292,9 @@ reorder_cols <- function(design) {
     return(design)
 }
 
-# Baysian D-efficient Design ----
+# Bayesian D-efficient Design ----
 
-make_design_eff <- function(
+make_design_deff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
     label, priors, prior_no_choice, probs, method, max_iter, parallel
 ) {
