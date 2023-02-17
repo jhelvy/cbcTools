@@ -138,19 +138,13 @@ cbc_design <- function(
   )
   profiles <- as.data.frame(profiles) # tibbles break things
   if (is.null(priors)) {
-    design <- make_design_rand(
-      profiles, n_resp, n_alts, n_q, no_choice, label
-    )
+    design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else if (!is.null(label)) {
-    if (!is.null(priors)) {
-      message(
-        "The use of the 'label' argument is currently only compatible with ",
-        "randomized designs, so the provided priors are being ignored.\n"
-      )
-    }
-    design <- make_design_rand(
-      profiles, n_resp, n_alts, n_q, no_choice, label
+    message(
+      "The use of the 'label' argument is currently only compatible with ",
+      "randomized designs, so the provided priors are being ignored.\n"
     )
+    design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else {
     design <- make_design_deff(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
@@ -298,7 +292,9 @@ make_design_deff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
     label, priors, prior_no_choice, probs, method, max_iter, parallel
 ) {
+
     # Set up initial parameters for creating design
+
     mu <- unlist(priors)
     if (no_choice) {
         mu <- c(prior_no_choice, mu)
@@ -414,6 +410,9 @@ make_design_deff <- function(
     if (probs) {
         des$probs <- as.vector(t(D$probs))
     }
+
+    # Add blockIDs
+    des$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
 
     # Repeat design to match number of respondents
     n_reps <- ceiling(n_resp / n_blocks)
