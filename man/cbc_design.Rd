@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Make a random or Baysian D-efficient choice-based conjoint survey design}
+\title{Make a random or Bayesian D-efficient choice-based conjoint survey design}
 \usage{
 cbc_design(
   profiles,
@@ -32,12 +32,12 @@ This can be generated using the \code{cbc_profiles()} function.}
 
 \item{n_q}{Number of questions per respondent.}
 
-\item{n_blocks}{Number of blocks used in Baysian D-efficient design.
+\item{n_blocks}{Number of blocks used in Bayesian D-efficient design.
 Max allowable is one block per respondent, defaults to \code{1}, meaning every
 respondent sees the same set of choice questions.}
 
 \item{n_draws}{Number of draws used in simulating the prior distribution
-used in Baysian D-efficient designs. Defaults to \code{50}.}
+used in Bayesian D-efficient designs. Defaults to \code{50}.}
 
 \item{no_choice}{Include a "no choice" option in the choice sets? Defaults
 to \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
@@ -51,8 +51,9 @@ of increased computational time.}
 \item{label}{The name of the variable to use in a "labeled" design
 (also called an "alternative-specific design") such that each set of
 alternatives contains one of each of the levels in the \code{label} attribute.
-If used, the \code{n_alts} argument will be ignored as its value is defined by
-the unique number of levels in the \code{label} variable. Defaults to \code{NULL}.}
+Currently only compatible with randomized designs. If used, the \code{n_alts}
+argument will be ignored as its value is defined by the unique number of
+levels in the \code{label} variable. Defaults to \code{NULL}.}
 
 \item{priors}{A list of one or more assumed prior parameters used to
 generate a Bayesian D-efficient design. If \code{NULL} (the default), a randomized
@@ -67,11 +68,11 @@ choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.}
 
 \item{method}{Which method to use for obtaining a Bayesian D-efficient
-design, \code{"CEA"} or \code{"Modfed"}? Defaults to \code{"CEA"}. See \code{idefix::CEA} and
-\code{idefix::Modfed} for more details.}
+design, \code{"CEA"} or \code{"Modfed"}? Defaults to \code{"CEA"}. See \code{?idefix::CEA} and
+\code{?idefix::Modfed} for more details.}
 
 \item{max_iter}{A numeric value indicating the maximum number allowed
-iterations when searching for a Baysian D-efficient design. The default is
+iterations when searching for a Bayesian D-efficient design. The default is
 50.}
 
 \item{parallel}{Logical value indicating whether computations should be done
@@ -84,7 +85,7 @@ each row is an alternative.
 \description{
 This function creates a data frame containing a choice-based conjoint survey
 design where each row is an alternative. Designs can be either a
-randomized or Baysian D-efficient, in which case an implementation of the
+randomized or Bayesian D-efficient, in which case an implementation of the
 CEA or Modfed Federov algorithm is used via the \code{idefix} package
 }
 \examples{
@@ -127,7 +128,7 @@ design_rand_labeled <- cbc_design(
 )
 
 # Make a Bayesian D-efficient design with a prior model specified
-design_db_eff <- cbc_design(
+design_deff <- cbc_design(
     profiles  = profiles,
     n_resp    = 300, # Number of respondents
     n_alts    = 3, # Number of alternatives per question
