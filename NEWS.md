@@ -1,9 +1,12 @@
 # cbcTools (development version)
 
+# cbcTools 0.2.0
+
+- Added a startup message when the package is loaded
+
 # cbcTools 0.1.0
 
 - Added initial integration with {idefix} packages for Bayesian D-efficient designs
-- Added a startup message when the package is loaded
 
 # cbcTools 0.0.5
 
