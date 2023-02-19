@@ -1,5 +1,4 @@
 context("Testing cbc_profiles()")
-library(cbcTools)
 
 test_that("Full factorial set of profiles created with numeric and character levels", {
   profiles <- cbcTools::cbc_profiles(
