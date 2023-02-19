@@ -3,13 +3,6 @@
 
 # cbcTools <a href='https://jhelvy.github.io/cbcTools/'><img src='man/figures/logo.png' align="right" style="height:139px;"/></a>
 
-<!-- badges: start -->
-
-[![CRAN
-status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.org/package=cbcTools)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/cbcTools?color=blue)](https://cran.r-project.org/package=cbcTools)
-<!-- badges: end -->
-
 This package provides a set of tools for designing surveys and
 conducting power analyses for choice-based conjoint survey experiments
 in R. Each function in the package begins with `cbc_` and supports a
@@ -58,15 +51,16 @@ citation("cbcTools")
 #> 
 #> To cite cbcTools in publications use:
 #> 
-#>   John Paul Helveston (2022). cbcTools: Tools For Designing Conjoint
-#>   Survey Experiments.
+#>   Helveston JP (2023). _cbcTools: Tools for Designing Choice-Based
+#>   Conjoint Survey Experiments_. R package,
+#>   <https://jhelvy.github.io/cbcTools/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{,
-#>     title = {cbcTools: Tools for Designing Choice-Based Conjoint Survey Experiments},
+#>     title = {{cbcTools}: Tools for Designing Choice-Based Conjoint Survey Experiments},
 #>     author = {John Paul Helveston},
-#>     year = {2022},
+#>     year = {2023},
 #>     note = {R package},
 #>     url = {https://jhelvy.github.io/cbcTools/},
 #>   }
