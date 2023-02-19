@@ -141,6 +141,8 @@ def_model_prior <- function(design, priors, n_draws) {
     parSetup     = parSetup,
     parIDs       = parIDs,
     standardDraws = getStandardDraws(parIDs, n_draws),
+    # Create data object
+    data = list(factorLevels = codedData$factorLevels),
     # Create n object, which stores counts of various variables
     n = list(
       vars       = length(parSetup),
