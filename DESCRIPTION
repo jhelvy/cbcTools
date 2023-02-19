@@ -24,6 +24,7 @@ Imports:
     randtoolbox,
     rlang,
     stats,
+    tibble,
     utils
 URL: https://github.com/jhelvy/cbcTools
 BugReports: https://github.com/jhelvy/cbcTools/issues

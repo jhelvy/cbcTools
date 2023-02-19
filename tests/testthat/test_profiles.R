@@ -2,7 +2,7 @@ context("Testing cbc_profiles()")
 library(cbcTools)
 
 test_that("Full factorial set of profiles created with numeric and character levels", {
-  profiles <- cbc_profiles(
+  profiles <- cbcTools::cbc_profiles(
     price     = c(1, 1.5, 2),
     type      = c("Fuji", "Gala"),
     freshness = c("Poor", "Excellent")
@@ -31,7 +31,7 @@ test_that("Full factorial set of profiles created with numeric and character lev
 })
 
 test_that("Full factorial set of profiles created with logical levels", {
-    profiles <- cbc_profiles(
+    profiles <- cbcTools::cbc_profiles(
         price     = c(1, 1.5, 2),
         available = c(TRUE, FALSE)
     )
@@ -52,7 +52,7 @@ test_that("Full factorial set of profiles created with logical levels", {
 })
 
 test_that("Full factorial set of profiles created with at least 3 character levels", {
-    profiles <- cbc_profiles(
+    profiles <- cbcTools::cbc_profiles(
         price     = c(1, 1.5, 2),
         freshness = c("Poor", "Average", "Excellent")
     )
@@ -77,7 +77,7 @@ test_that("Full factorial set of profiles created with at least 3 character leve
 })
 
 test_that("Profiles correctly removed based on filtering syntax", {
-    profiles <- cbc_profiles(
+    profiles <- cbcTools::cbc_profiles(
         price     = c(1, 1.5, 2),
         freshness = c('Poor', 'Average', 'Excellent'),
         type = list(
