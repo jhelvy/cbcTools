@@ -8,4 +8,4 @@
 
 ## Notes
 * This is a new release.
-
+* The bad urls in the README.md are the CRAN links that will be valid upon publication on CRAN.
