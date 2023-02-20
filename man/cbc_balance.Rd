@@ -43,3 +43,10 @@ cbc_balance(design)
 # Inspect the design overlap
 cbc_overlap(design)
 }
+\keyword{balance}
+\keyword{logit}
+\keyword{logitr}
+\keyword{mixed}
+\keyword{mnl}
+\keyword{mxl}
+\keyword{overlap}

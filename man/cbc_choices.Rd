@@ -87,3 +87,9 @@ data <- cbc_choices(
   )
 )
 }
+\keyword{logit}
+\keyword{logitr}
+\keyword{mixed}
+\keyword{mnl}
+\keyword{mxl}
+\keyword{simulation}

@@ -1,11 +1,10 @@
-citHeader("To cite cbcTools in publications use:")
-
-citEntry(
-  entry    = "Manual",
-  title    = "cbcTools: Tools For Designing Choice-Based Conjoint Survey Experiments",
-  author   = "John Paul Helveston",
-  year     = "2022",
-  note     = "R package version 0.0.3",
+bibentry(bibtype = "Manual",
+  title        = "{cbcTools}: Tools for Designing Choice-Based Conjoint Survey Experiments",
+  author       = person(given = c("John", "Paul"), family = "Helveston", email = "john.helveston@gmail.com"),
+  year         = "2023",
+  note     = "R package",
   url      = "https://jhelvy.github.io/cbcTools/",
-  textVersion = "John Paul Helveston (2022). cbcTools: Tools For Designing Conjoint Survey Experiments."
+  header       = "To cite cbcTools in publications use:"
 )
+
+

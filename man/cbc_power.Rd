@@ -112,10 +112,11 @@ power <- cbc_power(
   n_q     = 6
 )
 }
-\keyword{logit,}
-\keyword{logitr,}
-\keyword{mnl,}
-\keyword{mxl,}
+\keyword{logit}
+\keyword{logitr}
+\keyword{mixed}
+\keyword{mnl}
+\keyword{mxl}
 \keyword{power}
 \keyword{sample}
-\keyword{size,}
+\keyword{size}

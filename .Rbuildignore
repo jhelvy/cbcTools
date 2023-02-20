@@ -13,3 +13,5 @@ vignettes
 ^next_release\.md$
 ^build\.R$
 ^foo\.R$
+^cran-comments\.md$
+^CRAN-SUBMISSION$

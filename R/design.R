@@ -1,27 +1,51 @@
-#' Make a random or D-efficient choice-based conjoint survey design
+#' Make a random or Bayesian D-efficient choice-based conjoint survey design
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
-#' design where each row is an alternative. Designs can be either fully
-#' randomized or D-efficient, in which case an implementation of the
-#' Modified Federov algorithm is used via the `idefix` package (still in
-#' development).
+#' design where each row is an alternative. Designs can be either a
+#' randomized or Bayesian D-efficient, in which case an implementation of the
+#' CEA or Modfed Federov algorithm is used via the `idefix` package
 #'
+#' @keywords logitr mnl mxl mixed logit design
 #' @param profiles A data frame in which each row is a possible profile.
 #' This can be generated using the `cbc_profiles()` function.
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
-#' @param no_choice Include a "none" option in the choice sets? Defaults to
-#' `FALSE`. If `TRUE`, the total number of alternatives per question will be
+#' @param n_blocks Number of blocks used in Bayesian D-efficient design.
+#' Max allowable is one block per respondent, defaults to `1`, meaning every
+#' respondent sees the same set of choice questions.
+#' @param n_draws Number of draws used in simulating the prior distribution
+#' used in Bayesian D-efficient designs. Defaults to `50`.
+#' @param n_start A numeric value indicating the number of random start designs
+#' to use in obtaining a Bayesian D-efficient design. The default is `5`.
+#' Increasing `n_start` can result in a more efficient design at the expense
+#' of increased computational time.
+#' @param no_choice Include a "no choice" option in the choice sets? Defaults
+#' to `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #' one more than the provided `n_alts` argument.
 #' @param label The name of the variable to use in a "labeled" design
 #' (also called an "alternative-specific design") such that each set of
 #' alternatives contains one of each of the levels in the `label` attribute.
-#' If used, the `n_alts` argument will be ignored as its value is defined by
-#' the unique number of levels in the `label` variable. Defaults to `NULL`.
-#' @param d_eff If `TRUE`, returns a D-efficient design where each respondent
-#' is shown the same design, otherwise a fully randomized design is returned.
-#' Defaults to `FALSE`. **This feature is not yet implemented**
+#' Currently only compatible with randomized designs. If used, the `n_alts`
+#' argument will be ignored as its value is defined by the unique number of
+#' levels in the `label` variable. Defaults to `NULL`.
+#' @param priors A list of one or more assumed prior parameters used to
+#' generate a Bayesian D-efficient design. If `NULL` (the default), a randomized
+#' design will be generated.
+#' @param prior_no_choice Prior utility value for the "no choice" alternative.
+#' Only required if `no_choice = TRUE`. Defaults to `NULL`.
+#' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting
+#' design includes average predicted probabilities for each alternative in each
+#' choice set given the sample from the prior preference distribution.
+#' Defaults to `FALSE`.
+#' @param method Which method to use for obtaining a Bayesian D-efficient
+#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `?idefix::CEA` and
+#' `?idefix::Modfed` for more details.
+#' @param max_iter A numeric value indicating the maximum number allowed
+#' iterations when searching for a Bayesian D-efficient design. The default is
+#' 50.
+#' @param parallel Logical value indicating whether computations should be done
+#' over multiple cores. The default is `TRUE`.
 #' @return A data frame containing a choice-based conjoint survey design where
 #' each row is an alternative.
 #' @export
@@ -54,8 +78,8 @@
 #'   no_choice = TRUE
 #' )
 #'
-#' # Make randomized labeled survey design with each "type" appearing in each
-#' # choice question
+#' # Make a randomized labeled survey design with each "type" appearing in
+#' # each choice question
 #' design_rand_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
@@ -63,23 +87,68 @@
 #'   n_q       = 6, # Number of questions per respondent
 #'   label     = "type"
 #' )
+#'
+#' # Make a Bayesian D-efficient design with a prior model specified
+#' design_deff <- cbc_design(
+#'     profiles  = profiles,
+#'     n_resp    = 300, # Number of respondents
+#'     n_alts    = 3, # Number of alternatives per question
+#'     n_q       = 6, # Number of questions per respondent
+#'     n_start   = 1,
+#'     priors = list(
+#'         price     = -0.1,
+#'         type      = c(0.1, 0.2),
+#'         freshness = c(0.1, 0.2)
+#'     ),
+#'     parallel = FALSE
+#' )
 cbc_design <- function(
   profiles,
   n_resp,
   n_alts,
   n_q,
+  n_blocks = 1,
+  n_draws = 50,
   no_choice = FALSE,
+  n_start = 5,
   label = NULL,
-  d_eff = FALSE
+  priors = NULL,
+  prior_no_choice = NULL,
+  probs = FALSE,
+  method = "CEA",
+  max_iter = 50,
+  parallel = TRUE
 ) {
+  check_inputs_design(
+    profiles,
+    n_resp,
+    n_alts,
+    n_q,
+    n_blocks,
+    n_draws,
+    no_choice,
+    n_start,
+    label,
+    priors,
+    prior_no_choice,
+    probs,
+    method,
+    max_iter,
+    parallel
+  )
   profiles <- as.data.frame(profiles) # tibbles break things
-  if (d_eff) {
-    design <- make_design_eff(
-      profiles, n_resp, n_alts, n_q, no_choice, label
+  if (is.null(priors)) {
+    design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
+  } else if (!is.null(label)) {
+    message(
+      "The use of the 'label' argument is currently only compatible with ",
+      "randomized designs, so the provided priors are being ignored.\n"
     )
+    design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else {
-    design <- make_design_rand(
-      profiles, n_resp, n_alts, n_q, no_choice, label
+    design <- make_design_deff(
+      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
+      label, priors, prior_no_choice, probs, method, max_iter, parallel
     )
   }
   # Reset row numbers
@@ -87,48 +156,7 @@ cbc_design <- function(
   return(design)
 }
 
-# D-efficient design ----
-
-# still under development, will likely refer to the {idefix} package
-
-make_design_eff <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-  return(make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label))
-}
-
-# make_design_eff <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-#     survey <- get_eff_design(profiles, n_resp, n_alts, n_q, no_choice, label)
-#     return(survey)
-# }
-#
-# get_eff_design <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-#     mu <- rep(0, ncol(profiles))
-#     alt_cte <- rep(0, n_alts)
-#     if (no_choice) {
-#         n_alts <- n_alts + 1
-#         mu <- c(0, mu)
-#         alt_cte <- c(alt_cte, 1)
-#     }
-#     sigma <- diag(length(mu))
-#     par_draws <- MASS::mvrnorm(n = 500, mu = mu, Sigma = sigma)
-#     n_alt_cte <- sum(alt_cte)
-#     if (n_alt_cte >= 1) {
-#         par_draws <- list(
-#             par_draws[, 1:n_alt_cte],
-#             par_draws[, (n_alt_cte + 1):ncol(par_draws)])
-#     }
-#     design <- idefix::Modfed(
-#         cand.set = profiles,
-#         n.sets = n_resp,
-#         n.alts = n_alts,
-#         n.start = 5,
-#         alt.cte = alt_cte,
-#         no.choice = no_choice,
-#         par.draws = par_draws
-#     )
-#     return(design)
-# }
-
-# Randomized design ----
+# Randomized Design ----
 
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
   design <- get_design_rand(profiles, n_resp, n_alts, n_q)
@@ -151,11 +179,11 @@ get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
 get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   n_levels <- length(unique(profiles[, label]))
   if (n_levels != n_alts) {
-    warning(paste0(
-      "The n_alts argument is being set to ", n_levels,
+    message(
+      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
       " to match the number of unique levels in the ", label,
-      " variable"
-    ))
+      " variable.\n"
+    )
     # Over-ride user-provided n_alts as it is determined by the label
     n_alts <- n_levels
   }
@@ -216,13 +244,6 @@ get_dups <- function(design, n_alts) {
   return(dup_rows)
 }
 
-reorder_cols <- function(design) {
-  metaNames <- c("respID", "qID", "altID", "obsID", "profileID")
-  varNames <- setdiff(names(design), metaNames)
-  design <- as.data.frame(design)[, c(metaNames, varNames)]
-  return(design)
-}
-
 add_no_choice <- function(design, n_alts) {
   # Must dummy code categorical variables to include an outside good
   design <- dummy_code(design)
@@ -256,4 +277,174 @@ get_col_types <- function(data) {
     x[1]
   }
   return(unlist(lapply(types, test)))
+}
+
+reorder_cols <- function(design) {
+    metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
+    varNames <- setdiff(names(design), metaNames)
+    design <- as.data.frame(design)[, c(metaNames, varNames)]
+    return(design)
+}
+
+# Bayesian D-efficient Design ----
+
+make_design_deff <- function(
+    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
+    label, priors, prior_no_choice, probs, method, max_iter, parallel
+) {
+
+    # Set up initial parameters for creating design
+
+    mu <- unlist(priors)
+    if (no_choice) {
+        mu <- c(prior_no_choice, mu)
+    }
+    profile_lvls <- profiles[,2:ncol(profiles)]
+    lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
+    lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
+    coding <- rep("C", length(lvls))
+    types <- get_col_types(profile_lvls)
+    id_discrete <- types %in% c("factor", "character")
+    id_continuous <- !id_discrete
+    c.lvls <- NULL
+    if (any(id_continuous)) {
+        c.lvls <- lvl.names[id_continuous]
+    }
+    # lvl.names must be all characters for decoding process
+    lvl.names <- lapply(lvl.names, function(x) as.character(x))
+    if (any(id_discrete)) {
+        coding[id_discrete] <- "D"
+    }
+    no_choice_alt <- NULL
+    alt_cte <- rep(0, n_alts)
+    if (no_choice) {
+        n_alts <- n_alts + 1
+        alt_cte <- c(alt_cte, 1)
+        no_choice_alt <- n_alts
+    }
+    sigma <- diag(length(mu))
+    par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
+    n_alt_cte <- sum(alt_cte)
+    if (n_alt_cte >= 1) {
+        par_draws <- list(
+            par_draws[, 1:n_alt_cte],
+            par_draws[, (n_alt_cte + 1):ncol(par_draws)])
+    }
+
+    # Make the design
+
+    if (method == "CEA") {
+        D <- idefix::CEA(
+            lvls = lvls,
+            coding = coding,
+            par.draws = par_draws,
+            c.lvls = c.lvls,
+            n.alts = n_alts,
+            n.sets = n_q*n_blocks,
+            no.choice = no_choice,
+            n.start = n_start,
+            alt.cte = alt_cte,
+            parallel = parallel
+        )
+    } else {
+        D <- idefix::Modfed(
+            cand.set = idefix::Profiles(
+                lvls = lvls,
+                coding = coding,
+                c.lvls = c.lvls
+            ),
+            par.draws = par_draws,
+            n.alts = n_alts,
+            n.sets = n_q*n_blocks,
+            no.choice = no_choice,
+            n.start = n_start,
+            alt.cte = alt_cte,
+            parallel = parallel
+        )
+    }
+
+    # Decode the design
+    des <- idefix::Decode(
+        des = D$design,
+        n.alts = n_alts,
+        alt.cte = alt_cte,
+        lvl.names = lvl.names,
+        c.lvls = c.lvls,
+        coding = coding,
+        no.choice = no_choice_alt
+    )
+    des <- des$design
+    varnames <- names(priors)
+    if (no_choice) {
+        # First join on the profileIDs to the raw de-coded design
+        des_raw <- des
+        names(des_raw) <- varnames
+        des_raw$row_id <- seq(nrow(des_raw))
+        des_raw <- merge(des_raw, profiles, by = varnames, all.x = TRUE)
+        des_raw <- des_raw[c('row_id', 'profileID')]
+        # Now use dummy-coded design and add on profileIDs
+        des <- as.data.frame(D$design)
+        codednames <- encode_names(des, varnames, lvl.names, id_discrete)
+        names(des) <- c("no_choice", codednames)
+        des <- des[c(codednames, "no_choice")]
+        row.names(des) <- NULL
+        des$row_id <- seq(nrow(des))
+        des <- merge(des, des_raw, by = 'row_id')
+        des$row_id <- NULL
+        des <- des[c('profileID', codednames)]
+        des$no_choice <- as.vector(D$design[,1])
+    } else {
+        # Join on profileIDs
+        names(des) <- varnames
+        des$row_id <- seq(nrow(des)) # Keep track of row
+        des <- merge(des, profiles, by = varnames)
+        des <- des[order(des$row_id),]
+        # Convert numeric columns to actual numbers
+        des[,which(id_continuous)] <- lapply(
+            des[,which(id_continuous)], function(x) as.numeric(x)
+        )
+        des <- des[c('profileID', varnames)]
+    }
+
+    # Include probs?
+    if (probs) {
+        des$probs <- as.vector(t(D$probs))
+    }
+
+    # Add blockIDs
+    des$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
+
+    # Repeat design to match number of respondents
+    n_reps <- ceiling(n_resp / n_blocks)
+    design <- des[rep(seq_len(nrow(des)), n_reps), ]
+    row.names(design) <- NULL
+    design <- design[1:(n_resp*n_q*n_alts), ]
+
+    # Add metadata
+    design <- add_metadata(design, n_resp, n_alts, n_q)
+    design <- reorder_cols(design)
+
+    # Print error
+    message(
+        "Bayesian D-efficient design found with DB-error of ",
+        round(D$error, 5)
+    )
+
+    return(design)
+}
+
+encode_names <- function(des, varnames, lvl.names, id_discrete) {
+    codednames <- list()
+    for (i in 1:length(varnames)) {
+        if (id_discrete[i]) {
+            varlevels <- lvl.names[[i]]
+            codednames[[i]] <- paste(
+                varnames[i],
+                varlevels[2:length(varlevels)], sep = "_"
+            )
+        } else {
+            codednames[[i]] <- varnames[i]
+        }
+    }
+    return(unlist(codednames))
 }

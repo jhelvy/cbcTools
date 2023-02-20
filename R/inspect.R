@@ -2,6 +2,8 @@
 #'
 #' This function prints out a summary of the individual and pairwise counts of
 #' each level for each attribute across all choice questions in the design.
+#' @keywords logitr mnl mxl mixed logit balance overlap
+#'
 #' @param design A data frame of a survey design.
 #' @return Prints the individual and pairwise counts of the number of times
 #' each attribute levels in shown in the design.
@@ -42,12 +44,20 @@ cbc_balance <- function(design) {
   # Get pairwise counts matrix for each pair of attributes
   pairs <- data.frame(utils::combn(atts, 2))
   counts_pair <- lapply(pairs, function(x) table(design[[x[1]]], design[[x[2]]]))
-  cat("==============================\n")
+  cat("=====================================\n")
+  cat("Individual attribute level counts\n\n")
+  for (i in 1:length(counts)) {
+      cat(names(counts)[i], ":\n", sep = "")
+      print(counts[[i]])
+      cat("\n")
+  }
+  cat("=====================================\n")
+  cat("Pairwise attribute level counts\n\n")
   for (i in 1:ncol(pairs)) {
       pair_names <- pairs[,i]
       counts1 <- counts[[pair_names[1]]]
       counts2 <- counts[[pair_names[2]]]
-      cat(paste0(pair_names, collapse = " x "), "\n\n")
+      cat(paste0(pair_names, collapse = " x "), ":\n\n", sep = "")
       print(rbind(
           c(NA, counts2),
           cbind(counts1, counts_pair[[i]])
