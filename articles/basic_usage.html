@@ -83,7 +83,7 @@
 
       
 
-      </header><div class="row">
+      </header><script src="basic_usage_files/accessible-code-block-0.0.1/empty-anchor.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Basic Usage</h1>
@@ -96,11 +96,7 @@
 
     
     
-<p>This package provides a set of tools for designing surveys and
-conducting power analyses for choice-based conjoint survey experiments
-in R. Each function in the package begins with <code>cbc_</code> and
-supports a step in the following process for designing and analyzing
-surveys:</p>
+<p>This package provides a set of tools for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with <code>cbc_</code> and supports a step in the following process for designing and analyzing surveys:</p>
 <center>
 <img src="https://jhelvy.github.io/cbcTools/reference/figures/program_diagram.png" width="100%">
 </center>
@@ -108,14 +104,7 @@ surveys:</p>
 <div class="section level2">
 <h2 id="generate-profiles">Generate profiles<a class="anchor" aria-label="anchor" href="#generate-profiles"></a>
 </h2>
-<p>The first step in designing an experiment is to define the attributes
-and levels for your experiment and then generate all of the
-<code>profiles</code> of each possible combination of those attributes
-and levels. For example, let’s say you’re designing a conjoint
-experiment about apples and you want to include <code>price</code>,
-<code>type</code>, and <code>freshness</code> as attributes. You can
-obtain all of the possible profiles for these attributes using the
-<code><a href="../reference/cbc_profiles.html">cbc_profiles()</a></code> function:</p>
+<p>The first step in designing an experiment is to define the attributes and levels for your experiment and then generate all of the <code>profiles</code> of each possible combination of those attributes and levels. For example, let’s say you’re designing a conjoint experiment about apples and you want to include <code>price</code>, <code>type</code>, and <code>freshness</code> as attributes. You can obtain all of the possible profiles for these attributes using the <code><a href="../reference/cbc_profiles.html">cbc_profiles()</a></code> function:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span>
 <span></span>
@@ -143,23 +132,8 @@ obtain all of the possible profiles for these attributes using the
 <span><span class="co">#&gt; 61        61   3.0 Honeycrisp Excellent</span></span>
 <span><span class="co">#&gt; 62        62   3.5 Honeycrisp Excellent</span></span>
 <span><span class="co">#&gt; 63        63   4.0 Honeycrisp Excellent</span></span></code></pre></div>
-<p>Depending on the context of your survey, you may wish to eliminate or
-modify some profiles before designing your conjoint survey (e.g., some
-profile combinations may be illogical or unrealistic). <strong>WARNING:
-including hard constraints in your designs can substantially reduce the
-statistical power of your design, so use them cautiously and avoid them
-if possible</strong>.</p>
-<p>If you do wish to set some levels conditional on those of other
-attributes, you can do so by setting each level of an attribute to a
-list that defines these constraints. In the example below, the
-<code>type</code> attribute has constraints such that only certain price
-levels will be shown for each level. In addition, for the
-<code>"Honeycrisp"</code> level, only two of the three
-<code>freshness</code> levels are included: <code>"Excellent"</code> and
-<code>"Average"</code>. Note that both the other attributes
-(<code>price</code> and <code>freshness</code>) should contain all of
-the possible levels. When these constraints you can see that there are
-only 30 profiles compared to 63 without constraints:</p>
+<p>Depending on the context of your survey, you may wish to eliminate or modify some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). <strong>WARNING: including hard constraints in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible</strong>.</p>
+<p>If you do wish to set some levels conditional on those of other attributes, you can do so by setting each level of an attribute to a list that defines these constraints. In the example below, the <code>type</code> attribute has constraints such that only certain price levels will be shown for each level. In addition, for the <code>"Honeycrisp"</code> level, only two of the three <code>freshness</code> levels are included: <code>"Excellent"</code> and <code>"Average"</code>. Note that both the other attributes (<code>price</code> and <code>freshness</code>) should contain all of the possible levels. When these constraints you can see that there are only 30 profiles compared to 63 without constraints:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
 <span>  price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span>, <span class="fl">3.5</span>, <span class="fl">4</span>, <span class="fl">4.5</span>, <span class="fl">5</span><span class="op">)</span>,</span>
@@ -200,9 +174,7 @@ only 30 profiles compared to 63 without constraints:</p>
 <div class="section level2">
 <h2 id="generate-survey-designs">Generate survey designs<a class="anchor" aria-label="anchor" href="#generate-survey-designs"></a>
 </h2>
-<p>Once a set of profiles is obtained, a conjoint survey can then be
-generated using the <code><a href="../reference/cbc_design.html">cbc_design()</a></code> function. A variety of
-survey designs can be generated, including:</p>
+<p>Once a set of profiles is obtained, a conjoint survey can then be generated using the <code><a href="../reference/cbc_design.html">cbc_design()</a></code> function. A variety of survey designs can be generated, including:</p>
 <ul>
 <li>Random designs</li>
 <li>Labeled designs (a.k.a. “alternative-specific” designs)</li>
@@ -212,25 +184,18 @@ survey designs can be generated, including:</p>
 <div class="section level3">
 <h3 id="random-designs">Random designs<a class="anchor" aria-label="anchor" href="#random-designs"></a>
 </h3>
-<p>The randomized design simply samples from the set of
-<code>profiles</code>, ensuring that no two profiles are the same in any
-choice question. The resulting <code>design</code> data frame includes
-the following columns:</p>
+<p>The randomized design simply samples from the set of <code>profiles</code>, ensuring that no two profiles are the same in any choice question. The resulting <code>design</code> data frame includes the following columns:</p>
 <ul>
 <li>
-<code>profileID</code>: Identifies the profile in
-<code>profiles</code>.</li>
+<code>profileID</code>: Identifies the profile in <code>profiles</code>.</li>
 <li>
 <code>respID</code>: Identifies each survey respondent.</li>
 <li>
-<code>qID</code>: Identifies the choice question answered by the
-respondent.</li>
+<code>qID</code>: Identifies the choice question answered by the respondent.</li>
 <li>
-<code>altID</code>:Identifies the alternative in any one choice
-observation.</li>
+<code>altID</code>:Identifies the alternative in any one choice observation.</li>
 <li>
-<code>obsID</code>: Identifies each unique choice observation across
-all respondents.</li>
+<code>obsID</code>: Identifies each unique choice observation across all respondents.</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
@@ -244,23 +209,17 @@ all respondents.</li>
 <span><span class="co">#&gt; [1] 16200     8</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span> <span class="co"># Preview first 6 rows</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness</span></span>
-<span><span class="co">#&gt; 1         8      1   1     1     1   1.0       Gala      Poor</span></span>
-<span><span class="co">#&gt; 2        59      1   1     2     1   2.0 Honeycrisp Excellent</span></span>
-<span><span class="co">#&gt; 3        61      1   1     3     1   3.0 Honeycrisp Excellent</span></span>
-<span><span class="co">#&gt; 4        24      1   2     1     2   2.0       Fuji   Average</span></span>
-<span><span class="co">#&gt; 5        35      1   2     2     2   4.0       Gala   Average</span></span>
-<span><span class="co">#&gt; 6        39      1   2     3     2   2.5 Honeycrisp   Average</span></span></code></pre></div>
+<span><span class="co">#&gt; 1        62      1   1     1     1   3.5 Honeycrisp Excellent</span></span>
+<span><span class="co">#&gt; 2         6      1   1     2     1   3.5       Fuji      Poor</span></span>
+<span><span class="co">#&gt; 3        22      1   1     3     1   1.0       Fuji   Average</span></span>
+<span><span class="co">#&gt; 4        34      1   2     1     2   3.5       Gala   Average</span></span>
+<span><span class="co">#&gt; 5        29      1   2     2     2   1.0       Gala   Average</span></span>
+<span><span class="co">#&gt; 6         5      1   2     3     2   3.0       Fuji      Poor</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="labeled-designs-a-k-a--alternative-specific-designs">Labeled designs (a.k.a. “alternative-specific” designs)<a class="anchor" aria-label="anchor" href="#labeled-designs-a-k-a--alternative-specific-designs"></a>
 </h3>
-<p>You can also make a “labeled” design (also known as
-“alternative-specific” design) where the levels of one attribute is used
-as a label by setting the <code>label</code> argument to that attribute.
-This by definition sets the number of alternatives in each question to
-the number of levels in the chosen attribute, so the <code>n_alts</code>
-argument is overridden. Here is an example labeled survey using the
-<code>type</code> attribute as the label:</p>
+<p>You can also make a “labeled” design (also known as “alternative-specific” design) where the levels of one attribute is used as a label by setting the <code>label</code> argument to that attribute. This by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, so the <code>n_alts</code> argument is overridden. Here is an example labeled survey using the <code>type</code> attribute as the label:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_labeled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span>
@@ -274,24 +233,18 @@ argument is overridden. Here is an example labeled survey using the
 <span><span class="co">#&gt; [1] 16200     8</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_labeled</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness</span></span>
-<span><span class="co">#&gt; 1        28      1   1     1     1   4.0       Fuji   Average</span></span>
-<span><span class="co">#&gt; 2        32      1   1     2     1   2.5       Gala   Average</span></span>
-<span><span class="co">#&gt; 3        40      1   1     3     1   3.0 Honeycrisp   Average</span></span>
-<span><span class="co">#&gt; 4        26      1   2     1     2   3.0       Fuji   Average</span></span>
-<span><span class="co">#&gt; 5        54      1   2     2     2   3.0       Gala Excellent</span></span>
-<span><span class="co">#&gt; 6        60      1   2     3     2   2.5 Honeycrisp Excellent</span></span></code></pre></div>
-<p>In the above example, you can see in the first six rows of the survey
-that the <code>type</code> attribute is always fixed to be the same
-order, ensuring that each level in the <code>type</code> attribute will
-always be shown in each choice question.</p>
+<span><span class="co">#&gt; 1        49      1   1     1     1   4.0       Fuji Excellent</span></span>
+<span><span class="co">#&gt; 2        12      1   1     2     1   3.0       Gala      Poor</span></span>
+<span><span class="co">#&gt; 3        60      1   1     3     1   2.5 Honeycrisp Excellent</span></span>
+<span><span class="co">#&gt; 4         1      1   2     1     2   1.0       Fuji      Poor</span></span>
+<span><span class="co">#&gt; 5        30      1   2     2     2   1.5       Gala   Average</span></span>
+<span><span class="co">#&gt; 6        62      1   2     3     2   3.5 Honeycrisp Excellent</span></span></code></pre></div>
+<p>In the above example, you can see in the first six rows of the survey that the <code>type</code> attribute is always fixed to be the same order, ensuring that each level in the <code>type</code> attribute will always be shown in each choice question.</p>
 </div>
 <div class="section level3">
 <h3 id="designs-with-a-no-choice-option-a-k-a--outside-good">Designs with a “no choice” option (a.k.a. “outside good”)<a class="anchor" aria-label="anchor" href="#designs-with-a-no-choice-option-a-k-a--outside-good"></a>
 </h3>
-<p>You can include a “no choice” (also known as “outside good”) option
-in your survey by setting <code>no_choice = TRUE</code>. If included,
-all categorical attributes will be dummy-coded to appropriately
-dummy-code the “no choice” alternative.</p>
+<p>You can include a “no choice” (also known as “outside good”) option in your survey by setting <code>no_choice = TRUE</code>. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the “no choice” alternative.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_nochoice</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span>
@@ -305,40 +258,30 @@ dummy-code the “no choice” alternative.</p>
 <span><span class="co">#&gt; [1] 21600    13</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_nochoice</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price type_Fuji type_Gala type_Honeycrisp</span></span>
-<span><span class="co">#&gt; 1        59      1   1     1     1   2.0         0         0               1</span></span>
-<span><span class="co">#&gt; 2        44      1   1     2     1   1.5         1         0               0</span></span>
-<span><span class="co">#&gt; 3        42      1   1     3     1   4.0         0         0               1</span></span>
+<span><span class="co">#&gt; 1         9      1   1     1     1   1.5         0         1               0</span></span>
+<span><span class="co">#&gt; 2        35      1   1     2     1   4.0         0         1               0</span></span>
+<span><span class="co">#&gt; 3        24      1   1     3     1   2.0         1         0               0</span></span>
 <span><span class="co">#&gt; 4         0      1   1     4     1   0.0         0         0               0</span></span>
-<span><span class="co">#&gt; 5        53      1   2     1     2   2.5         0         1               0</span></span>
-<span><span class="co">#&gt; 6        58      1   2     2     2   1.5         0         0               1</span></span>
+<span><span class="co">#&gt; 5        19      1   2     1     2   3.0         0         0               1</span></span>
+<span><span class="co">#&gt; 6        15      1   2     2     2   1.0         0         0               1</span></span>
 <span><span class="co">#&gt;   freshness_Poor freshness_Average freshness_Excellent no_choice</span></span>
-<span><span class="co">#&gt; 1              0                 0                   1         0</span></span>
-<span><span class="co">#&gt; 2              0                 0                   1         0</span></span>
+<span><span class="co">#&gt; 1              1                 0                   0         0</span></span>
+<span><span class="co">#&gt; 2              0                 1                   0         0</span></span>
 <span><span class="co">#&gt; 3              0                 1                   0         0</span></span>
 <span><span class="co">#&gt; 4              0                 0                   0         1</span></span>
-<span><span class="co">#&gt; 5              0                 0                   1         0</span></span>
-<span><span class="co">#&gt; 6              0                 0                   1         0</span></span></code></pre></div>
+<span><span class="co">#&gt; 5              1                 0                   0         0</span></span>
+<span><span class="co">#&gt; 6              1                 0                   0         0</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="bayesian-d-efficient-designs">Bayesian D-efficient designs<a class="anchor" aria-label="anchor" href="#bayesian-d-efficient-designs"></a>
 </h3>
-<p>A Bayesian D-efficient design can be obtained by providing a list of
-prior parameters to define an expected prior utility model. These
-designs are optimized to minimize the D-error of the design given a
-prior model. The optimization is handled using the <a href="https://www.jstatsoft.org/article/view/v096i03" class="external-link">{idefix}
-package</a>. For now, designs are limited to multinomial logit priors
-(the {idefix} package can generate designs with mixed logit priors).
-These designs also currently do not support the ability to specify
-interaction terms in the prior model or use “labeled” designs.</p>
-<p>In the example below, the prior model assumes the following
-parameters:</p>
+<p>A Bayesian D-efficient design can be obtained by providing a list of prior parameters to define an expected prior utility model. These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the <a href="https://www.jstatsoft.org/article/view/v096i03" class="external-link">{idefix} package</a>. For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use “labeled” designs.</p>
+<p>In the example below, the prior model assumes the following parameters:</p>
 <ul>
 <li>1 continuous parameter for <code>price</code>
 </li>
-<li>2 categorical parameters for <code>type</code> (<code>'Gala'</code>
-and <code>'Honeycrisp'</code>)</li>
-<li>2 categorical parameters for <code>freshness</code>
-(<code>"Average"</code> and <code>"Excellent"</code>)</li>
+<li>2 categorical parameters for <code>type</code> (<code>'Gala'</code> and <code>'Honeycrisp'</code>)</li>
+<li>2 categorical parameters for <code>freshness</code> (<code>"Average"</code> and <code>"Excellent"</code>)</li>
 </ul>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_db_eff</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
@@ -357,15 +300,13 @@ and <code>'Honeycrisp'</code>)</li>
 <span><span class="co">#&gt; [1] 16200     9</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_db_eff</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness blockID</span></span>
-<span><span class="co">#&gt; 1         2      1   1     1     1   1.5       Fuji      Poor       1</span></span>
-<span><span class="co">#&gt; 2        38      1   1     2     1   1.5 Honeycrisp   Average       1</span></span>
-<span><span class="co">#&gt; 3        52      1   1     3     1   1.5       Gala Excellent       1</span></span>
-<span><span class="co">#&gt; 4        26      1   2     1     2   1.5       Fuji   Average       1</span></span>
-<span><span class="co">#&gt; 5        60      1   2     2     2   1.5 Honeycrisp Excellent       1</span></span>
-<span><span class="co">#&gt; 6         8      1   2     3     2   1.5       Gala      Poor       1</span></span></code></pre></div>
-<p>Bayesian D-efficient designs that include a “no choice” option should
-set <code>no_choice = TRUE</code> and also define a prior for the “no
-choice” option using <code>prior_no_choice</code>, e.g.:</p>
+<span><span class="co">#&gt; 1         5      1   1     1     1     3       Fuji      Poor       1</span></span>
+<span><span class="co">#&gt; 2        52      1   1     2     1     3       Gala Excellent       1</span></span>
+<span><span class="co">#&gt; 3        39      1   1     3     1     3 Honeycrisp   Average       1</span></span>
+<span><span class="co">#&gt; 4        23      1   2     1     2     3       Fuji   Average       1</span></span>
+<span><span class="co">#&gt; 5        15      1   2     2     2     3 Honeycrisp      Poor       1</span></span>
+<span><span class="co">#&gt; 6        54      1   2     3     2     3       Gala Excellent       1</span></span></code></pre></div>
+<p>Bayesian D-efficient designs that include a “no choice” option should set <code>no_choice = TRUE</code> and also define a prior for the “no choice” option using <code>prior_no_choice</code>, e.g.:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_db_eff_no_choice</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span>
@@ -385,71 +326,81 @@ choice” option using <code>prior_no_choice</code>, e.g.:</p>
 <span><span class="co">#&gt; [1] 21600    12</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_db_eff_no_choice</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price type_Gala type_Honeycrisp</span></span>
-<span><span class="co">#&gt; 1        49      1   1     1     1     4         0               0</span></span>
-<span><span class="co">#&gt; 2        21      1   1     2     1     4         0               1</span></span>
-<span><span class="co">#&gt; 3        22      1   1     3     1     1         0               0</span></span>
+<span><span class="co">#&gt; 1        57      1   1     1     1     1         0               1</span></span>
+<span><span class="co">#&gt; 2        10      1   1     2     1     2         1               0</span></span>
+<span><span class="co">#&gt; 3         1      1   1     3     1     1         0               0</span></span>
 <span><span class="co">#&gt; 4        NA      1   1     4     1     0         0               0</span></span>
-<span><span class="co">#&gt; 5        10      1   2     1     2     2         1               0</span></span>
-<span><span class="co">#&gt; 6        15      1   2     2     2     1         0               1</span></span>
+<span><span class="co">#&gt; 5        36      1   2     1     2     1         0               1</span></span>
+<span><span class="co">#&gt; 6        43      1   2     2     2     1         0               0</span></span>
 <span><span class="co">#&gt;   freshness_Average freshness_Excellent no_choice blockID</span></span>
 <span><span class="co">#&gt; 1                 0                   1         0       1</span></span>
 <span><span class="co">#&gt; 2                 0                   0         0       1</span></span>
-<span><span class="co">#&gt; 3                 1                   0         0       1</span></span>
+<span><span class="co">#&gt; 3                 0                   0         0       1</span></span>
 <span><span class="co">#&gt; 4                 0                   0         1       1</span></span>
-<span><span class="co">#&gt; 5                 0                   0         0       1</span></span>
-<span><span class="co">#&gt; 6                 0                   0         0       1</span></span></code></pre></div>
+<span><span class="co">#&gt; 5                 1                   0         0       1</span></span>
+<span><span class="co">#&gt; 6                 0                   1         0       1</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="inspect-survey-designs">Inspect survey designs<a class="anchor" aria-label="anchor" href="#inspect-survey-designs"></a>
 </h2>
-<p>The package includes some functions to quickly inspect some basic
-metrics of a design.</p>
-<p>The <code><a href="../reference/cbc_balance.html">cbc_balance()</a></code> function prints out a summary of the
-individual and pairwise counts of each level of each attribute across
-all choice questions:</p>
+<p>The package includes some functions to quickly inspect some basic metrics of a design.</p>
+<p>The <code><a href="../reference/cbc_balance.html">cbc_balance()</a></code> function prints out a summary of the individual and pairwise counts of each level of each attribute across all choice questions:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cbc_balance.html">cbc_balance</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ==============================</span></span>
-<span><span class="co">#&gt; price x type </span></span>
+<span><span class="co">#&gt; =====================================</span></span>
+<span><span class="co">#&gt; Individual attribute level counts</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; price:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    1  1.5    2  2.5    3  3.5    4 </span></span>
+<span><span class="co">#&gt; 2315 2273 2326 2273 2351 2278 2384 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; type:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;       Fuji       Gala Honeycrisp </span></span>
+<span><span class="co">#&gt;       5489       5399       5312 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; freshness:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;      Poor   Average Excellent </span></span>
+<span><span class="co">#&gt;      5407      5422      5371 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; =====================================</span></span>
+<span><span class="co">#&gt; Pairwise attribute level counts</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; price x type:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Fuji Gala Honeycrisp</span></span>
-<span><span class="co">#&gt;       NA 5440 5337       5423</span></span>
-<span><span class="co">#&gt; 1   2343  757  796        790</span></span>
-<span><span class="co">#&gt; 1.5 2249  769  750        730</span></span>
-<span><span class="co">#&gt; 2   2362  811  766        785</span></span>
-<span><span class="co">#&gt; 2.5 2315  785  728        802</span></span>
-<span><span class="co">#&gt; 3   2300  746  803        751</span></span>
-<span><span class="co">#&gt; 3.5 2345  787  752        806</span></span>
-<span><span class="co">#&gt; 4   2286  785  742        759</span></span>
+<span><span class="co">#&gt;       NA 5489 5399       5312</span></span>
+<span><span class="co">#&gt; 1   2315  792  736        787</span></span>
+<span><span class="co">#&gt; 1.5 2273  748  759        766</span></span>
+<span><span class="co">#&gt; 2   2326  810  780        736</span></span>
+<span><span class="co">#&gt; 2.5 2273  774  755        744</span></span>
+<span><span class="co">#&gt; 3   2351  822  804        725</span></span>
+<span><span class="co">#&gt; 3.5 2278  753  760        765</span></span>
+<span><span class="co">#&gt; 4   2384  790  805        789</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; price x freshness </span></span>
+<span><span class="co">#&gt; price x freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Poor Average Excellent</span></span>
-<span><span class="co">#&gt;       NA 5452    5343      5405</span></span>
-<span><span class="co">#&gt; 1   2343  787     784       772</span></span>
-<span><span class="co">#&gt; 1.5 2249  757     750       742</span></span>
-<span><span class="co">#&gt; 2   2362  822     746       794</span></span>
-<span><span class="co">#&gt; 2.5 2315  782     749       784</span></span>
-<span><span class="co">#&gt; 3   2300  799     743       758</span></span>
-<span><span class="co">#&gt; 3.5 2345  776     771       798</span></span>
-<span><span class="co">#&gt; 4   2286  729     800       757</span></span>
+<span><span class="co">#&gt;       NA 5407    5422      5371</span></span>
+<span><span class="co">#&gt; 1   2315  825     714       776</span></span>
+<span><span class="co">#&gt; 1.5 2273  758     772       743</span></span>
+<span><span class="co">#&gt; 2   2326  786     766       774</span></span>
+<span><span class="co">#&gt; 2.5 2273  747     739       787</span></span>
+<span><span class="co">#&gt; 3   2351  717     862       772</span></span>
+<span><span class="co">#&gt; 3.5 2278  791     765       722</span></span>
+<span><span class="co">#&gt; 4   2384  783     804       797</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; type x freshness </span></span>
+<span><span class="co">#&gt; type x freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                 Poor Average Excellent</span></span>
-<span><span class="co">#&gt;              NA 5452    5343      5405</span></span>
-<span><span class="co">#&gt; Fuji       5440 1832    1823      1785</span></span>
-<span><span class="co">#&gt; Gala       5337 1811    1701      1825</span></span>
-<span><span class="co">#&gt; Honeycrisp 5423 1809    1819      1795</span></span></code></pre></div>
-<p>The <code><a href="../reference/cbc_overlap.html">cbc_overlap()</a></code> function prints out a summary of the
-amount of “overlap” across attributes within the choice questions. For
-example, for each attribute, the count under <code>"1"</code> is the
-number of choice questions in which the same level was shown across all
-alternatives for that attribute (because there was only one level
-shown). Likewise, the count under <code>"2"</code> is the number of
-choice questions in which only two unique levels of that attribute were
-shown, and so on:</p>
+<span><span class="co">#&gt;              NA 5407    5422      5371</span></span>
+<span><span class="co">#&gt; Fuji       5489 1876    1777      1836</span></span>
+<span><span class="co">#&gt; Gala       5399 1794    1809      1796</span></span>
+<span><span class="co">#&gt; Honeycrisp 5312 1737    1836      1739</span></span></code></pre></div>
+<p>The <code><a href="../reference/cbc_overlap.html">cbc_overlap()</a></code> function prints out a summary of the amount of “overlap” across attributes within the choice questions. For example, for each attribute, the count under <code>"1"</code> is the number of choice questions in which the same level was shown across all alternatives for that attribute (because there was only one level shown). Likewise, the count under <code>"2"</code> is the number of choice questions in which only two unique levels of that attribute were shown, and so on:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cbc_overlap.html">cbc_overlap</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ==============================</span></span>
@@ -459,23 +410,22 @@ shown, and so on:</p>
 <span><span class="co">#&gt; price:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1    2    3 </span></span>
-<span><span class="co">#&gt;   71 1802 3527 </span></span>
+<span><span class="co">#&gt;   92 1843 3465 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; type:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1    2    3 </span></span>
-<span><span class="co">#&gt;  547 3613 1240 </span></span>
+<span><span class="co">#&gt;  516 3596 1288 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1    2    3 </span></span>
-<span><span class="co">#&gt;  543 3581 1276</span></span></code></pre></div>
+<span><span class="co">#&gt;  531 3588 1281</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="simulate-choices">Simulate choices<a class="anchor" aria-label="anchor" href="#simulate-choices"></a>
 </h2>
-<p>You can simulate choices for a given <code>design</code> using the
-<code><a href="../reference/cbc_choices.html">cbc_choices()</a></code> function.</p>
+<p>You can simulate choices for a given <code>design</code> using the <code><a href="../reference/cbc_choices.html">cbc_choices()</a></code> function.</p>
 <div class="section level3">
 <h3 id="random-choices">Random choices<a class="anchor" aria-label="anchor" href="#random-choices"></a>
 </h3>
@@ -488,36 +438,26 @@ shown, and so on:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness choice</span></span>
-<span><span class="co">#&gt; 1         8      1   1     1     1   1.0       Gala      Poor      0</span></span>
-<span><span class="co">#&gt; 2        59      1   1     2     1   2.0 Honeycrisp Excellent      1</span></span>
-<span><span class="co">#&gt; 3        61      1   1     3     1   3.0 Honeycrisp Excellent      0</span></span>
-<span><span class="co">#&gt; 4        24      1   2     1     2   2.0       Fuji   Average      0</span></span>
-<span><span class="co">#&gt; 5        35      1   2     2     2   4.0       Gala   Average      0</span></span>
-<span><span class="co">#&gt; 6        39      1   2     3     2   2.5 Honeycrisp   Average      1</span></span></code></pre></div>
+<span><span class="co">#&gt; 1        62      1   1     1     1   3.5 Honeycrisp Excellent      0</span></span>
+<span><span class="co">#&gt; 2         6      1   1     2     1   3.5       Fuji      Poor      1</span></span>
+<span><span class="co">#&gt; 3        22      1   1     3     1   1.0       Fuji   Average      0</span></span>
+<span><span class="co">#&gt; 4        34      1   2     1     2   3.5       Gala   Average      0</span></span>
+<span><span class="co">#&gt; 5        29      1   2     2     2   1.0       Gala   Average      0</span></span>
+<span><span class="co">#&gt; 6         5      1   2     3     2   3.0       Fuji      Poor      1</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="choices-according-to-a-prior">Choices according to a prior<a class="anchor" aria-label="anchor" href="#choices-according-to-a-prior"></a>
 </h3>
-<p>You can also pass a list of prior parameters to define a utility
-model that will be used to simulate choices. In the example below, the
-choices are simulated using a utility model with the following
-parameters:</p>
+<p>You can also pass a list of prior parameters to define a utility model that will be used to simulate choices. In the example below, the choices are simulated using a utility model with the following parameters:</p>
 <ul>
 <li>1 continuous parameter for <code>price</code>
 </li>
-<li>2 categorical parameters for <code>type</code> (<code>'Gala'</code>
-and <code>'Honeycrisp'</code>)</li>
-<li>2 categorical parameters for <code>freshness</code>
-(<code>"Average"</code> and <code>"Excellent"</code>)</li>
+<li>2 categorical parameters for <code>type</code> (<code>'Gala'</code> and <code>'Honeycrisp'</code>)</li>
+<li>2 categorical parameters for <code>freshness</code> (<code>"Average"</code> and <code>"Excellent"</code>)</li>
 </ul>
-<p>Note that for categorical variables (<code>type</code> and
-<code>freshness</code> in this example), the first level defined when
-using <code><a href="../reference/cbc_profiles.html">cbc_profiles()</a></code> is set as the reference level. The
-example below defines the following utility model for simulating choices
-for each alternative <em>j</em>:</p>
+<p>Note that for categorical variables (<code>type</code> and <code>freshness</code> in this example), the first level defined when using <code><a href="../reference/cbc_profiles.html">cbc_profiles()</a></code> is set as the reference level. The example below defines the following utility model for simulating choices for each alternative <em>j</em>:</p>
 <p><span class="math display">\[
-u_j = -0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j +
-0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
+u_j = -0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
 \]</span></p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_choices.html">cbc_choices</a></span><span class="op">(</span></span>
@@ -529,10 +469,7 @@ u_j = -0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j +
 <span>    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>If you wish to include a prior model with an interaction, you can do
-so inside the <code>priors</code> list. For example, here is the same
-example as above but with an interaction between <code>price</code> and
-<code>type</code> added:</p>
+<p>If you wish to include a prior model with an interaction, you can do so inside the <code>priors</code> list. For example, here is the same example as above but with an interaction between <code>price</code> and <code>type</code> added:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_choices.html">cbc_choices</a></span><span class="op">(</span></span>
 <span>  design <span class="op">=</span> <span class="va">design</span>,</span>
@@ -544,14 +481,7 @@ example as above but with an interaction between <code>price</code> and
 <span>    `price*type` <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Finally, you can also simulate data for a mixed logit model where
-parameters follow a normal or log-normal distribution across the
-population. In the example below, the <code><a href="../reference/randN.html">randN()</a></code> function is
-used to specify the <code>type</code> attribute with 2 random normal
-parameters with a specified vector of means (<code>mean</code>) and
-standard deviations (<code>sd</code>) for each level of
-<code>type</code>. Log-normal parameters are specified using
-<code><a href="../reference/randLN.html">randLN()</a></code>.</p>
+<p>Finally, you can also simulate data for a mixed logit model where parameters follow a normal or log-normal distribution across the population. In the example below, the <code><a href="../reference/randN.html">randN()</a></code> function is used to specify the <code>type</code> attribute with 2 random normal parameters with a specified vector of means (<code>mean</code>) and standard deviations (<code>sd</code>) for each level of <code>type</code>. Log-normal parameters are specified using <code><a href="../reference/randLN.html">randLN()</a></code>.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_choices.html">cbc_choices</a></span><span class="op">(</span></span>
 <span>  design <span class="op">=</span> <span class="va">design</span>,</span>
@@ -567,15 +497,7 @@ standard deviations (<code>sd</code>) for each level of
 <div class="section level2">
 <h2 id="conduct-a-power-analysis">Conduct a power analysis<a class="anchor" aria-label="anchor" href="#conduct-a-power-analysis"></a>
 </h2>
-<p>The simulated choice data can be used to conduct a power analysis by
-estimating the same model multiple times with incrementally increasing
-sample sizes. As the sample size increases, the estimated coefficient
-standard errors will decrease (i.e. coefficient estimates become more
-precise). The <code><a href="../reference/cbc_power.html">cbc_power()</a></code> function achieves this by
-partitioning the choice data into multiple sizes (defined by the
-<code>nbreaks</code> argument) and then estimating a user-defined choice
-model on each data subset. In the example below, 10 different sample
-sizes are used. All models are estimated using the <a href="https://jhelvy.github.io/logitr/" class="external-link">{logitr}</a> package:</p>
+<p>The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease (i.e. coefficient estimates become more precise). The <code><a href="../reference/cbc_power.html">cbc_power()</a></code> function achieves this by partitioning the choice data into multiple sizes (defined by the <code>nbreaks</code> argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the <a href="https://jhelvy.github.io/logitr/" class="external-link">{logitr}</a> package:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">power</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
 <span>  data    <span class="op">=</span> <span class="va">data</span>,</span>
@@ -587,33 +509,26 @@ sizes are used. All models are estimated using the <a href="https://jhelvy.githu
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">power</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   sampleSize               coef         est         se</span></span>
-<span><span class="co">#&gt; 1         90              price -0.04205641 0.05159648</span></span>
-<span><span class="co">#&gt; 2         90           typeGala  0.10412148 0.12983563</span></span>
-<span><span class="co">#&gt; 3         90     typeHoneycrisp  0.12804339 0.12796677</span></span>
-<span><span class="co">#&gt; 4         90   freshnessAverage -0.24737595 0.12880973</span></span>
-<span><span class="co">#&gt; 5         90 freshnessExcellent -0.15564991 0.12483236</span></span>
-<span><span class="co">#&gt; 6        180              price -0.02022038 0.03590362</span></span>
+<span><span class="co">#&gt;   sampleSize               coef          est         se</span></span>
+<span><span class="co">#&gt; 1         90              price  0.002924838 0.05146600</span></span>
+<span><span class="co">#&gt; 2         90           typeGala  0.233180677 0.12825304</span></span>
+<span><span class="co">#&gt; 3         90     typeHoneycrisp  0.035743785 0.12937359</span></span>
+<span><span class="co">#&gt; 4         90   freshnessAverage -0.014743287 0.12836997</span></span>
+<span><span class="co">#&gt; 5         90 freshnessExcellent  0.068555240 0.12907622</span></span>
+<span><span class="co">#&gt; 6        180              price  0.024248178 0.03648072</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="va">power</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    sampleSize               coef         est         se</span></span>
-<span><span class="co">#&gt; 45        810 freshnessExcellent 0.031248637 0.04265589</span></span>
-<span><span class="co">#&gt; 46        900              price 0.002402562 0.01645839</span></span>
-<span><span class="co">#&gt; 47        900           typeGala 0.033805807 0.04052107</span></span>
-<span><span class="co">#&gt; 48        900     typeHoneycrisp 0.033630729 0.04061446</span></span>
-<span><span class="co">#&gt; 49        900   freshnessAverage 0.021762523 0.04046391</span></span>
-<span><span class="co">#&gt; 50        900 freshnessExcellent 0.043015716 0.04040606</span></span></code></pre></div>
-<p>The <code>power</code> data frame contains the coefficient estimates
-and standard errors for each sample size. You can quickly visualize the
-outcome to identify a required sample size for a desired level of
-parameter precision by using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method:</p>
+<span><span class="co">#&gt;    sampleSize               coef          est         se</span></span>
+<span><span class="co">#&gt; 45        810 freshnessExcellent  0.006245264 0.04253667</span></span>
+<span><span class="co">#&gt; 46        900              price  0.004012791 0.01651714</span></span>
+<span><span class="co">#&gt; 47        900           typeGala  0.054770705 0.04013583</span></span>
+<span><span class="co">#&gt; 48        900     typeHoneycrisp -0.034236418 0.04038143</span></span>
+<span><span class="co">#&gt; 49        900   freshnessAverage -0.001104716 0.04054634</span></span>
+<span><span class="co">#&gt; 50        900 freshnessExcellent  0.002979385 0.04039342</span></span></code></pre></div>
+<p>The <code>power</code> data frame contains the coefficient estimates and standard errors for each sample size. You can quickly visualize the outcome to identify a required sample size for a desired level of parameter precision by using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">power</span><span class="op">)</span></span></code></pre></div>
 <p><img src="basic_usage_files/figure-html/power-1.png" width="700"></p>
-<p>If you want to examine any other aspects of the models other than the
-standard errors, you can set <code>return_models = TRUE</code> and
-<code><a href="../reference/cbc_power.html">cbc_power()</a></code> will return a list of estimated models. The
-example below prints a summary of the last model in the list of
-models:</p>
+<p>If you want to examine any other aspects of the models other than the standard errors, you can set <code>return_models = TRUE</code> and <code><a href="../reference/cbc_power.html">cbc_power()</a></code> will return a list of estimated models. The example below prints a summary of the last model in the list of models:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/logitr" class="external-link">logitr</a></span><span class="op">)</span></span>
 <span></span>
@@ -630,9 +545,9 @@ models:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">models</span><span class="op">[[</span><span class="fl">10</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt; =================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Model estimated on: Sat Feb 18 21:52:48 2023 </span></span>
+<span><span class="co">#&gt; Model estimated on: Mon Feb 20 15:57:23 2023 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Using logitr version: 1.0.0.9000 </span></span>
+<span><span class="co">#&gt; Using logitr version: 1.0.1 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Call:</span></span>
 <span><span class="co">#&gt; FUN(data = X[[i]], outcome = ..1, obsID = ..2, pars = ..3, randPars = ..4, </span></span>
@@ -640,45 +555,38 @@ models:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Frequencies of alternatives:</span></span>
 <span><span class="co">#&gt;       1       2       3 </span></span>
-<span><span class="co">#&gt; 0.33259 0.32685 0.34056 </span></span>
+<span><span class="co">#&gt; 0.32889 0.33870 0.33241 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Exit Status: 3, Optimization stopped because ftol_rel or ftol_abs was reached.</span></span>
 <span><span class="co">#&gt;                                 </span></span>
 <span><span class="co">#&gt; Model Type:    Multinomial Logit</span></span>
 <span><span class="co">#&gt; Model Space:          Preference</span></span>
 <span><span class="co">#&gt; Model Run:                1 of 1</span></span>
-<span><span class="co">#&gt; Iterations:                    8</span></span>
-<span><span class="co">#&gt; Elapsed Time:        0h:0m:0.02s</span></span>
+<span><span class="co">#&gt; Iterations:                    9</span></span>
+<span><span class="co">#&gt; Elapsed Time:        0h:0m:0.03s</span></span>
 <span><span class="co">#&gt; Algorithm:        NLOPT_LD_LBFGS</span></span>
 <span><span class="co">#&gt; Weights Used?:             FALSE</span></span>
 <span><span class="co">#&gt; Robust?                    FALSE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Model Coefficients: </span></span>
-<span><span class="co">#&gt;                     Estimate Std. Error z-value Pr(&gt;|z|)</span></span>
-<span><span class="co">#&gt; price              0.0024026  0.0164584  0.1460   0.8839</span></span>
-<span><span class="co">#&gt; typeGala           0.0338058  0.0405211  0.8343   0.4041</span></span>
-<span><span class="co">#&gt; typeHoneycrisp     0.0336307  0.0406145  0.8280   0.4076</span></span>
-<span><span class="co">#&gt; freshnessAverage   0.0217625  0.0404639  0.5378   0.5907</span></span>
-<span><span class="co">#&gt; freshnessExcellent 0.0430157  0.0404061  1.0646   0.2871</span></span>
+<span><span class="co">#&gt;                      Estimate Std. Error z-value Pr(&gt;|z|)</span></span>
+<span><span class="co">#&gt; price               0.0040128  0.0165171  0.2429   0.8080</span></span>
+<span><span class="co">#&gt; typeGala            0.0547707  0.0401358  1.3646   0.1724</span></span>
+<span><span class="co">#&gt; typeHoneycrisp     -0.0342364  0.0403814 -0.8478   0.3965</span></span>
+<span><span class="co">#&gt; freshnessAverage   -0.0011047  0.0405463 -0.0272   0.9783</span></span>
+<span><span class="co">#&gt; freshnessExcellent  0.0029794  0.0403934  0.0738   0.9412</span></span>
 <span><span class="co">#&gt;                                      </span></span>
-<span><span class="co">#&gt; Log-Likelihood:         -5.931469e+03</span></span>
+<span><span class="co">#&gt; Log-Likelihood:         -5.930020e+03</span></span>
 <span><span class="co">#&gt; Null Log-Likelihood:    -5.932506e+03</span></span>
-<span><span class="co">#&gt; AIC:                     1.187294e+04</span></span>
-<span><span class="co">#&gt; BIC:                     1.190591e+04</span></span>
-<span><span class="co">#&gt; McFadden R2:             1.748802e-04</span></span>
-<span><span class="co">#&gt; Adj McFadden R2:        -6.679339e-04</span></span>
+<span><span class="co">#&gt; AIC:                     1.187004e+04</span></span>
+<span><span class="co">#&gt; BIC:                     1.190301e+04</span></span>
+<span><span class="co">#&gt; McFadden R2:             4.190870e-04</span></span>
+<span><span class="co">#&gt; Adj McFadden R2:        -4.237271e-04</span></span>
 <span><span class="co">#&gt; Number of Observations:  5.400000e+03</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="pipe-it-all-together">Pipe it all together!<a class="anchor" aria-label="anchor" href="#pipe-it-all-together"></a>
 </h3>
-<p>One of the convenient features of how the package is written is that
-the object generated in each step is used as the first argument to the
-function for the next step. Thus, just like in the overall program
-diagram, the functions can be piped together. For example, the
-“pipeline” below uses the Base R pipe operator (<code>|&gt;</code>) to
-generate profiles, generate a design, simulate choices according to a
-prior utility model, conduct a power analysis, and then finally plot the
-results:</p>
+<p>One of the convenient features of how the package is written is that the object generated in each step is used as the first argument to the function for the next step. Thus, just like in the overall program diagram, the functions can be piped together. For example, the “pipeline” below uses the Base R pipe operator (<code>|&gt;</code>) to generate profiles, generate a design, simulate choices according to a prior utility model, conduct a power analysis, and then finally plot the results:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
 <span>  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">4</span>, <span class="fl">0.5</span><span class="op">)</span>, <span class="co"># $ per pound</span></span>
@@ -728,7 +636,7 @@ results:</p>
 
 <div class="pkgdown">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
 </div>
 
       </footer>
