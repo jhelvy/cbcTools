@@ -1,6 +1,5 @@
 # cbcTools (development version)
 
-
 # cbcTools 0.2.0
 
 - Added a startup message when the package is loaded
