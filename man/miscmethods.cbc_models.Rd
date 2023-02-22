@@ -21,6 +21,9 @@
 
 \item{...}{further arguments.}
 }
+\value{
+No return value, prints a summary of estimated models.
+}
 \description{
 Miscellaneous methods for \code{cbc_models} class objects.
 }

@@ -7,5 +7,4 @@
 0 errors | 0 warnings | 0 notes
 
 ## Notes
-* This is a new release.
-* The bad urls in the README.md are the CRAN links that will be valid upon publication on CRAN.
+* This is a re-submission addressing comments to remove redundancies in DESCRIPTION and add missing \value items in several .Rd files

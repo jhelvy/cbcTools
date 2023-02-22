@@ -30,8 +30,8 @@
 #' argument will be ignored as its value is defined by the unique number of
 #' levels in the `label` variable. Defaults to `NULL`.
 #' @param priors A list of one or more assumed prior parameters used to
-#' generate a Bayesian D-efficient design. If `NULL` (the default), a randomized
-#' design will be generated.
+#' generate a Bayesian D-efficient design. If `NULL` (the default), a
+#' randomized design will be generated.
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #' Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting

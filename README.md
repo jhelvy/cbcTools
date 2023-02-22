@@ -51,14 +51,14 @@ citation("cbcTools")
 #> 
 #> To cite cbcTools in publications use:
 #> 
-#>   Helveston JP (2023). _cbcTools: Tools for Designing Choice-Based
+#>   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
 #>   Conjoint Survey Experiments_. R package,
 #>   <https://jhelvy.github.io/cbcTools/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{,
-#>     title = {{cbcTools}: Tools for Designing Choice-Based Conjoint Survey Experiments},
+#>     title = {{cbcTools}: Design and Evaluate Choice-Based Conjoint Survey Experiments},
 #>     author = {John Paul Helveston},
 #>     year = {2023},
 #>     note = {R package},

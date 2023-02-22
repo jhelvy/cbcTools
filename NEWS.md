@@ -2,8 +2,10 @@
 
 # cbcTools 0.2.0
 
-- Added a startup message when the package is loaded
+- Added a startup message when the package is loaded.
 - Updates for compatibility with logitr version 1.0.1.
+- Updated DESCRIPTION and CITATION to remove redundancy in title.
+- Updated documentation of returned values in several functions.
 
 # cbcTools 0.1.0
 

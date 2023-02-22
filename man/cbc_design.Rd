@@ -56,8 +56,8 @@ argument will be ignored as its value is defined by the unique number of
 levels in the \code{label} variable. Defaults to \code{NULL}.}
 
 \item{priors}{A list of one or more assumed prior parameters used to
-generate a Bayesian D-efficient design. If \code{NULL} (the default), a randomized
-design will be generated.}
+generate a Bayesian D-efficient design. If \code{NULL} (the default), a
+randomized design will be generated.}
 
 \item{prior_no_choice}{Prior utility value for the "no choice" alternative.
 Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}

@@ -70,11 +70,20 @@ at \code{parallel::detectCores()}.}
 estimation. See the \code{logitr} documentation for details about other
 available arguments.}
 }
+\value{
+Returns a data frame of estimated model coefficients and standard
+errors for the same model estimated on subsets of the \code{data} with increasing
+sample sizes.
+}
 \description{
 This function estimates the same model multiple times using different size
-subsets of a set of choice data. The number of models to run is set by the
-\code{nbreaks} argument, which breaks up the data into groups of increasing
-sample sizes. All models are estimated models using the {logitr} package.
+subsets of a set of choice data and then returns a data frame of the
+estimated model coefficients and standard errors for each sample size. This
+is useful for determining the required sample size for obtaining a desired
+level of statistical power on each coefficient. The number of models to
+estimate is set by the \code{nbreaks} argument, which breaks up the data into
+groups of increasing sample sizes. All models are estimated models using
+the {logitr} package. For more details see Helveston (2023) \doi{10.18637/jss.v105.i10}.
 }
 \examples{
 library(cbcTools)

@@ -8,7 +8,7 @@
 #' @param digits the number of digits for printing, defaults to `3`.
 #' @param width the width of the printing.
 #' @param ... further arguments.
-#'
+#' @return No return value, prints a summary of estimated models.
 #' @rdname miscmethods.cbc_models
 #' @export
 print.cbc_models <- function (
@@ -32,10 +32,11 @@ print.cbc_models <- function (
 #' @aliases plot.cbc_errors
 #' @param x is an object of class `cbc_errors`.
 #' @param ... further arguments.
+#' @return Returns a ggplot2 object plotting standard errors versus sample
+#' size.
 #' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
 #' theme element_blank labs
 #' @importFrom rlang .data
-#'
 #' @rdname miscmethods.cbc_errors
 #' @export
 #' @examples

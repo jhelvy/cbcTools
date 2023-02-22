@@ -12,6 +12,10 @@
 
 \item{...}{further arguments.}
 }
+\value{
+Returns a ggplot2 object plotting standard errors versus sample
+size.
+}
 \description{
 Miscellaneous methods for \code{cbc_errors} class objects.
 }
