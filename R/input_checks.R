@@ -22,7 +22,7 @@ check_inputs_design <- function(
     if (no_choice) {
         if (!is.null(priors) & is.null(prior_no_choice)) {
             stop(
-                'If no_choice = TRUE, you must specify the prior utility ',
+                "If 'no_choice = TRUE', you must specify the prior utility ",
                 'value for the "no choice" option using prior_no_choice'
             )
 

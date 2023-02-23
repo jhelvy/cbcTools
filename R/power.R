@@ -42,7 +42,7 @@
 #' cores is set to `parallel::detectCores() - 1`. Max cores allowed is capped
 #' at `parallel::detectCores()`.
 #' @param ... Other arguments that are passed to `logitr::logitr()` for model
-#' estimation. See the `logitr` documentation for details about other
+#' estimation. See the {logitr} documentation for details about other
 #' available arguments.
 #' @return Returns a data frame of estimated model coefficients and standard
 #' errors for the same model estimated on subsets of the `data` with increasing
@@ -81,7 +81,8 @@
 #'   outcome = "choice",
 #'   obsID   = "obsID",
 #'   nbreaks = 10,
-#'   n_q     = 6
+#'   n_q     = 6,
+#'   n_cores = 2
 #' )
 cbc_power <- function(
   data,

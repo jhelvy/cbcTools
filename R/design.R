@@ -3,7 +3,7 @@
 #' This function creates a data frame containing a choice-based conjoint survey
 #' design where each row is an alternative. Designs can be either a
 #' randomized or Bayesian D-efficient, in which case an implementation of the
-#' CEA or Modfed Federov algorithm is used via the `idefix` package
+#' CEA or Modfed Federov algorithm is used via the {idefix} package
 #'
 #' @keywords logitr mnl mxl mixed logit design
 #' @param profiles A data frame in which each row is a possible profile.
@@ -140,9 +140,9 @@ cbc_design <- function(
   if (is.null(priors)) {
     design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else if (!is.null(label)) {
-    message(
+    warning(
       "The use of the 'label' argument is currently only compatible with ",
-      "randomized designs, so the provided priors are being ignored.\n"
+      "randomized designs, so the provided 'priors' are being ignored.\n"
     )
     design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else {
@@ -179,7 +179,7 @@ get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
 get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   n_levels <- length(unique(profiles[, label]))
   if (n_levels != n_alts) {
-    message(
+    warning(
       "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
       " to match the number of unique levels in the ", label,
       " variable.\n"
