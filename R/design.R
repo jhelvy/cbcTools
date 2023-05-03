@@ -196,10 +196,9 @@ get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
   dup_rows_obs <- get_dup_obs(design, n_alts)
   dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
   while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
-    cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
+    # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
+    # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
     dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
-    print(dup_rows)
     new_rows <- sample_profiles(profiles, size = length(dup_rows))
     design[dup_rows, 1:ncol(new_rows)] <- new_rows
     # Recalculate duplicates
@@ -209,35 +208,9 @@ get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
   return(design)
 }
 
-get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
-  n_levels <- length(unique(profiles[, label]))
-  if (n_levels != n_alts) {
-    warning(
-      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
-      " to match the number of unique levels in the ", label,
-      " variable.\n"
-    )
-    # Over-ride user-provided n_alts as it is determined by the label
-    n_alts <- n_levels
-  }
-  # Randomize rows by label
-  labels <- split(profiles, profiles[label])
-  for (i in seq_len(n_levels)) {
-    design_label <- sample_profiles(labels[[i]], size = n_resp * n_q)
-    design_label$labelID <- seq(nrow(design_label))
-    labels[[i]] <- design_label
-  }
-  design <- do.call(rbind, labels)
-  design <- design[order(design$labelID), ]
-  design$labelID <- NULL
-  # Add meta data and remove cases with double alternatives
-  design <- remove_dups(design, n_resp, n_alts, n_q)
-  return(design)
-}
-
 sample_profiles <- function(profiles, size) {
   return(profiles[sample(
-    x = profiles$profileID, size = size, replace = TRUE), ]
+    x = seq_len(nrow(profiles)), size = size, replace = TRUE), ]
   )
 }
 
@@ -280,6 +253,52 @@ dup_obs_by_resp <- function(df) {
   # Convert the list of vectors to a data frame to check for duplicates
   dupe_df <- do.call(rbind, profiles_list)
   return(as.numeric(names(which(duplicated(dupe_df)))))
+}
+
+get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
+  n_levels <- length(unique(profiles[, label]))
+  if (n_levels != n_alts) {
+    warning(
+      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
+      " to match the number of unique levels in the ", label,
+      " variable.\n"
+    )
+    # Over-ride user-provided n_alts as it is determined by the label
+    n_alts <- n_levels
+  }
+  # Randomize rows by label
+  labels <- split(profiles, profiles[label])
+  design <- sample_profiles_by_group(labels, size = n_resp * n_q)
+  # Replace rows with duplicated profiles in each obsID or
+  # duplicated choice sets in each respID
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  dup_rows_obs <- get_dup_obs(design, n_alts)
+  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
+    # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
+    # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
+    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
+    new_rows <- sample_profiles_by_group(labels, size = length(dup_rows) / n_alts)
+    design[dup_rows, 1:ncol(new_rows)] <- new_rows
+    # Recalculate duplicates
+    dup_rows_obs <- get_dup_obs(design, n_alts)
+    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  }
+  return(design)
+}
+
+sample_profiles_by_group <- function(labels, size) {
+  design <- lapply(labels, function(x) sample_profiles(x, size = size))
+  design <- lapply(design, function(x) add_label_id(x))
+  design <- do.call(rbind, design)
+  design <- design[order(design$labelID), ]
+  design$labelID <- NULL
+  return(design)
+}
+
+add_label_id <- function(design) {
+  design$labelID <- seq(nrow(design))
+  return(design)
 }
 
 add_no_choice <- function(design, n_alts) {
