@@ -177,8 +177,9 @@ cbc_design <- function(
 # Randomized Design ----
 
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-  design <- get_design_rand(profiles, n_resp, n_alts, n_q)
-  if (!is.null(label)) {
+  if (is.null(label)) {
+    design <- get_design_rand(profiles, n_resp, n_alts, n_q)
+  } else {
     design <- get_design_rand_label(profiles, n_resp, n_alts, n_q, label)
   }
   if (no_choice) {
@@ -248,11 +249,15 @@ get_dup_resp <- function(design, n_resp, n_q) {
 dup_obs_by_resp <- function(df) {
   profiles_list <- tapply(
     df$profileID, df$obsID,
-    FUN = function(x) sort(unique(x))
+    FUN = function(x) sort(x)
   )
   # Convert the list of vectors to a data frame to check for duplicates
   dupe_df <- do.call(rbind, profiles_list)
-  return(as.numeric(names(which(duplicated(dupe_df)))))
+  dup_ids <- which(duplicated(dupe_df))
+  if (length(dup_ids) > 0) {
+    return(as.numeric(names(dup_ids)))
+  }
+  return(NULL)
 }
 
 get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
