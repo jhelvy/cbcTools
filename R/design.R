@@ -145,7 +145,7 @@ cbc_design <- function(
       "increase the number of profiles."
     )
   }
-  ncomb <- ncol(combn(profiles$profileID, n_alts))
+  ncomb <- ncol(utils::combn(profiles$profileID, n_alts))
   if (n_q > ncomb) {
     stop(
       "The number of questions per respondent, specified by n_q, is ",
@@ -240,7 +240,7 @@ get_dup_resp <- function(design, n_resp, n_q) {
   # Identify duplicate choice sets for each respondent
   dup_ids <- unlist(lapply(
     1:n_resp,
-    function(x) dup_obs_by_resp(subset(design, respID == x))
+    function(x) dup_obs_by_resp(design[which(design$respID == x),])
   ))
   dup_rows <- which(design$obsID %in% dup_ids)
   return(dup_rows)
