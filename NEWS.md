@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.3.0
+
+- Bug fix: modify code in `cbc_design()` to avoid duplicate choice sets for the same respondents; addresses #7.
+
 # cbcTools 0.2.0
 
 - Added a startup message when the package is loaded.
