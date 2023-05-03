@@ -7,5 +7,5 @@
 0 errors | 0 warnings | 0 notes
 
 ## Notes
-* This is a re-submission addressing comments to add quotes to package names in the DESCRIPTION.
-* Additional requests to remove cat() statements were discussed and agreed that their usage is appropriate for interactive inspection functions, e.g. in R/inspect.R
+* This is a new release.
+
