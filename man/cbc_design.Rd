@@ -86,7 +86,7 @@ each row is an alternative.
 This function creates a data frame containing a choice-based conjoint survey
 design where each row is an alternative. Designs can be either a
 randomized or Bayesian D-efficient, in which case an implementation of the
-CEA or Modfed Federov algorithm is used via the \code{idefix} package
+CEA or Modfed Federov algorithm is used via the {idefix} package
 }
 \examples{
 library(cbcTools)
