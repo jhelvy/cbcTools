@@ -137,6 +137,24 @@ cbc_design <- function(
     parallel
   )
   profiles <- as.data.frame(profiles) # tibbles break things
+  if (n_alts > nrow(profiles)) {
+    stop(
+      "The number of alternatives per observation, specified by n_alts, is ",
+      "larger than the number of unique profiles. Either decrease n_alts to ",
+      "be less than ", nrow(profiles), " or add more attributes / levels to ",
+      "increase the number of profiles."
+    )
+  }
+  ncomb <- ncol(combn(profiles$profileID, n_alts))
+  if (n_q > ncomb) {
+    stop(
+      "The number of questions per respondent, specified by n_q, is ",
+      "larger than the number of unique sets of choice sets. You can address ",
+      "this by decreasing n_q to be less than ", ncomb, ", decreasing n_alts, ",
+      "or add more attributes / levels to increase the number of choice set ",
+      "combinations."
+    )
+  }
   if (is.null(priors)) {
     design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else if (!is.null(label)) {
@@ -171,16 +189,22 @@ make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
 }
 
 get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
-  design <- sample_rows(profiles, size = n_resp * n_alts * n_q)
+  design <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
   design <- add_metadata(design, n_resp, n_alts, n_q)
   # Replace rows with duplicated profiles in each obsID or
   # duplicated choice sets in each respID
-  dup_rows <- get_dup_rows(design, n_resp, n_alts, n_q)
-  while (length(dup_rows) > 0) {
-    # cat('Number dupe rows:', length(dup_rows), '\n')
-    new_rows <- sample_rows(profiles, size = length(dup_rows))
+  dup_rows_obs <- get_dup_obs(design, n_alts)
+  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
+    cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
+    cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
+    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
+    print(dup_rows)
+    new_rows <- sample_profiles(profiles, size = length(dup_rows))
     design[dup_rows, 1:ncol(new_rows)] <- new_rows
-    dup_rows <- get_dup_rows(design, n_resp, n_alts, n_q)
+    # Recalculate duplicates
+    dup_rows_obs <- get_dup_obs(design, n_alts)
+    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
   }
   return(design)
 }
@@ -199,7 +223,7 @@ get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   # Randomize rows by label
   labels <- split(profiles, profiles[label])
   for (i in seq_len(n_levels)) {
-    design_label <- sample_rows(labels[[i]], size = n_resp * n_q)
+    design_label <- sample_profiles(labels[[i]], size = n_resp * n_q)
     design_label$labelID <- seq(nrow(design_label))
     labels[[i]] <- design_label
   }
@@ -211,11 +235,10 @@ get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   return(design)
 }
 
-sample_rows <- function(profiles, size) {
-  sample_ids <- sample(
-    x = seq_len(nrow(profiles)), size = size, replace = TRUE
+sample_profiles <- function(profiles, size) {
+  return(profiles[sample(
+    x = profiles$profileID, size = size, replace = TRUE), ]
   )
-  return(profiles[sample_ids, ])
 }
 
 add_metadata <- function(design, n_resp, n_alts, n_q) {
@@ -226,12 +249,6 @@ add_metadata <- function(design, n_resp, n_alts, n_q) {
   design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
   row.names(design) <- NULL
   return(design)
-}
-
-get_dup_rows <- function(design, n_resp, n_alts, n_q) {
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
-  return(unique(c(dup_rows_obs, dup_rows_resp)))
 }
 
 get_dup_obs <- function(design, n_alts) {
