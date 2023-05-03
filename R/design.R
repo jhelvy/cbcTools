@@ -172,7 +172,16 @@ make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
 
 get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
   design <- sample_rows(profiles, size = n_resp * n_alts * n_q)
-  design <- remove_dups(design, n_resp, n_alts, n_q)
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  # Replace rows with duplicated profiles in each obsID or
+  # duplicated choice sets in each respID
+  dup_rows <- get_dup_rows(design, n_resp, n_alts, n_q)
+  while (length(dup_rows) > 0) {
+    # cat('Number dupe rows:', length(dup_rows), '\n')
+    new_rows <- sample_rows(profiles, size = length(dup_rows))
+    design[dup_rows, 1:ncol(new_rows)] <- new_rows
+    dup_rows <- get_dup_rows(design, n_resp, n_alts, n_q)
+  }
   return(design)
 }
 
@@ -209,21 +218,6 @@ sample_rows <- function(profiles, size) {
   return(profiles[sample_ids, ])
 }
 
-remove_dups <- function(design, n_resp, n_alts, n_q) {
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  dup_rows <- get_dups(design, n_alts)
-  while (length(dup_rows) > 0) {
-    # cat('Number repeated: ', length(dup_rows), '\n')
-    new_rows <- sample(
-      x = seq(nrow(design)), size = length(dup_rows), replace = F
-    )
-    design[dup_rows, ] <- design[new_rows, ]
-    design <- add_metadata(design, n_resp, n_alts, n_q)
-    dup_rows <- get_dups(design, n_alts)
-  }
-  return(design)
-}
-
 add_metadata <- function(design, n_resp, n_alts, n_q) {
   n_rows_per_resp <- n_alts * n_q
   design$respID <- rep(seq(n_resp), each = n_rows_per_resp)
@@ -234,7 +228,14 @@ add_metadata <- function(design, n_resp, n_alts, n_q) {
   return(design)
 }
 
-get_dups <- function(design, n_alts) {
+get_dup_rows <- function(design, n_resp, n_alts, n_q) {
+  dup_rows_obs <- get_dup_obs(design, n_alts)
+  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  return(unique(c(dup_rows_obs, dup_rows_resp)))
+}
+
+get_dup_obs <- function(design, n_alts) {
+  # Identify duplicate profiles for each observation (each choice set)
   counts <- tapply(
     design$profileID, design$obsID,
     FUN = function(x) length(unique(x))
@@ -242,6 +243,26 @@ get_dups <- function(design, n_alts) {
   dup_ids <- which(counts != n_alts)
   dup_rows <- which(design$obsID %in% dup_ids)
   return(dup_rows)
+}
+
+get_dup_resp <- function(design, n_resp, n_q) {
+  # Identify duplicate choice sets for each respondent
+  dup_ids <- unlist(lapply(
+    1:n_resp,
+    function(x) dup_obs_by_resp(subset(design, respID == x))
+  ))
+  dup_rows <- which(design$obsID %in% dup_ids)
+  return(dup_rows)
+}
+
+dup_obs_by_resp <- function(df) {
+  profiles_list <- tapply(
+    df$profileID, df$obsID,
+    FUN = function(x) sort(unique(x))
+  )
+  # Convert the list of vectors to a data frame to check for duplicates
+  dupe_df <- do.call(rbind, profiles_list)
+  return(as.numeric(names(which(duplicated(dupe_df)))))
 }
 
 add_no_choice <- function(design, n_alts) {
@@ -448,3 +469,8 @@ encode_names <- function(des, varnames, lvl.names, id_discrete) {
     }
     return(unlist(codednames))
 }
+
+
+
+
+
