@@ -401,8 +401,8 @@ make_design_deff <- function(
         # "CEA" method only works with unrestricted profile set
         if (profiles_restricted) {
           stop(
-            'For the CEA algorithm, you must use an unrestricted set of ',
-            'profiles. Set method = "Modfed" to use the restricted set of ',
+            'The CEA algorithm requires the use of an unrestricted set of ',
+            'profiles. Set \'method = "Modfed"\', which can use restricted ',
             'profiles, or consider using an unrestricted set of profiles.'
           )
         }
