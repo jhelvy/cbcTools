@@ -39,8 +39,8 @@
 #' choice set given the sample from the prior preference distribution.
 #' Defaults to `FALSE`.
 #' @param method Which method to use for obtaining a Bayesian D-efficient
-#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `?idefix::CEA` and
-#' `?idefix::Modfed` for more details.
+#' design, `"Modfed"` or `"CEA"`? Defaults to `"Modfed"`. See `?idefix::Modfed`
+#' and `?idefix::CEA` for more details.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #' iterations when searching for a Bayesian D-efficient design. The default is
 #' 50.
@@ -115,7 +115,7 @@ cbc_design <- function(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = "CEA",
+  method = "Modfed",
   max_iter = 50,
   parallel = TRUE
 ) {
