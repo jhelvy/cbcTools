@@ -362,7 +362,6 @@ make_design_deff <- function(
     profile_lvls <- profiles[, 2:ncol(profiles)]
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     varnames <- names(priors)
-    names(lvl.names) <- varnames
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
     types <- get_col_types(profile_lvls)
@@ -421,7 +420,8 @@ make_design_deff <- function(
     } else {
         D <- idefix::Modfed(
             cand.set = defineCandidateSet(
-              lvls, coding, c.lvls, profiles, profiles_restricted
+              lvls, coding, c.lvls, profiles, id_continuous,
+              profiles_restricted
             ),
             par.draws = par_draws,
             n.alts = n_alts,
@@ -503,7 +503,7 @@ make_design_deff <- function(
 }
 
 defineCandidateSet <- function(
-    lvls, coding, c.lvls, profiles, profiles_restricted
+    lvls, coding, c.lvls, profiles, id_continuous, profiles_restricted
 ) {
   cand_set <- idefix::Profiles(
     lvls = lvls,
@@ -512,12 +512,14 @@ defineCandidateSet <- function(
   )
   if (!profiles_restricted) { return(cand_set) }
   # Manually dummy-code profiles with restrictions
+  cand_set_res <- profiles[-1]
   cand_set_res <- fastDummies::dummy_cols(
-    profiles,
-    select_columns = names(profiles)[-1],
+    cand_set_res,
+    select_columns = names(cand_set_res)[!id_continuous],
     remove_first_dummy = TRUE
   )
-  cand_set_res <- cand_set_res[,(ncol(profiles) + 1):ncol(cand_set_res)]
+  cols_keep <- c(which(id_continuous), ncol(profiles):ncol(cand_set_res))
+  cand_set_res <- cand_set_res[,cols_keep]
   names(cand_set_res) <- colnames(cand_set)
   cand_set_res <- as.matrix(cand_set_res)
   row.names(cand_set_res) <- seq(nrow(cand_set_res))
