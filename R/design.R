@@ -359,8 +359,15 @@ make_design_deff <- function(
     if (no_choice) {
         mu <- c(prior_no_choice, mu)
     }
-    profile_lvls <- profiles[,2:ncol(profiles)]
+    profile_lvls <- profiles[, 2:ncol(profiles)]
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
+    varnames <- names(priors)
+    names(lvl.names) <- varnames
+
+    # Stop if using restricted profile set and the "CEA" method
+    check_restricted_profiles(profiles, lvl.names, method)
+
+    # Set up encoding vars for idefix::CEA() or idefix::Modfed()
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
     types <- get_col_types(profile_lvls)
@@ -424,7 +431,7 @@ make_design_deff <- function(
     }
 
     # Decode the design
-    des <- idefix::Decode(
+    design_raw <- idefix::Decode(
         des = D$design,
         n.alts = n_alts,
         alt.cte = alt_cte,
@@ -433,8 +440,7 @@ make_design_deff <- function(
         coding = coding,
         no.choice = no_choice_alt
     )
-    des <- des$design
-    varnames <- names(priors)
+    design <- design_raw$design
     if (no_choice) {
         # First join on the profileIDs to the raw de-coded design
         des_raw <- des
@@ -455,28 +461,28 @@ make_design_deff <- function(
         des$no_choice <- as.vector(D$design[,1])
     } else {
         # Join on profileIDs
-        names(des) <- varnames
-        des$row_id <- seq(nrow(des)) # Keep track of row
-        des <- merge(des, profiles, by = varnames)
-        des <- des[order(des$row_id),]
+        names(design) <- varnames
+        design$row_id <- seq(nrow(design)) # Keep track of row
+        test <- merge(design, profiles, by = varnames, all.x = TRUE)
+        design <- design[order(design$row_id),]
         # Convert numeric columns to actual numbers
         for (id in which(id_continuous)) {
-          des[,id] <- as.numeric(des[,id])
+          design[,id] <- as.numeric(design[,id])
         }
-        des <- des[c('profileID', varnames)]
+        design <- design[c('profileID', varnames)]
     }
 
     # Include probs?
     if (probs) {
-        des$probs <- as.vector(t(D$probs))
+      design$probs <- as.vector(t(D$probs))
     }
 
     # Add blockIDs
-    des$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
+    design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
 
     # Repeat design to match number of respondents
     n_reps <- ceiling(n_resp / n_blocks)
-    design <- des[rep(seq_len(nrow(des)), n_reps), ]
+    design <- design[rep(seq_len(nrow(design)), n_reps), ]
     row.names(design) <- NULL
     design <- design[1:(n_resp*n_q*n_alts), ]
 
@@ -491,6 +497,18 @@ make_design_deff <- function(
     )
 
     return(design)
+}
+
+check_restricted_profiles <- function(profiles, lvl.names, method) {
+  if (method == "CEA") {
+    if (nrow(expand.grid(lvl.names)) > nrow(profiles)) {
+      stop(
+        'For the CEA algorithm, you must use an unrestricted set of ',
+        'profiles. Set method = "Modfed" to use the restricted set of ',
+        'profiles, or consider using an unrestricted set of profiles.'
+      )
+    }
+  }
 }
 
 encode_names <- function(des, varnames, lvl.names, id_discrete) {
@@ -508,8 +526,3 @@ encode_names <- function(des, varnames, lvl.names, id_discrete) {
     }
     return(unlist(codednames))
 }
-
-
-
-
-
