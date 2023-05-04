@@ -363,11 +363,6 @@ make_design_deff <- function(
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     varnames <- names(priors)
     names(lvl.names) <- varnames
-
-    # Stop if using restricted profile set and the "CEA" method
-    check_restricted_profiles(profiles, lvl.names, method)
-
-    # Set up encoding vars for idefix::CEA() or idefix::Modfed()
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
     types <- get_col_types(profile_lvls)
@@ -400,7 +395,17 @@ make_design_deff <- function(
 
     # Make the design
 
+    profiles_restricted <- nrow(expand.grid(lvl.names)) > nrow(profiles)
+
     if (method == "CEA") {
+        # "CEA" method only works with unrestricted profile set
+        if (profiles_restricted) {
+          stop(
+            'For the CEA algorithm, you must use an unrestricted set of ',
+            'profiles. Set method = "Modfed" to use the restricted set of ',
+            'profiles, or consider using an unrestricted set of profiles.'
+          )
+        }
         D <- idefix::CEA(
             lvls = lvls,
             coding = coding,
@@ -415,10 +420,8 @@ make_design_deff <- function(
         )
     } else {
         D <- idefix::Modfed(
-            cand.set = idefix::Profiles(
-                lvls = lvls,
-                coding = coding,
-                c.lvls = c.lvls
+            cand.set = defineCandidateSet(
+              lvls, coding, c.lvls, profiles, profiles_restricted
             ),
             par.draws = par_draws,
             n.alts = n_alts,
@@ -463,7 +466,7 @@ make_design_deff <- function(
         # Join on profileIDs
         names(design) <- varnames
         design$row_id <- seq(nrow(design)) # Keep track of row
-        test <- merge(design, profiles, by = varnames, all.x = TRUE)
+        design <- merge(design, profiles, by = varnames, all.x = TRUE)
         design <- design[order(design$row_id),]
         # Convert numeric columns to actual numbers
         for (id in which(id_continuous)) {
@@ -499,16 +502,26 @@ make_design_deff <- function(
     return(design)
 }
 
-check_restricted_profiles <- function(profiles, lvl.names, method) {
-  if (method == "CEA") {
-    if (nrow(expand.grid(lvl.names)) > nrow(profiles)) {
-      stop(
-        'For the CEA algorithm, you must use an unrestricted set of ',
-        'profiles. Set method = "Modfed" to use the restricted set of ',
-        'profiles, or consider using an unrestricted set of profiles.'
-      )
-    }
-  }
+defineCandidateSet <- function(
+    lvls, coding, c.lvls, profiles, profiles_restricted
+) {
+  cand_set <- idefix::Profiles(
+    lvls = lvls,
+    coding = coding,
+    c.lvls = c.lvls
+  )
+  if (!profiles_restricted) { return(cand_set) }
+  # Manually dummy-code profiles with restrictions
+  cand_set_res <- fastDummies::dummy_cols(
+    profiles,
+    select_columns = names(profiles)[-1],
+    remove_first_dummy = TRUE
+  )
+  cand_set_res <- cand_set_res[,(ncol(profiles) + 1):ncol(cand_set_res)]
+  names(cand_set_res) <- colnames(cand_set)
+  cand_set_res <- as.matrix(cand_set_res)
+  row.names(cand_set_res) <- seq(nrow(cand_set_res))
+  return(cand_set_res)
 }
 
 encode_names <- function(des, varnames, lvl.names, id_discrete) {
