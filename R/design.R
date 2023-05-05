@@ -89,6 +89,8 @@
 #' )
 #'
 #' # Make a Bayesian D-efficient design with a prior model specified
+#' # Note that by default method = "Modfed" and parallel = TRUE.
+#' # This example uses "CEA" because it is faster.
 #' design_deff <- cbc_design(
 #'     profiles  = profiles,
 #'     n_resp    = 30, # Number of respondents
@@ -100,6 +102,7 @@
 #'         type      = c(0.1, 0.2),
 #'         freshness = c(0.1, 0.2)
 #'     ),
+#'     method = "CEA",
 #'     parallel = FALSE
 #' )
 cbc_design <- function(
