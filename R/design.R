@@ -137,24 +137,6 @@ cbc_design <- function(
     parallel
   )
   profiles <- as.data.frame(profiles) # tibbles break things
-  if (n_alts > nrow(profiles)) {
-    stop(
-      "The number of alternatives per observation, specified by n_alts, is ",
-      "larger than the number of unique profiles. Either decrease n_alts to ",
-      "be less than ", nrow(profiles), " or add more attributes / levels to ",
-      "increase the number of profiles."
-    )
-  }
-  ncomb <- ncol(utils::combn(profiles$profileID, n_alts))
-  if (n_q > ncomb) {
-    stop(
-      "The number of questions per respondent, specified by n_q, is ",
-      "larger than the number of unique sets of choice sets. You can address ",
-      "this by decreasing n_q to be less than ", ncomb, ", decreasing n_alts, ",
-      "or add more attributes / levels to increase the number of choice set ",
-      "combinations."
-    )
-  }
   if (is.null(priors)) {
     design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
   } else if (!is.null(label)) {

@@ -31,7 +31,7 @@ check_inputs_design <- function(
     }
 
     if ((method != "CEA") & (method != "Modfed")) {
-        stop('The method argument must be either "CEA" or "Modfed"')
+        stop('The method argument must be either "Modfed" or "CEA"')
     }
 
     if (!is.null(priors)) {
@@ -46,4 +46,30 @@ check_inputs_design <- function(
         }
     }
 
+    if (n_alts > nrow(profiles)) {
+        stop(
+            "The number of alternatives per observation, specified by n_alts, ",
+            "is larger than the number of unique profiles. Either decrease ",
+            "n_alts to be less than ", nrow(profiles), " or add more ",
+            "attributes / levels to increase the number of profiles."
+        )
+    }
+
+    if (n_q > floor(nrow(profiles) / n_alts)) {
+        # First if statement is because this check is only in the case of a
+        # small number of profiles. If the number of profiles is too large,
+        # the next if statement will error because R integers have a maximum
+        # value of 2^31 - 1. See this issue:
+        # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
+        ncomb <- ncol(utils::combn(profiles$profileID, n_alts))
+        if (n_q > ncomb) {
+            stop(
+                "The number of questions per respondent, specified by n_q, ",
+                "is larger than the number of unique sets of choice sets. ",
+                "You can correct this by decreasing n_q to be less than ",
+                ncomb, ", decreasing n_alts, or add more attributes / levels ",
+                "to increase the number of choice set combinations."
+            )
+        }
+    }
 }
