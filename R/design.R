@@ -337,13 +337,20 @@ make_design_deff <- function(
     label, priors, prior_no_choice, probs, method, max_iter, parallel
 ) {
     # Set up initial parameters for creating design
+
+    # Make sure order of priors matches order of attributes in profiles
+    profile_lvls <- profiles[, 2:ncol(profiles)]
+    varnames <- names(profile_lvls)
+    priors <- priors[varnames]
+
+    # Set up priors
     mu <- unlist(priors)
     if (no_choice) {
         mu <- c(prior_no_choice, mu)
     }
-    profile_lvls <- profiles[, 2:ncol(profiles)]
+
+    # Set up levels and coding
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
-    varnames <- names(priors)
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
     types <- get_col_types(profile_lvls)
@@ -425,36 +432,13 @@ make_design_deff <- function(
         coding = coding,
         no.choice = no_choice_alt
     )
+
+    # Join on profileIDs to design
     design <- design_raw$design
+    names(design) <- varnames
+    design <- join_profiles(design, profiles, varnames, id_continuous)
     if (no_choice) {
-        # First join on the profileIDs to the raw de-coded design
-        des_raw <- des
-        names(des_raw) <- varnames
-        des_raw$row_id <- seq(nrow(des_raw))
-        des_raw <- merge(des_raw, profiles, by = varnames, all.x = TRUE)
-        des_raw <- des_raw[c('row_id', 'profileID')]
-        # Now use dummy-coded design and add on profileIDs
-        des <- as.data.frame(D$design)
-        codednames <- encode_names(des, varnames, lvl.names, id_discrete)
-        names(des) <- c("no_choice", codednames)
-        des <- des[c(codednames, "no_choice")]
-        row.names(des) <- NULL
-        des$row_id <- seq(nrow(des))
-        des <- merge(des, des_raw, by = 'row_id')
-        des$row_id <- NULL
-        des <- des[c('profileID', codednames)]
-        des$no_choice <- as.vector(D$design[,1])
-    } else {
-        # Join on profileIDs
-        names(design) <- varnames
-        design$row_id <- seq(nrow(design)) # Keep track of row
-        design <- merge(design, profiles, by = varnames, all.x = TRUE)
-        design <- design[order(design$row_id),]
-        # Convert numeric columns to actual numbers
-        for (id in which(id_continuous)) {
-          design[,id] <- as.numeric(design[,id])
-        }
-        design <- design[c('profileID', varnames)]
+      design <- add_no_choice_deff(design, n_alts, varnames[id_discrete])
     }
 
     # Include probs?
@@ -508,18 +492,51 @@ defineCandidateSet <- function(
   return(cand_set_res)
 }
 
-encode_names <- function(des, varnames, lvl.names, id_discrete) {
-    codednames <- list()
-    for (i in 1:length(varnames)) {
-        if (id_discrete[i]) {
-            varlevels <- lvl.names[[i]]
-            codednames[[i]] <- paste(
-                varnames[i],
-                varlevels[2:length(varlevels)], sep = "_"
-            )
-        } else {
-            codednames[[i]] <- varnames[i]
-        }
-    }
-    return(unlist(codednames))
+join_profiles <- function(design, profiles, varnames, id_continuous) {
+  # Replaces the generated design with rows from profiles, which ensures
+  # factor levels in profiles are maintained in design
+
+  # Keep track of row order in design
+  design$row_id <- seq(nrow(design))
+
+  # Convert numeric columns to actual numbers
+  for (id in which(id_continuous)) {
+    design[,id] <- as.numeric(design[,id])
+  }
+
+  # Convert character types to factors and set same levels as profiles
+  for (id in which(!id_continuous)) {
+    design[,id] <- factor(design[,id], levels = levels(profiles[,id+1]))
+  }
+
+  # Join on profileIDs, then reorder to retain design order
+  design <- merge(design, profiles, by = varnames, all.x = TRUE)
+  design <- design[order(design$row_id),]
+  design <- design[c('profileID', varnames)]
+  return(design)
+}
+
+add_no_choice_deff <- function(design, n_alts, varnames_discrete) {
+  # First dummy code categorical variables
+  design$obsID <- rep(seq(nrow(design) / n_alts), each = n_alts)
+  design$altID <- rep(seq(n_alts), nrow(design) / n_alts)
+  design <- design[which(design$altID != 4), ]
+  design <- fastDummies::dummy_cols(
+    design,
+    select_columns = varnames_discrete,
+    remove_first_dummy = TRUE
+  )
+  design <- design[,which(! names(design) %in% varnames_discrete)]
+  design$no_choice <- 0
+  # Insert dummy-coded outside good rows
+  design_og <- design[which(design$altID == 1), ]
+  design_og$altID <- n_alts
+  design_og$profileID <- NA
+  design_og[,
+    which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
+  design_og$no_choice <- 1
+  design <- rbind(design, design_og)
+  design <- design[order(design$obsID, design$altID), ]
+  design[,c('altID', 'obsID')] <- NULL
+  return(design)
 }
