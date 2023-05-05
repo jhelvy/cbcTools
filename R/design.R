@@ -531,7 +531,7 @@ add_no_choice_deff <- function(design, n_alts, varnames_discrete) {
   # Insert dummy-coded outside good rows
   design_og <- design[which(design$altID == 1), ]
   design_og$altID <- n_alts
-  design_og$profileID <- NA
+  design_og$profileID <- 0
   design_og[,
     which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
   design_og$no_choice <- 1
