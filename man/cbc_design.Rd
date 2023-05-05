@@ -104,16 +104,16 @@ profiles <- cbc_profiles(
 design_rand <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
-  n_alts   = 3, # Number of alternatives per question
-  n_q      = 6 # Number of questions per respondent
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6    # Number of questions per respondent
 )
 
 # Make a randomized survey design with a "no choice" option
 design_rand_nochoice <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
-  n_alts    = 3, # Number of alternatives per question
-  n_q       = 6, # Number of questions per respondent
+  n_alts    = 3,   # Number of alternatives per question
+  n_q       = 6,   # Number of questions per respondent
   no_choice = TRUE
 )
 
@@ -122,17 +122,17 @@ design_rand_nochoice <- cbc_design(
 design_rand_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
-  n_alts    = 3, # Number of alternatives per question
-  n_q       = 6, # Number of questions per respondent
+  n_alts    = 3,   # Number of alternatives per question
+  n_q       = 6,   # Number of questions per respondent
   label     = "type"
 )
 
 # Make a Bayesian D-efficient design with a prior model specified
 design_deff <- cbc_design(
     profiles  = profiles,
-    n_resp    = 300, # Number of respondents
-    n_alts    = 3, # Number of alternatives per question
-    n_q       = 6, # Number of questions per respondent
+    n_resp    = 30, # Number of respondents
+    n_alts    = 2,  # Number of alternatives per question
+    n_q       = 5,  # Number of questions per respondent
     n_start   = 1,
     priors = list(
         price     = -0.1,
