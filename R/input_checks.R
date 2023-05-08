@@ -64,16 +64,24 @@ check_inputs_design <- function(
 
     # Check that number of questions per respondents is larger than the
     # unique number of choice sets
-    n <- nrow(profiles)
-    k <- n_alts
-    ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
-    if (n_q > ncomb) {
-        stop(
-            "The number of questions per respondent, specified by n_q, ",
-            "is larger than the number of unique sets of choice sets. ",
-            "You can correct this by decreasing n_q to be less than ",
-            ncomb, ", decreasing n_alts, or add more attributes / levels ",
-            "to increase the number of choice set combinations."
-        )
+    if (n_q > floor(nrow(profiles) / n_alts)) {
+        # The first if statement is because the next one only matters with a
+        # small number of profiles, so most cases where n is large the next
+        # if statement isn't necessary. If the number of profiles is too large,
+        # the next if statement will error because R integers have a maximum
+        # value of 2^31 - 1. See this issue:
+        # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
+        n <- nrow(profiles)
+        k <- n_alts
+        ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
+        if (n_q > ncomb) {
+            stop(
+                "The number of questions per respondent, specified by n_q, ",
+                "is larger than the number of unique sets of choice sets. ",
+                "You can correct this by decreasing n_q to be less than ",
+                ncomb, ", decreasing n_alts, or add more attributes / levels ",
+                "to increase the number of choice set combinations."
+            )
+        }
     }
 }
