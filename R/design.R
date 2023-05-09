@@ -39,8 +39,8 @@
 #' choice set given the sample from the prior preference distribution.
 #' Defaults to `FALSE`.
 #' @param method Which method to use for obtaining a Bayesian D-efficient
-#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `?idefix::CEA` and
-#' `?idefix::Modfed` for more details.
+#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `?idefix::CEA`
+#' and `?idefix::Modfed` for more details.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #' iterations when searching for a Bayesian D-efficient design. The default is
 #' 50.
@@ -65,16 +65,16 @@
 #' design_rand <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3, # Number of alternatives per question
-#'   n_q      = 6 # Number of questions per respondent
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
 #' # Make a randomized survey design with a "no choice" option
 #' design_rand_nochoice <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
-#'   n_alts    = 3, # Number of alternatives per question
-#'   n_q       = 6, # Number of questions per respondent
+#'   n_alts    = 3,   # Number of alternatives per question
+#'   n_q       = 6,   # Number of questions per respondent
 #'   no_choice = TRUE
 #' )
 #'
@@ -83,17 +83,18 @@
 #' design_rand_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
-#'   n_alts    = 3, # Number of alternatives per question
-#'   n_q       = 6, # Number of questions per respondent
+#'   n_alts    = 3,   # Number of alternatives per question
+#'   n_q       = 6,   # Number of questions per respondent
 #'   label     = "type"
 #' )
 #'
 #' # Make a Bayesian D-efficient design with a prior model specified
+#' # Note that by default parallel = TRUE.
 #' design_deff <- cbc_design(
 #'     profiles  = profiles,
 #'     n_resp    = 300, # Number of respondents
-#'     n_alts    = 3, # Number of alternatives per question
-#'     n_q       = 6, # Number of questions per respondent
+#'     n_alts    = 3,  # Number of alternatives per question
+#'     n_q       = 6,  # Number of questions per respondent
 #'     n_start   = 1,
 #'     priors = list(
 #'         price     = -0.1,
@@ -159,8 +160,9 @@ cbc_design <- function(
 # Randomized Design ----
 
 make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
-  design <- get_design_rand(profiles, n_resp, n_alts, n_q)
-  if (!is.null(label)) {
+  if (is.null(label)) {
+    design <- get_design_rand(profiles, n_resp, n_alts, n_q)
+  } else {
     design <- get_design_rand_label(profiles, n_resp, n_alts, n_q, label)
   }
   if (no_choice) {
@@ -171,9 +173,74 @@ make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
 }
 
 get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
-  design <- sample_rows(profiles, size = n_resp * n_alts * n_q)
-  design <- remove_dups(design, n_resp, n_alts, n_q)
+  design <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  # Replace rows with duplicated profiles in each obsID or
+  # duplicated choice sets in each respID
+  dup_rows_obs <- get_dup_obs(design, n_alts)
+  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
+    # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
+    # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
+    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
+    new_rows <- sample_profiles(profiles, size = length(dup_rows))
+    design[dup_rows, 1:ncol(new_rows)] <- new_rows
+    # Recalculate duplicates
+    dup_rows_obs <- get_dup_obs(design, n_alts)
+    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  }
   return(design)
+}
+
+sample_profiles <- function(profiles, size) {
+  return(profiles[sample(
+    x = seq_len(nrow(profiles)), size = size, replace = TRUE), ]
+  )
+}
+
+add_metadata <- function(design, n_resp, n_alts, n_q) {
+  n_rows_per_resp <- n_alts * n_q
+  design$respID <- rep(seq(n_resp), each = n_rows_per_resp)
+  design$qID <- rep(rep(seq(n_q), each = n_alts), n_resp)
+  design$altID <- rep(seq(n_alts), n_resp * n_q)
+  design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
+  row.names(design) <- NULL
+  return(design)
+}
+
+get_dup_obs <- function(design, n_alts) {
+  # Identify duplicate profiles for each observation (each choice set)
+  counts <- tapply(
+    design$profileID, design$obsID,
+    FUN = function(x) length(unique(x))
+  )
+  dup_ids <- which(counts != n_alts)
+  dup_rows <- which(design$obsID %in% dup_ids)
+  return(dup_rows)
+}
+
+get_dup_resp <- function(design, n_resp, n_q) {
+  # Identify duplicate choice sets for each respondent
+  dup_ids <- unlist(lapply(
+    1:n_resp,
+    function(x) dup_obs_by_resp(design[which(design$respID == x),])
+  ))
+  dup_rows <- which(design$obsID %in% dup_ids)
+  return(dup_rows)
+}
+
+dup_obs_by_resp <- function(df) {
+  profiles_list <- tapply(
+    df$profileID, df$obsID,
+    FUN = function(x) sort(x)
+  )
+  # Convert the list of vectors to a data frame to check for duplicates
+  dupe_df <- do.call(rbind, profiles_list)
+  dup_ids <- which(duplicated(dupe_df))
+  if (length(dup_ids) > 0) {
+    return(as.numeric(names(dup_ids)))
+  }
+  return(NULL)
 }
 
 get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
@@ -189,59 +256,37 @@ get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
   }
   # Randomize rows by label
   labels <- split(profiles, profiles[label])
-  for (i in seq_len(n_levels)) {
-    design_label <- sample_rows(labels[[i]], size = n_resp * n_q)
-    design_label$labelID <- seq(nrow(design_label))
-    labels[[i]] <- design_label
+  design <- sample_profiles_by_group(labels, size = n_resp * n_q)
+  # Replace rows with duplicated profiles in each obsID or
+  # duplicated choice sets in each respID
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  dup_rows_obs <- get_dup_obs(design, n_alts)
+  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
+    # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
+    # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
+    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
+    new_rows <- sample_profiles_by_group(labels, size = length(dup_rows) / n_alts)
+    design[dup_rows, 1:ncol(new_rows)] <- new_rows
+    # Recalculate duplicates
+    dup_rows_obs <- get_dup_obs(design, n_alts)
+    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
   }
-  design <- do.call(rbind, labels)
+  return(design)
+}
+
+sample_profiles_by_group <- function(labels, size) {
+  design <- lapply(labels, function(x) sample_profiles(x, size = size))
+  design <- lapply(design, function(x) add_label_id(x))
+  design <- do.call(rbind, design)
   design <- design[order(design$labelID), ]
   design$labelID <- NULL
-  # Add meta data and remove cases with double alternatives
-  design <- remove_dups(design, n_resp, n_alts, n_q)
   return(design)
 }
 
-sample_rows <- function(profiles, size) {
-  sample_ids <- sample(
-    x = seq_len(nrow(profiles)), size = size, replace = TRUE
-  )
-  return(profiles[sample_ids, ])
-}
-
-remove_dups <- function(design, n_resp, n_alts, n_q) {
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  dup_rows <- get_dups(design, n_alts)
-  while (length(dup_rows) > 0) {
-    # cat('Number repeated: ', length(dup_rows), '\n')
-    new_rows <- sample(
-      x = seq(nrow(design)), size = length(dup_rows), replace = F
-    )
-    design[dup_rows, ] <- design[new_rows, ]
-    design <- add_metadata(design, n_resp, n_alts, n_q)
-    dup_rows <- get_dups(design, n_alts)
-  }
+add_label_id <- function(design) {
+  design$labelID <- seq(nrow(design))
   return(design)
-}
-
-add_metadata <- function(design, n_resp, n_alts, n_q) {
-  n_rows_per_resp <- n_alts * n_q
-  design$respID <- rep(seq(n_resp), each = n_rows_per_resp)
-  design$qID <- rep(rep(seq(n_q), each = n_alts), n_resp)
-  design$altID <- rep(seq(n_alts), n_resp * n_q)
-  design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
-  row.names(design) <- NULL
-  return(design)
-}
-
-get_dups <- function(design, n_alts) {
-  counts <- tapply(
-    design$profileID, design$obsID,
-    FUN = function(x) length(unique(x))
-  )
-  dup_ids <- which(counts != n_alts)
-  dup_rows <- which(design$obsID %in% dup_ids)
-  return(dup_rows)
 }
 
 add_no_choice <- function(design, n_alts) {
@@ -292,14 +337,20 @@ make_design_deff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
     label, priors, prior_no_choice, probs, method, max_iter, parallel
 ) {
-
     # Set up initial parameters for creating design
 
+    # Make sure order of priors matches order of attributes in profiles
+    profile_lvls <- profiles[, 2:ncol(profiles)]
+    varnames <- names(profile_lvls)
+    priors <- priors[varnames]
+
+    # Set up priors
     mu <- unlist(priors)
     if (no_choice) {
         mu <- c(prior_no_choice, mu)
     }
-    profile_lvls <- profiles[,2:ncol(profiles)]
+
+    # Set up levels and coding
     lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
@@ -333,6 +384,17 @@ make_design_deff <- function(
 
     # Make the design
 
+    profiles_restricted <- nrow(expand.grid(lvl.names)) > nrow(profiles)
+
+    if (profiles_restricted & (method == "CEA")) {
+      # "CEA" method only works with unrestricted profile set
+      method == "Modfed"
+      warning(
+        'The "CEA" algorithm requires the use of an unrestricted set of ',
+        'profiles, so "Modfed" is now being used instead.'
+      )
+    }
+
     if (method == "CEA") {
         D <- idefix::CEA(
             lvls = lvls,
@@ -348,10 +410,9 @@ make_design_deff <- function(
         )
     } else {
         D <- idefix::Modfed(
-            cand.set = idefix::Profiles(
-                lvls = lvls,
-                coding = coding,
-                c.lvls = c.lvls
+            cand.set = defineCandidateSet(
+              lvls, coding, c.lvls, profiles, id_continuous,
+              profiles_restricted
             ),
             par.draws = par_draws,
             n.alts = n_alts,
@@ -364,7 +425,7 @@ make_design_deff <- function(
     }
 
     # Decode the design
-    des <- idefix::Decode(
+    design_raw <- idefix::Decode(
         des = D$design,
         n.alts = n_alts,
         alt.cte = alt_cte,
@@ -373,50 +434,26 @@ make_design_deff <- function(
         coding = coding,
         no.choice = no_choice_alt
     )
-    des <- des$design
-    varnames <- names(priors)
+
+    # Join on profileIDs to design
+    design <- design_raw$design
+    names(design) <- varnames
+    design <- join_profiles(design, profiles, varnames, id_continuous)
     if (no_choice) {
-        # First join on the profileIDs to the raw de-coded design
-        des_raw <- des
-        names(des_raw) <- varnames
-        des_raw$row_id <- seq(nrow(des_raw))
-        des_raw <- merge(des_raw, profiles, by = varnames, all.x = TRUE)
-        des_raw <- des_raw[c('row_id', 'profileID')]
-        # Now use dummy-coded design and add on profileIDs
-        des <- as.data.frame(D$design)
-        codednames <- encode_names(des, varnames, lvl.names, id_discrete)
-        names(des) <- c("no_choice", codednames)
-        des <- des[c(codednames, "no_choice")]
-        row.names(des) <- NULL
-        des$row_id <- seq(nrow(des))
-        des <- merge(des, des_raw, by = 'row_id')
-        des$row_id <- NULL
-        des <- des[c('profileID', codednames)]
-        des$no_choice <- as.vector(D$design[,1])
-    } else {
-        # Join on profileIDs
-        names(des) <- varnames
-        des$row_id <- seq(nrow(des)) # Keep track of row
-        des <- merge(des, profiles, by = varnames)
-        des <- des[order(des$row_id),]
-        # Convert numeric columns to actual numbers
-        des[,which(id_continuous)] <- lapply(
-            des[,which(id_continuous)], function(x) as.numeric(x)
-        )
-        des <- des[c('profileID', varnames)]
+      design <- add_no_choice_deff(design, n_alts, varnames[id_discrete])
     }
 
     # Include probs?
     if (probs) {
-        des$probs <- as.vector(t(D$probs))
+      design$probs <- as.vector(t(D$probs))
     }
 
     # Add blockIDs
-    des$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
+    design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
 
     # Repeat design to match number of respondents
     n_reps <- ceiling(n_resp / n_blocks)
-    design <- des[rep(seq_len(nrow(des)), n_reps), ]
+    design <- design[rep(seq_len(nrow(design)), n_reps), ]
     row.names(design) <- NULL
     design <- design[1:(n_resp*n_q*n_alts), ]
 
@@ -433,18 +470,75 @@ make_design_deff <- function(
     return(design)
 }
 
-encode_names <- function(des, varnames, lvl.names, id_discrete) {
-    codednames <- list()
-    for (i in 1:length(varnames)) {
-        if (id_discrete[i]) {
-            varlevels <- lvl.names[[i]]
-            codednames[[i]] <- paste(
-                varnames[i],
-                varlevels[2:length(varlevels)], sep = "_"
-            )
-        } else {
-            codednames[[i]] <- varnames[i]
-        }
-    }
-    return(unlist(codednames))
+defineCandidateSet <- function(
+    lvls, coding, c.lvls, profiles, id_continuous, profiles_restricted
+) {
+  cand_set <- idefix::Profiles(
+    lvls = lvls,
+    coding = coding,
+    c.lvls = c.lvls
+  )
+  if (!profiles_restricted) { return(cand_set) }
+  # Manually dummy-code profiles with restrictions
+  cand_set_res <- profiles[-1]
+  cand_set_res <- fastDummies::dummy_cols(
+    cand_set_res,
+    select_columns = names(cand_set_res)[!id_continuous],
+    remove_first_dummy = TRUE
+  )
+  cols_keep <- c(which(id_continuous), ncol(profiles):ncol(cand_set_res))
+  cand_set_res <- cand_set_res[,cols_keep]
+  names(cand_set_res) <- colnames(cand_set)
+  cand_set_res <- as.matrix(cand_set_res)
+  row.names(cand_set_res) <- seq(nrow(cand_set_res))
+  return(cand_set_res)
+}
+
+join_profiles <- function(design, profiles, varnames, id_continuous) {
+  # Replaces the generated design with rows from profiles, which ensures
+  # factor levels in profiles are maintained in design
+
+  # Keep track of row order in design
+  design$row_id <- seq(nrow(design))
+
+  # Convert numeric columns to actual numbers
+  for (id in which(id_continuous)) {
+    design[,id] <- as.numeric(design[,id])
+  }
+
+  # Convert character types to factors and set same levels as profiles
+  for (id in which(!id_continuous)) {
+    design[,id] <- factor(design[,id], levels = levels(profiles[,id+1]))
+  }
+
+  # Join on profileIDs, then reorder to retain design order
+  design <- merge(design, profiles, by = varnames, all.x = TRUE)
+  design <- design[order(design$row_id),]
+  design <- design[c('profileID', varnames)]
+  return(design)
+}
+
+add_no_choice_deff <- function(design, n_alts, varnames_discrete) {
+  # First dummy code categorical variables
+  design$obsID <- rep(seq(nrow(design) / n_alts), each = n_alts)
+  design$altID <- rep(seq(n_alts), nrow(design) / n_alts)
+  design <- design[which(design$altID != 4), ]
+  design <- fastDummies::dummy_cols(
+    design,
+    select_columns = varnames_discrete,
+    remove_first_dummy = TRUE
+  )
+  design <- design[,which(! names(design) %in% varnames_discrete)]
+  design$no_choice <- 0
+  # Insert dummy-coded outside good rows
+  design_og <- design[which(design$altID == 1), ]
+  design_og$altID <- n_alts
+  design_og$profileID <- 0
+  design_og[,
+    which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
+  design_og$no_choice <- 1
+  design <- rbind(design, design_og)
+  design <- design[order(design$obsID, design$altID), ]
+  design[,c('altID', 'obsID')] <- NULL
+  return(design)
 }

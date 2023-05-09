@@ -67,7 +67,7 @@ cores is set to \code{parallel::detectCores() - 1}. Max cores allowed is capped
 at \code{parallel::detectCores()}.}
 
 \item{...}{Other arguments that are passed to \code{logitr::logitr()} for model
-estimation. See the \code{logitr} documentation for details about other
+estimation. See the {logitr} documentation for details about other
 available arguments.}
 }
 \value{
@@ -118,7 +118,8 @@ power <- cbc_power(
   outcome = "choice",
   obsID   = "obsID",
   nbreaks = 10,
-  n_q     = 6
+  n_q     = 6,
+  n_cores = 2
 )
 }
 \keyword{logit}

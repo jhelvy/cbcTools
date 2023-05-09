@@ -68,8 +68,8 @@ choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.}
 
 \item{method}{Which method to use for obtaining a Bayesian D-efficient
-design, \code{"CEA"} or \code{"Modfed"}? Defaults to \code{"CEA"}. See \code{?idefix::CEA} and
-\code{?idefix::Modfed} for more details.}
+design, \code{"CEA"} or \code{"Modfed"}? Defaults to \code{"CEA"}. See \code{?idefix::CEA}
+and \code{?idefix::Modfed} for more details.}
 
 \item{max_iter}{A numeric value indicating the maximum number allowed
 iterations when searching for a Bayesian D-efficient design. The default is
@@ -86,7 +86,7 @@ each row is an alternative.
 This function creates a data frame containing a choice-based conjoint survey
 design where each row is an alternative. Designs can be either a
 randomized or Bayesian D-efficient, in which case an implementation of the
-CEA or Modfed Federov algorithm is used via the \code{idefix} package
+CEA or Modfed Federov algorithm is used via the {idefix} package
 }
 \examples{
 library(cbcTools)
@@ -104,16 +104,16 @@ profiles <- cbc_profiles(
 design_rand <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
-  n_alts   = 3, # Number of alternatives per question
-  n_q      = 6 # Number of questions per respondent
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6    # Number of questions per respondent
 )
 
 # Make a randomized survey design with a "no choice" option
 design_rand_nochoice <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
-  n_alts    = 3, # Number of alternatives per question
-  n_q       = 6, # Number of questions per respondent
+  n_alts    = 3,   # Number of alternatives per question
+  n_q       = 6,   # Number of questions per respondent
   no_choice = TRUE
 )
 
@@ -122,17 +122,18 @@ design_rand_nochoice <- cbc_design(
 design_rand_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
-  n_alts    = 3, # Number of alternatives per question
-  n_q       = 6, # Number of questions per respondent
+  n_alts    = 3,   # Number of alternatives per question
+  n_q       = 6,   # Number of questions per respondent
   label     = "type"
 )
 
 # Make a Bayesian D-efficient design with a prior model specified
+# Note that by default parallel = TRUE.
 design_deff <- cbc_design(
     profiles  = profiles,
     n_resp    = 300, # Number of respondents
-    n_alts    = 3, # Number of alternatives per question
-    n_q       = 6, # Number of questions per respondent
+    n_alts    = 3,  # Number of alternatives per question
+    n_q       = 6,  # Number of questions per respondent
     n_start   = 1,
     priors = list(
         price     = -0.1,
