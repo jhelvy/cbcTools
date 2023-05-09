@@ -20,7 +20,7 @@ CEA or Modfed Federov algorithm is used via the idefix package"><meta property="
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0.9000</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.0</span>
       </span>
     </div>
 
@@ -64,7 +64,7 @@ CEA or Modfed Federov algorithm is used via the idefix package"><meta property="
     <p>This function creates a data frame containing a choice-based conjoint survey
 design where each row is an alternative. Designs can be either a
 randomized or Bayesian D-efficient, in which case an implementation of the
-CEA or Modfed Federov algorithm is used via the <code>idefix</code> package</p>
+CEA or Modfed Federov algorithm is used via the idefix package</p>
     </div>
 
     <div id="ref-usage">
@@ -159,8 +159,8 @@ Defaults to <code>FALSE</code>.</p></dd>
 
 <dt>method</dt>
 <dd><p>Which method to use for obtaining a Bayesian D-efficient
-design, <code>"CEA"</code> or <code>"Modfed"</code>? Defaults to <code>"CEA"</code>. See <code><a href="https://rdrr.io/pkg/idefix/man/CEA.html" class="external-link">?idefix::CEA</a></code> and
-<code><a href="https://rdrr.io/pkg/idefix/man/Modfed.html" class="external-link">?idefix::Modfed</a></code> for more details.</p></dd>
+design, <code>"CEA"</code> or <code>"Modfed"</code>? Defaults to <code>"CEA"</code>. See <code><a href="https://rdrr.io/pkg/idefix/man/CEA.html" class="external-link">?idefix::CEA</a></code>
+and <code><a href="https://rdrr.io/pkg/idefix/man/Modfed.html" class="external-link">?idefix::Modfed</a></code> for more details.</p></dd>
 
 
 <dt>max_iter</dt>
@@ -199,16 +199,16 @@ each row is an alternative.</p>
 <span class="r-in"><span><span class="va">design_rand</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
-<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
-<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>,   <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span>    <span class="co"># Number of questions per respondent</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Make a randomized survey design with a "no choice" option</span></span></span>
 <span class="r-in"><span><span class="va">design_rand_nochoice</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>  n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
-<span class="r-in"><span>  n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
-<span class="r-in"><span>  n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  n_alts    <span class="op">=</span> <span class="fl">3</span>,   <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q       <span class="op">=</span> <span class="fl">6</span>,   <span class="co"># Number of questions per respondent</span></span></span>
 <span class="r-in"><span>  no_choice <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -217,17 +217,18 @@ each row is an alternative.</p>
 <span class="r-in"><span><span class="va">design_rand_labeled</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles  <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>  n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
-<span class="r-in"><span>  n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
-<span class="r-in"><span>  n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  n_alts    <span class="op">=</span> <span class="fl">3</span>,   <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q       <span class="op">=</span> <span class="fl">6</span>,   <span class="co"># Number of questions per respondent</span></span></span>
 <span class="r-in"><span>  label     <span class="op">=</span> <span class="st">"type"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Make a Bayesian D-efficient design with a prior model specified</span></span></span>
+<span class="r-in"><span><span class="co"># Note that by default parallel = TRUE.</span></span></span>
 <span class="r-in"><span><span class="va">design_deff</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    profiles  <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>    n_resp    <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
-<span class="r-in"><span>    n_alts    <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
-<span class="r-in"><span>    n_q       <span class="op">=</span> <span class="fl">6</span>, <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>    n_alts    <span class="op">=</span> <span class="fl">3</span>,  <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>    n_q       <span class="op">=</span> <span class="fl">6</span>,  <span class="co"># Number of questions per respondent</span></span></span>
 <span class="r-in"><span>    n_start   <span class="op">=</span> <span class="fl">1</span>,</span></span>
 <span class="r-in"><span>    priors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>        price     <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>,</span></span>
@@ -236,8 +237,7 @@ each row is an alternative.</p>
 <span class="r-in"><span>    <span class="op">)</span>,</span></span>
 <span class="r-in"><span>    parallel <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>provided 18 variables to replace 1 variables</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Bayesian D-efficient design found with DB-error of 1.25606</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Bayesian D-efficient design found with DB-error of 1.3629</span>
 </code></pre></div>
     </div>
   </div>
