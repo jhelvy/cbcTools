@@ -73,7 +73,8 @@ check_inputs_design <- function(
         # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
         n <- nrow(profiles)
         k <- n_alts
-        ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
+        ncomb <- choose(n, k) # More robust
+        # ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
         if (n_q > ncomb) {
             stop(
                 "The number of questions per respondent, specified by n_q, ",
