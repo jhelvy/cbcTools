@@ -17,7 +17,7 @@ cbc_design(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = "Modfed",
+  method = "CEA",
   max_iter = 50,
   parallel = TRUE
 )
@@ -68,8 +68,8 @@ choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.}
 
 \item{method}{Which method to use for obtaining a Bayesian D-efficient
-design, \code{"Modfed"} or \code{"CEA"}? Defaults to \code{"Modfed"}. See \code{?idefix::Modfed}
-and \code{?idefix::CEA} for more details.}
+design, \code{"CEA"} or \code{"Modfed"}? Defaults to \code{"CEA"}. See \code{?idefix::CEA}
+and \code{?idefix::Modfed} for more details.}
 
 \item{max_iter}{A numeric value indicating the maximum number allowed
 iterations when searching for a Bayesian D-efficient design. The default is
@@ -128,20 +128,18 @@ design_rand_labeled <- cbc_design(
 )
 
 # Make a Bayesian D-efficient design with a prior model specified
-# Note that by default method = "Modfed" and parallel = TRUE.
-# This example uses "CEA" because it is faster.
+# Note that by default parallel = TRUE.
 design_deff <- cbc_design(
     profiles  = profiles,
-    n_resp    = 30, # Number of respondents
-    n_alts    = 2,  # Number of alternatives per question
-    n_q       = 5,  # Number of questions per respondent
+    n_resp    = 300, # Number of respondents
+    n_alts    = 3,  # Number of alternatives per question
+    n_q       = 6,  # Number of questions per respondent
     n_start   = 1,
     priors = list(
         price     = -0.1,
         type      = c(0.1, 0.2),
         freshness = c(0.1, 0.2)
     ),
-    method = "CEA",
     parallel = FALSE
 )
 }
