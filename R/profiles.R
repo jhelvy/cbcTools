@@ -41,19 +41,14 @@
 #'
 cbc_profiles <- function(...) {
   levels <- list(...)
-  # Check for conditional levels
-  cond <- lapply(levels, function(x) names(x))
-  cond_check <- unlist(lapply(cond, function(x) is.null(x)))
-  if (! all(cond_check)) {
-    return(cbc_profiles_conditional(levels, cond_check))
-  }
-  # No conditional levels, so return full set of combinations
   profiles <- expand.grid(levels)
   profiles <- add_profile_ids(profiles)
   return(profiles)
 }
 
-cbc_profiles_conditional <- function(levels, cond_check) {
+# Restrict profiles - this is the left over code from the previous approach
+# Coming back to this later to clean this up
+cbc_restrict <- function(profiles, restrictions) {
   # Make all possible profiles
   new_levels <- levels
   cond_indices <- which(cond_check == FALSE)
