@@ -17,7 +17,7 @@ step in the following process for designing and analyzing surveys:
 
 ![](man/figures/program_diagram.png)
 
-## Basic Usage
+# Basic Usage
 
 View the [basic
 usage](https://jhelvy.github.io/cbcTools/articles/basic_usage.html) page
@@ -26,8 +26,14 @@ experiments.
 
 # Installation
 
-The current version is not yet on CRAN, but you can install it from
-Github using the {remotes} library:
+You can install the latest version of {cbcTools} from CRAN:
+
+``` r
+install.packages("cbcTools")
+```
+
+or you can install the development version of {cbcTools} from
+[GitHub](https://github.com/jhelvy/cbcTools):
 
 ``` r
 # install.packages("remotes")
@@ -40,14 +46,14 @@ Load the library with:
 library(cbcTools)
 ```
 
-## Author, Version, and License Information
+# Author, Version, and License Information
 
 - Author: *John Paul Helveston* <https://www.jhelvy.com/>
 - Date First Written: *October 23, 2020*
 - License:
   [MIT](https://github.com/jhelvy/cbcTools/blob/master/LICENSE.md)
 
-## Citation Information
+# Citation Information
 
 If you use this package for in a publication, I would greatly appreciate
 it if you cited it - you can get the citation by typing
