@@ -94,25 +94,29 @@
 
 <p>This package provides a set of tools for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with <code>cbc_</code> and supports a step in the following process for designing and analyzing surveys:</p>
 <p><img src="reference/figures/program_diagram.png"></p>
-<div class="section level2">
-<h2 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
-</h2>
-<p>View the <a href="https://jhelvy.github.io/cbcTools/articles/basic_usage.html">basic usage</a> page for details on how to use <strong>cbcTools</strong> to design choice-based conjoint experiments.</p>
 </div>
+<div class="section level1">
+<h1 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
+</h1>
+<p>View the <a href="https://jhelvy.github.io/cbcTools/articles/basic_usage.html">basic usage</a> page for details on how to use <strong>cbcTools</strong> to design choice-based conjoint experiments.</p>
 </div>
 <div class="section level1">
 <h1 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h1>
-<p>The current version is not yet on CRAN, but you can install it from Github using the {remotes} library:</p>
+<p>You can install the latest version of {cbcTools} from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"cbcTools"</span><span class="op">)</span></span></code></pre></div>
+<p>or you can install the development version of {cbcTools} from <a href="https://github.com/jhelvy/cbcTools" class="external-link">GitHub</a>:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"jhelvy/cbcTools"</span><span class="op">)</span></span></code></pre></div>
 <p>Load the library with:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span></code></pre></div>
-<div class="section level2">
-<h2 id="author-version-and-license-information">Author, Version, and License Information<a class="anchor" aria-label="anchor" href="#author-version-and-license-information"></a>
-</h2>
+</div>
+<div class="section level1">
+<h1 id="author-version-and-license-information">Author, Version, and License Information<a class="anchor" aria-label="anchor" href="#author-version-and-license-information"></a>
+</h1>
 <ul>
 <li>Author: <em>John Paul Helveston</em> <a href="https://www.jhelvy.com/" class="external-link uri">https://www.jhelvy.com/</a>
 </li>
@@ -122,11 +126,11 @@
 </li>
 </ul>
 </div>
-<div class="section level2">
-<h2 id="citation-information">Citation Information<a class="anchor" aria-label="anchor" href="#citation-information"></a>
-</h2>
+<div class="section level1">
+<h1 id="citation-information">Citation Information<a class="anchor" aria-label="anchor" href="#citation-information"></a>
+</h1>
 <p>If you use this package for in a publication, I would greatly appreciate it if you cited it - you can get the citation by typing <code>citation("cbcTools")</code> into R:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"cbcTools"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; To cite cbcTools in publications use:</span></span>
@@ -144,7 +148,6 @@
 <span><span class="co">#&gt;     note = {R package},</span></span>
 <span><span class="co">#&gt;     url = {https://jhelvy.github.io/cbcTools/},</span></span>
 <span><span class="co">#&gt;   }</span></span></code></pre></div>
-</div>
 </div>
 
   </div>
