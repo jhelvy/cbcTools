@@ -28,9 +28,10 @@ cbc_profiles <- function(...) {
 #' This function returns a restricted set of profiles as a data frame.
 #' @param profiles A data frame in which each row is a possible profile.
 #' This can be generated using the `cbc_profiles()` function.
-#' @param ... Lists defining pairs of restrictions for attributes and levels.
-#' Each restriction should be provided as a named list defining one restriction,
-#' e.g. `list(type = 'Fuji', freshness = 'Poor')`.
+#' @param ... Any number of lists defining pairs of restricted attribute levels.
+#' Each restriction should be provided as a named list defining one restricted pair,
+#' where the item name is the attribute and the value is the level, e.g. 
+#' `list(type = 'Fuji', freshness = 'Poor')`.
 #' @return A restricted set of profiles as a data frame.
 #' @export
 #' @examples
@@ -44,7 +45,7 @@ cbc_profiles <- function(...) {
 #' )
 #'
 #' # Obtain a restricted subset of profiles
-#' df <- cbc_restrictions(
+#' profiles_restricted <- cbc_restrictions(
 #'     profiles,
 #'     list(type = 'Fuji', freshness = 'Poor'),
 #'     list(price = 3, type = 'Gala')
