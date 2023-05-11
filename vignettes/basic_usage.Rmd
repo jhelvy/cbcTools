@@ -43,39 +43,22 @@ head(profiles)
 tail(profiles)
 ```
 
-Depending on the context of your survey, you may wish to eliminate or modify some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). **WARNING: including hard constraints in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
+Depending on the context of your survey, you may wish to eliminate some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). **WARNING: including restrictions in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
 
-If you do wish to set some levels conditional on those of other attributes, you can do so by setting each level of an attribute to a list that defines these constraints. In the example below, the `type` attribute has constraints such that only certain price levels will be shown for each level. In addition, for the `"Honeycrisp"` level, only two of the three `freshness` levels are included: `"Excellent"` and `"Average"`. Note that both the other attributes (`price` and `freshness`) should contain all of the possible levels. When these constraints you can see that there are only 30 profiles compared to 63 without constraints:
+If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of lists defining pairs of restricted attribute levels. In the example below, some combinations of `type` and `price` are restricted along with the restriction of `"Poor"` freshness of `"Honeycrisp"` type apples. With these restrictions, there are now only 48 profiles compared to 63 without them:
 
 ```{r}
-profiles <- cbc_profiles(
-  price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  freshness = c('Poor', 'Average', 'Excellent'),
-  type = list(
-    "Fuji" = list(
-        price = c(2, 2.5, 3)
-    ),
-    "Gala" = list(
-        price = c(1, 1.5, 2)
-    ),
-    "Honeycrisp" = list(
-        price = c(2.5, 3, 3.5, 4, 4.5, 5),
-        freshness = c("Average", "Excellent")
-    )
-  )
+restricted_profiles <- cbcTools::cbc_restrict(
+    profiles,
+    list(type = "Fuji", price = 2),
+    list(type = "Gala", price = 1),
+    list(type = "Honeycrisp", price = 1),
+    list(type = "Honeycrisp", freshness = "Poor")
 )
 
-nrow(profiles)
-head(profiles)
-tail(profiles)
-```
-
-```{r, include=FALSE}
-profiles <- cbc_profiles(
-  price     = seq(1, 4, 0.5), # $ per pound
-  type      = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Poor', 'Average', 'Excellent')
-)
+nrow(restricted_profiles)
+head(restricted_profiles)
+tail(restricted_profiles)
 ```
 
 # Generate survey designs
