@@ -4,41 +4,18 @@
 #' attribute levels.
 #' @param ... A series of vectors defining the levels of each attribute. Each
 #' argument should be named according to the attribute name, e.g.,
-#' `price = c(1, 2, 3)`. Conditional attribute levels can also be included by
-#' setting each level of an attribute to a named list that determines the
-#' levels of other attributes for that specific level.
+#' `price = c(1, 2, 3)`.
 #' @return A data frame of all possible combinations of attribute levels.
 #' @export
 #' @examples
 #' library(cbcTools)
 #'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
+#' # Generate all profiles for a simple conjoint experiment about apples
 #' profiles <- cbc_profiles(
 #'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
 #'   type      = c("Fuji", "Gala", "Honeycrisp"),
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
-#'
-#' # Generate profiles for with conditional levels
-#' profiles <- cbc_profiles(
-#'   price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   freshness = c("Excellent", "Average", "Poor"),
-#'   type = list(
-#'     "Fuji" = list(
-#'         price = c(2, 2.5, 3)
-#'     ),
-#'     "Gala" = list(
-#'         price = c(1, 1.5, 2)
-#'     ),
-#'     "Honeycrisp" = list(
-#'         price = c(2.5, 3, 3.5, 4, 4.5, 5),
-#'         freshness = c("Excellent", "Average")
-#'     )
-#'   )
-#' )
-#'
 cbc_profiles <- function(...) {
   levels <- list(...)
   profiles <- expand.grid(levels)
@@ -46,42 +23,45 @@ cbc_profiles <- function(...) {
   return(profiles)
 }
 
-# Restrict profiles - this is the left over code from the previous approach
-# Coming back to this later to clean this up
-cbc_restrict <- function(profiles, restrictions) {
-  # Make all possible profiles
-  new_levels <- levels
-  cond_indices <- which(cond_check == FALSE)
-  for (i in seq_len(length(cond_indices))) {
-    att <- levels[[cond_indices[i]]]
-    new_levels[[cond_indices[i]]] <- names(att)
-  }
-  profiles <- expand.grid(new_levels)
-  # Now filter out profiles based on conditionals
-  for (i in seq_len(length(cond_indices))) {
-    att_name <- names(cond_indices[i])
-    att <- levels[[cond_indices[i]]]
-    for (j in seq_len(length(att))) {
-      att_level <- names(att)[[j]]
-      conditions <- att[[j]]
-      for (k in seq_len(length(conditions))) {
-        cond_att <- names(conditions)[k]
-        cond_levels <- conditions[[k]]
-        indices_att <- which(profiles[[att_name]] == att_level)
-        indices_cond <- which(profiles[[cond_att]] %in% cond_levels)
-        indices_drop <- setdiff(indices_att, indices_cond)
-        profiles <- profiles[-indices_drop,]
-      }
-    }
-  }
-  row.names(profiles) <- NULL
-  profiles <- add_profile_ids(profiles)
-  return(profiles)
+#' Obtain a restricted set of profiles
+#'
+#' This function returns a restricted set of profiles as a data frame.
+#' @param profiles A data frame in which each row is a possible profile.
+#' This can be generated using the `cbc_profiles()` function.
+#' @param ... Lists defining pairs of restrictions for attributes and levels.
+#' Each restriction should be provided as a named list defining one restriction,
+#' e.g. `list(type = 'Fuji', freshness = 'Poor')`.
+#' @return A restricted set of profiles as a data frame.
+#' @export
+#' @examples
+#' library(cbcTools)
+#'
+#' # Generate all profiles for a simple conjoint experiment about apples
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c('Poor', 'Average', 'Excellent')
+#' )
+#'
+#' # Obtain a restricted subset of profiles
+#' df <- cbc_restrictions(
+#'     profiles,
+#'     list(type = 'Fuji', freshness = 'Poor'),
+#'     list(price = 3, type = 'Gala')
+#' )
+cbc_restrict <- function(profiles, ...) {
+    restrictions <- list(...)
+    restrict_rows <- unlist(lapply(restrictions, function(x) which(
+        (profiles[names(x)[1]] == x[[1]]) & (profiles[names(x)[2]] == x[[2]])
+    )))
+    profiles <- profiles[-restrict_rows,]
+    profiles <- add_profile_ids(profiles)
+    return(profiles)
 }
 
 add_profile_ids <- function(profiles) {
   profiles$profileID <- seq(nrow(profiles))
-  varNames <- varNames <- setdiff(names(profiles), "profileID")
-  profiles <- profiles[, c("profileID", varNames)]
+  profiles <- profiles[, c("profileID", setdiff(names(profiles), "profileID"))]
+  row.names(profiles) <- NULL
   return(profiles)
 }
