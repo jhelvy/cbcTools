@@ -1,3 +1,11 @@
+check_inputs_profiles <- function(levels) {
+  for (level in levels) {
+    if (!is.vector(level) | is.null(names(level))) {
+      stop("Each item in ... must be a named vector where the names are attributes and the values in the vector are levels of that attribute.")
+    }
+  }
+}
+
 check_inputs_restrict <- function(profiles, restrictions) {
   # Check if profiles is a data frame
   if (!is.data.frame(profiles)) {

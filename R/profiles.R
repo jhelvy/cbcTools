@@ -2,9 +2,8 @@
 #'
 #' This function creates a data frame of of all possible combinations of
 #' attribute levels.
-#' @param ... A series of vectors defining the levels of each attribute. Each
-#' argument should be named according to the attribute name, e.g.,
-#' `price = c(1, 2, 3)`.
+#' @param ... Any number of named vectors defining each attribute and their levels, 
+#' e.g. `price = c(1, 2, 3)`. Separate each vector by a comma.
 #' @return A data frame of all possible combinations of attribute levels.
 #' @export
 #' @examples
@@ -18,6 +17,7 @@
 #' )
 cbc_profiles <- function(...) {
   levels <- list(...)
+  check_inputs_profiles(levels)
   profiles <- expand.grid(levels)
   profiles <- add_profile_ids(profiles)
   return(profiles)
@@ -31,7 +31,7 @@ cbc_profiles <- function(...) {
 #' @param ... Any number of lists defining pairs of restricted attribute levels.
 #' Each restriction should be provided as a named list defining one restricted pair,
 #' where the item name is the attribute and the value is the level, e.g. 
-#' `list(type = 'Fuji', freshness = 'Poor')`.
+#' `list(type = 'Fuji', freshness = 'Poor')`. Separate each list by a comma.
 #' @return A restricted set of profiles as a data frame.
 #' @export
 #' @examples
