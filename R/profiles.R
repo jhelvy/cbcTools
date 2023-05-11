@@ -51,9 +51,10 @@ cbc_profiles <- function(...) {
 #' )
 cbc_restrict <- function(profiles, ...) {
     restrictions <- list(...)
-    restrict_rows <- unlist(lapply(restrictions, function(x) which(
+    check_inputs_restrict(profiles, restrictions)
+    restrict_rows <- unique(unlist(lapply(restrictions, function(x) which(
         (profiles[names(x)[1]] == x[[1]]) & (profiles[names(x)[2]] == x[[2]])
-    )))
+    ))))
     profiles <- profiles[-restrict_rows,]
     profiles <- add_profile_ids(profiles)
     return(profiles)

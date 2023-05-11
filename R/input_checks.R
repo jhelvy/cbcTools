@@ -1,3 +1,45 @@
+check_inputs_restrict <- function(profiles, restrictions) {
+  # Check if profiles is a data frame
+  if (!is.data.frame(profiles)) {
+    stop("The 'profiles' argument must be a data frame.")
+  }
+  
+  # Check if profiles has been created by the cbc_profiles function
+  if (!"profileID" %in% colnames(profiles)) {
+    stop(
+        "The 'profiles' data frame must be created using the 'cbc_profiles' function ",
+        "and contain the 'profileID' variable."
+    )
+  }
+  
+  # Check if restrictions input contains only lists
+  if (!all(sapply(restrictions, is.list))) {
+    stop("The '...' input must contain only lists defining restricted pairs of attribute levels.")
+  }
+  
+  # Check if each list has exactly 2 items
+  if (!all(sapply(restrictions, function(x) length(x) == 2))) {
+    stop("Each list in the '...' input must contain exactly 2 items defining restricted pairs of attribute levels.")
+  }
+  
+  # Check if the restricted combinations of attributes and levels are present in the profiles data frame
+  for (restriction in restrictions) {
+    attribute1 <- names(restriction)[1]
+    attribute2 <- names(restriction)[2]
+    level1 <- restriction[[1]]
+    level2 <- restriction[[2]]
+    
+    att_names <- colnames(profiles)
+    if (!(attribute1 %in% att_names & attribute2 %in% att_names)) {
+      stop("The attributes in the restriction lists must be present in the 'profiles' data frame.")
+    }
+    
+    if (!(level1 %in% profiles[[attribute1]] && level2 %in% profiles[[attribute2]])) {
+      stop("The levels in the restriction lists must be present in the 'profiles' data frame.")
+    }
+  }
+}
+
 check_inputs_design <- function(
     profiles,
     n_resp,
