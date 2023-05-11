@@ -1,5 +1,7 @@
 # cbcTools (development version)
 
+- Add `cbc_restrict()` function to improve UI for adding restrictions to profiles.
+
 # cbcTools 0.3.0
 
 - Bug fix: modify code in `cbc_design()` to avoid duplicate choice sets for the same respondents; addresses #7.
