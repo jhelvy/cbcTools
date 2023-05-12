@@ -1,6 +1,6 @@
 Package: cbcTools
 Title: Design and Evaluate Choice-Based Conjoint Survey Experiments
-Version: 0.3.1
+Version: 0.3.2
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",
@@ -20,6 +20,7 @@ Suggests:
     testthat,
     tibble
 Imports:
+    dplyr,
     fastDummies,
     ggplot2,
     idefix,

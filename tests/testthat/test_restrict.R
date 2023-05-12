@@ -7,7 +7,7 @@ test_that("Restrict profiles based on a single restriction", {
   )
   restricted_profiles <- cbcTools::cbc_restrict(
     profiles,
-    list(type = "Fuji", price = 1.5)
+    type == "Fuji" & price == 1.5
   )
   expected_profiles <- as.data.frame(
      tibble::tribble(
@@ -31,8 +31,8 @@ test_that("Restrict profiles based on two restrictions", {
     )
     restricted_profiles <- cbcTools::cbc_restrict(
         profiles,
-        list(type = "Fuji", price = 1.5),
-        list(type = "Gala", price = 2)
+        type == "Fuji" & price == 1.5,
+        type == "Gala" & price == 2
     )
     expected_profiles <- as.data.frame(
         tibble::tribble(
@@ -56,10 +56,10 @@ test_that("Restrict profiles based on a complex set of restrictions", {
     )
     restricted_profiles <- cbcTools::cbc_restrict(
         profiles,
-        list(type = "Fuji", price = 2),
-        list(type = "Gala", price = 1),
-        list(type = "Honeycrisp", price = 1),
-        list(type = "Honeycrisp", freshness = "Poor")
+        type == "Fuji" & price == 2,
+        type == "Gala" & price == 1,
+        type == "Honeycrisp" & price == 1,
+        type == "Honeycrisp" & freshness == "Poor"
     )
     expected_profiles <- as.data.frame(
         tibble::tribble(
