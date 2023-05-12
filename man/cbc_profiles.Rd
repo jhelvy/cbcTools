@@ -7,11 +7,8 @@
 cbc_profiles(...)
 }
 \arguments{
-\item{...}{A series of vectors defining the levels of each attribute. Each
-argument should be named according to the attribute name, e.g.,
-\code{price = c(1, 2, 3)}. Conditional attribute levels can also be included by
-setting each level of an attribute to a named list that determines the
-levels of other attributes for that specific level.}
+\item{...}{Any number of named vectors defining each attribute and their levels,
+e.g. \code{price = c(1, 2, 3)}. Separate each vector by a comma.}
 }
 \value{
 A data frame of all possible combinations of attribute levels.
@@ -23,31 +20,10 @@ attribute levels.
 \examples{
 library(cbcTools)
 
-# A simple conjoint experiment about apples
-
-# Generate all possible profiles
+# Generate all profiles for a simple conjoint experiment about apples
 profiles <- cbc_profiles(
   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
   type      = c("Fuji", "Gala", "Honeycrisp"),
   freshness = c('Poor', 'Average', 'Excellent')
 )
-
-# Generate profiles for with conditional levels
-profiles <- cbc_profiles(
-  price = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  freshness = c("Excellent", "Average", "Poor"),
-  type = list(
-    "Fuji" = list(
-        price = c(2, 2.5, 3)
-    ),
-    "Gala" = list(
-        price = c(1, 1.5, 2)
-    ),
-    "Honeycrisp" = list(
-        price = c(2.5, 3, 3.5, 4, 4.5, 5),
-        freshness = c("Excellent", "Average")
-    )
-  )
-)
-
 }
