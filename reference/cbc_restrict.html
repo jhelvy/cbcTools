@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.2</span>
       </span>
     </div>
 
@@ -73,10 +73,10 @@ This can be generated using the <code><a href="cbc_profiles.html">cbc_profiles()
 
 
 <dt>...</dt>
-<dd><p>Any number of lists defining pairs of restricted attribute levels.
-Each restriction should be provided as a named list defining one restricted pair,
-where the item name is the attribute and the value is the level, e.g.
-<code>list(type = 'Fuji', freshness = 'Poor')</code>. Separate each list by a comma.</p></dd>
+<dd><p>Any number of restricted pairs of attribute levels, defined as
+pairs of logical expressions separated by commas. For example, the
+restriction <code>type == 'Fuji' &amp; freshness == 'Poor'</code> will eliminate profiles
+such that <code>"Fuji"</code> type apples will never be shown with <code>"Poor"</code> freshness.</p></dd>
 
 </dl></div>
     <div id="value">
@@ -97,11 +97,20 @@ where the item name is the attribute and the value is the level, e.g.
 <span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Obtain a restricted subset of profiles</span></span></span>
+<span class="r-in"><span><span class="co"># Obtain a restricted subset of profiles based on pairs of logical</span></span></span>
+<span class="r-in"><span><span class="co"># expressions. The example below contains the following restrictions:</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># - `"Gala"` apples will not be shown with the prices `1.5`, `2.5`, &amp; `3.5`.</span></span></span>
+<span class="r-in"><span><span class="co"># - `"Honeycrisp"` apples will not be shown with prices less than `2`.</span></span></span>
+<span class="r-in"><span><span class="co"># - `"Honeycrisp"` apples will not be shown with the `"Poor"` freshness.</span></span></span>
+<span class="r-in"><span><span class="co"># - `"Fuji"` apples will not be shown with the `"Excellent"` freshness.</span></span></span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">profiles_restricted</span> <span class="op">&lt;-</span> <span class="fu">cbc_restrict</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">'Fuji'</span>, freshness <span class="op">=</span> <span class="st">'Poor'</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>price <span class="op">=</span> <span class="fl">3</span>, type <span class="op">=</span> <span class="st">'Gala'</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">type</span> <span class="op">==</span> <span class="st">"Gala"</span> <span class="op">&amp;</span> <span class="va">price</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">2.5</span>, <span class="fl">3.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">type</span> <span class="op">==</span> <span class="st">"Honeycrisp"</span> <span class="op">&amp;</span> <span class="va">price</span> <span class="op">&gt;</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>    <span class="va">type</span> <span class="op">==</span> <span class="st">"Honeycrisp"</span> <span class="op">&amp;</span> <span class="va">freshness</span> <span class="op">==</span> <span class="st">"Poor"</span>,</span></span>
+<span class="r-in"><span>    <span class="va">type</span> <span class="op">==</span> <span class="st">"Fuji"</span> <span class="op">&amp;</span> <span class="va">freshness</span> <span class="op">==</span> <span class="st">"Excellent"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
