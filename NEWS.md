@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.3.2
+
+- Modify how restrictions are defined in the `cbc_restrict()` function to allow users to provide expressions.
+
 # cbcTools 0.3.1
 
 - Add `cbc_restrict()` function to improve UI for adding restrictions to profiles.

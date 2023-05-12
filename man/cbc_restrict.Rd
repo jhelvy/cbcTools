@@ -31,10 +31,19 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Obtain a restricted subset of profiles based on provided restrictions
+# Obtain a restricted subset of profiles based on pairs of logical
+# expressions. The example below contains the following restrictions:
+
+# - `"Gala"` apples will not be shown with the prices `1.5`, `2.5`, & `3.5`.
+# - `"Honeycrisp"` apples will not be shown with prices less than `2`.
+# - `"Honeycrisp"` apples will not be shown with the `"Poor"` freshness.
+# - `"Fuji"` apples will not be shown with the `"Excellent"` freshness.
+
 profiles_restricted <- cbc_restrict(
     profiles,
-    type == "Fuji" & price <= 1.5,
-    type == 'Fuji' & freshness == 'Poor'
+    type == "Gala" & price \%in\% c(1.5, 2.5, 3.5),
+    type == "Honeycrisp" & price > 2,
+    type == "Honeycrisp" & freshness == "Poor",
+    type == "Fuji" & freshness == "Excellent"
 )
 }
