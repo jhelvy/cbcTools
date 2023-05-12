@@ -52,7 +52,7 @@ Depending on the context of your survey, you may wish to eliminate some profiles
 If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of lists defining pairs of restricted attribute levels. In the example below, some combinations of `type` and `price` are restricted along with the restriction of `"Poor"` freshness of `"Honeycrisp"` type apples. With these restrictions, there are now only 48 profiles compared to 63 without them:
 
 ```{r}
-restricted_profiles <- cbcTools::cbc_restrict(
+restricted_profiles <- cbc_restrict(
     profiles,
     list(type = "Fuji", price = 2),
     list(type = "Gala", price = 1),

@@ -32,7 +32,7 @@ profiles <- cbc_profiles(
 )
 
 # Obtain a restricted subset of profiles
-profiles_restricted <- cbc_restrictions(
+profiles_restricted <- cbc_restrict(
     profiles,
     list(type = 'Fuji', freshness = 'Poor'),
     list(price = 3, type = 'Gala')
