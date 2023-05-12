@@ -15,3 +15,4 @@ vignettes
 ^foo\.R$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+.vscode

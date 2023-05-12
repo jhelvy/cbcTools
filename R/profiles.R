@@ -51,9 +51,11 @@ cbc_profiles <- function(...) {
 #'     type == 'Fuji' & freshness == 'Poor'
 #' )
 cbc_restrict <- function(profiles, ...) {
-    restrictions <- rlang::enexprs(...)
-    drop_rows <- lapply(restrictions, function(x) subset(profiles, eval(x)))
-    drop_ids <- unique(unlist(lapply(drop_rows, function(x) x$profileID)))
+    check_inputs_restrict(profiles)
+    drop_ids <- unique(unlist(lapply(
+        rlang::enquos(...),
+        function(x) dplyr::filter(profiles, !!x) |> dplyr::pull(.data$profileID)
+    )))
     profiles <- profiles[-drop_ids,]
     profiles <- add_profile_ids(profiles)
     return(profiles)

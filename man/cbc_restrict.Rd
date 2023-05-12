@@ -10,10 +10,10 @@ cbc_restrict(profiles, ...)
 \item{profiles}{A data frame in which each row is a possible profile.
 This can be generated using the \code{cbc_profiles()} function.}
 
-\item{...}{Any number of lists defining pairs of restricted attribute levels.
-Each restriction should be provided as a named list defining one restricted pair,
-where the item name is the attribute and the value is the level, e.g.
-\code{list(type = 'Fuji', freshness = 'Poor')}. Separate each list by a comma.}
+\item{...}{Any number of restricted pairs of attribute levels, defined as
+pairs of logical expressions separated by commas. For example, the
+restriction \code{type == 'Fuji' & freshness == 'Poor'} will eliminate profiles
+such that \code{"Fuji"} type apples will never be shown with \code{"Poor"} freshness.}
 }
 \value{
 A restricted set of profiles as a data frame.
@@ -31,10 +31,10 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Obtain a restricted subset of profiles
+# Obtain a restricted subset of profiles based on provided restrictions
 profiles_restricted <- cbc_restrict(
     profiles,
-    list(type = 'Fuji', freshness = 'Poor'),
-    list(price = 3, type = 'Gala')
+    type == "Fuji" & price <= 1.5,
+    type == 'Fuji' & freshness == 'Poor'
 )
 }
