@@ -47,22 +47,29 @@ tail(profiles)
 
 ## Restricted profiles 
 
-Depending on the context of your survey, you may wish to eliminate some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). **WARNING: including restrictions in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
+Depending on the context of your survey, you may wish to eliminate some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). 
 
-If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of restricted pairs of attribute levels, defined as pairs of logical expressions separated by commas. In the example below, there are restrictions on certain combinations of `type` and `price` levels as we as the restriction that `"Poor"` freshness not be shown for `"Honeycrisp"` type apples. With these restrictions, there are now only 48 profiles compared to 63 without them.
+> **CAUTION: including restrictions in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
+
+If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of restricted pairs of attribute levels, defined as pairs of logical expressions separated by commas. In the example below, I include the following restrictions:
+
+- `"Gala"` apples will not be shown with the prices `1.5`, `2.5`, and `3.5`.
+- `"Honeycrisp"` apples will not be shown with prices less than `2`.
+- `"Honeycrisp"` apples will not be shown with the `"Poor"` freshness.
+- `"Fuji"` apples will not be shown with the `"Excellent"` freshness.
+
+With these restrictions, there are now only 32 profiles compared to 63 without them:
 
 ```{r}
 restricted_profiles <- cbc_restrict(
     profiles,
-    type == "Fuji" & price == 2,
-    type == "Gala" & price == 1,
-    type == "Honeycrisp" & price == 1,
-    type == "Honeycrisp" & freshness == "Poor"
+    type == "Gala" & price %in% c(1.5, 2.5, 3.5),
+    type == "Honeycrisp" & price > 2,
+    type == "Honeycrisp" & freshness == "Poor", 
+    type == "Fuji" & freshness == "Excellent"
 )
 
-nrow(restricted_profiles)
-head(restricted_profiles)
-tail(restricted_profiles)
+restricted_profiles
 ```
 
 # Generate survey designs
