@@ -451,7 +451,7 @@ make_design_deff <- function(
     # Join on profileIDs to design
     design <- design_raw$design
     names(design) <- varnames
-    design <- join_profiles(design, profiles, varnames, ids$continuous)
+    design <- join_profiles(design, profiles, varnames, ids)
     if (no_choice) {
       design <- add_no_choice_deff(design, n_alts, varnames[ids$discrete])
     }
@@ -507,7 +507,7 @@ defineCandidateSet <- function(
   return(cand_set_res)
 }
 
-join_profiles <- function(design, profiles, varnames, id_continuous) {
+join_profiles <- function(design, profiles, varnames, ids) {
   # Replaces the generated design with rows from profiles, which ensures
   # factor levels in profiles are maintained in design
 
@@ -515,12 +515,12 @@ join_profiles <- function(design, profiles, varnames, id_continuous) {
   design$row_id <- seq(nrow(design))
 
   # Convert numeric columns to actual numbers
-  for (id in which(id_continuous)) {
+  for (id in which(ids$continuous)) {
     design[,id] <- as.numeric(design[,id])
   }
 
   # Convert character types to factors and set same levels as profiles
-  for (id in which(!id_continuous)) {
+  for (id in which(ids$discrete)) {
     design[,id] <- factor(design[,id], levels = levels(profiles[,id+1]))
   }
 
