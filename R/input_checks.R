@@ -65,14 +65,37 @@ check_inputs_design <- function(
 
     # Check if there are missing levels in priors (if priors are used)
     if (!is.null(priors)) {
+
+        # Check that prior names aren't missing
         prior_names <- names(priors)
-        profile_names <- names(profiles[,2:ncol(profiles)])
-        missing <- setdiff(profile_names, prior_names)
+        profile_lvls <- profiles[,2:ncol(profiles)]
+        missing <- setdiff(names(profile_lvls), prior_names)
         if (length(missing) > 0) {
             stop(
                 "'priors' is missing the following variables: \n\n",
                 paste(missing, collapse = "\n")
             )
+        }
+
+        # Check that prior levels aren't missing
+        ids <- get_type_ids(profile_lvls)
+        for (id in which(ids$discrete)) {
+            n_lvls <- length(unique(profile_lvls[,id])) - 1
+            if (length(priors[[id]]) != n_lvls) {
+                stop(
+                    "Invalid number of values provided in 'priors' for the '",
+                    prior_names[id], "' attribute. Please provide ", n_lvls,
+                    " values"
+                )
+            }
+        }
+        for (id in which(ids$continuous)) {
+            if (length(priors[[id]]) != 1) {
+                stop(
+                    "Invalid number of values provided in 'priors' for the '",
+                    prior_names[id], "' attribute. Please provide 1 value"
+                )
+            }
         }
     }
 
