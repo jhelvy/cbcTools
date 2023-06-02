@@ -351,12 +351,19 @@ make_design_deff <- function(
     }
 
     # Set up levels and coding
-    lvl.names <- unname(lapply(profile_lvls, function(x) unique(x)))
-    lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
-    coding <- rep("C", length(lvls))
     types <- get_col_types(profile_lvls)
     id_discrete <- types %in% c("factor", "character")
     id_continuous <- !id_discrete
+    lvl.names <- list()
+    for (i in seq_len(ncol(profile_lvls))) {
+        if (id_discrete[i]) {
+            lvl.names[[i]] <- levels(profile_lvls[,i])
+        } else {
+            lvl.names[[i]] <- unique(profile_lvls[,i])
+        }
+    }
+    lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
+    coding <- rep("C", length(lvls))
     c.lvls <- NULL
     if (any(id_continuous)) {
         c.lvls <- lvl.names[id_continuous]
