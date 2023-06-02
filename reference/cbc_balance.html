@@ -18,7 +18,7 @@ each level for each attribute across all choice questions in the design."><meta 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.3</span>
       </span>
     </div>
 
@@ -33,7 +33,7 @@ each level for each attribute across all choice questions in the design."><meta 
   <a href="../reference/index.html">Reference</a>
 </li>
 <li>
-  <a href="../articles/basic_usage.html">Basic Usage</a>
+  <a href="../articles/usage.html">Usage</a>
 </li>
 <li>
   <a href="../news/index.html">Changelog</a>
@@ -110,17 +110,17 @@ each attribute levels in shown in the design.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   1 1.5   2 2.5   3 3.5   4 4.5   5 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 571 621 654 607 577 547 580 645 598 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 670 610 566 627 613 543 634 574 563 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       Fuji       Gala Honeycrisp </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       1814       1782       1804 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       1820       1804       1776 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Poor   Average Excellent </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      1824      1807      1769 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      1790      1804      1806 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> =====================================</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Pairwise attribute level counts</span>
@@ -128,38 +128,38 @@ each attribute levels in shown in the design.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price x type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Fuji Gala Honeycrisp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1814 1782       1804</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   571  202  174        195</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 621  217  208        196</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   654  229  216        209</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 607  211  197        199</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   577  189  208        180</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 547  182  170        195</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   580  187  183        210</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 645  212  226        207</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   598  185  200        213</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1820 1804       1776</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   670  217  233        220</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 610  201  206        203</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   566  190  176        200</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 627  220  209        198</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   613  209  210        194</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 543  180  186        177</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   634  214  209        211</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 574  204  201        169</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   563  185  174        204</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price x freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         Poor Average Excellent</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1824    1807      1769</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   571  199     192       180</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 621  194     218       209</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   654  233     214       207</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 607  199     214       194</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   577  187     194       196</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 547  176     164       207</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   580  205     199       176</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 645  230     216       199</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   598  201     196       201</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      NA 1790    1804      1806</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   670  236     218       216</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1.5 610  193     211       206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   566  190     195       181</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2.5 627  208     204       215</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   613  196     211       206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3.5 543  171     194       178</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   634  210     218       206</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4.5 574  207     178       189</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   563  179     175       209</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type x freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 Poor Average Excellent</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              NA 1824    1807      1769</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Fuji       1814  613     625       576</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Gala       1782  614     586       582</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Honeycrisp 1804  597     596       611</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              NA 1790    1804      1806</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Fuji       1820  607     600       613</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Gala       1804  604     589       611</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Honeycrisp 1776  579     615       582</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect the design overlap</span></span></span>
@@ -171,17 +171,17 @@ each attribute levels in shown in the design.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   19  457 1324 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   17  485 1298 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  205 1173  422 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  171 1182  447 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1    2    3 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  170 1223  407 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  168 1231  401 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
