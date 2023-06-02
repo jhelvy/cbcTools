@@ -1,8 +1,8 @@
 ---
-title: "Basic Usage"
+title: "Usage"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Basic Usage}
+  %\VignetteIndexEntry{Usage}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-This package provides a set of tools for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing surveys:
+This package provides functions for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing surveys:
 
 <center>
 <img src="https://jhelvy.github.io/cbcTools/reference/figures/program_diagram.png" width=100%>

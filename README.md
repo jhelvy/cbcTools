@@ -10,19 +10,17 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 [![](http://cranlogs.r-pkg.org/badges/grand-total/cbcTools?color=blue)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
-This package provides a set of tools for designing surveys and
-conducting power analyses for choice-based conjoint survey experiments
-in R. Each function in the package begins with `cbc_` and supports a
-step in the following process for designing and analyzing surveys:
+Functions for designing surveys and conducting power analyses for
+choice-based conjoint survey experiments in R. Each function in the
+package begins with `cbc_` and supports a step in the following process
+for designing and analyzing surveys:
 
 ![](man/figures/program_diagram.png)
 
-# Basic Usage
+# Usage
 
-View the [basic
-usage](https://jhelvy.github.io/cbcTools/articles/basic_usage.html) page
-for details on how to use **cbcTools** to design choice-based conjoint
-experiments.
+View the [usage](https://jhelvy.github.io/cbcTools/articles/usage.html)
+page for details on how to use **cbcTools**.
 
 # Installation
 
