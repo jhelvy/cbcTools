@@ -1,5 +1,10 @@
 # cbcTools (development version)
 
+# cbcTools 0.3.3
+
+- Bug fix in `cbc_design()` where factor level ordering for categorical variables were being mis-ordered.
+- Added additional input check for appropriate `priors` in `cbc_design()`.
+
 # cbcTools 0.3.2
 
 - Modify how restrictions are defined in the `cbc_restrict()` function to allow users to provide expressions.
