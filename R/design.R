@@ -401,7 +401,7 @@ make_design_deff <- function(
 
     if (profiles_restricted & (method == "CEA")) {
       # "CEA" method only works with unrestricted profile set
-      method == "Modfed"
+      method <- "Modfed"
       warning(
         'The "CEA" algorithm requires the use of an unrestricted set of ',
         'profiles, so "Modfed" is now being used instead.'
@@ -424,8 +424,7 @@ make_design_deff <- function(
     } else {
         D <- idefix::Modfed(
             cand.set = defineCandidateSet(
-              lvls, coding, c.lvls, profiles, ids$continuous,
-              profiles_restricted
+              lvls, coding, c.lvls, profile_lvls, ids, profiles_restricted
             ),
             par.draws = par_draws,
             n.alts = n_alts,
@@ -484,23 +483,36 @@ make_design_deff <- function(
 }
 
 defineCandidateSet <- function(
-    lvls, coding, c.lvls, profiles, id_continuous, profiles_restricted
+    lvls, coding, c.lvls, profile_lvls, ids, profiles_restricted
 ) {
+  # Make candidate set with profiles, assuming non-restricted
   cand_set <- idefix::Profiles(
     lvls = lvls,
     coding = coding,
     c.lvls = c.lvls
   )
   if (!profiles_restricted) { return(cand_set) }
-  # Manually dummy-code profiles with restrictions
-  cand_set_res <- profiles[-1]
+
+  # If restricted, need to manually dummy-code profiles to avoid
+  # including restricted profiles
   cand_set_res <- fastDummies::dummy_cols(
-    cand_set_res,
-    select_columns = names(cand_set_res)[!id_continuous],
-    remove_first_dummy = TRUE
+    profile_lvls,
+    select_columns = names(profile_lvls)[ids$discrete],
+    remove_first_dummy = TRUE,
+    remove_selected_columns = TRUE
   )
-  cols_keep <- c(which(id_continuous), ncol(profiles):ncol(cand_set_res))
-  cand_set_res <- cand_set_res[,cols_keep]
+  name_order <- names(profile_lvls)
+  names_coded <- names(cand_set_res)
+  cols <- c()
+  for (i in seq_len(length(coding))) {
+    if (coding[i] == "C") {
+      name_match <- name_order[i]
+    } else {
+      name_match <- names_coded[grepl(paste0(name_order[i], "_"), names_coded)]
+    }
+    cols <- c(cols, name_match)
+  }
+  cand_set_res <- cand_set_res[,cols]
   names(cand_set_res) <- colnames(cand_set)
   cand_set_res <- as.matrix(cand_set_res)
   row.names(cand_set_res) <- seq(nrow(cand_set_res))
