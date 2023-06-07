@@ -44,7 +44,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.3.9001</span>
       </span>
     </div>
 
@@ -271,12 +271,12 @@ all respondents.</li>
 <span><span class="co">#&gt; [1] 16200     8</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span> <span class="co"># Preview first 6 rows</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness</span></span>
-<span><span class="co">#&gt; 1         2      1   1     1     1   1.5       Fuji      Poor</span></span>
-<span><span class="co">#&gt; 2        28      1   1     2     1   4.0       Fuji   Average</span></span>
-<span><span class="co">#&gt; 3        48      1   1     3     1   3.5       Fuji Excellent</span></span>
-<span><span class="co">#&gt; 4        31      1   2     1     2   2.0       Gala   Average</span></span>
-<span><span class="co">#&gt; 5        21      1   2     2     2   4.0 Honeycrisp      Poor</span></span>
-<span><span class="co">#&gt; 6        53      1   2     3     2   2.5       Gala Excellent</span></span></code></pre></div>
+<span><span class="co">#&gt; 1        41      1   1     1     1   3.5 Honeycrisp   Average</span></span>
+<span><span class="co">#&gt; 2        62      1   1     2     1   3.5 Honeycrisp Excellent</span></span>
+<span><span class="co">#&gt; 3        42      1   1     3     1   4.0 Honeycrisp   Average</span></span>
+<span><span class="co">#&gt; 4        17      1   2     1     2   2.0 Honeycrisp      Poor</span></span>
+<span><span class="co">#&gt; 5        38      1   2     2     2   2.0 Honeycrisp   Average</span></span>
+<span><span class="co">#&gt; 6        59      1   2     3     2   2.0 Honeycrisp Excellent</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="labeled-designs-a-k-a--alternative-specific-designs">Labeled designs (a.k.a. “alternative-specific” designs)<a class="anchor" aria-label="anchor" href="#labeled-designs-a-k-a--alternative-specific-designs"></a>
@@ -301,12 +301,12 @@ argument is overridden. Here is an example labeled survey using the
 <span><span class="co">#&gt; [1] 16200     8</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_labeled</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness</span></span>
-<span><span class="co">#&gt; 1        25      1   1     1     1   2.5       Fuji   Average</span></span>
-<span><span class="co">#&gt; 2        53      1   1     2     1   2.5       Gala Excellent</span></span>
-<span><span class="co">#&gt; 3        19      1   1     3     1   3.0 Honeycrisp      Poor</span></span>
-<span><span class="co">#&gt; 4        28      1   2     1     2   4.0       Fuji   Average</span></span>
-<span><span class="co">#&gt; 5         8      1   2     2     2   1.0       Gala      Poor</span></span>
-<span><span class="co">#&gt; 6        20      1   2     3     2   3.5 Honeycrisp      Poor</span></span></code></pre></div>
+<span><span class="co">#&gt; 1        44      1   1     1     1   1.5       Fuji Excellent</span></span>
+<span><span class="co">#&gt; 2        10      1   1     2     1   2.0       Gala      Poor</span></span>
+<span><span class="co">#&gt; 3        41      1   1     3     1   3.5 Honeycrisp   Average</span></span>
+<span><span class="co">#&gt; 4        25      1   2     1     2   2.5       Fuji   Average</span></span>
+<span><span class="co">#&gt; 5        14      1   2     2     2   4.0       Gala      Poor</span></span>
+<span><span class="co">#&gt; 6        16      1   2     3     2   1.5 Honeycrisp      Poor</span></span></code></pre></div>
 <p>In the above example, you can see in the first six rows of the survey
 that the <code>type</code> attribute is always fixed to be the same
 order, ensuring that each level in the <code>type</code> attribute will
@@ -332,18 +332,18 @@ dummy-code the “no choice” alternative.</p>
 <span><span class="co">#&gt; [1] 21600    13</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_nochoice</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price type_Fuji type_Gala type_Honeycrisp</span></span>
-<span><span class="co">#&gt; 1        25      1   1     1     1   2.5         1         0               0</span></span>
-<span><span class="co">#&gt; 2        16      1   1     2     1   1.5         0         0               1</span></span>
-<span><span class="co">#&gt; 3        13      1   1     3     1   3.5         0         1               0</span></span>
+<span><span class="co">#&gt; 1        12      1   1     1     1   3.0         0         1               0</span></span>
+<span><span class="co">#&gt; 2        38      1   1     2     1   2.0         0         0               1</span></span>
+<span><span class="co">#&gt; 3        47      1   1     3     1   3.0         1         0               0</span></span>
 <span><span class="co">#&gt; 4         0      1   1     4     1   0.0         0         0               0</span></span>
-<span><span class="co">#&gt; 5        61      1   2     1     2   3.0         0         0               1</span></span>
-<span><span class="co">#&gt; 6         6      1   2     2     2   3.5         1         0               0</span></span>
+<span><span class="co">#&gt; 5         7      1   2     1     2   4.0         1         0               0</span></span>
+<span><span class="co">#&gt; 6        16      1   2     2     2   1.5         0         0               1</span></span>
 <span><span class="co">#&gt;   freshness_Poor freshness_Average freshness_Excellent no_choice</span></span>
-<span><span class="co">#&gt; 1              0                 1                   0         0</span></span>
-<span><span class="co">#&gt; 2              1                 0                   0         0</span></span>
-<span><span class="co">#&gt; 3              1                 0                   0         0</span></span>
+<span><span class="co">#&gt; 1              1                 0                   0         0</span></span>
+<span><span class="co">#&gt; 2              0                 1                   0         0</span></span>
+<span><span class="co">#&gt; 3              0                 0                   1         0</span></span>
 <span><span class="co">#&gt; 4              0                 0                   0         1</span></span>
-<span><span class="co">#&gt; 5              0                 0                   1         0</span></span>
+<span><span class="co">#&gt; 5              1                 0                   0         0</span></span>
 <span><span class="co">#&gt; 6              1                 0                   0         0</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -384,12 +384,12 @@ and <code>'Honeycrisp'</code>)</li>
 <span><span class="co">#&gt; [1] 16200     9</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_db_eff</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness blockID</span></span>
-<span><span class="co">#&gt; 1         8      1   1     1     1   1.0       Gala      Poor       1</span></span>
-<span><span class="co">#&gt; 2        62      1   1     2     1   3.5 Honeycrisp Excellent       1</span></span>
-<span><span class="co">#&gt; 3        22      1   1     3     1   1.0       Fuji   Average       1</span></span>
-<span><span class="co">#&gt; 4        17      1   2     1     2   2.0 Honeycrisp      Poor       1</span></span>
-<span><span class="co">#&gt; 5        44      1   2     2     2   1.5       Fuji Excellent       1</span></span>
-<span><span class="co">#&gt; 6        30      1   2     3     2   1.5       Gala   Average       1</span></span></code></pre></div>
+<span><span class="co">#&gt; 1        39      1   1     1     1   2.5 Honeycrisp   Average       1</span></span>
+<span><span class="co">#&gt; 2         9      1   1     2     1   1.5       Gala      Poor       1</span></span>
+<span><span class="co">#&gt; 3        46      1   1     3     1   2.5       Fuji Excellent       1</span></span>
+<span><span class="co">#&gt; 4        16      1   2     1     2   1.5 Honeycrisp      Poor       1</span></span>
+<span><span class="co">#&gt; 5        22      1   2     2     2   1.0       Fuji   Average       1</span></span>
+<span><span class="co">#&gt; 6        56      1   2     3     2   4.0       Gala Excellent       1</span></span></code></pre></div>
 <p>Bayesian D-efficient designs that include a “no choice” option should
 set <code>no_choice = TRUE</code> and also define a prior for the “no
 choice” option using <code>prior_no_choice</code>, e.g.:</p>
@@ -412,19 +412,19 @@ choice” option using <code>prior_no_choice</code>, e.g.:</p>
 <span><span class="co">#&gt; [1] 21600    12</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_db_eff_no_choice</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price type_Gala type_Honeycrisp</span></span>
-<span><span class="co">#&gt; 1        57      1   1     1     1   1.0         0               1</span></span>
-<span><span class="co">#&gt; 2         1      1   1     2     1   1.0         0               0</span></span>
-<span><span class="co">#&gt; 3        34      1   1     3     1   3.5         1               0</span></span>
-<span><span class="co">#&gt; 4         0      1   1     4     1   0.0         0               0</span></span>
-<span><span class="co">#&gt; 5        61      1   2     1     2   3.0         0               1</span></span>
-<span><span class="co">#&gt; 6         6      1   2     2     2   3.5         0               0</span></span>
+<span><span class="co">#&gt; 1        50      1   1     1     1     1         1               0</span></span>
+<span><span class="co">#&gt; 2        24      1   1     2     1     2         0               0</span></span>
+<span><span class="co">#&gt; 3         8      1   1     3     1     1         1               0</span></span>
+<span><span class="co">#&gt; 4         0      1   1     4     1     0         0               0</span></span>
+<span><span class="co">#&gt; 5        19      1   2     1     2     3         0               1</span></span>
+<span><span class="co">#&gt; 6        43      1   2     2     2     1         0               0</span></span>
 <span><span class="co">#&gt;   freshness_Average freshness_Excellent no_choice blockID</span></span>
 <span><span class="co">#&gt; 1                 0                   1         0       1</span></span>
-<span><span class="co">#&gt; 2                 0                   0         0       1</span></span>
-<span><span class="co">#&gt; 3                 1                   0         0       1</span></span>
+<span><span class="co">#&gt; 2                 1                   0         0       1</span></span>
+<span><span class="co">#&gt; 3                 0                   0         0       1</span></span>
 <span><span class="co">#&gt; 4                 0                   0         1       1</span></span>
-<span><span class="co">#&gt; 5                 0                   1         0       1</span></span>
-<span><span class="co">#&gt; 6                 0                   0         0       1</span></span></code></pre></div>
+<span><span class="co">#&gt; 5                 0                   0         0       1</span></span>
+<span><span class="co">#&gt; 6                 0                   1         0       1</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -443,17 +443,17 @@ all choice questions:</p>
 <span><span class="co">#&gt; price:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1  1.5    2  2.5    3  3.5    4 </span></span>
-<span><span class="co">#&gt; 2360 2310 2319 2270 2301 2318 2322 </span></span>
+<span><span class="co">#&gt; 2272 2310 2347 2347 2265 2324 2335 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; type:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;       Fuji       Gala Honeycrisp </span></span>
-<span><span class="co">#&gt;       5433       5426       5341 </span></span>
+<span><span class="co">#&gt;       5309       5570       5321 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;      Poor   Average Excellent </span></span>
-<span><span class="co">#&gt;      5366      5410      5424 </span></span>
+<span><span class="co">#&gt;      5339      5512      5349 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =====================================</span></span>
 <span><span class="co">#&gt; Pairwise attribute level counts</span></span>
@@ -461,34 +461,34 @@ all choice questions:</p>
 <span><span class="co">#&gt; price x type:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Fuji Gala Honeycrisp</span></span>
-<span><span class="co">#&gt;       NA 5433 5426       5341</span></span>
-<span><span class="co">#&gt; 1   2360  782  821        757</span></span>
-<span><span class="co">#&gt; 1.5 2310  787  749        774</span></span>
-<span><span class="co">#&gt; 2   2319  785  786        748</span></span>
-<span><span class="co">#&gt; 2.5 2270  761  738        771</span></span>
-<span><span class="co">#&gt; 3   2301  774  782        745</span></span>
-<span><span class="co">#&gt; 3.5 2318  791  747        780</span></span>
-<span><span class="co">#&gt; 4   2322  753  803        766</span></span>
+<span><span class="co">#&gt;       NA 5309 5570       5321</span></span>
+<span><span class="co">#&gt; 1   2272  730  819        723</span></span>
+<span><span class="co">#&gt; 1.5 2310  772  767        771</span></span>
+<span><span class="co">#&gt; 2   2347  791  792        764</span></span>
+<span><span class="co">#&gt; 2.5 2347  780  787        780</span></span>
+<span><span class="co">#&gt; 3   2265  722  815        728</span></span>
+<span><span class="co">#&gt; 3.5 2324  740  799        785</span></span>
+<span><span class="co">#&gt; 4   2335  774  791        770</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; price x freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Poor Average Excellent</span></span>
-<span><span class="co">#&gt;       NA 5366    5410      5424</span></span>
-<span><span class="co">#&gt; 1   2360  808     804       748</span></span>
-<span><span class="co">#&gt; 1.5 2310  728     787       795</span></span>
-<span><span class="co">#&gt; 2   2319  783     767       769</span></span>
-<span><span class="co">#&gt; 2.5 2270  742     757       771</span></span>
-<span><span class="co">#&gt; 3   2301  762     752       787</span></span>
-<span><span class="co">#&gt; 3.5 2318  740     769       809</span></span>
-<span><span class="co">#&gt; 4   2322  803     774       745</span></span>
+<span><span class="co">#&gt;       NA 5339    5512      5349</span></span>
+<span><span class="co">#&gt; 1   2272  765     768       739</span></span>
+<span><span class="co">#&gt; 1.5 2310  765     776       769</span></span>
+<span><span class="co">#&gt; 2   2347  754     846       747</span></span>
+<span><span class="co">#&gt; 2.5 2347  765     803       779</span></span>
+<span><span class="co">#&gt; 3   2265  748     757       760</span></span>
+<span><span class="co">#&gt; 3.5 2324  769     792       763</span></span>
+<span><span class="co">#&gt; 4   2335  773     770       792</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; type x freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                 Poor Average Excellent</span></span>
-<span><span class="co">#&gt;              NA 5366    5410      5424</span></span>
-<span><span class="co">#&gt; Fuji       5433 1764    1858      1811</span></span>
-<span><span class="co">#&gt; Gala       5426 1787    1829      1810</span></span>
-<span><span class="co">#&gt; Honeycrisp 5341 1815    1723      1803</span></span></code></pre></div>
+<span><span class="co">#&gt;              NA 5339    5512      5349</span></span>
+<span><span class="co">#&gt; Fuji       5309 1730    1828      1751</span></span>
+<span><span class="co">#&gt; Gala       5570 1810    1873      1887</span></span>
+<span><span class="co">#&gt; Honeycrisp 5321 1799    1811      1711</span></span></code></pre></div>
 <p>The <code><a href="../reference/cbc_overlap.html">cbc_overlap()</a></code> function prints out a summary of the
 amount of “overlap” across attributes within the choice questions. For
 example, for each attribute, the count under <code>"1"</code> is the
@@ -506,17 +506,17 @@ shown, and so on:</p>
 <span><span class="co">#&gt; price:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1    2    3 </span></span>
-<span><span class="co">#&gt;   73 1831 3496 </span></span>
+<span><span class="co">#&gt;   86 1811 3503 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; type:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1    2    3 </span></span>
-<span><span class="co">#&gt;  499 3597 1304 </span></span>
+<span><span class="co">#&gt;  551 3652 1197 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; freshness:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    1    2    3 </span></span>
-<span><span class="co">#&gt;  545 3579 1276</span></span></code></pre></div>
+<span><span class="co">#&gt;  522 3609 1269</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="simulate-choices">Simulate choices<a class="anchor" aria-label="anchor" href="#simulate-choices"></a>
@@ -535,12 +535,12 @@ shown, and so on:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness choice</span></span>
-<span><span class="co">#&gt; 1         2      1   1     1     1   1.5       Fuji      Poor      0</span></span>
-<span><span class="co">#&gt; 2        28      1   1     2     1   4.0       Fuji   Average      1</span></span>
-<span><span class="co">#&gt; 3        48      1   1     3     1   3.5       Fuji Excellent      0</span></span>
-<span><span class="co">#&gt; 4        31      1   2     1     2   2.0       Gala   Average      0</span></span>
-<span><span class="co">#&gt; 5        21      1   2     2     2   4.0 Honeycrisp      Poor      0</span></span>
-<span><span class="co">#&gt; 6        53      1   2     3     2   2.5       Gala Excellent      1</span></span></code></pre></div>
+<span><span class="co">#&gt; 1        41      1   1     1     1   3.5 Honeycrisp   Average      0</span></span>
+<span><span class="co">#&gt; 2        62      1   1     2     1   3.5 Honeycrisp Excellent      0</span></span>
+<span><span class="co">#&gt; 3        42      1   1     3     1   4.0 Honeycrisp   Average      1</span></span>
+<span><span class="co">#&gt; 4        17      1   2     1     2   2.0 Honeycrisp      Poor      0</span></span>
+<span><span class="co">#&gt; 5        38      1   2     2     2   2.0 Honeycrisp   Average      1</span></span>
+<span><span class="co">#&gt; 6        59      1   2     3     2   2.0 Honeycrisp Excellent      0</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="choices-according-to-a-prior">Choices according to a prior<a class="anchor" aria-label="anchor" href="#choices-according-to-a-prior"></a>
@@ -634,21 +634,21 @@ sizes are used. All models are estimated using the <a href="https://jhelvy.githu
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">power</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   sampleSize               coef          est         se</span></span>
-<span><span class="co">#&gt; 1         90              price  0.025423934 0.05318028</span></span>
-<span><span class="co">#&gt; 2         90           typeGala -0.023373706 0.12748588</span></span>
-<span><span class="co">#&gt; 3         90     typeHoneycrisp -0.123616286 0.12976235</span></span>
-<span><span class="co">#&gt; 4         90   freshnessAverage -0.192135677 0.12567398</span></span>
-<span><span class="co">#&gt; 5         90 freshnessExcellent -0.309027742 0.13474186</span></span>
-<span><span class="co">#&gt; 6        180              price  0.009987847 0.03673450</span></span>
+<span><span class="co">#&gt;   sampleSize               coef         est         se</span></span>
+<span><span class="co">#&gt; 1         90              price -0.05293362 0.05369391</span></span>
+<span><span class="co">#&gt; 2         90           typeGala -0.07899845 0.12684746</span></span>
+<span><span class="co">#&gt; 3         90     typeHoneycrisp  0.15345497 0.13286547</span></span>
+<span><span class="co">#&gt; 4         90   freshnessAverage -0.28385632 0.12680060</span></span>
+<span><span class="co">#&gt; 5         90 freshnessExcellent -0.32617012 0.13072943</span></span>
+<span><span class="co">#&gt; 6        180              price -0.05890407 0.03665670</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="va">power</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    sampleSize               coef         est         se</span></span>
-<span><span class="co">#&gt; 45        810 freshnessExcellent  0.05368672 0.04287309</span></span>
-<span><span class="co">#&gt; 46        900              price -0.03180080 0.01643932</span></span>
-<span><span class="co">#&gt; 47        900           typeGala  0.04807470 0.04011681</span></span>
-<span><span class="co">#&gt; 48        900     typeHoneycrisp  0.02942616 0.04059400</span></span>
-<span><span class="co">#&gt; 49        900   freshnessAverage  0.07437599 0.04054395</span></span>
-<span><span class="co">#&gt; 50        900 freshnessExcellent  0.03091127 0.04067163</span></span></code></pre></div>
+<span><span class="co">#&gt;    sampleSize               coef          est         se</span></span>
+<span><span class="co">#&gt; 45        810 freshnessExcellent -0.014881183 0.04268887</span></span>
+<span><span class="co">#&gt; 46        900              price -0.024608436 0.01653667</span></span>
+<span><span class="co">#&gt; 47        900           typeGala -0.007525194 0.04041576</span></span>
+<span><span class="co">#&gt; 48        900     typeHoneycrisp  0.024045307 0.04085478</span></span>
+<span><span class="co">#&gt; 49        900   freshnessAverage -0.026647663 0.04052658</span></span>
+<span><span class="co">#&gt; 50        900 freshnessExcellent -0.008207778 0.04054605</span></span></code></pre></div>
 <p>The <code>power</code> data frame contains the coefficient estimates
 and standard errors for each sample size. You can quickly visualize the
 outcome to identify a required sample size for a desired level of
@@ -677,7 +677,7 @@ models:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">models</span><span class="op">[[</span><span class="fl">10</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt; =================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Model estimated on: Tue Jun 06 17:21:45 2023 </span></span>
+<span><span class="co">#&gt; Model estimated on: Wed Jun 07 20:06:16 2023 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Using logitr version: 1.1.0 </span></span>
 <span><span class="co">#&gt; </span></span>
@@ -687,35 +687,33 @@ models:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Frequencies of alternatives:</span></span>
 <span><span class="co">#&gt;       1       2       3 </span></span>
-<span><span class="co">#&gt; 0.33315 0.33741 0.32944 </span></span>
+<span><span class="co">#&gt; 0.33722 0.33500 0.32778 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Exit Status: 3, Optimization stopped because ftol_rel or ftol_abs was reached.</span></span>
 <span><span class="co">#&gt;                                 </span></span>
 <span><span class="co">#&gt; Model Type:    Multinomial Logit</span></span>
 <span><span class="co">#&gt; Model Space:          Preference</span></span>
 <span><span class="co">#&gt; Model Run:                1 of 1</span></span>
-<span><span class="co">#&gt; Iterations:                    8</span></span>
-<span><span class="co">#&gt; Elapsed Time:        0h:0m:0.02s</span></span>
+<span><span class="co">#&gt; Iterations:                    9</span></span>
+<span><span class="co">#&gt; Elapsed Time:        0h:0m:0.05s</span></span>
 <span><span class="co">#&gt; Algorithm:        NLOPT_LD_LBFGS</span></span>
 <span><span class="co">#&gt; Weights Used?:             FALSE</span></span>
 <span><span class="co">#&gt; Robust?                    FALSE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Model Coefficients: </span></span>
-<span><span class="co">#&gt;                     Estimate Std. Error z-value Pr(&gt;|z|)  </span></span>
-<span><span class="co">#&gt; price              -0.031801   0.016439 -1.9344  0.05306 .</span></span>
-<span><span class="co">#&gt; typeGala            0.048075   0.040117  1.1984  0.23077  </span></span>
-<span><span class="co">#&gt; typeHoneycrisp      0.029426   0.040594  0.7249  0.46852  </span></span>
-<span><span class="co">#&gt; freshnessAverage    0.074376   0.040544  1.8345  0.06659 .</span></span>
-<span><span class="co">#&gt; freshnessExcellent  0.030911   0.040672  0.7600  0.44724  </span></span>
-<span><span class="co">#&gt; ---</span></span>
-<span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
+<span><span class="co">#&gt;                      Estimate Std. Error z-value Pr(&gt;|z|)</span></span>
+<span><span class="co">#&gt; price              -0.0246084  0.0165367 -1.4881   0.1367</span></span>
+<span><span class="co">#&gt; typeGala           -0.0075252  0.0404158 -0.1862   0.8523</span></span>
+<span><span class="co">#&gt; typeHoneycrisp      0.0240453  0.0408548  0.5886   0.5562</span></span>
+<span><span class="co">#&gt; freshnessAverage   -0.0266477  0.0405266 -0.6575   0.5108</span></span>
+<span><span class="co">#&gt; freshnessExcellent -0.0082078  0.0405460 -0.2024   0.8396</span></span>
 <span><span class="co">#&gt;                                      </span></span>
-<span><span class="co">#&gt; Log-Likelihood:         -5.928199e+03</span></span>
+<span><span class="co">#&gt; Log-Likelihood:         -5.930844e+03</span></span>
 <span><span class="co">#&gt; Null Log-Likelihood:    -5.932506e+03</span></span>
-<span><span class="co">#&gt; AIC:                     1.186640e+04</span></span>
-<span><span class="co">#&gt; BIC:                     1.189937e+04</span></span>
-<span><span class="co">#&gt; McFadden R2:             7.261192e-04</span></span>
-<span><span class="co">#&gt; Adj McFadden R2:        -1.166949e-04</span></span>
+<span><span class="co">#&gt; AIC:                     1.187169e+04</span></span>
+<span><span class="co">#&gt; BIC:                     1.190466e+04</span></span>
+<span><span class="co">#&gt; McFadden R2:             2.802611e-04</span></span>
+<span><span class="co">#&gt; Adj McFadden R2:        -5.625530e-04</span></span>
 <span><span class="co">#&gt; Number of Observations:  5.400000e+03</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="pipe-it-all-together">Pipe it all together!<a class="anchor" aria-label="anchor" href="#pipe-it-all-together"></a>
