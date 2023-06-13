@@ -37,6 +37,7 @@ check_inputs_design <- function(
     prior_no_choice,
     probs,
     method,
+    keep_db_error,
     max_iter,
     parallel
 ) {

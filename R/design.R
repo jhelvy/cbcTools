@@ -42,6 +42,9 @@
 #' design, `"CEA"` or `"Modfed"`? If `priors` are specified, it defaults to
 #' `"CEA"`, otherwise it defaults to `NULL`. See `?idefix::CEA` and
 #' `?idefix::Modfed` for more details.
+#' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
+#' object will be a list containing the design and the DB-error score.
+#' Defaults to `FALSE`.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #' iterations when searching for a Bayesian D-efficient design. The default is
 #' 50.
@@ -119,6 +122,7 @@ cbc_design <- function(
   prior_no_choice = NULL,
   probs = FALSE,
   method = NULL,
+  keep_db_error = FALSE,
   max_iter = 50,
   parallel = TRUE
 ) {
@@ -143,6 +147,7 @@ cbc_design <- function(
     prior_no_choice,
     probs,
     method,
+    keep_db_error,
     max_iter,
     parallel
   )
@@ -158,7 +163,8 @@ cbc_design <- function(
   } else {
     design <- make_design_deff(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-      label, priors, prior_no_choice, probs, method, max_iter, parallel
+      label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
+      parallel
     )
   }
   # Reset row numbers
@@ -352,7 +358,8 @@ reorder_cols <- function(design) {
 
 make_design_deff <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-    label, priors, prior_no_choice, probs, method, max_iter, parallel
+    label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
+    parallel
 ) {
     # Set up initial parameters for creating design
 
@@ -487,6 +494,11 @@ make_design_deff <- function(
         "Bayesian D-efficient design found with DB-error of ",
         round(D$error, 5)
     )
+
+    # Return list containing the design and DB error if keep_db_error = TRUE
+    if (keep_db_error) {
+        return(list(design = design, db_err = D$error))
+    }
 
     return(design)
 }
