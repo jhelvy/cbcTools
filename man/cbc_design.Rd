@@ -17,7 +17,8 @@ cbc_design(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = "CEA",
+  method = NULL,
+  keep_db_error = FALSE,
   max_iter = 50,
   parallel = TRUE
 )
@@ -68,8 +69,13 @@ choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.}
 
 \item{method}{Which method to use for obtaining a Bayesian D-efficient
-design, \code{"CEA"} or \code{"Modfed"}? Defaults to \code{"CEA"}. See \code{?idefix::CEA}
-and \code{?idefix::Modfed} for more details.}
+design, \code{"CEA"} or \code{"Modfed"}? If \code{priors} are specified, it defaults to
+\code{"CEA"}, otherwise it defaults to \code{NULL}. See \code{?idefix::CEA} and
+\code{?idefix::Modfed} for more details.}
+
+\item{keep_db_error}{If \code{TRUE}, for Bayesian D-efficient designs the returned
+object will be a list containing the design and the DB-error score.
+Defaults to \code{FALSE}.}
 
 \item{max_iter}{A numeric value indicating the maximum number allowed
 iterations when searching for a Bayesian D-efficient design. The default is
@@ -140,6 +146,7 @@ design_deff <- cbc_design(
         type      = c(0.1, 0.2),
         freshness = c(0.1, 0.2)
     ),
+    method = "CEA",
     parallel = FALSE
 )
 }

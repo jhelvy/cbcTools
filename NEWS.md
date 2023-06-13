@@ -1,5 +1,11 @@
 # cbcTools (development version)
 
+# cbcTools 0.3.4
+
+- Another small bug fix in `cbc_design()` related to #16 where factor level ordering for categorical variables were being mis-ordered.
+- Updated how the `method` argument is handled by default in `cbc_design()` to be more flexible (anticipating other methods in the future).
+- Added `keep_db_error` arg to `cbc_design()`.
+
 # cbcTools 0.3.3
 
 - Bug fix in `cbc_design()` where factor level ordering for categorical variables were being mis-ordered.
