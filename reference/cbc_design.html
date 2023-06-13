@@ -20,7 +20,7 @@ CEA or Modfed Federov algorithm is used via the idefix package"><meta property="
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.3.9001</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.4</span>
       </span>
     </div>
 
@@ -81,7 +81,8 @@ CEA or Modfed Federov algorithm is used via the idefix package</p>
 <span>  priors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  prior_no_choice <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  probs <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"CEA"</span>,</span>
+<span>  method <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  keep_db_error <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -159,8 +160,15 @@ Defaults to <code>FALSE</code>.</p></dd>
 
 <dt>method</dt>
 <dd><p>Which method to use for obtaining a Bayesian D-efficient
-design, <code>"CEA"</code> or <code>"Modfed"</code>? Defaults to <code>"CEA"</code>. See <code><a href="https://rdrr.io/pkg/idefix/man/CEA.html" class="external-link">?idefix::CEA</a></code>
-and <code><a href="https://rdrr.io/pkg/idefix/man/Modfed.html" class="external-link">?idefix::Modfed</a></code> for more details.</p></dd>
+design, <code>"CEA"</code> or <code>"Modfed"</code>? If <code>priors</code> are specified, it defaults to
+<code>"CEA"</code>, otherwise it defaults to <code>NULL</code>. See <code><a href="https://rdrr.io/pkg/idefix/man/CEA.html" class="external-link">?idefix::CEA</a></code> and
+<code><a href="https://rdrr.io/pkg/idefix/man/Modfed.html" class="external-link">?idefix::Modfed</a></code> for more details.</p></dd>
+
+
+<dt>keep_db_error</dt>
+<dd><p>If <code>TRUE</code>, for Bayesian D-efficient designs the returned
+object will be a list containing the design and the DB-error score.
+Defaults to <code>FALSE</code>.</p></dd>
 
 
 <dt>max_iter</dt>
@@ -235,9 +243,10 @@ each row is an alternative.</p>
 <span class="r-in"><span>        type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>        freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    method <span class="op">=</span> <span class="st">"CEA"</span>,</span></span>
 <span class="r-in"><span>    parallel <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Bayesian D-efficient design found with DB-error of 1.41512</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Bayesian D-efficient design found with DB-error of 1.31223</span>
 </code></pre></div>
     </div>
   </div>
