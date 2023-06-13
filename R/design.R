@@ -39,8 +39,9 @@
 #' choice set given the sample from the prior preference distribution.
 #' Defaults to `FALSE`.
 #' @param method Which method to use for obtaining a Bayesian D-efficient
-#' design, `"CEA"` or `"Modfed"`? Defaults to `"CEA"`. See `?idefix::CEA`
-#' and `?idefix::Modfed` for more details.
+#' design, `"CEA"` or `"Modfed"`? If `priors` are specified, it defaults to
+#' `"CEA"`, otherwise it defaults to `NULL`. See `?idefix::CEA` and
+#' `?idefix::Modfed` for more details.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #' iterations when searching for a Bayesian D-efficient design. The default is
 #' 50.
@@ -101,6 +102,7 @@
 #'         type      = c(0.1, 0.2),
 #'         freshness = c(0.1, 0.2)
 #'     ),
+#'     method = "CEA",
 #'     parallel = FALSE
 #' )
 cbc_design <- function(
@@ -116,10 +118,17 @@ cbc_design <- function(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = "CEA",
+  method = NULL,
   max_iter = 50,
   parallel = TRUE
 ) {
+  if (!is.null(priors)) {
+    if (is.null(method)) {
+        # Set default method to 'CEA' if priors are specified and
+        # user didn't specify a method.
+        method <- 'CEA'
+    }
+  }
   check_inputs_design(
     profiles,
     n_resp,
@@ -404,7 +413,7 @@ make_design_deff <- function(
       method <- "Modfed"
       warning(
         'The "CEA" algorithm requires the use of an unrestricted set of ',
-        'profiles, so "Modfed" is now being used instead.'
+        'profiles, so "Modfed" is being used instead.'
       )
     }
 

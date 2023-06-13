@@ -57,14 +57,14 @@ check_inputs_design <- function(
 
     }
 
-    # Check that user specified an appropriate method for Bayesian D-efficient
-    # designs
-    if ((method != "CEA") & (method != "Modfed")) {
-        stop('The method argument must be either "Modfed" or "CEA"')
-    }
+    # Check that priors are appropriate if specified
 
-    # Check if there are missing levels in priors (if priors are used)
     if (!is.null(priors)) {
+
+        # Check that user specified an appropriate method
+        if ((method != "CEA") & (method != "Modfed")) {
+            stop('The method argument must be either "Modfed" or "CEA"')
+        }
 
         # Check that prior names aren't missing
         prior_names <- names(priors)
