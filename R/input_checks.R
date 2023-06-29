@@ -23,6 +23,22 @@ check_inputs_restrict <- function(profiles) {
   }
 }
 
+check_design_method <- function(method, priors) {
+  if (!is.null(priors)) {
+    if (! method %in% c('CEA', 'Modfed')) {
+      # Set method to 'CEA' if priors are specified and
+      # user didn't specify an appropriate method.
+      warning(
+        'Since "priors" are specified, the "method" must be either "CEA" ',
+        'or "Modfed". The specified "method" is being ignored and set to ',
+        '"CEA"\n'
+      )
+      method <- 'CEA'
+    }
+  }
+  return(method)
+}
+
 check_inputs_design <- function(
     profiles,
     n_resp,
@@ -58,13 +74,26 @@ check_inputs_design <- function(
 
     }
 
+    # Check that an appropriate method is used
+
+    if (! method %in% c('random', 'orthogonal', 'CEA', 'Modfed')) {
+        stop(
+            'The "method" argument must be set to "random", "orthogonal", ',
+            '"Modfed", or "CEA"'
+        )
+    }
+
     # Check that priors are appropriate if specified
 
     if (!is.null(priors)) {
 
         # Check that user specified an appropriate method
-        if ((method != "CEA") & (method != "Modfed")) {
-            stop('The method argument must be either "Modfed" or "CEA"')
+        # This should already be handled
+        if (! method %in% c('CEA', 'Modfed')) {
+            stop(
+                'Since "priors" are specified, the "method" argument must ',
+                'be either "Modfed" or "CEA"'
+            )
         }
 
         # Check that prior names aren't missing

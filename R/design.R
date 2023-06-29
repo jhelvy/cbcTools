@@ -38,9 +38,15 @@
 #' design includes average predicted probabilities for each alternative in each
 #' choice set given the sample from the prior preference distribution.
 #' Defaults to `FALSE`.
-#' @param method Which method to use for obtaining a Bayesian D-efficient
-#' design, `"CEA"` or `"Modfed"`? If `priors` are specified, it defaults to
-#' `"CEA"`, otherwise it defaults to `NULL`. See `?idefix::CEA` and
+#' @param method Which design method to use? Defaults to `"random"` where choice
+#' sets are created by randomly selecting from the full set of `profiles`. The
+#' `"orthogonal"` method first finds an orthogonal array from `profiles` and
+#' then randomly selects from it. For Bayesian D-efficient designs, use `"CEA"`
+#' or `"Modfed"` along with specified `priors`. If priors are specified with no
+#' specified `method`, `"CEA"` will be used. If `method` is set to `"CEA"` or
+#' but without `priors` specified, a prior of all `0`s is used. If using a
+#' restricted set of `profiles`, only the `"Modfed"` method can be used as
+#' `"CEA"` requires unrestricted `profiles`. See `?idefix::CEA` and
 #' `?idefix::Modfed` for more details.
 #' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
 #' object will be a list containing the design and the DB-error score.
@@ -121,18 +127,12 @@ cbc_design <- function(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = NULL,
+  method = "random",
   keep_db_error = FALSE,
   max_iter = 50,
   parallel = TRUE
 ) {
-  if (!is.null(priors)) {
-    if (is.null(method)) {
-        # Set default method to 'CEA' if priors are specified and
-        # user didn't specify a method.
-        method <- 'CEA'
-    }
-  }
+  method <- check_design_method(method, priors)
   check_inputs_design(
     profiles,
     n_resp,
@@ -152,16 +152,25 @@ cbc_design <- function(
     parallel
   )
   profiles <- as.data.frame(profiles) # tibbles break things
-  if (is.null(priors)) {
-    design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
+  if (method == 'random') {
+    design <- make_design_random(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
   } else if (!is.null(label)) {
     warning(
-      "The use of the 'label' argument is currently only compatible with ",
-      "randomized designs, so the provided 'priors' are being ignored.\n"
+      'The use of the "label" argument is currently only compatible with ',
+      'random designs, so the "method" argument is being ignored and a ',
+      'random design is being used\n'
     )
-    design <- make_design_rand(profiles, n_resp, n_alts, n_q, no_choice, label)
+    design <- make_design_random(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
+  } else if (method == 'orthogonal') {
+    design <- make_design_orthogonal(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
   } else {
-    design <- make_design_deff(
+    design <- make_design_bayesian(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
       label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
       parallel
@@ -172,9 +181,11 @@ cbc_design <- function(
   return(design)
 }
 
-# Randomized Design ----
+# Random Design ----
 
-make_design_rand <- function(profiles, n_resp, n_alts, n_q, no_choice, label) {
+make_design_random <- function(
+  profiles, n_resp, n_alts, n_q, no_choice, label
+) {
   if (is.null(label)) {
     design <- get_design_rand(profiles, n_resp, n_alts, n_q)
   } else {
@@ -346,9 +357,17 @@ reorder_cols <- function(design) {
     return(design)
 }
 
+# Orthogonal Design ----
+
+make_design_orthogonal <- function(
+    profiles, n_resp, n_alts, n_q, no_choice, label
+) {
+
+}
+
 # Bayesian D-efficient Design ----
 
-make_design_deff <- function(
+make_design_bayesian <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
     label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
     parallel
@@ -405,7 +424,7 @@ make_design_deff <- function(
       method <- "Modfed"
       warning(
         'The "CEA" algorithm requires the use of an unrestricted set of ',
-        'profiles, so "Modfed" is being used instead.'
+        'profiles, so "Modfed" is being used instead.\n'
       )
     }
 
