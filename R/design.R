@@ -11,9 +11,9 @@
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used in non-random designs (Orthogonal or
-#' Bayesian D-efficient designs). Max allowable is one block per respondent.
-#' Defaults to `1`, meaning every respondent sees the same choice set.
+#' @param n_blocks Number of blocks used in Orthogonal or Bayesian D-efficient
+#' designs. Max allowable is one block per respondent. Defaults to `1`, meaning
+#' every respondent sees the same choice set.
 #' @param n_draws Number of draws used in simulating the prior distribution
 #' used in Bayesian D-efficient designs. Defaults to `50`.
 #' @param n_start A numeric value indicating the number of random start designs
