@@ -11,9 +11,9 @@
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used in Bayesian D-efficient design.
-#' Max allowable is one block per respondent, defaults to `1`, meaning every
-#' respondent sees the same set of choice questions.
+#' @param n_blocks Number of blocks used in non-random designs (Orthogonal or
+#' Bayesian D-efficient designs). Max allowable is one block per respondent.
+#' Defaults to `1`, meaning every respondent sees the same choice set.
 #' @param n_draws Number of draws used in simulating the prior distribution
 #' used in Bayesian D-efficient designs. Defaults to `50`.
 #' @param n_start A numeric value indicating the number of random start designs
@@ -26,12 +26,11 @@
 #' @param label The name of the variable to use in a "labeled" design
 #' (also called an "alternative-specific design") such that each set of
 #' alternatives contains one of each of the levels in the `label` attribute.
-#' Currently only compatible with randomized designs. If used, the `n_alts`
-#' argument will be ignored as its value is defined by the unique number of
-#' levels in the `label` variable. Defaults to `NULL`.
+#' Currently not compatible with Bayesian D-efficient designs. If used,
+#' the `n_alts` argument will be ignored as its value is defined by the unique
+#' number of levels in the `label` variable. Defaults to `NULL`.
 #' @param priors A list of one or more assumed prior parameters used to
-#' generate a Bayesian D-efficient design. If `NULL` (the default), a
-#' randomized design will be generated.
+#' generate a Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #' Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting
@@ -42,11 +41,10 @@
 #' sets are created by randomly selecting from the full set of `profiles`. The
 #' `"orthogonal"` method first finds an orthogonal array from `profiles` and
 #' then randomly selects from it. For Bayesian D-efficient designs, use `"CEA"`
-#' or `"Modfed"` along with specified `priors`. If priors are specified with no
-#' specified `method`, `"CEA"` will be used. If `method` is set to `"CEA"` or
-#' but without `priors` specified, a prior of all `0`s is used. If using a
-#' restricted set of `profiles`, only the `"Modfed"` method can be used as
-#' `"CEA"` requires unrestricted `profiles`. See `?idefix::CEA` and
+#' or `"Modfed"` along with specified `priors`. If `method` is set to `"CEA"`
+#' or `"Modfed"` but without `priors` specified, a prior of all `0`s is used.
+#' If using a restricted set of `profiles`, only the `"Modfed"` method can be
+#' used as `"CEA"` requires unrestricted `profiles`. See `?idefix::CEA` and
 #' `?idefix::Modfed` for more details.
 #' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
 #' object will be a list containing the design and the DB-error score.
@@ -390,25 +388,13 @@ make_design_bayesian <- function(
     label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
     parallel
 ) {
-    # Set up initial parameters for creating design
-
-    # Make sure order of priors matches order of attributes in profiles
-    profile_lvls <- profiles[, 2:ncol(profiles)]
-    varnames <- names(profile_lvls)
-    priors <- priors[varnames]
-
-    # Set up priors
-    mu <- unlist(priors)
-    if (no_choice) {
-        mu <- c(prior_no_choice, mu)
-    }
-
     # Set up levels and coding
-    lvl.names <- unname(get_profile_list(profiles))
+    profile_list <- get_profile_list(profiles)
+    type_ids <- get_type_ids(profiles)
+    lvl.names <- unname(profile_list)
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
     c.lvls <- NULL
-    type_ids <- get_type_ids(profiles)
     if (any(type_ids$continuous)) {
         c.lvls <- lvl.names[type_ids$continuous]
     }
@@ -423,6 +409,23 @@ make_design_bayesian <- function(
         n_alts <- n_alts + 1
         alt_cte <- c(alt_cte, 1)
         no_choice_alt <- n_alts
+    }
+
+    # Make sure order of priors matches order of attributes in profiles
+    profile_lvls <- profiles[, 2:ncol(profiles)]
+    varnames <- names(profile_lvls)
+    if (is.null(priors)) {
+        # No priors specified, so use all 0s
+        warning(
+            'Since the ', method, ' method is used but no priors were ',
+            'specified, a zero prior will be used (all coefficients set to 0)'
+        )
+        priors <- lapply(profile_list, function(x) rep(0, length(x) - 1))
+        priors[type_ids$continuous] <- 0
+    }
+    mu <- unlist(priors[varnames])
+    if (no_choice) {
+        mu <- c(prior_no_choice, mu)
     }
     sigma <- diag(length(mu))
     par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
