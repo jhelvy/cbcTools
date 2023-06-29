@@ -17,7 +17,7 @@ cbc_design(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = NULL,
+  method = "random",
   keep_db_error = FALSE,
   max_iter = 50,
   parallel = TRUE
@@ -68,9 +68,15 @@ design includes average predicted probabilities for each alternative in each
 choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.}
 
-\item{method}{Which method to use for obtaining a Bayesian D-efficient
-design, \code{"CEA"} or \code{"Modfed"}? If \code{priors} are specified, it defaults to
-\code{"CEA"}, otherwise it defaults to \code{NULL}. See \code{?idefix::CEA} and
+\item{method}{Which design method to use? Defaults to \code{"random"} where choice
+sets are created by randomly selecting from the full set of \code{profiles}. The
+\code{"orthogonal"} method first finds an orthogonal array from \code{profiles} and
+then randomly selects from it. For Bayesian D-efficient designs, use \code{"CEA"}
+or \code{"Modfed"} along with specified \code{priors}. If priors are specified with no
+specified \code{method}, \code{"CEA"} will be used. If \code{method} is set to \code{"CEA"} or
+but without \code{priors} specified, a prior of all \code{0}s is used. If using a
+restricted set of \code{profiles}, only the \code{"Modfed"} method can be used as
+\code{"CEA"} requires unrestricted \code{profiles}. See \code{?idefix::CEA} and
 \code{?idefix::Modfed} for more details.}
 
 \item{keep_db_error}{If \code{TRUE}, for Bayesian D-efficient designs the returned
@@ -106,7 +112,8 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Make a randomized survey design
+# Make a randomized survey design from all possible profiles
+# (This is the default setting where method = 'random')
 design_rand <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
@@ -114,7 +121,17 @@ design_rand <- cbc_design(
   n_q      = 6    # Number of questions per respondent
 )
 
-# Make a randomized survey design with a "no choice" option
+# Make a survey design from an orthogonal array of profiles
+design_rand <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6    # Number of questions per respondent
+  method   = 'orthogonal'
+)
+
+# Make a randomized survey design from all possible profiles
+# with a "no choice" option
 design_rand_nochoice <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
@@ -123,8 +140,8 @@ design_rand_nochoice <- cbc_design(
   no_choice = TRUE
 )
 
-# Make a randomized labeled survey design with each "type" appearing in
-# each choice question
+# Make a randomized survey design from all possible profiles
+# with each level of the "type" attribute appearing as an alternative
 design_rand_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
