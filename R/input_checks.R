@@ -79,8 +79,8 @@ check_inputs_design <- function(
         }
 
         # Check that prior levels aren't missing
-        ids <- get_type_ids(profile_lvls)
-        for (id in which(ids$discrete)) {
+        type_ids <- get_type_ids(profiles)
+        for (id in which(type_ids$discrete)) {
             n_lvls <- length(unique(profile_lvls[,id])) - 1
             if (length(priors[[id]]) != n_lvls) {
                 stop(
@@ -90,7 +90,7 @@ check_inputs_design <- function(
                 )
             }
         }
-        for (id in which(ids$continuous)) {
+        for (id in which(type_ids$continuous)) {
             if (length(priors[[id]]) != 1) {
                 stop(
                     "Invalid number of values provided in 'priors' for the '",

@@ -339,14 +339,6 @@ get_col_types <- function(data) {
   return(unlist(lapply(types, test)))
 }
 
-get_type_ids <- function(profile_lvls) {
-    types <- get_col_types(profile_lvls)
-    ids <- list()
-    ids$discrete <- types %in% c("factor", "character")
-    ids$continuous <- !ids$discrete
-    return(ids)
-}
-
 reorder_cols <- function(design) {
     metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
     varNames <- setdiff(names(design), metaNames)
@@ -375,25 +367,18 @@ make_design_deff <- function(
     }
 
     # Set up levels and coding
-    ids <- get_type_ids(profile_lvls)
-    lvl.names <- list()
-    for (i in seq_len(ncol(profile_lvls))) {
-        if (ids$discrete[i]) {
-            lvl.names[[i]] <- levels(profile_lvls[,i])
-        } else {
-            lvl.names[[i]] <- unique(profile_lvls[,i])
-        }
-    }
+    lvl.names <- unname(get_profile_list(profiles))
     lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
     coding <- rep("C", length(lvls))
     c.lvls <- NULL
-    if (any(ids$continuous)) {
-        c.lvls <- lvl.names[ids$continuous]
+    type_ids <- get_type_ids(profiles)
+    if (any(type_ids$continuous)) {
+        c.lvls <- lvl.names[type_ids$continuous]
     }
     # lvl.names must be all characters for decoding process
     lvl.names <- lapply(lvl.names, function(x) as.character(x))
-    if (any(ids$discrete)) {
-        coding[ids$discrete] <- "D"
+    if (any(type_ids$discrete)) {
+        coding[type_ids$discrete] <- "D"
     }
     no_choice_alt <- NULL
     alt_cte <- rep(0, n_alts)
@@ -440,7 +425,7 @@ make_design_deff <- function(
     } else {
         D <- idefix::Modfed(
             cand.set = defineCandidateSet(
-              lvls, coding, c.lvls, profile_lvls, ids, profiles_restricted
+              lvls, coding, c.lvls, profile_lvls, type_ids, profiles_restricted
             ),
             par.draws = par_draws,
             n.alts = n_alts,
@@ -466,9 +451,9 @@ make_design_deff <- function(
     # Join on profileIDs to design
     design <- design_raw$design
     names(design) <- varnames
-    design <- join_profiles(design, profiles, varnames, ids)
+    design <- join_profiles(design, profiles, type_ids)
     if (no_choice) {
-      design <- add_no_choice_deff(design, n_alts, varnames[ids$discrete])
+      design <- add_no_choice_deff(design, n_alts, varnames[type_ids$discrete])
     }
 
     # Include probs?
@@ -503,8 +488,32 @@ make_design_deff <- function(
     return(design)
 }
 
+get_type_ids <- function(profiles) {
+    types <- get_col_types(profiles[, 2:ncol(profiles)])
+    ids <- list()
+    ids$discrete <- types %in% c("factor", "character")
+    ids$continuous <- !ids$discrete
+    return(ids)
+}
+
+get_profile_list <- function(profiles) {
+    profile_lvls <- profiles[, 2:ncol(profiles)]
+    varnames <- names(profile_lvls)
+    type_ids <- get_type_ids(profiles)
+    profile_list <- list()
+    for (i in seq_len(ncol(profile_lvls))) {
+        if (type_ids$discrete[i]) {
+            profile_list[[i]] <- levels(profile_lvls[,i])
+        } else {
+            profile_list[[i]] <- unique(profile_lvls[,i])
+        }
+    }
+    names(profile_list) <- varnames
+    return(profile_list)
+}
+
 defineCandidateSet <- function(
-    lvls, coding, c.lvls, profile_lvls, ids, profiles_restricted
+    lvls, coding, c.lvls, profile_lvls, type_ids, profiles_restricted
 ) {
   # Make candidate set with profiles, assuming non-restricted
   cand_set <- idefix::Profiles(
@@ -518,7 +527,7 @@ defineCandidateSet <- function(
   # including restricted profiles
   cand_set_res <- fastDummies::dummy_cols(
     profile_lvls,
-    select_columns = names(profile_lvls)[ids$discrete],
+    select_columns = names(profile_lvls)[type_ids$discrete],
     remove_first_dummy = TRUE,
     remove_selected_columns = TRUE
   )
@@ -540,7 +549,7 @@ defineCandidateSet <- function(
   return(cand_set_res)
 }
 
-join_profiles <- function(design, profiles, varnames, ids) {
+join_profiles <- function(design, profiles, type_ids) {
   # Replaces the generated design with rows from profiles, which ensures
   # factor levels in profiles are maintained in design
 
@@ -548,16 +557,17 @@ join_profiles <- function(design, profiles, varnames, ids) {
   design$row_id <- seq(nrow(design))
 
   # Convert numeric columns to actual numbers
-  for (id in which(ids$continuous)) {
-    design[,id] <- as.numeric(design[,id])
+  for (id in which(type_ids$continuous)) {
+    design[,id] <- as.numeric(as.character(design[,id]))
   }
 
   # Convert character types to factors and set same levels as profiles
-  for (id in which(ids$discrete)) {
+  for (id in which(type_ids$discrete)) {
     design[,id] <- factor(design[,id], levels = levels(profiles[,id+1]))
   }
 
   # Join on profileIDs, then reorder to retain design order
+  varnames <- names(profiles[, 2:ncol(profiles)])
   design <- merge(design, profiles, by = varnames, all.x = TRUE)
   design <- design[order(design$row_id),]
   design <- design[c('profileID', varnames)]
