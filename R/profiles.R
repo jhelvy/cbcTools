@@ -59,12 +59,28 @@ cbc_profiles <- function(...) {
 #'     type == "Honeycrisp" & freshness == "Poor",
 #'     type == "Fuji" & freshness == "Excellent"
 #' )
+
 cbc_restrict <- function(profiles, ...) {
     check_inputs_restrict(profiles)
+
+    # drop_ids <- unique(unlist(lapply(
+    #     rlang::enquos(...),
+    #     function(x) {
+    #       dplyr::filter(profiles, !!x) |> dplyr::pull(.data$profileID)
+    #     }
+    # )))
+
+    # Came up with a different approach to avoid the {dplyr} dependency
+
     drop_ids <- unique(unlist(lapply(
-        rlang::enquos(...),
-        function(x) dplyr::filter(profiles, !!x) |> dplyr::pull(.data$profileID)
+      rlang::enexprs(...),
+      function(x) {
+        subset_ids <- subset(profiles, eval(x), select = c("profileID"))
+        as.character(subset_ids$profileID)
+      }
     )))
+    drop_ids <- which(profiles$profileID %in% drop_ids)
+
     profiles <- profiles[-drop_ids,]
     profiles <- add_profile_ids(profiles)
     return(profiles)

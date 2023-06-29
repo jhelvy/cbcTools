@@ -20,7 +20,7 @@ Suggests:
     testthat,
     tibble
 Imports:
-    dplyr,
+    DoE.base,
     fastDummies,
     ggplot2,
     idefix,

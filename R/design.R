@@ -85,7 +85,7 @@
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
+#'   n_q      = 6,   # Number of questions per respondent
 #'   method   = 'orthogonal'
 #' )
 #'
