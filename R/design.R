@@ -71,7 +71,8 @@
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a randomized survey design
+#' # Make a randomized survey design from all possible profiles
+#' # (This is the default setting where method = 'random')
 #' design_rand <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
@@ -79,7 +80,17 @@
 #'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
-#' # Make a randomized survey design with a "no choice" option
+#' # Make a survey design from an orthogonal array of profiles
+#' design_rand <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 300, # Number of respondents
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6    # Number of questions per respondent
+#'   method   = 'orthogonal'
+#' )
+#'
+#' # Make a randomized survey design from all possible profiles
+#' # with a "no choice" option
 #' design_rand_nochoice <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
@@ -88,8 +99,8 @@
 #'   no_choice = TRUE
 #' )
 #'
-#' # Make a randomized labeled survey design with each "type" appearing in
-#' # each choice question
+#' # Make a randomized survey design from all possible profiles
+#' # with each level of the "type" attribute appearing as an alternative
 #' design_rand_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
@@ -153,16 +164,7 @@ cbc_design <- function(
   )
   profiles <- as.data.frame(profiles) # tibbles break things
   if (method == 'random') {
-    design <- make_design_random(
-      profiles, n_resp, n_alts, n_q, no_choice, label
-    )
-  } else if (!is.null(label)) {
-    warning(
-      'The use of the "label" argument is currently only compatible with ',
-      'random designs, so the "method" argument is being ignored and a ',
-      'random design is being used\n'
-    )
-    design <- make_design_random(
+    design <- get_randomized_design(
       profiles, n_resp, n_alts, n_q, no_choice, label
     )
   } else if (method == 'orthogonal') {
@@ -183,7 +185,7 @@ cbc_design <- function(
 
 # Random Design ----
 
-make_design_random <- function(
+get_randomized_design <- function(
   profiles, n_resp, n_alts, n_q, no_choice, label
 ) {
   if (is.null(label)) {
@@ -362,7 +364,18 @@ reorder_cols <- function(design) {
 make_design_orthogonal <- function(
     profiles, n_resp, n_alts, n_q, no_choice, label
 ) {
-
+    oa <- as.data.frame(DoE.base::oa.design(
+        factor.names = get_profile_list(profiles))
+    )
+    if (nrow(oa) == nrow(profiles)) {
+        message("No orthogonal array found, using full factorial")
+    } else {
+        message("Using orthogonal array with ", nrow(oa), " rows")
+    }
+    type_ids <- get_type_ids(profiles)
+    oa <- join_profiles(oa, profiles, type_ids)
+    design <- get_randomized_design(oa, n_resp, n_alts, n_q, no_choice, label)
+    return(design)
 }
 
 # Bayesian D-efficient Design ----

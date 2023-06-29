@@ -25,7 +25,7 @@ check_inputs_restrict <- function(profiles) {
 
 check_design_method <- function(method, priors) {
   if (!is.null(priors)) {
-    if (! method %in% c('CEA', 'Modfed')) {
+    if (! method_is_bayesian(method)) {
       # Set method to 'CEA' if priors are specified and
       # user didn't specify an appropriate method.
       warning(
@@ -74,6 +74,15 @@ check_inputs_design <- function(
 
     }
 
+    # The labeled design isn't yet supported for Bayesian D-efficient designs
+
+    if (!is.null(label) & method_is_bayesian(method)) {
+        stop(
+            'The use of the "label" argument is currently not compatible with ',
+            'Bayesian D-efficient designs'
+        )
+    }
+
     # Check that an appropriate method is used
 
     if (! method %in% c('random', 'orthogonal', 'CEA', 'Modfed')) {
@@ -89,10 +98,11 @@ check_inputs_design <- function(
 
         # Check that user specified an appropriate method
         # This should already be handled
-        if (! method %in% c('CEA', 'Modfed')) {
+        if (! method_is_bayesian(method)) {
             stop(
                 'Since "priors" are specified, the "method" argument must ',
-                'be either "Modfed" or "CEA"'
+                'be either "Modfed" or "CEA" to obtain a Bayesian ',
+                'D-efficient design'
             )
         }
 

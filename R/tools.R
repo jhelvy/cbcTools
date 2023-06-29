@@ -10,3 +10,7 @@
     "Please cite the package in your publications, see:\ncitation(\"cbcTools\")"
   )
 }
+
+method_is_bayesian <- function(method) {
+    return(method %in% c('CEA', 'Modfed'))
+}
