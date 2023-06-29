@@ -81,7 +81,7 @@
 #' )
 #'
 #' # Make a survey design from an orthogonal array of profiles
-#' design_rand <- cbc_design(
+#' design_ortho <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
@@ -364,13 +364,18 @@ reorder_cols <- function(design) {
 make_design_orthogonal <- function(
     profiles, n_resp, n_alts, n_q, no_choice, label
 ) {
-    oa <- as.data.frame(DoE.base::oa.design(
-        factor.names = get_profile_list(profiles))
-    )
+    oa <- suppressMessages(as.data.frame(
+        DoE.base::oa.design(
+            factor.names = get_profile_list(profiles)
+        )
+    ))
     if (nrow(oa) == nrow(profiles)) {
-        message("No orthogonal array found, using full factorial")
+        message("No orthogonal array found; using full factorial for design")
     } else {
-        message("Using orthogonal array with ", nrow(oa), " rows")
+        message(
+          "Orthogonal array found; using ", nrow(oa), " out of ",
+          nrow(profiles), " profiles for design"
+        )
     }
     type_ids <- get_type_ids(profiles)
     oa <- join_profiles(oa, profiles, type_ids)
