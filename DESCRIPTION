@@ -17,6 +17,7 @@ RoxygenNote: 7.2.3
 Depends:
     R (>= 3.5.0)
 Suggests:
+    here,
     testthat,
     tibble
 Imports:
