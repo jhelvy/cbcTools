@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.4.0</span>
       </span>
     </div>
 
@@ -97,12 +97,13 @@ size.</p>
 <span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Make a randomized survey design</span></span></span>
+<span class="r-in"><span><span class="co"># Make a survey design from all possible profiles</span></span></span>
+<span class="r-in"><span><span class="co"># (This is the default setting where method = 'full' for "full factorial")</span></span></span>
 <span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
-<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
-<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>,   <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span>    <span class="co"># Number of questions per respondent</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Simulate random choices</span></span></span>

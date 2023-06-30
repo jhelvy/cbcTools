@@ -6,8 +6,8 @@ is useful for determining the required sample size for obtaining a desired
 level of statistical power on each coefficient. The number of models to
 estimate is set by the nbreaks argument, which breaks up the data into
 groups of increasing sample sizes. All models are estimated models using
-the logitr package. For more details see Helveston (2023) doi:10.18637/jss.v105.i10
-."><meta property="og:image" content="https://jhelvy.github.io/cbcTools/reference/figures/logo.png"><meta property="og:image:alt" content="Logo for the cbcTools package"><meta name="twitter:card" content="summary"><meta name="twitter:creator" content="@JohnHelveston"><meta name="twitter:site" content="@JohnHelveston"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
+the 'logitr' package. For more details see the JSS article on the 'logitr'
+package (Helveston, 2023)."><meta property="og:image" content="https://jhelvy.github.io/cbcTools/reference/figures/logo.png"><meta property="og:image:alt" content="Logo for the cbcTools package"><meta name="twitter:card" content="summary"><meta name="twitter:creator" content="@JohnHelveston"><meta name="twitter:site" content="@JohnHelveston"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]--></head><body data-spy="scroll" data-target="#toc">
@@ -25,7 +25,7 @@ the logitr package. For more details see Helveston (2023) doi:10.18637/jss.v105.
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.4.0</span>
       </span>
     </div>
 
@@ -73,8 +73,8 @@ is useful for determining the required sample size for obtaining a desired
 level of statistical power on each coefficient. The number of models to
 estimate is set by the <code>nbreaks</code> argument, which breaks up the data into
 groups of increasing sample sizes. All models are estimated models using
-the logitr package. For more details see Helveston (2023) <a href="https://doi.org/10.18637/jss.v105.i10" class="external-link">doi:10.18637/jss.v105.i10</a>
-.</p>
+the 'logitr' package. For more details see the JSS article on the 'logitr'
+package (Helveston, 2023).</p>
     </div>
 
     <div id="ref-usage">
@@ -182,6 +182,11 @@ available arguments.</p></dd>
 errors for the same model estimated on subsets of the <code>data</code> with increasing
 sample sizes.</p>
     </div>
+    <div id="references">
+    <h2>References</h2>
+    <p>Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
+<a href="https://doi.org/10.18637/jss.v105.i10" class="external-link">doi:10.18637/jss.v105.i10</a></p>
+    </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
@@ -196,12 +201,13 @@ sample sizes.</p>
 <span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Make a randomized survey design</span></span></span>
+<span class="r-in"><span><span class="co"># Make a survey design from all possible profiles</span></span></span>
+<span class="r-in"><span><span class="co"># (This is the default setting where method = 'full' for "full factorial")</span></span></span>
 <span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>  n_resp   <span class="op">=</span> <span class="fl">300</span>, <span class="co"># Number of respondents</span></span></span>
-<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>, <span class="co"># Number of alternatives per question</span></span></span>
-<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span> <span class="co"># Number of questions per respondent</span></span></span>
+<span class="r-in"><span>  n_alts   <span class="op">=</span> <span class="fl">3</span>,   <span class="co"># Number of alternatives per question</span></span></span>
+<span class="r-in"><span>  n_q      <span class="op">=</span> <span class="fl">6</span>    <span class="co"># Number of questions per respondent</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Simulate random choices</span></span></span>
