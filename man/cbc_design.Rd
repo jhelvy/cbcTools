@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Make a random or Bayesian D-efficient choice-based conjoint survey design}
+\title{Make a choice-based conjoint survey design}
 \usage{
 cbc_design(
   profiles,
@@ -11,16 +11,16 @@ cbc_design(
   n_q,
   n_blocks = 1,
   n_draws = 50,
-  no_choice = FALSE,
   n_start = 5,
+  no_choice = FALSE,
   label = NULL,
+  method = "full",
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = NULL,
   keep_db_error = FALSE,
   max_iter = 50,
-  parallel = TRUE
+  parallel = FALSE
 )
 }
 \arguments{
@@ -33,32 +33,35 @@ This can be generated using the \code{cbc_profiles()} function.}
 
 \item{n_q}{Number of questions per respondent.}
 
-\item{n_blocks}{Number of blocks used in Bayesian D-efficient design.
-Max allowable is one block per respondent, defaults to \code{1}, meaning every
-respondent sees the same set of choice questions.}
+\item{n_blocks}{Number of blocks used in Orthogonal or Bayesian D-efficient
+designs. Max allowable is one block per respondent. Defaults to \code{1}, meaning
+every respondent sees the same choice set.}
 
 \item{n_draws}{Number of draws used in simulating the prior distribution
 used in Bayesian D-efficient designs. Defaults to \code{50}.}
-
-\item{no_choice}{Include a "no choice" option in the choice sets? Defaults
-to \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
-one more than the provided \code{n_alts} argument.}
 
 \item{n_start}{A numeric value indicating the number of random start designs
 to use in obtaining a Bayesian D-efficient design. The default is \code{5}.
 Increasing \code{n_start} can result in a more efficient design at the expense
 of increased computational time.}
 
+\item{no_choice}{Include a "no choice" option in the choice sets? Defaults
+to \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
+one more than the provided \code{n_alts} argument.}
+
 \item{label}{The name of the variable to use in a "labeled" design
 (also called an "alternative-specific design") such that each set of
 alternatives contains one of each of the levels in the \code{label} attribute.
-Currently only compatible with randomized designs. If used, the \code{n_alts}
-argument will be ignored as its value is defined by the unique number of
-levels in the \code{label} variable. Defaults to \code{NULL}.}
+Currently not compatible with Bayesian D-efficient designs. If used,
+the \code{n_alts} argument will be ignored as its value is defined by the unique
+number of levels in the \code{label} variable. Defaults to \code{NULL}.}
+
+\item{method}{Choose the design method to use: \code{"full"}, \code{"orthogonal"},
+\code{"CEA"} or \code{"Modfed"}. Defaults to \code{"full"}. See details below for complete
+description of each method.}
 
 \item{priors}{A list of one or more assumed prior parameters used to
-generate a Bayesian D-efficient design. If \code{NULL} (the default), a
-randomized design will be generated.}
+generate a Bayesian D-efficient design. Defaults to \code{NULL}}
 
 \item{prior_no_choice}{Prior utility value for the "no choice" alternative.
 Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
@@ -67,11 +70,6 @@ Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
 design includes average predicted probabilities for each alternative in each
 choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.}
-
-\item{method}{Which method to use for obtaining a Bayesian D-efficient
-design, \code{"CEA"} or \code{"Modfed"}? If \code{priors} are specified, it defaults to
-\code{"CEA"}, otherwise it defaults to \code{NULL}. See \code{?idefix::CEA} and
-\code{?idefix::Modfed} for more details.}
 
 \item{keep_db_error}{If \code{TRUE}, for Bayesian D-efficient designs the returned
 object will be a list containing the design and the DB-error score.
@@ -82,7 +80,7 @@ iterations when searching for a Bayesian D-efficient design. The default is
 50.}
 
 \item{parallel}{Logical value indicating whether computations should be done
-over multiple cores. The default is \code{TRUE}.}
+over multiple cores. The default is \code{FALSE}.}
 }
 \value{
 A data frame containing a choice-based conjoint survey design where
@@ -90,9 +88,45 @@ each row is an alternative.
 }
 \description{
 This function creates a data frame containing a choice-based conjoint survey
-design where each row is an alternative. Designs can be either a
-randomized or Bayesian D-efficient, in which case an implementation of the
-CEA or Modfed Federov algorithm is used via the {idefix} package
+design where each row is an alternative. Generate a variety of survey
+designs, including full factorial designs, orthogonal designs, and
+Bayesian D-efficient designs as well as designs with "no choice" options
+and "labeled" (also known as "alternative specific") designs.
+}
+\details{
+The \code{method} argument determines the design method used. Options are:
+\itemize{
+\item \code{"full"}
+\item \code{"orthogonal"}
+\item \code{"CEA"}
+\item \code{"Modfed"}
+}
+
+The \code{"full"} method uses a "full factorial" design where choice sets are
+created by randomly selecting from the full set of \code{profiles}. Blocking can
+used with these designs where blocks are created from subsets of the full
+factorial design. For more information about blocking with full factorial
+designs, see \code{?DoE.base::fac.design} as well as the JSS article on the
+{DoE.base} package (Grömping, 2018).
+
+The \code{"orthogonal"} method first finds an orthogonal array from the full
+set of \code{profiles} (if possible), then randomly selects from it to create
+choice sets. For some designs an orthogonal array can't be found, in which
+case a full factorial design is used. This approach is also sometimes called
+a "main effects" design since orthogonal arrays focus the information on the
+main effects at the expense of information about interaction effects. For
+more information about orthogonal designs, see \code{?DoE.base::oa.design} as
+well as the JSS article on the {DoE.base} package
+(Grömping, 2018).
+
+For Bayesian D-efficient designs, use \code{"CEA"} or \code{"Modfed"} along with
+specified \code{priors}. If \code{method} is set to \code{"CEA"} or \code{"Modfed"} but without
+\code{priors} specified, a prior of all \code{0}s will be used and a warning message
+stating this will be shown. If you are using a restricted set of \code{profiles},
+only the \code{"Modfed"} method can be used as \code{"CEA"} requires unrestricted
+\code{profiles}. For more details on Bayesian D-efficient designs, see
+\code{?idefix::CEA} and \code{?idefix::Modfed} as well as the JSS article on the
+{idefix} package (Traets et al, 2020).
 }
 \examples{
 library(cbcTools)
@@ -106,16 +140,27 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Make a randomized survey design
-design_rand <- cbc_design(
+# Make a survey design from all possible profiles
+# (This is the default setting where method = 'full' for "full factorial")
+design_full <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 )
 
-# Make a randomized survey design with a "no choice" option
-design_rand_nochoice <- cbc_design(
+# Make a survey design from an orthogonal array of profiles
+design_ortho <- cbc_design(
+  profiles = profiles,
+  n_resp   = 300, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'orthogonal'
+)
+
+# Make a survey design from all possible profiles
+# with a "no choice" option
+design_full_nochoice <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
   n_alts    = 3,   # Number of alternatives per question
@@ -123,9 +168,9 @@ design_rand_nochoice <- cbc_design(
   no_choice = TRUE
 )
 
-# Make a randomized labeled survey design with each "type" appearing in
-# each choice question
-design_rand_labeled <- cbc_design(
+# Make a survey design from all possible profiles
+# with each level of the "type" attribute appearing as an alternative
+design_full_labeled <- cbc_design(
   profiles  = profiles,
   n_resp    = 300, # Number of respondents
   n_alts    = 3,   # Number of alternatives per question
@@ -134,13 +179,13 @@ design_rand_labeled <- cbc_design(
 )
 
 # Make a Bayesian D-efficient design with a prior model specified
-# Note that by default parallel = TRUE.
-design_deff <- cbc_design(
+# Note that by speed can be improved by setting parallel = TRUE
+design_bayesian <- cbc_design(
     profiles  = profiles,
     n_resp    = 300, # Number of respondents
-    n_alts    = 3,  # Number of alternatives per question
-    n_q       = 6,  # Number of questions per respondent
-    n_start   = 1,
+    n_alts    = 3,   # Number of alternatives per question
+    n_q       = 6,   # Number of questions per respondent
+    n_start   = 1,   # Defauls to 5, set to 1 here for a quick example
     priors = list(
         price     = -0.1,
         type      = c(0.1, 0.2),
@@ -150,7 +195,16 @@ design_deff <- cbc_design(
     parallel = FALSE
 )
 }
+\references{
+Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41,
+\doi{10.18637/jss.v085.i05}
+Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
+\doi{10.18637/jss.v096.i03}
+}
+\keyword{DoE.base}
 \keyword{design}
+\keyword{experiment}
+\keyword{idefix}
 \keyword{logit}
 \keyword{logitr}
 \keyword{mixed}

@@ -83,7 +83,8 @@ is useful for determining the required sample size for obtaining a desired
 level of statistical power on each coefficient. The number of models to
 estimate is set by the \code{nbreaks} argument, which breaks up the data into
 groups of increasing sample sizes. All models are estimated models using
-the {logitr} package. For more details see Helveston (2023) \doi{10.18637/jss.v105.i10}.
+the 'logitr' package. For more details see the JSS article on the 'logitr'
+package (Helveston, 2023).
 }
 \examples{
 library(cbcTools)
@@ -97,12 +98,13 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Make a randomized survey design
+# Make a survey design from all possible profiles
+# (This is the default setting where method = 'full' for "full factorial")
 design <- cbc_design(
   profiles = profiles,
   n_resp   = 300, # Number of respondents
-  n_alts   = 3, # Number of alternatives per question
-  n_q      = 6 # Number of questions per respondent
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6    # Number of questions per respondent
 )
 
 # Simulate random choices
@@ -121,6 +123,10 @@ power <- cbc_power(
   n_q     = 6,
   n_cores = 2
 )
+}
+\references{
+Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
+\doi{10.18637/jss.v105.i10}
 }
 \keyword{logit}
 \keyword{logitr}

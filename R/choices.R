@@ -1,7 +1,9 @@
 #' Simulate choices for a survey design
 #'
 #' Simulate choices for a survey design, either randomly or according to a
-#' utility model defined by user-provided prior parameters.
+#' utility model defined by user-provided prior parameters. All choices are
+#' simulated using the 'logitr' package. For more details see the JSS article
+#' on the 'logitr' package (Helveston, 2023).
 #' @keywords logitr mnl mxl mixed logit simulation
 #'
 #' @param design A data frame of a survey design.
@@ -12,6 +14,9 @@
 #' If `NULL` (the default), choices will be randomly assigned.
 #' @param n_draws The number of Halton draws to use for simulated choices
 #' for mixed logit models. Defaults to `100`.
+#' @references
+#' Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
+#' \doi{10.18637/jss.v105.i10}
 #' @return Returns the `design` data frame with an additional `choice` column
 #' identifying the simulated choices.
 #' @export
@@ -27,12 +32,13 @@
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a randomized survey design
+#' # Make a survey design from all possible profiles
+#' # (This is the default setting where method = 'full' for "full factorial")
 #' design <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3, # Number of alternatives per question
-#'   n_q      = 6 # Number of questions per respondent
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
 #' # Simulate random choices

@@ -7,7 +7,8 @@
 #' level of statistical power on each coefficient. The number of models to
 #' estimate is set by the `nbreaks` argument, which breaks up the data into
 #' groups of increasing sample sizes. All models are estimated models using
-#' the {logitr} package. For more details see Helveston (2023) \doi{10.18637/jss.v105.i10}.
+#' the 'logitr' package. For more details see the JSS article on the 'logitr'
+#' package (Helveston, 2023).
 #' @keywords logitr mnl mxl mixed logit sample size power
 #'
 #' @param data The data, formatted as a `data.frame` object.
@@ -44,6 +45,9 @@
 #' @param ... Other arguments that are passed to `logitr::logitr()` for model
 #' estimation. See the {logitr} documentation for details about other
 #' available arguments.
+#' @references
+#' Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
+#' \doi{10.18637/jss.v105.i10}
 #' @return Returns a data frame of estimated model coefficients and standard
 #' errors for the same model estimated on subsets of the `data` with increasing
 #' sample sizes.
@@ -60,12 +64,13 @@
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a randomized survey design
+#' # Make a survey design from all possible profiles
+#' # (This is the default setting where method = 'full' for "full factorial")
 #' design <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3, # Number of alternatives per question
-#'   n_q      = 6 # Number of questions per respondent
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
 #' # Simulate random choices
@@ -229,4 +234,84 @@ extract_errors <- function(models) {
     )
     row.names(results) <- NULL
     return(results)
+}
+
+#' Plot a comparison of different design powers
+#'
+#' This function creates a ggplot2 object comparing the power curves of
+#' different designs. Each design is color coded and each facet (sub plot)
+#' is a model coefficient.
+#' @param ... Any number of data frame containing power results obtained from
+#' the `cbc_power()` function, separated by commas.
+#' @return A plot comparing the power curves of different designs.
+#' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
+#' theme element_blank labs facet_wrap
+#' @importFrom rlang .data
+#' @export
+#' @examples
+#' library(cbcTools)
+#'
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c('Poor', 'Average', 'Excellent')
+#' )
+#'
+#' # Make designs to compare: full factorial vs bayesian d-efficient
+#' design_full <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp = 300, n_alts = 3, n_q = 6
+#' )
+#' # Same priors will be used in bayesian design and simulated choices
+#' priors <- list(
+#'   price     = -0.1,
+#'   type      = c(0.1, 0.2),
+#'   freshness = c(0.1, 0.2)
+#' )
+#' design_bayesian <- cbc_design(
+#'   profiles  = profiles,
+#'   n_resp = 300, n_alts = 3, n_q = 6, n_start = 1, method = "CEA",
+#'   priors = priors, parallel = FALSE
+#' )
+#'
+#' # Obtain power for each design by simulating choices
+#' power_full <- design_full |>
+#' cbc_choices(obsID = "obsID", priors = priors) |>
+#'   cbc_power(
+#'     pars = c("price", "type", "freshness"),
+#'     outcome = "choice", obsID = "obsID", nbreaks = 10, n_q = 6, n_cores = 2
+#'   )
+#' power_bayesian <- design_bayesian |>
+#'   cbc_choices(obsID = "obsID", priors = priors) |>
+#'   cbc_power(
+#'     pars = c("price", "type", "freshness"),
+#'     outcome = "choice", obsID = "obsID", nbreaks = 10, n_q = 6, n_cores = 2
+#'   )
+#'
+#' # Compare power of each design
+#' plot_compare_power(power_bayesian, power_full)
+plot_compare_power <- function(...) {
+  power <- list(...)
+  design_names <- unlist(lapply(as.list(match.call())[-1], deparse))
+  names(power) <- design_names
+  for (i in 1:length(power)) {
+    power[[i]]$design <- names(power)[i]
+  }
+  power <- do.call(rbind, power)
+  ggplot2::ggplot(power) +
+    geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
+    geom_point(
+      aes(x = .data$sampleSize, y = .data$se, color = .data$design),
+      size = 1.8
+    ) +
+    facet_wrap(~.data$coef) +
+    expand_limits(y = 0) +
+    theme_bw(base_size = 14) +
+    theme(panel.grid.minor = element_blank()) +
+    labs(
+      color = "Design",
+      x = "Sample size",
+      y = "Standard error"
+    )
 }
