@@ -60,6 +60,11 @@ check_inputs_design <- function(
     max_iter,
     parallel
 ) {
+
+    if (n_blocks < 1) {
+      stop('n_blocks must be greater than or equal to 1')
+    }
+
     if (n_blocks > n_resp) {
         stop("Maximum allowable number of blocks is one block per respondent")
     }

@@ -197,7 +197,7 @@ cbc_design <- function(
   profiles <- as.data.frame(profiles) # tibbles break things
   if (method == 'full') {
     design <- make_design_full(
-      profiles, n_resp, n_alts, n_q, no_choice, label
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
     )
   } else if (method == 'orthogonal') {
     design <- make_design_orthogonal(
@@ -396,11 +396,52 @@ reorder_cols <- function(design) {
 # Full Factorial Design ----
 
 make_design_full <- function(
-    profiles, n_resp, n_alts, n_q, no_choice, label
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
 ) {
-  design <- get_randomized_design(
-    profiles, n_resp, n_alts, n_q, no_choice, label
-  )
+  if (n_blocks > 1) {
+    design <- make_design_full_blocked(
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+    )
+  } else {
+    design <- get_randomized_design(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
+  }
+  return(design)
+}
+
+make_design_full_blocked <- function(
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+) {
+  # Make blocks
+  design <- suppressMessages(as.data.frame(
+    DoE.base::fac.design(
+      factor.names = get_profile_list(profiles),
+      blocks = n_blocks,
+      block.name = "blockID"
+    )
+  ))
+  design$blockID <- as.numeric(as.character(design$blockID))
+  design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
+  type_ids <- get_type_ids(profiles)
+  profiles <- join_profiles(design, profiles, type_ids)
+
+  # Randomize design within each block
+  profiles <- split(profiles, profiles$blockID)
+  # Make sure number of respondents divides well into blocks
+  n_resp_list <- rep(n_resp / n_blocks, n_blocks)
+  if (! all(n_resp_list %% 1 == 0)) {
+    n_resp_list <- floor(n_resp_list)
+    n_resp_list[n_blocks] <- n_resp_list[n_blocks] + 1
+  }
+  design <- list()
+  for (i in 1:n_blocks) {
+    design[[i]] <- get_randomized_design(
+      profiles[[i]], n_resp_list[i], n_alts, n_q, no_choice, label
+    )
+  }
+  design <- do.call(rbind, design)
+  design <- add_metadata(design, n_resp, n_alts, n_q)
   return(design)
 }
 
@@ -410,9 +451,9 @@ make_design_orthogonal <- function(
     profiles, n_resp, n_alts, n_q, no_choice, label
 ) {
     oa <- suppressMessages(as.data.frame(
-        DoE.base::oa.design(
-            factor.names = get_profile_list(profiles)
-        )
+      DoE.base::oa.design(
+        factor.names = get_profile_list(profiles)
+      )
     ))
     if (nrow(oa) == nrow(profiles)) {
         message("No orthogonal array found; using full factorial for design")
@@ -641,6 +682,9 @@ join_profiles <- function(design, profiles, type_ids) {
   # Keep track of row order in design
   design$row_id <- seq(nrow(design))
 
+  # Before joining profiles, ensure that all the data types are the same
+  # as in profiles, otherwise join won't work properly
+
   # Convert numeric columns to actual numbers
   for (id in which(type_ids$continuous)) {
     design[,id] <- as.numeric(as.character(design[,id]))
@@ -655,6 +699,7 @@ join_profiles <- function(design, profiles, type_ids) {
   varnames <- names(profiles[, 2:ncol(profiles)])
   design <- merge(design, profiles, by = varnames, all.x = TRUE)
   design <- design[order(design$row_id),]
+  if ('blockID' %in% names(design)) { varnames <- c(varnames, 'blockID') }
   design <- design[c('profileID', varnames)]
   return(design)
 }
