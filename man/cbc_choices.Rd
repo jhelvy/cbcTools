@@ -25,7 +25,9 @@ identifying the simulated choices.
 }
 \description{
 Simulate choices for a survey design, either randomly or according to a
-utility model defined by user-provided prior parameters.
+utility model defined by user-provided prior parameters. All choices are
+simulated using the 'logitr' package. For more details see the JSS article
+on the 'logitr' package (Helveston, 2023).
 }
 \examples{
 library(cbcTools)
@@ -87,6 +89,10 @@ data <- cbc_choices(
     freshness = c(0.1, 0.2)
   )
 )
+}
+\references{
+Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
+\doi{10.18637/jss.v105.i10}
 }
 \keyword{logit}
 \keyword{logitr}

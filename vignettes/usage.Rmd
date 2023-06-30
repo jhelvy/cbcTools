@@ -358,7 +358,7 @@ One of the convenient features of how the package is written is that the object 
 ```{r}
 #| eval: false
 
-power_plot <- cbc_profiles(
+cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')
@@ -388,3 +388,5 @@ plot()
 
 ```{r, ref.label='power', echo=FALSE}
 ```
+
+# References

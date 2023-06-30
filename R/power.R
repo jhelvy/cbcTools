@@ -7,7 +7,8 @@
 #' level of statistical power on each coefficient. The number of models to
 #' estimate is set by the `nbreaks` argument, which breaks up the data into
 #' groups of increasing sample sizes. All models are estimated models using
-#' the {logitr} package. For more details see Helveston (2023) \doi{10.18637/jss.v105.i10}.
+#' the 'logitr' package. For more details see the JSS article on the 'logitr'
+#' package (Helveston, 2023).
 #' @keywords logitr mnl mxl mixed logit sample size power
 #'
 #' @param data The data, formatted as a `data.frame` object.
@@ -44,6 +45,9 @@
 #' @param ... Other arguments that are passed to `logitr::logitr()` for model
 #' estimation. See the {logitr} documentation for details about other
 #' available arguments.
+#' @references
+#' Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
+#' \doi{10.18637/jss.v105.i10}
 #' @return Returns a data frame of estimated model coefficients and standard
 #' errors for the same model estimated on subsets of the `data` with increasing
 #' sample sizes.

@@ -62,7 +62,7 @@
 #' used with these designs where blocks are created from subsets of the full
 #' factorial design. For more information about blocking with full factorial
 #' designs, see `?DoE.base::fac.design` as well as the JSS article on the
-#' {DoE.base} package (Grömping, 2018) \doi{10.18637/jss.v085.i05}.
+#' {DoE.base} package (Grömping, 2018).
 #'
 #' The `"orthogonal"` method first finds an orthogonal array from the full
 #' set of `profiles` (if possible), then randomly selects from it to create
@@ -72,7 +72,7 @@
 #' main effects at the expense of information about interaction effects. For
 #' more information about orthogonal designs, see `?DoE.base::oa.design` as
 #' well as the JSS article on the {DoE.base} package
-#' (Grömping, 2018) \doi{10.18637/jss.v085.i05}.
+#' (Grömping, 2018).
 #'
 #' For Bayesian D-efficient designs, use `"CEA"` or `"Modfed"` along with
 #' specified `priors`. If `method` is set to `"CEA"` or `"Modfed"` but without
@@ -81,13 +81,12 @@
 #' only the `"Modfed"` method can be used as `"CEA"` requires unrestricted
 #' `profiles`. For more details on Bayesian D-efficient designs, see
 #' `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
-#' {idefix} package (Traets et al, 2020) \doi{10.18637/jss.v096.i03}.
+#' {idefix} package (Traets et al, 2020).
 #' @references
-#' Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal
-#' of Statistical Software, 85(5), 1–41. \doi{10.18637/jss.v085.i05}.
-#' Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal
-#' Designs for Discrete Choice Experiments in R: The idefix Package. Journal
-#' of Statistical Software, 96(3), 1–41. \doi{10.18637/jss.v096.i03}.
+#' Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41,
+#' \doi{10.18637/jss.v085.i05}
+#' Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
+#' \doi{10.18637/jss.v096.i03}
 #' @return A data frame containing a choice-based conjoint survey design where
 #' each row is an alternative.
 #' @export
