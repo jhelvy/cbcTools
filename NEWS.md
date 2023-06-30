@@ -1,5 +1,10 @@
 # cbcTools (development version)
 
+# cbcTools 0.4.0
+
+- Adjustments made to the `method` argument in the `cbc_design()` function in preparation for potentially adding new design methods.
+- Added the `"orthogonal"` option for generating orthogonal designs.
+
 # cbcTools 0.3.4
 
 - Another small bug fix in `cbc_design()` related to #16 where factor level ordering for categorical variables were being mis-ordered.
