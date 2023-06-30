@@ -235,3 +235,83 @@ extract_errors <- function(models) {
     row.names(results) <- NULL
     return(results)
 }
+
+#' Plot a comparison of different design powers
+#'
+#' This function creates a ggplot2 object comparing the power curves of
+#' different designs. Each design is color coded and each facet (sub plot)
+#' is a model coefficient.
+#' @param ... Any number of data frame containing power results obtained from
+#' the `cbc_power()` function, separated by commas.
+#' @return A plot comparing the power curves of different designs.
+#' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
+#' theme element_blank labs facet_wrap
+#' @importFrom rlang .data
+#' @export
+#' @examples
+#' library(cbcTools)
+#'
+#' # Generate all possible profiles
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c('Poor', 'Average', 'Excellent')
+#' )
+#'
+#' # Make designs to compare: full factorial vs bayesian d-efficient
+#' design_full <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp = 300, n_alts = 3, n_q = 6
+#' )
+#' # Same priors will be used in bayesian design and simulated choices
+#' priors <- list(
+#'   price     = -0.1,
+#'   type      = c(0.1, 0.2),
+#'   freshness = c(0.1, 0.2)
+#' )
+#' design_bayesian <- cbc_design(
+#'   profiles  = profiles,
+#'   n_resp = 300, n_alts = 3, n_q = 6, n_start = 1, method = "CEA",
+#'   priors = priors, parallel = FALSE
+#' )
+#'
+#' # Obtain power for each design by simulating choices
+#' power_full <- design_full |>
+#' cbc_choices(obsID = "obsID", priors = priors) |>
+#'   cbc_power(
+#'     pars = c("price", "type", "freshness"),
+#'     outcome = "choice", obsID = "obsID", nbreaks = 10, n_q = 6, n_cores = 2
+#'   )
+#' power_bayesian <- design_bayesian |>
+#'   cbc_choices(obsID = "obsID", priors = priors) |>
+#'   cbc_power(
+#'     pars = c("price", "type", "freshness"),
+#'     outcome = "choice", obsID = "obsID", nbreaks = 10, n_q = 6, n_cores = 2
+#'   )
+#'
+#' # Compare power of each design
+#' plot_compare_power(power_bayesian, power_full)
+plot_compare_power <- function(...) {
+  power <- list(...)
+  design_names <- unlist(lapply(as.list(match.call())[-1], deparse))
+  names(power) <- design_names
+  for (i in 1:length(power)) {
+    power[[i]]$design <- names(power)[i]
+  }
+  power <- do.call(rbind, power)
+  ggplot2::ggplot(power) +
+    geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
+    geom_point(
+      aes(x = .data$sampleSize, y = .data$se, color = .data$design),
+      size = 1.8
+    ) +
+    facet_wrap(~.data$coef) +
+    expand_limits(y = 0) +
+    theme_bw(base_size = 14) +
+    theme(panel.grid.minor = element_blank()) +
+    labs(
+      color = "Design",
+      x = "Sample size",
+      y = "Standard error"
+    )
+}

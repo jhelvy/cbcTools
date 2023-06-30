@@ -389,4 +389,44 @@ plot()
 ```{r, ref.label='power', echo=FALSE}
 ```
 
+## Comparing multiple designs
+
+When evaluating multiple designs, it can be helpful to visually compare their respective power curves. This can be done using the `plot_compare_power()` function. To use it, you have to first create different designs and then simulate the power of each design by simulating choices. Here is an example comparing a full factorial design against a Bayesian D-efficient design:
+
+```{r}
+# Make designs to compare: full factorial vs bayesian d-efficient
+design_full <- cbc_design(
+  profiles = profiles,
+  n_resp = 300, n_alts = 3, n_q = 6
+)
+# Same priors will be used in bayesian design and simulated choices 
+priors <- list( 
+  price     = -0.1,
+  type      = c(0.1, 0.2),
+  freshness = c(0.1, 0.2)
+)
+design_bayesian <- cbc_design(
+  profiles  = profiles,
+  n_resp = 300, n_alts = 3, n_q = 6, n_start = 1, method = "CEA",
+  priors = priors, parallel = FALSE
+)
+
+# Obtain power for each design by simulating choices
+power_full <- design_full |>
+cbc_choices(obsID = "obsID", priors = priors) |>
+  cbc_power(
+    pars = c("price", "type", "freshness"),
+    outcome = "choice", obsID = "obsID", nbreaks = 10, n_q = 6, n_cores = 2
+  )
+power_bayesian <- design_bayesian |>
+  cbc_choices(obsID = "obsID", priors = priors) |>
+  cbc_power(
+    pars = c("price", "type", "freshness"),
+    outcome = "choice", obsID = "obsID", nbreaks = 10, n_q = 6, n_cores = 2
+  )
+
+# Compare power of each design
+plot_compare_power(power_bayesian, power_full)
+```
+
 # References

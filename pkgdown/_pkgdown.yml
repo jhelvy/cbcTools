@@ -48,6 +48,7 @@ reference:
   desc: "Functions for conducting a power analysis."
   contents:
   - cbc_power
+  - plot_compare_power
 - title: "Methods"
   desc: "Various methods."
   contents:

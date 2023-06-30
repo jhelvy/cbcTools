@@ -51,12 +51,13 @@ print.cbc_models <- function (
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a randomized survey design
+#' # Make a survey design from all possible profiles
+#' # (This is the default setting where method = 'full' for "full factorial")
 #' design <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3, # Number of alternatives per question
-#'   n_q      = 6 # Number of questions per respondent
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
 #' # Simulate random choices
