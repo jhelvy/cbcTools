@@ -1,11 +1,12 @@
-#' Make a random or Bayesian D-efficient choice-based conjoint survey design
+#' Make a choice-based conjoint survey design
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
-#' design where each row is an alternative. Designs can be either a
-#' randomized or Bayesian D-efficient, in which case an implementation of the
-#' CEA or Modfed Federov algorithm is used via the {idefix} package
+#' design where each row is an alternative. Generate a variety of survey
+#' designs, including full factorial designs, orthogonal designs, and
+#' Bayesian D-efficient designs as well as designs with "no choice" options
+#' and "labeled" (also known as "alternative specific") designs.
 #'
-#' @keywords logitr mnl mxl mixed logit design
+#' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
 #' @param profiles A data frame in which each row is a possible profile.
 #' This can be generated using the `cbc_profiles()` function.
 #' @param n_resp Number of survey respondents.
@@ -29,6 +30,9 @@
 #' Currently not compatible with Bayesian D-efficient designs. If used,
 #' the `n_alts` argument will be ignored as its value is defined by the unique
 #' number of levels in the `label` variable. Defaults to `NULL`.
+#' @param method Choose the design method to use: `"full"`, `"orthogonal"`,
+#' `"CEA"` or `"Modfed"`. Defaults to `"full"`. See details below for complete
+#' description of each method.
 #' @param priors A list of one or more assumed prior parameters used to
 #' generate a Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
@@ -37,15 +41,6 @@
 #' design includes average predicted probabilities for each alternative in each
 #' choice set given the sample from the prior preference distribution.
 #' Defaults to `FALSE`.
-#' @param method Which design method to use? Defaults to `"random"` where choice
-#' sets are created by randomly selecting from the full set of `profiles`. The
-#' `"orthogonal"` method first finds an orthogonal array from `profiles` and
-#' then randomly selects from it. For Bayesian D-efficient designs, use `"CEA"`
-#' or `"Modfed"` along with specified `priors`. If `method` is set to `"CEA"`
-#' or `"Modfed"` but without `priors` specified, a prior of all `0`s is used.
-#' If using a restricted set of `profiles`, only the `"Modfed"` method can be
-#' used as `"CEA"` requires unrestricted `profiles`. See `?idefix::CEA` and
-#' `?idefix::Modfed` for more details.
 #' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
 #' object will be a list containing the design and the DB-error score.
 #' Defaults to `FALSE`.
@@ -53,7 +48,40 @@
 #' iterations when searching for a Bayesian D-efficient design. The default is
 #' 50.
 #' @param parallel Logical value indicating whether computations should be done
-#' over multiple cores. The default is `TRUE`.
+#' over multiple cores. The default is `FALSE`.
+#' @details
+#' The `method` argument determines the design method used. Options are:
+#'
+#' - `"full"`
+#' - `"orthogonal"`
+#' - `"CEA"`
+#' - `"Modfed"`
+#'
+#' The `"full"` method uses a "full factorial" design where choice sets are
+#' created by randomly selecting from the full set of `profiles`. Blocking can
+#' used with these designs where blocks are created from subsets of the full
+#' factorial design. For more information about blocking with full factorial
+#' designs, see `?DoE.base::fac.design` as well as the JSS article on the
+#' {DoE.base} package (Grömping, 2018) <doi:10.18637/jss.v085.i05>.
+#'
+#' The `"orthogonal"` method first finds an orthogonal array from the full
+#' set of `profiles` (if possible), then randomly selects from it to create
+#' choice sets. For some designs an orthogonal array can't be found, in which
+#' case a full factorial design is used. This approach is also sometimes called
+#' a "main effects" design since orthogonal arrays focus the information on the
+#' main effects at the expense of information about interaction effects. For
+#' more information about orthogonal designs, see `?DoE.base::oa.design` as
+#' well as the JSS article on the {DoE.base} package
+#' (Grömping, 2018) <doi:10.18637/jss.v085.i05>.
+#'
+#' For Bayesian D-efficient designs, use `"CEA"` or `"Modfed"` along with
+#' specified `priors`. If `method` is set to `"CEA"` or `"Modfed"` but without
+#' `priors` specified, a prior of all `0`s will be used and a warning message
+#' stating this will be shown. If you are using a restricted set of `profiles`,
+#' only the `"Modfed"` method can be used as `"CEA"` requires unrestricted
+#' `profiles`. For more details on Bayesian D-efficient designs, see
+#' `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
+#' {idefix} package (Traets et al, 2020) <doi:10.18637/jss.v096.i03>.
 #' @return A data frame containing a choice-based conjoint survey design where
 #' each row is an alternative.
 #' @export
@@ -69,9 +97,9 @@
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a randomized survey design from all possible profiles
-#' # (This is the default setting where method = 'random')
-#' design_rand <- cbc_design(
+#' # Make a survey design from all possible profiles
+#' # (This is the default setting where method = 'full' for "full factorial")
+#' design_full <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 300, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
@@ -87,9 +115,9 @@
 #'   method   = 'orthogonal'
 #' )
 #'
-#' # Make a randomized survey design from all possible profiles
+#' # Make a survey design from all possible profiles
 #' # with a "no choice" option
-#' design_rand_nochoice <- cbc_design(
+#' design_full_nochoice <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
 #'   n_alts    = 3,   # Number of alternatives per question
@@ -97,9 +125,9 @@
 #'   no_choice = TRUE
 #' )
 #'
-#' # Make a randomized survey design from all possible profiles
+#' # Make a survey design from all possible profiles
 #' # with each level of the "type" attribute appearing as an alternative
-#' design_rand_labeled <- cbc_design(
+#' design_full_labeled <- cbc_design(
 #'   profiles  = profiles,
 #'   n_resp    = 300, # Number of respondents
 #'   n_alts    = 3,   # Number of alternatives per question
@@ -108,13 +136,13 @@
 #' )
 #'
 #' # Make a Bayesian D-efficient design with a prior model specified
-#' # Note that by default parallel = TRUE.
+#' # Note that by speed can be improved by setting parallel = TRUE
 #' design_deff <- cbc_design(
 #'     profiles  = profiles,
 #'     n_resp    = 300, # Number of respondents
-#'     n_alts    = 3,  # Number of alternatives per question
-#'     n_q       = 6,  # Number of questions per respondent
-#'     n_start   = 1,
+#'     n_alts    = 3,   # Number of alternatives per question
+#'     n_q       = 6,   # Number of questions per respondent
+#'     n_start   = 1,   # Defauls to 5, set to 1 here for a quick example
 #'     priors = list(
 #'         price     = -0.1,
 #'         type      = c(0.1, 0.2),
@@ -130,16 +158,16 @@ cbc_design <- function(
   n_q,
   n_blocks = 1,
   n_draws = 50,
-  no_choice = FALSE,
   n_start = 5,
+  no_choice = FALSE,
   label = NULL,
+  method = "full",
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  method = "random",
   keep_db_error = FALSE,
   max_iter = 50,
-  parallel = TRUE
+  parallel = FALSE
 ) {
   method <- check_design_method(method, priors)
   check_inputs_design(
@@ -149,20 +177,20 @@ cbc_design <- function(
     n_q,
     n_blocks,
     n_draws,
-    no_choice,
     n_start,
+    no_choice,
     label,
+    method,
     priors,
     prior_no_choice,
     probs,
-    method,
     keep_db_error,
     max_iter,
     parallel
   )
   profiles <- as.data.frame(profiles) # tibbles break things
-  if (method == 'random') {
-    design <- get_randomized_design(
+  if (method == 'full') {
+    design <- make_design_full(
       profiles, n_resp, n_alts, n_q, no_choice, label
     )
   } else if (method == 'orthogonal') {
@@ -171,8 +199,8 @@ cbc_design <- function(
     )
   } else {
     design <- make_design_bayesian(
-      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-      label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
+      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
+      label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
       parallel
     )
   }
@@ -181,7 +209,9 @@ cbc_design <- function(
   return(design)
 }
 
-# Random Design ----
+# Randomize the design ----
+
+# Sample from profiles to create randomized choice sets
 
 get_randomized_design <- function(
   profiles, n_resp, n_alts, n_q, no_choice, label
@@ -357,6 +387,17 @@ reorder_cols <- function(design) {
     return(design)
 }
 
+# Full Factorial Design ----
+
+make_design_full <- function(
+    profiles, n_resp, n_alts, n_q, no_choice, label
+) {
+  design <- get_randomized_design(
+    profiles, n_resp, n_alts, n_q, no_choice, label
+  )
+  return(design)
+}
+
 # Orthogonal Design ----
 
 make_design_orthogonal <- function(
@@ -384,8 +425,8 @@ make_design_orthogonal <- function(
 # Bayesian D-efficient Design ----
 
 make_design_bayesian <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, no_choice, n_start,
-    label, priors, prior_no_choice, probs, method, keep_db_error, max_iter,
+    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
+    label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
     parallel
 ) {
     # Set up levels and coding
@@ -411,7 +452,7 @@ make_design_bayesian <- function(
         no_choice_alt <- n_alts
     }
 
-    # Make sure order of priors matches order of attributes in profiles
+    # Setup priors
     profile_lvls <- profiles[, 2:ncol(profiles)]
     varnames <- names(profile_lvls)
     if (is.null(priors)) {
@@ -423,6 +464,7 @@ make_design_bayesian <- function(
         priors <- lapply(profile_list, function(x) rep(0, length(x) - 1))
         priors[type_ids$continuous] <- 0
     }
+    # Make sure order of priors matches order of attributes in profiles
     mu <- unlist(priors[varnames])
     if (no_choice) {
         mu <- c(prior_no_choice, mu)
@@ -437,9 +479,7 @@ make_design_bayesian <- function(
     }
 
     # Make the design
-
     profiles_restricted <- nrow(expand.grid(lvl.names)) > nrow(profiles)
-
     if (profiles_restricted & (method == "CEA")) {
       # "CEA" method only works with unrestricted profile set
       method <- "Modfed"
@@ -448,7 +488,6 @@ make_design_bayesian <- function(
         'profiles, so "Modfed" is being used instead.\n'
       )
     }
-
     if (method == "CEA") {
         D <- idefix::CEA(
             lvls = lvls,
@@ -514,7 +553,7 @@ make_design_bayesian <- function(
     design <- add_metadata(design, n_resp, n_alts, n_q)
     design <- reorder_cols(design)
 
-    # Print error
+    # Print DB error
     message(
         "Bayesian D-efficient design found with DB-error of ",
         round(D$error, 5)
