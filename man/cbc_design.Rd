@@ -107,7 +107,7 @@ created by randomly selecting from the full set of \code{profiles}. Blocking can
 used with these designs where blocks are created from subsets of the full
 factorial design. For more information about blocking with full factorial
 designs, see \code{?DoE.base::fac.design} as well as the JSS article on the
-{DoE.base} package (Grömping, 2018) \url{doi:10.18637/jss.v085.i05}.
+{DoE.base} package (Grömping, 2018) \doi{10.18637/jss.v085.i05}.
 
 The \code{"orthogonal"} method first finds an orthogonal array from the full
 set of \code{profiles} (if possible), then randomly selects from it to create
@@ -117,7 +117,7 @@ a "main effects" design since orthogonal arrays focus the information on the
 main effects at the expense of information about interaction effects. For
 more information about orthogonal designs, see \code{?DoE.base::oa.design} as
 well as the JSS article on the {DoE.base} package
-(Grömping, 2018) \url{doi:10.18637/jss.v085.i05}.
+(Grömping, 2018) \doi{10.18637/jss.v085.i05}.
 
 For Bayesian D-efficient designs, use \code{"CEA"} or \code{"Modfed"} along with
 specified \code{priors}. If \code{method} is set to \code{"CEA"} or \code{"Modfed"} but without
@@ -126,7 +126,7 @@ stating this will be shown. If you are using a restricted set of \code{profiles}
 only the \code{"Modfed"} method can be used as \code{"CEA"} requires unrestricted
 \code{profiles}. For more details on Bayesian D-efficient designs, see
 \code{?idefix::CEA} and \code{?idefix::Modfed} as well as the JSS article on the
-{idefix} package (Traets et al, 2020) \url{doi:10.18637/jss.v096.i03}.
+{idefix} package (Traets et al, 2020) \doi{10.18637/jss.v096.i03}.
 }
 \examples{
 library(cbcTools)
@@ -180,7 +180,7 @@ design_full_labeled <- cbc_design(
 
 # Make a Bayesian D-efficient design with a prior model specified
 # Note that by speed can be improved by setting parallel = TRUE
-design_deff <- cbc_design(
+design_bayesian <- cbc_design(
     profiles  = profiles,
     n_resp    = 300, # Number of respondents
     n_alts    = 3,   # Number of alternatives per question
@@ -194,6 +194,13 @@ design_deff <- cbc_design(
     method = "CEA",
     parallel = FALSE
 )
+}
+\references{
+Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal
+of Statistical Software, 85(5), 1–41. \doi{10.18637/jss.v085.i05}.
+Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal
+Designs for Discrete Choice Experiments in R: The idefix Package. Journal
+of Statistical Software, 96(3), 1–41. \doi{10.18637/jss.v096.i03}.
 }
 \keyword{DoE.base}
 \keyword{design}

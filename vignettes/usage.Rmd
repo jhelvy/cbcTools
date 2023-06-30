@@ -5,6 +5,7 @@ vignette: >
   %\VignetteIndexEntry{Usage}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
+bibliography: "`r here::here('vignettes', 'library.bib')`"
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
@@ -35,7 +36,7 @@ The first step in designing an experiment is to define the attributes and levels
 library(cbcTools)
 
 profiles <- cbc_profiles(
-  price     = seq(1, 4, 0.5), # $ per pound
+  price     = seq(1, 5, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')
 )
@@ -51,21 +52,21 @@ Depending on the context of your survey, you may wish to eliminate some profiles
 
 > **CAUTION: including restrictions in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
 
-If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of restricted pairs of attribute levels, defined as pairs of logical expressions separated by commas. In the example below, I include the following restrictions:
+If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of restricted pairs of attribute levels, defined as pairs of logical expressions separated by commas. In the example below, I include the following restrictions (these are arbitrary and just for illustration purposes):
 
 - `"Gala"` apples will not be shown with the prices `1.5`, `2.5`, and `3.5`.
 - `"Honeycrisp"` apples will not be shown with prices less than `2`.
-- `"Honeycrisp"` apples will not be shown with the `"Poor"` freshness.
+- `"Honeycrisp"` apples will only be shown with `"Average"` freshness.
 - `"Fuji"` apples will not be shown with the `"Excellent"` freshness.
 
-With these restrictions, there are now only 32 profiles compared to 63 without them:
+With these restrictions, there are now only 39 profiles compared to 81 without them:
 
 ```{r}
 restricted_profiles <- cbc_restrict(
     profiles,
     type == "Gala" & price %in% c(1.5, 2.5, 3.5),
     type == "Honeycrisp" & price > 2,
-    type == "Honeycrisp" & freshness == "Poor", 
+    type == "Honeycrisp" & freshness %in% c("Poor", "Excellent"),
     type == "Fuji" & freshness == "Excellent"
 )
 
@@ -76,44 +77,68 @@ restricted_profiles
 
 Once a set of profiles is obtained, a conjoint survey can then be generated using the `cbc_design()` function. A variety of survey designs can be generated, including:
 
-- Random designs
+- Full factorial designs
+- Orthogonal (a.k.a. "main effects") designs
 - Labeled designs (a.k.a. "alternative-specific" designs)
 - Designs with a "no choice" option (a.k.a. "outside good")
 - Bayesian D-efficient designs
 
-## Random designs
+## Full factorial designs
 
-The randomized design simply samples from the set of `profiles`, ensuring that no two profiles are the same in any choice question. The resulting `design` data frame includes the following columns:
+Full factorial designs are obtained by setting `method = 'full'` (the default setting for `method`). This method simply samples from the full set of `profiles`, ensuring that no two profiles are the same in any choice question. Blocking can used with these designs where blocks are created from subsets of the full factorial design. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Grömping2018].
+
+The resulting `design` data frame includes the following columns:
 
 - `profileID`: Identifies the profile in `profiles`.
 - `respID`: Identifies each survey respondent.
 - `qID`: Identifies the choice question answered by the respondent.
 - `altID`:Identifies the alternative in any one choice observation.
 - `obsID`: Identifies each unique choice observation across all respondents.
+- `blockID`: If blocking is used, identifies each unique block.
 
 ```{r}
-design <- cbc_design(
+design_full <- cbc_design(
   profiles = profiles,
   n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6    # Number of questions per respondent
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'full' # This is the default method
 )
 
-dim(design)  # View dimensions
-head(design) # Preview first 6 rows
+dim(design_full)  # View dimensions
+head(design_full) # Preview first 6 rows
+```
+
+## Orthogonal designs
+
+Orthogonal designs are obtained by setting `method = 'orthogonal'`. This method first finds an orthogonal array from the full set of `profiles` (if possible), then randomly selects from it to create choice sets. For some designs an orthogonal array can't be found, in which case a full factorial design is used. This approach is also sometimes called a "main effects" design since orthogonal arrays focus the information on the main effects at the expense of information about interaction effects. For more information about orthogonal designs, see `?DoE.base::oa.design` as well as the JSS article on the {DoE.base} package [@Grömping2018]
+
+```{r}
+#| message: true
+
+design_ortho <- cbc_design(
+  profiles = profiles,
+  n_resp   = 900, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'orthogonal'
+)
+
+dim(design_ortho)  # View dimensions
+head(design_ortho) # Preview first 6 rows
 ```
 
 ## Labeled designs (a.k.a. "alternative-specific" designs)
 
-You can also make a "labeled" design (also known as "alternative-specific" design) where the levels of one attribute is used as a label by setting the `label` argument to that attribute. This by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, so the `n_alts` argument is overridden. Here is an example labeled survey using the `type` attribute as the label:
+You can also make a "labeled" design (also known as "alternative-specific" design) where the levels of one attribute are used as a label by setting the `label` argument to that attribute. This by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, so the `n_alts` argument is overridden. Here is an example of a labeled full factorial survey using the `type` attribute as the label:
 
 ```{r}
 design_labeled <- cbc_design(
-  profiles  = profiles,
-  n_resp    = 900, # Number of respondents
-  n_alts    = 3,   # Number of alternatives per question
-  n_q       = 6,   # Number of questions per respondent
-  label     = "type" # Set the "type" attribute as the label
+  profiles = profiles,
+  n_resp   = 900, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  label    = "type" # Set the "type" attribute as the label
 )
 
 dim(design_labeled)
@@ -122,9 +147,9 @@ head(design_labeled)
 
 In the above example, you can see in the first six rows of the survey that the `type` attribute is always fixed to be the same order, ensuring that each level in the `type` attribute will always be shown in each choice question.
 
-## Designs with a "no choice" option (a.k.a. "outside good")
+## Designs with a "no choice" option (a.k.a. an "outside good")
 
-You can include a "no choice" (also known as "outside good") option in your survey by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
+You can include a "no choice" (also known as an "outside good") option in your survey by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
 
 ```{r}
 design_nochoice <- cbc_design(
@@ -141,7 +166,7 @@ head(design_nochoice)
 
 ## Bayesian D-efficient designs
 
-A Bayesian D-efficient design can be obtained by providing a list of prior parameters to define an expected prior utility model. These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://www.jstatsoft.org/article/view/v096i03). For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use "labeled" designs.
+Bayesian D-efficient designs are obtained by setting `method = 'CEA'` or `method = 'Modfed'` along with a specified list of `priors` (parameters that define a prior utility model). These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://cran.r-project.org/web/packages/idefix/index.html). For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use "labeled" designs. If `method` is set to `"CEA"` or `"Modfed"` but without `priors` specified, a prior of all `0`s will be used and a warning message stating this will be shown. If you are using a restricted set of `profiles`, only the `"Modfed"` method can be used as `"CEA"` requires unrestricted `profiles`. For more details on Bayesian D-efficient designs, see `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the {idefix} package [@Traets2020].
 
 In the example below, the prior model assumes the following parameters:
 
@@ -150,7 +175,7 @@ In the example below, the prior model assumes the following parameters:
 - 2 categorical parameters for `freshness` (`"Average"` and `"Excellent"`)
 
 ```{r}
-design_db_eff <- cbc_design(
+design_bayesian <- cbc_design(
   profiles  = profiles,
   n_resp    = 900, # Number of respondents
   n_alts    = 3, # Number of alternatives per question
@@ -159,17 +184,18 @@ design_db_eff <- cbc_design(
     price     = -0.1,
     type      = c(0.1, 0.2),
     freshness = c(0.1, 0.2)
-  )
+  ),
+  method = 'CEA'
 )
 
-dim(design_db_eff)
-head(design_db_eff)
+dim(design_bayesian)
+head(design_bayesian)
 ```
 
 Bayesian D-efficient designs that include a "no choice" option should set `no_choice = TRUE` and also define a prior for the "no choice" option using `prior_no_choice`, e.g.:
 
 ```{r}
-design_db_eff_no_choice <- cbc_design(
+design_bayesian_no_choice <- cbc_design(
   profiles  = profiles,
   n_resp    = 900, # Number of respondents
   n_alts    = 3, # Number of alternatives per question
@@ -180,11 +206,12 @@ design_db_eff_no_choice <- cbc_design(
     type      = c(0.1, 0.2),
     freshness = c(0.1, 0.2)
   ),
-  prior_no_choice = -0.1
+  prior_no_choice = -0.1,
+  method = 'CEA'
 )
 
-dim(design_db_eff_no_choice)
-head(design_db_eff_no_choice)
+dim(design_bayesian_no_choice)
+head(design_bayesian_no_choice)
 ```
 
 # Inspect survey designs
@@ -194,6 +221,13 @@ The package includes some functions to quickly inspect some basic metrics of a d
 The `cbc_balance()` function prints out a summary of the individual and pairwise counts of each level of each attribute across all choice questions:
 
 ```{r}
+design <- cbc_design(
+  profiles = profiles,
+  n_resp   = 900, 
+  n_alts   = 3,   
+  n_q      = 6
+)
+
 cbc_balance(design)
 ```
 
@@ -205,7 +239,7 @@ cbc_overlap(design)
 
 # Simulate choices
 
-You can simulate choices for a given `design` using the `cbc_choices()` function.
+You can simulate choices for a given `design` using the `cbc_choices()` function. Choices are simulated using the [{logitr} package](https://jhelvy.github.io/logitr/). For more information, see `?logitr::logitr` as well as the JSS article on the {logitr} package [@Helveston2023].
 
 ## Random choices
 
@@ -277,7 +311,7 @@ data <- cbc_choices(
 
 # Conduct a power analysis
 
-The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease (i.e. coefficient estimates become more precise). The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the [{logitr}](https://jhelvy.github.io/logitr/) package:
+The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease (i.e. coefficient estimates become more precise). The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the [{logitr} package](https://jhelvy.github.io/logitr/). For more information, see `?logitr::logitr` as well as the JSS article on the {logitr} package [@Helveston2023].
 
 ```{r}
 power <- cbc_power(
@@ -321,8 +355,10 @@ summary(models[[10]])
 
 One of the convenient features of how the package is written is that the object generated in each step is used as the first argument to the function for the next step. Thus, just like in the overall program diagram, the functions can be piped together. For example, the "pipeline" below uses the Base R pipe operator (`|>`) to generate profiles, generate a design, simulate choices according to a prior utility model, conduct a power analysis, and then finally plot the results:
 
-```{r, eval=FALSE}
-design <- cbc_profiles(
+```{r}
+#| eval: false
+
+power_plot <- cbc_profiles(
   price     = seq(1, 4, 0.5), # $ per pound
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')

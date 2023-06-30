@@ -86,9 +86,9 @@ check_inputs_design <- function(
 
     # Check that an appropriate method is used
 
-    if (! method %in% c('random', 'orthogonal', 'CEA', 'Modfed')) {
+    if (! method %in% c('full', 'orthogonal', 'CEA', 'Modfed')) {
         stop(
-            'The "method" argument must be set to "random", "orthogonal", ',
+            'The "method" argument must be set to "full", "orthogonal", ',
             '"Modfed", or "CEA"'
         )
     }
