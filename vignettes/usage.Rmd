@@ -85,7 +85,7 @@ Once a set of profiles is obtained, a conjoint survey can then be generated usin
 
 ## Full factorial designs
 
-Full factorial designs are obtained by setting `method = 'full'` (the default setting for `method`). This method simply samples from the full set of `profiles`, ensuring that no two profiles are the same in any choice question. Blocking can used with these designs where blocks are created from subsets of the full factorial design. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Grömping2018].
+Full factorial designs are obtained by setting `method = 'full'` (the default setting for `method`). This method simply samples from the full set of `profiles`, ensuring that no two profiles are the same in any choice question and that no two choice sets are the same for any one respondent. Blocking can be implemented where blocks are created from subsets of the full factorial design. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Grömping2018].
 
 The resulting `design` data frame includes the following columns:
 
