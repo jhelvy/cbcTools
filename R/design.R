@@ -175,6 +175,8 @@ cbc_design <- function(
   parallel = FALSE
 ) {
   method <- check_design_method(method, priors)
+  profile_list <- get_profile_list(profiles)
+  profiles_restricted <- nrow(expand.grid(profile_list)) > nrow(profiles)
   check_inputs_design(
     profiles,
     n_resp,
@@ -191,7 +193,8 @@ cbc_design <- function(
     probs,
     keep_db_error,
     max_iter,
-    parallel
+    parallel,
+    profiles_restricted
   )
   profiles <- as.data.frame(profiles) # tibbles break things
   if (method == 'full') {
@@ -206,7 +209,7 @@ cbc_design <- function(
     design <- make_design_bayesian(
       profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
       label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
-      parallel
+      parallel, profiles_restricted
     )
   }
   # Reset row numbers
@@ -473,7 +476,7 @@ make_design_orthogonal <- function(
 make_design_bayesian <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
     label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
-    parallel
+    parallel, profiles_restricted
 ) {
     # Set up levels and coding
     profile_list <- get_profile_list(profiles)
@@ -525,7 +528,6 @@ make_design_bayesian <- function(
     }
 
     # Make the design
-    profiles_restricted <- nrow(expand.grid(lvl.names)) > nrow(profiles)
     if (profiles_restricted & (method == "CEA")) {
       # "CEA" method only works with unrestricted profile set
       method <- "Modfed"

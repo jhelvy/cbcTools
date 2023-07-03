@@ -58,7 +58,8 @@ check_inputs_design <- function(
     probs,
     keep_db_error,
     max_iter,
-    parallel
+    parallel,
+    profiles_restricted
 ) {
 
     if (n_blocks < 1) {
@@ -69,14 +70,24 @@ check_inputs_design <- function(
         stop("Maximum allowable number of blocks is one block per respondent")
     }
 
-    # If using a Bayesian D-efficient design with a no choice option, user must
-    # specify a value for prior_no_choice
-    if (no_choice) {
-      if (!is.null(priors) & is.null(prior_no_choice)) {
+    # Check that an appropriate method is used
+
+    if (! method %in% c('full', 'orthogonal', 'CEA', 'Modfed')) {
         stop(
-          'If "no_choice = TRUE", you must specify the prior utility ',
-          'value for the "no choice" option using prior_no_choice'
+            'The "method" argument must be set to "full", "orthogonal", ',
+            '"Modfed", or "CEA"'
         )
+    }
+
+    # Check that orthogonal design method does not use a label or a
+    # restricted set of profiles
+
+    if (method == 'orthogonal') {
+      if (!is.null(label)) {
+        stop("Orthogonal designs cannot be labeled.")
+      }
+      if (profiles_restricted) {
+        stop("Orthogonal designs cannot use restricted profiles")
       }
     }
 
@@ -89,13 +100,15 @@ check_inputs_design <- function(
       )
     }
 
-    # Check that an appropriate method is used
-
-    if (! method %in% c('full', 'orthogonal', 'CEA', 'Modfed')) {
+    # If using a Bayesian D-efficient design with a no choice option, user must
+    # specify a value for prior_no_choice
+    if (no_choice) {
+      if (!is.null(priors) & is.null(prior_no_choice)) {
         stop(
-            'The "method" argument must be set to "full", "orthogonal", ',
-            '"Modfed", or "CEA"'
+          'If "no_choice = TRUE", you must specify the prior utility ',
+          'value for the "no choice" option using prior_no_choice'
         )
+      }
     }
 
     # Check that priors are appropriate if specified
