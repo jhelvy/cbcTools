@@ -1,5 +1,7 @@
 # cbcTools (development version)
 
+- Added restrictions so that orthogonal designs cannot use the `label` argument or restricted profile sets (as either of these would result in a non-orthogonal design).
+
 # cbcTools 0.4.0
 
 - Adjustments made to the `method` argument in the `cbc_design()` function in preparation for potentially adding new design methods.
