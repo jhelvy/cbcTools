@@ -30,9 +30,9 @@
 #' Currently not compatible with Bayesian D-efficient designs. If used,
 #' the `n_alts` argument will be ignored as its value is defined by the unique
 #' number of levels in the `label` variable. Defaults to `NULL`.
-#' @param method Choose the design method to use: `"full"`, `"orthogonal"`,
-#' `"CEA"` or `"Modfed"`. Defaults to `"full"`. See details below for complete
-#' description of each method.
+#' @param method Choose the design method to use: `"random"`, `"full"`,
+#' `"orthogonal"`, `"CEA"` or `"Modfed"`. Defaults to `"random"`. See details
+#' below for complete description of each method.
 #' @param priors A list of one or more assumed prior parameters used to
 #' generate a Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
@@ -52,27 +52,51 @@
 #' @details
 #' The `method` argument determines the design method used. Options are:
 #'
+#' - `"random"`
 #' - `"full"`
 #' - `"orthogonal"`
 #' - `"CEA"`
 #' - `"Modfed"`
 #'
-#' The `"full"` method uses a "full factorial" design where choice sets are
-#' created by randomly selecting from the full set of `profiles`. Blocking can
-#' used with these designs where blocks are created from subsets of the full
-#' factorial design. For more information about blocking with full factorial
-#' designs, see `?DoE.base::fac.design` as well as the JSS article on the
-#' {DoE.base} package (Grömping, 2018).
+#' All methods ensure that the two following criteria are met:
 #'
-#' The `"orthogonal"` method first finds an orthogonal array from the full
-#' set of `profiles` (if possible), then randomly selects from it to create
-#' choice sets. For some designs an orthogonal array can't be found, in which
-#' case a full factorial design is used. This approach is also sometimes called
-#' a "main effects" design since orthogonal arrays focus the information on the
-#' main effects at the expense of information about interaction effects. For
-#' more information about orthogonal designs, see `?DoE.base::oa.design` as
-#' well as the JSS article on the {DoE.base} package
-#' (Grömping, 2018).
+#'   1. No two profiles are the same within any one choice set.
+#'   2. No two choice sets are the same within any one respondent.
+#'
+#' A "no choice" option (created with  the `no_choice` argument) can be added
+#' using any design method.
+#'
+#' A "labeled" design (created with the `label` argument) can only be used
+#' with `"random"` or `"full"` designs.
+#'
+#' Finally, restricted profile sets cannot be used with the `"orthogonal"` or
+#' `"CEA"` methods.
+#'
+#' The `"random"` method (the default) creates a design where choice sets are
+#' created by randomly sampling from the full set of `profiles`. This means
+#' that few (if any) respondents will see the same sets of choice sets. This
+#' method is less efficient than other approaches and may lead to a deficient
+#' experiment in smaller sample sizes, though it guarantees equal ability to
+#' estimate main and interaction effects.
+#'
+#' The `"full"` method for ("full factorial") creates a design where a fixed
+#' set of choice sets is created by randomly sampling from the full set of
+#' `profiles` and then repeated for each respondent in the survey. The number
+#' of unique choice sets is determined by `n_q*n_blocks`. If blocking is used,
+#' blocks are created as mutually exclusive subsets of `profiles`. For more
+#' information about blocking with full factorial designs, see
+#' `?DoE.base::fac.design` as well as the JSS article on the {DoE.base}
+#' package (Grömping, 2018).
+#'
+#' The `"orthogonal"` method creates a design where an orthogonal array from
+#' the full set of `profiles` is first found (if possible) and then repeated
+#' for each respondent in the survey. For some designs an orthogonal array
+#' can't be found, in which case a full factorial design is used. This
+#'  approach is also sometimes called a "main effects" design since orthogonal
+#' arrays focus the information on the main effects at the expense of
+#' information about interaction effects. For more information about
+#' orthogonal designs, see `?DoE.base::oa.design` as well as the JSS article
+#' on the {DoE.base} package (Grömping, 2018).
 #'
 #' For Bayesian D-efficient designs, use `"CEA"` or `"Modfed"` along with
 #' specified `priors`. If `method` is set to `"CEA"` or `"Modfed"` but without
@@ -166,7 +190,7 @@ cbc_design <- function(
   n_start = 5,
   no_choice = FALSE,
   label = NULL,
-  method = "full",
+  method = "random",
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
