@@ -128,30 +128,36 @@ estimate main and interaction effects.
 
 The \code{"full"} method for ("full factorial") creates a design where a fixed
 set of choice sets is created by randomly sampling from the full set of
-\code{profiles} and then is repeated for each respondent in the survey. The number
-of unique choice sets is determined by \code{n_q*n_blocks}. If blocking is used,
-choice set blocks are created using mutually exclusive subsets of \code{profiles}
-within each block. For more information about blocking with full factorial
-designs, see \code{?DoE.base::fac.design} as well as the JSS article on the
-{DoE.base} package (Grömping, 2018).
+\code{profiles}, which is then repeated to meet the desired number of survey
+respondents (\code{n_resp}). If blocking is used, choice set blocks are created using
+mutually exclusive subsets of \code{profiles} within each block. This method is
+less efficient than other approaches and may lead to a deficient experiment
+in smaller sample sizes, though it guarantees equal ability to estimate main
+and interaction effects. For more information about blocking with full
+factorial designs, see \code{?DoE.base::fac.design} as well as the JSS article on
+the {DoE.base} package (Grömping, 2018).
 
 The \code{"orthogonal"} method creates a design where an orthogonal array from
-the full set of \code{profiles} is found. Choice sets are then created by
-randomly sampling from this orthogonal array and then is repeated for each
-respondent in the survey. For cases where an orthogonal array cannot be
-found, a full factorial design is used. This approach is also sometimes
-called a "main effects" design since orthogonal arrays focus the information
-on the main effects at the expense of information about interaction effects.
-For more information about orthogonal designs, see \code{?DoE.base::oa.design} as
-well as the JSS article on the {DoE.base} package (Grömping, 2018).
+the full set of \code{profiles} is found. A fixed set of choice sets is created by
+randomly sampling from this orthogonal array, which is then repeated to meet
+the desired number of survey respondents (\code{n_resp}). For cases where an
+orthogonal array cannot be found, a full factorial design is used. This
+approach is also sometimes called a "main effects" design since orthogonal
+arrays focus the information on the main effects at the expense of
+information about interaction effects. For more information about orthogonal
+designs, see \code{?DoE.base::oa.design} as well as the JSS article on the
+{DoE.base} package (Grömping, 2018).
 
-The \code{"CEA"} or \code{"Modfed"} methods create Bayesian D-efficient designs along
-with specified \code{priors}. If \code{"CEA"} or \code{"Modfed"} is used without specifying
-\code{priors}, a prior of all \code{0}s will be used and a warning message
-stating this will be shown. Restricted sets of \code{profiles} can only be used
-with \code{"Modfed"}. For more details on Bayesian D-efficient designs, see
-\code{?idefix::CEA} and \code{?idefix::Modfed} as well as the JSS article on the
-{idefix} package (Traets et al, 2020).
+The \code{"CEA"} and \code{"Modfed"} methods use the specified \code{priors} to create a
+Bayesian D-efficient design. A fixed set of choice sets is first found and
+then repeated to meet the desired number of survey respondents (\code{n_resp}).
+The total number of unique choice sets is determined by \code{n_q*n_blocks}.
+If \code{"CEA"} or \code{"Modfed"} is used without specifying \code{priors}, a prior of all
+\code{0}s will be used and a warning message stating this will be shown.
+Restricted sets of \code{profiles} can only be used with \code{"Modfed"}. For more
+details on Bayesian D-efficient designs, see \code{?idefix::CEA} and
+\code{?idefix::Modfed} as well as the JSS article on the {idefix} package
+(Traets et al, 2020).
 }
 \examples{
 library(cbcTools)
