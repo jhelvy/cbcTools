@@ -63,14 +63,15 @@
 #'   1. No two profiles are the same within any one choice set.
 #'   2. No two choice sets are the same within any one respondent.
 #'
-#' A "no choice" option (created with  the `no_choice` argument) can be added
-#' using any design method.
+#' The table below summarizes method compatibility with other design options.
 #'
-#' A "labeled" design (created with the `label` argument) can only be used
-#' with `"random"` or `"full"` designs.
-#'
-#' Finally, restricted profile sets cannot be used with the `"orthogonal"` or
-#' `"CEA"` methods.
+#' | Method         | Include "no choice"? | Labeled designs?  | Use restricted profiles? | Blocking? |
+#' |----------------|----------------------|-------------------|--------------------------|-----------|
+#' | `"random"`     | ✅                   | ✅                | ✅                       | ❌         |
+#' | `"full"`       | ✅                   | ✅                | ✅                       | ✅         |
+#' | `"orthogonal"` | ✅                   | ❌                | ❌                       | ✅         |
+#' | `"CEA"`        | ✅                   | ❌                | ❌                       | ✅         |
+#' | `"Modfed"`     | ✅                   | ❌                | ✅                       | ✅         |
 #'
 #' The `"random"` method (the default) creates a design where choice sets are
 #' created by randomly sampling from the full set of `profiles`. This means
@@ -81,29 +82,28 @@
 #'
 #' The `"full"` method for ("full factorial") creates a design where a fixed
 #' set of choice sets is created by randomly sampling from the full set of
-#' `profiles` and then repeated for each respondent in the survey. The number
+#' `profiles` and then is repeated for each respondent in the survey. The number
 #' of unique choice sets is determined by `n_q*n_blocks`. If blocking is used,
-#' blocks are created as mutually exclusive subsets of `profiles`. For more
-#' information about blocking with full factorial designs, see
-#' `?DoE.base::fac.design` as well as the JSS article on the {DoE.base}
-#' package (Grömping, 2018).
+#' choice set blocks are created using mutually exclusive subsets of `profiles`
+#' within each block. For more information about blocking with full factorial
+#' designs, see `?DoE.base::fac.design` as well as the JSS article on the
+#' {DoE.base} package (Grömping, 2018).
 #'
 #' The `"orthogonal"` method creates a design where an orthogonal array from
-#' the full set of `profiles` is first found (if possible) and then repeated
-#' for each respondent in the survey. For some designs an orthogonal array
-#' can't be found, in which case a full factorial design is used. This
-#'  approach is also sometimes called a "main effects" design since orthogonal
-#' arrays focus the information on the main effects at the expense of
-#' information about interaction effects. For more information about
-#' orthogonal designs, see `?DoE.base::oa.design` as well as the JSS article
-#' on the {DoE.base} package (Grömping, 2018).
+#' the full set of `profiles` is found. Choice sets are then created by
+#' randomly sampling from this orthogonal array and then is repeated for each
+#' respondent in the survey. For cases where an orthogonal array cannot be
+#' found, a full factorial design is used. This approach is also sometimes
+#' called a "main effects" design since orthogonal arrays focus the information
+#' on the main effects at the expense of information about interaction effects.
+#' For more information about orthogonal designs, see `?DoE.base::oa.design` as
+#' well as the JSS article on the {DoE.base} package (Grömping, 2018).
 #'
-#' For Bayesian D-efficient designs, use `"CEA"` or `"Modfed"` along with
-#' specified `priors`. If `method` is set to `"CEA"` or `"Modfed"` but without
-#' `priors` specified, a prior of all `0`s will be used and a warning message
-#' stating this will be shown. If you are using a restricted set of `profiles`,
-#' only the `"Modfed"` method can be used as `"CEA"` requires unrestricted
-#' `profiles`. For more details on Bayesian D-efficient designs, see
+#' The `"CEA"` or `"Modfed"` methods create Bayesian D-efficient designs along
+#' with specified `priors`. If `"CEA"` or `"Modfed"` is used without specifying
+#' `priors`, a prior of all `0`s will be used and a warning message
+#' stating this will be shown. Restricted sets of `profiles` can only be used
+#' with `"Modfed"`. For more details on Bayesian D-efficient designs, see
 #' `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
 #' {idefix} package (Traets et al, 2020).
 #' @references
@@ -199,8 +199,7 @@ cbc_design <- function(
   parallel = FALSE
 ) {
   method <- check_design_method(method, priors)
-  profile_list <- get_profile_list(profiles)
-  profiles_restricted <- nrow(expand.grid(profile_list)) > nrow(profiles)
+  profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
   check_inputs_design(
     profiles,
     n_resp,
@@ -221,7 +220,11 @@ cbc_design <- function(
     profiles_restricted
   )
   profiles <- as.data.frame(profiles) # tibbles break things
-  if (method == 'full') {
+  if (method == 'random') {
+    design <- make_design_random(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
+  } else if (method == 'full') {
     design <- make_design_full(
       profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
     )
@@ -241,11 +244,11 @@ cbc_design <- function(
   return(design)
 }
 
-# Randomize the design ----
+# Random Design ----
 
 # Sample from profiles to create randomized choice sets
 
-get_randomized_design <- function(
+make_design_random <- function(
   profiles, n_resp, n_alts, n_q, no_choice, label
 ) {
   if (is.null(label)) {
@@ -257,6 +260,7 @@ get_randomized_design <- function(
     design <- add_no_choice(design, n_alts)
   }
   design <- reorder_cols(design)
+  row.names(design) <- NULL
   return(design)
 }
 
@@ -286,13 +290,11 @@ sample_profiles <- function(profiles, size) {
   )
 }
 
-add_metadata <- function(design, n_resp, n_alts, n_q) {
-  n_rows_per_resp <- n_alts * n_q
-  design$respID <- rep(seq(n_resp), each = n_rows_per_resp)
-  design$qID <- rep(rep(seq(n_q), each = n_alts), n_resp)
-  design$altID <- rep(seq(n_alts), n_resp * n_q)
-  design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
-  row.names(design) <- NULL
+add_metadata <- function(design, n_resp, n_alts, n_q, n_blocks) {
+  design$respID <- rep(seq(n_resp), each = n_alts * n_q)
+  design$qID    <- rep(rep(seq(n_q), each = n_alts), n_resp)
+  design$altID  <- rep(seq(n_alts), n_resp * n_q)
+  design$obsID  <- rep(seq(n_resp * n_q), each = n_alts)
   return(design)
 }
 
@@ -413,7 +415,7 @@ get_col_types <- function(data) {
 }
 
 reorder_cols <- function(design) {
-    metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
+    metaNames <- c("profileID", "respID", "qID", "altID", "obsID", "blockID")
     varNames <- setdiff(names(design), metaNames)
     design <- as.data.frame(design)[, c(metaNames, varNames)]
     return(design)
@@ -425,19 +427,21 @@ make_design_full <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
 ) {
   if (n_blocks > 1) {
-    design <- make_design_full_blocked(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-    )
+    design <- make_design_full_blocked(profiles, n_resp, n_alts, n_q, n_blocks)
   } else {
-    design <- get_randomized_design(
-      profiles, n_resp, n_alts, n_q, no_choice, label
-    )
+    design <- make_random_sets(profiles, n_alts, n_q)
+    design$blockID <- 1
+    design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
   }
+  if (no_choice) {
+    design <- add_no_choice(design, n_alts)
+  }
+  design <- reorder_cols(design)
   return(design)
 }
 
 make_design_full_blocked <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+    profiles, n_resp, n_alts, n_q, n_blocks
 ) {
   # Make blocks
   design <- suppressMessages(as.data.frame(
@@ -447,27 +451,68 @@ make_design_full_blocked <- function(
       block.name = "blockID"
     )
   ))
+  # Make blockID a number, then join on profileIDs
   design$blockID <- as.numeric(as.character(design$blockID))
   design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
   type_ids <- get_type_ids(profiles)
   profiles <- join_profiles(design, profiles, type_ids)
 
-  # Randomize design within each block
+  # Create random choice sets within each block
+  design <- design_rand_sets_blocked(profiles, n_resp, n_alts, n_q, n_blocks)
+  return(design)
+}
+
+design_rand_sets_blocked <- function(profiles, n_resp, n_alts, n_q, n_blocks) {
+  # Make choice sets for each set of profileIDs
   profiles <- split(profiles, profiles$blockID)
-  # Make sure number of respondents divides well into blocks
-  n_resp_list <- rep(n_resp / n_blocks, n_blocks)
-  if (! all(n_resp_list %% 1 == 0)) {
-    n_resp_list <- floor(n_resp_list)
-    n_resp_list[n_blocks] <- n_resp_list[n_blocks] + 1
-  }
   design <- list()
   for (i in 1:n_blocks) {
-    design[[i]] <- get_randomized_design(
-      profiles[[i]], n_resp_list[i], n_alts, n_q, no_choice, label
-    )
+    profiles_temp <- profiles[[i]]
+    design[[i]] <- make_random_sets(profiles_temp, n_alts, nrow(profiles_temp))
   }
   design <- do.call(rbind, design)
+  design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
   design <- add_metadata(design, n_resp, n_alts, n_q)
+  return(design)
+}
+
+make_random_sets <- function(profiles, n_alts, n_q) {
+  design <- sample_random_sets(profiles, n_alts, n_q)
+  # Replace rows with duplicated profiles in each obsID or
+  # duplicated choice sets in each respID
+  dup_rows_obs <- get_dup_obs(design, n_alts)
+  dup_rows_resp <- get_dup_resp(design, n_resp = 1, n_q)
+  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
+    design <- sample_random_sets(profiles, n_alts, n_q)
+    dup_rows_obs <- get_dup_obs(design, n_alts)
+    dup_rows_resp <- get_dup_resp(design, n_resp = 1, n_q)
+  }
+  return(design)
+}
+
+sample_random_sets <- function(design, n_alts, n_q) {
+  # Make a randomized copy of the design for each alternative
+  design <- lapply(seq(n_alts), function(x) design[order(runif(n_q)),])
+  design <- lapply(design, function(x) {
+    x$order <- seq(nrow(x))
+    return(x)
+  })
+  design <- do.call(rbind, design)
+  design <- design[order(design$order),]
+  design <- add_metadata(design, n_resp = 1, n_alts, n_q)
+  design$order <- NULL
+  return(design)
+}
+
+repeat_design <- function(design, n_resp, n_alts, n_q, n_blocks) {
+  # Repeat design to match number of respondents
+  n_reps <- ceiling(n_resp / n_blocks)
+  design <- design[rep(seq_len(nrow(design)), n_reps), ]
+  design <- design[1:(n_resp*n_q*n_alts), ]
+
+  # Add metadata
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  design <- reorder_cols(design)
   return(design)
 }
 
@@ -489,9 +534,9 @@ make_design_orthogonal <- function(
           nrow(profiles), " profiles for design"
         )
     }
-    type_ids <- get_type_ids(profiles)
-    oa <- join_profiles(oa, profiles, type_ids)
-    design <- get_randomized_design(oa, n_resp, n_alts, n_q, no_choice, label)
+    design <- make_random_sets(profiles, n_alts, n_q)
+    design$blockID <- 1
+    design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
     return(design)
 }
 
@@ -613,6 +658,7 @@ make_design_bayesian <- function(
     }
 
     # Repeat design to match number of respondents
+    design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
     design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
 
     # Print DB error
@@ -718,27 +764,6 @@ join_profiles <- function(design, profiles, type_ids) {
   design <- design[c('profileID', varnames)]
   return(design)
 }
-
-repeat_design <- function(design, n_resp, n_alts, n_q, n_blocks) {
-  # Add blockIDs
-  design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
-
-  # Repeat design to match number of respondents
-  n_reps <- ceiling(n_resp / n_blocks)
-  design <- design[rep(seq_len(nrow(design)), n_reps), ]
-  row.names(design) <- NULL
-  design <- design[1:(n_resp*n_q*n_alts), ]
-
-  # Add metadata
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  design <- reorder_cols(design)
-  return(design)
-}
-
-
-
-
-
 
 add_no_choice_deff <- function(design, n_alts, varnames_discrete) {
   # First dummy code categorical variables
