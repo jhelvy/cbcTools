@@ -225,9 +225,9 @@ get_randomized_design <- function(
   profiles, n_resp, n_alts, n_q, no_choice, label
 ) {
   if (is.null(label)) {
-    design <- get_design_rand(profiles, n_resp, n_alts, n_q)
+    design <- design_rand_sample(profiles, n_resp, n_alts, n_q)
   } else {
-    design <- get_design_rand_label(profiles, n_resp, n_alts, n_q, label)
+    design <- design_rand_sample_label(profiles, n_resp, n_alts, n_q, label)
   }
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
@@ -236,7 +236,7 @@ get_randomized_design <- function(
   return(design)
 }
 
-get_design_rand <- function(profiles, n_resp, n_alts, n_q) {
+design_rand_sample <- function(profiles, n_resp, n_alts, n_q) {
   design <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
   design <- add_metadata(design, n_resp, n_alts, n_q)
   # Replace rows with duplicated profiles in each obsID or
@@ -298,7 +298,7 @@ dup_obs_by_resp <- function(df) {
     df$profileID, df$obsID,
     FUN = function(x) sort(x)
   )
-  # Convert the list of vectors to a data frame to check for duplicates
+  # Convert vector list to a data frame to check for duplicates
   dupe_df <- do.call(rbind, profiles_list)
   dup_ids <- which(duplicated(dupe_df))
   if (length(dup_ids) > 0) {
@@ -307,7 +307,7 @@ dup_obs_by_resp <- function(df) {
   return(NULL)
 }
 
-get_design_rand_label <- function(profiles, n_resp, n_alts, n_q, label) {
+design_rand_sample_label <- function(profiles, n_resp, n_alts, n_q, label) {
   n_levels <- length(unique(profiles[, label]))
   if (n_levels != n_alts) {
     warning(
@@ -588,18 +588,8 @@ make_design_bayesian <- function(
       design$probs <- as.vector(t(D$probs))
     }
 
-    # Add blockIDs
-    design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
-
     # Repeat design to match number of respondents
-    n_reps <- ceiling(n_resp / n_blocks)
-    design <- design[rep(seq_len(nrow(design)), n_reps), ]
-    row.names(design) <- NULL
-    design <- design[1:(n_resp*n_q*n_alts), ]
-
-    # Add metadata
-    design <- add_metadata(design, n_resp, n_alts, n_q)
-    design <- reorder_cols(design)
+    design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
 
     # Print DB error
     message(
@@ -704,6 +694,27 @@ join_profiles <- function(design, profiles, type_ids) {
   design <- design[c('profileID', varnames)]
   return(design)
 }
+
+repeat_design <- function(design, n_resp, n_alts, n_q, n_blocks) {
+  # Add blockIDs
+  design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
+
+  # Repeat design to match number of respondents
+  n_reps <- ceiling(n_resp / n_blocks)
+  design <- design[rep(seq_len(nrow(design)), n_reps), ]
+  row.names(design) <- NULL
+  design <- design[1:(n_resp*n_q*n_alts), ]
+
+  # Add metadata
+  design <- add_metadata(design, n_resp, n_alts, n_q)
+  design <- reorder_cols(design)
+  return(design)
+}
+
+
+
+
+
 
 add_no_choice_deff <- function(design, n_alts, varnames_discrete) {
   # First dummy code categorical variables
