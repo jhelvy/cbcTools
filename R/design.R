@@ -65,13 +65,13 @@
 #'
 #' The table below summarizes method compatibility with other design options.
 #'
-#' | Method         | Include "no choice"? | Labeled designs?  | Use restricted profiles? | Blocking? |
-#' |----------------|----------------------|-------------------|--------------------------|-----------|
-#' | `"random"`     | ✅                   | ✅                | ✅                       | ❌         |
-#' | `"full"`       | ✅                   | ✅                | ✅                       | ✅         |
-#' | `"orthogonal"` | ✅                   | ❌                | ❌                       | ✅         |
-#' | `"CEA"`        | ✅                   | ❌                | ❌                       | ✅         |
-#' | `"Modfed"`     | ✅                   | ❌                | ✅                       | ✅         |
+#' | Method         | Include "no choice"? | Labeled designs?  | Restricted profiles? | Blocking? |
+#' |----------------|----------------------|-------------------|----------------------|-----------|
+#' | `"random"`     | ✅                   | ✅                | ✅                    | ❌        |
+#' | `"full"`       | ✅                   | ✅                | ✅                    | ✅        |
+#' | `"orthogonal"` | ✅                   | ❌                | ❌                    | ❌        |
+#' | `"CEA"`        | ✅                   | ❌                | ❌                    | ✅        |
+#' | `"Modfed"`     | ✅                   | ❌                | ✅                    | ✅        |
 #'
 #' The `"random"` method (the default) creates a design where choice sets are
 #' created by randomly sampling from the full set of `profiles`. This means
@@ -534,7 +534,9 @@ make_design_orthogonal <- function(
           nrow(profiles), " profiles for design"
         )
     }
-    design <- make_random_sets(profiles, n_alts, n_q)
+    type_ids <- get_type_ids(profiles)
+    oa <- join_profiles(oa, profiles, type_ids)
+    design <- make_random_sets(oa, n_alts, n_q = nrow(oa))
     design$blockID <- 1
     design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
     return(design)
