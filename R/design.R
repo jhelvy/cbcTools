@@ -82,30 +82,36 @@
 #'
 #' The `"full"` method for ("full factorial") creates a design where a fixed
 #' set of choice sets is created by randomly sampling from the full set of
-#' `profiles` and then is repeated for each respondent in the survey. The number
-#' of unique choice sets is determined by `n_q*n_blocks`. If blocking is used,
-#' choice set blocks are created using mutually exclusive subsets of `profiles`
-#' within each block. For more information about blocking with full factorial
-#' designs, see `?DoE.base::fac.design` as well as the JSS article on the
-#' {DoE.base} package (Grömping, 2018).
+#' `profiles`, which is then repeated to meet the desired number of survey
+#' respondents (`n_resp`). If blocking is used, choice set blocks are created using
+#' mutually exclusive subsets of `profiles` within each block. This method is
+#' less efficient than other approaches and may lead to a deficient experiment
+#' in smaller sample sizes, though it guarantees equal ability to estimate main
+#' and interaction effects. For more information about blocking with full
+#' factorial designs, see `?DoE.base::fac.design` as well as the JSS article on
+#' the {DoE.base} package (Grömping, 2018).
 #'
 #' The `"orthogonal"` method creates a design where an orthogonal array from
-#' the full set of `profiles` is found. Choice sets are then created by
-#' randomly sampling from this orthogonal array and then is repeated for each
-#' respondent in the survey. For cases where an orthogonal array cannot be
-#' found, a full factorial design is used. This approach is also sometimes
-#' called a "main effects" design since orthogonal arrays focus the information
-#' on the main effects at the expense of information about interaction effects.
-#' For more information about orthogonal designs, see `?DoE.base::oa.design` as
-#' well as the JSS article on the {DoE.base} package (Grömping, 2018).
+#' the full set of `profiles` is found. A fixed set of choice sets is created by
+#' randomly sampling from this orthogonal array, which is then repeated to meet
+#' the desired number of survey respondents (`n_resp`). For cases where an
+#' orthogonal array cannot be found, a full factorial design is used. This
+#' approach is also sometimes called a "main effects" design since orthogonal
+#' arrays focus the information on the main effects at the expense of
+#' information about interaction effects. For more information about orthogonal
+#' designs, see `?DoE.base::oa.design` as well as the JSS article on the
+#' {DoE.base} package (Grömping, 2018).
 #'
-#' The `"CEA"` or `"Modfed"` methods create Bayesian D-efficient designs along
-#' with specified `priors`. If `"CEA"` or `"Modfed"` is used without specifying
-#' `priors`, a prior of all `0`s will be used and a warning message
-#' stating this will be shown. Restricted sets of `profiles` can only be used
-#' with `"Modfed"`. For more details on Bayesian D-efficient designs, see
-#' `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
-#' {idefix} package (Traets et al, 2020).
+#' The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
+#' Bayesian D-efficient design. A fixed set of choice sets is first found and
+#' then repeated to meet the desired number of survey respondents (`n_resp`).
+#' The total number of unique choice sets is determined by `n_q*n_blocks`.
+#' If `"CEA"` or `"Modfed"` is used without specifying `priors`, a prior of all
+#' `0`s will be used and a warning message stating this will be shown.
+#' Restricted sets of `profiles` can only be used with `"Modfed"`. For more
+#' details on Bayesian D-efficient designs, see `?idefix::CEA` and
+#' `?idefix::Modfed` as well as the JSS article on the {idefix} package
+#' (Traets et al, 2020).
 #' @references
 #' Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41,
 #' \doi{10.18637/jss.v085.i05}
@@ -268,6 +274,7 @@ make_design_random <- function(
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
   }
+  design$blockID <- 1
   design <- reorder_cols(design)
   row.names(design) <- NULL
   return(design)
@@ -438,7 +445,7 @@ make_design_full <- function(
   if (n_blocks > 1) {
     design <- make_design_full_blocked(profiles, n_resp, n_alts, n_q, n_blocks)
   } else {
-    design <- make_random_sets(profiles, n_alts, n_q)
+    design <- make_random_sets(profiles, n_alts)
     design$blockID <- 1
     design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
   }
@@ -477,7 +484,7 @@ design_rand_sets_blocked <- function(profiles, n_resp, n_alts, n_q, n_blocks) {
   design <- list()
   for (i in 1:n_blocks) {
     profiles_temp <- profiles[[i]]
-    design[[i]] <- make_random_sets(profiles_temp, n_alts, nrow(profiles_temp))
+    design[[i]] <- make_random_sets(profiles_temp, n_alts)
   }
   design <- do.call(rbind, design)
   design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
@@ -485,7 +492,8 @@ design_rand_sets_blocked <- function(profiles, n_resp, n_alts, n_q, n_blocks) {
   return(design)
 }
 
-make_random_sets <- function(profiles, n_alts, n_q) {
+make_random_sets <- function(profiles, n_alts) {
+  n_q <- nrow(profiles)
   design <- sample_random_sets(profiles, n_alts, n_q)
   # Replace rows with duplicated profiles in each obsID or
   # duplicated choice sets in each respID
@@ -545,7 +553,7 @@ make_design_orthogonal <- function(
     }
     type_ids <- get_type_ids(profiles)
     oa <- join_profiles(oa, profiles, type_ids)
-    design <- make_random_sets(oa, n_alts, n_q = nrow(oa))
+    design <- make_random_sets(oa, n_alts)
     design$blockID <- 1
     design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
     return(design)
