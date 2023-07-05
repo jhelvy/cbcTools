@@ -513,7 +513,7 @@ make_random_sets <- function(profiles, n_alts) {
 
 sample_random_sets <- function(design, n_alts, n_q) {
   # Make a randomized copy of the design for each alternative
-  design <- lapply(seq(n_alts), function(x) design[order(runif(n_q)),])
+  design <- lapply(seq(n_alts), function(x) design[order(stats::runif(n_q)),])
   design <- lapply(design, function(x) {
     x$order <- seq(nrow(x))
     return(x)
