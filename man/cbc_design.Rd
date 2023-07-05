@@ -14,7 +14,7 @@ cbc_design(
   n_start = 5,
   no_choice = FALSE,
   label = NULL,
-  method = "full",
+  method = "random",
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
@@ -56,9 +56,9 @@ Currently not compatible with Bayesian D-efficient designs. If used,
 the \code{n_alts} argument will be ignored as its value is defined by the unique
 number of levels in the \code{label} variable. Defaults to \code{NULL}.}
 
-\item{method}{Choose the design method to use: \code{"full"}, \code{"orthogonal"},
-\code{"CEA"} or \code{"Modfed"}. Defaults to \code{"full"}. See details below for complete
-description of each method.}
+\item{method}{Choose the design method to use: \code{"random"}, \code{"full"},
+\code{"orthogonal"}, \code{"CEA"} or \code{"Modfed"}. Defaults to \code{"random"}. See details
+below for complete description of each method.}
 
 \item{priors}{A list of one or more assumed prior parameters used to
 generate a Bayesian D-efficient design. Defaults to \code{NULL}}
@@ -96,35 +96,60 @@ and "labeled" (also known as "alternative specific") designs.
 \details{
 The \code{method} argument determines the design method used. Options are:
 \itemize{
+\item \code{"random"}
 \item \code{"full"}
 \item \code{"orthogonal"}
 \item \code{"CEA"}
 \item \code{"Modfed"}
 }
 
-The \code{"full"} method uses a "full factorial" design where choice sets are
-created by randomly selecting from the full set of \code{profiles}. Blocking can
-used with these designs where blocks are created from subsets of the full
-factorial design. For more information about blocking with full factorial
+All methods ensure that the two following criteria are met:
+\enumerate{
+\item No two profiles are the same within any one choice set.
+\item No two choice sets are the same within any one respondent.
+}
+
+The table below summarizes method compatibility with other design options.\tabular{lllll}{
+   Method \tab Include "no choice"? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \cr
+   \code{"random"} \tab ✅ \tab ✅ \tab ✅ \tab ❌ \cr
+   \code{"full"} \tab ✅ \tab ✅ \tab ✅ \tab ✅ \cr
+   \code{"orthogonal"} \tab ✅ \tab ❌ \tab ❌ \tab ❌ \cr
+   \code{"CEA"} \tab ✅ \tab ❌ \tab ❌ \tab ✅ \cr
+   \code{"Modfed"} \tab ✅ \tab ❌ \tab ✅ \tab ✅ \cr
+}
+
+
+The \code{"random"} method (the default) creates a design where choice sets are
+created by randomly sampling from the full set of \code{profiles}. This means
+that few (if any) respondents will see the same sets of choice sets. This
+method is less efficient than other approaches and may lead to a deficient
+experiment in smaller sample sizes, though it guarantees equal ability to
+estimate main and interaction effects.
+
+The \code{"full"} method for ("full factorial") creates a design where a fixed
+set of choice sets is created by randomly sampling from the full set of
+\code{profiles} and then is repeated for each respondent in the survey. The number
+of unique choice sets is determined by \code{n_q*n_blocks}. If blocking is used,
+choice set blocks are created using mutually exclusive subsets of \code{profiles}
+within each block. For more information about blocking with full factorial
 designs, see \code{?DoE.base::fac.design} as well as the JSS article on the
 {DoE.base} package (Grömping, 2018).
 
-The \code{"orthogonal"} method first finds an orthogonal array from the full
-set of \code{profiles} (if possible), then randomly selects from it to create
-choice sets. For some designs an orthogonal array can't be found, in which
-case a full factorial design is used. This approach is also sometimes called
-a "main effects" design since orthogonal arrays focus the information on the
-main effects at the expense of information about interaction effects. For
-more information about orthogonal designs, see \code{?DoE.base::oa.design} as
-well as the JSS article on the {DoE.base} package
-(Grömping, 2018).
+The \code{"orthogonal"} method creates a design where an orthogonal array from
+the full set of \code{profiles} is found. Choice sets are then created by
+randomly sampling from this orthogonal array and then is repeated for each
+respondent in the survey. For cases where an orthogonal array cannot be
+found, a full factorial design is used. This approach is also sometimes
+called a "main effects" design since orthogonal arrays focus the information
+on the main effects at the expense of information about interaction effects.
+For more information about orthogonal designs, see \code{?DoE.base::oa.design} as
+well as the JSS article on the {DoE.base} package (Grömping, 2018).
 
-For Bayesian D-efficient designs, use \code{"CEA"} or \code{"Modfed"} along with
-specified \code{priors}. If \code{method} is set to \code{"CEA"} or \code{"Modfed"} but without
-\code{priors} specified, a prior of all \code{0}s will be used and a warning message
-stating this will be shown. If you are using a restricted set of \code{profiles},
-only the \code{"Modfed"} method can be used as \code{"CEA"} requires unrestricted
-\code{profiles}. For more details on Bayesian D-efficient designs, see
+The \code{"CEA"} or \code{"Modfed"} methods create Bayesian D-efficient designs along
+with specified \code{priors}. If \code{"CEA"} or \code{"Modfed"} is used without specifying
+\code{priors}, a prior of all \code{0}s will be used and a warning message
+stating this will be shown. Restricted sets of \code{profiles} can only be used
+with \code{"Modfed"}. For more details on Bayesian D-efficient designs, see
 \code{?idefix::CEA} and \code{?idefix::Modfed} as well as the JSS article on the
 {idefix} package (Traets et al, 2020).
 }
@@ -140,52 +165,61 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Make a survey design from all possible profiles
-# (This is the default setting where method = 'full' for "full factorial")
+# Make a survey by randomly sampling from all possible profiles
+# (This is the default setting where method = 'random')
 design_full <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
+  n_resp   = 100, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 )
 
-# Make a survey design from an orthogonal array of profiles
+# Make a survey using a full factorial design
+design_full <- cbc_design(
+  profiles = profiles,
+  n_resp   = 100, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'full'
+)
+
+# Make a survey from an orthogonal array of profiles
 design_ortho <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
+  n_resp   = 100, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6,   # Number of questions per respondent
   method   = 'orthogonal'
 )
 
-# Make a survey design from all possible profiles
-# with a "no choice" option
+# Make a survey by randomly sampling from all possible profiles
+# and include a "no choice" option
 design_full_nochoice <- cbc_design(
   profiles  = profiles,
-  n_resp    = 300, # Number of respondents
+  n_resp    = 100, # Number of respondents
   n_alts    = 3,   # Number of alternatives per question
   n_q       = 6,   # Number of questions per respondent
   no_choice = TRUE
 )
 
-# Make a survey design from all possible profiles
+# Make a survey by randomly sampling from all possible profiles
 # with each level of the "type" attribute appearing as an alternative
 design_full_labeled <- cbc_design(
-  profiles  = profiles,
-  n_resp    = 300, # Number of respondents
-  n_alts    = 3,   # Number of alternatives per question
-  n_q       = 6,   # Number of questions per respondent
-  label     = "type"
+  profiles = profiles,
+  n_resp   = 100, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  label    = "type"
 )
 
 # Make a Bayesian D-efficient design with a prior model specified
 # Note that by speed can be improved by setting parallel = TRUE
 design_bayesian <- cbc_design(
     profiles  = profiles,
-    n_resp    = 300, # Number of respondents
+    n_resp    = 100, # Number of respondents
     n_alts    = 3,   # Number of alternatives per question
     n_q       = 6,   # Number of questions per respondent
-    n_start   = 1,   # Defauls to 5, set to 1 here for a quick example
+    n_start   = 1,   # Defaults to 5, set to 1 here for a quick example
     priors = list(
         price     = -0.1,
         type      = c(0.1, 0.2),

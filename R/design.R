@@ -126,52 +126,61 @@
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a survey design from all possible profiles
-#' # (This is the default setting where method = 'full' for "full factorial")
+#' # Make a survey by randomly sampling from all possible profiles
+#' # (This is the default setting where method = 'random')
 #' design_full <- cbc_design(
 #'   profiles = profiles,
-#'   n_resp   = 300, # Number of respondents
+#'   n_resp   = 100, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
 #'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
-#' # Make a survey design from an orthogonal array of profiles
+#' # Make a survey using a full factorial design
+#' design_full <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 100, # Number of respondents
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6,   # Number of questions per respondent
+#'   method   = 'full'
+#' )
+#'
+#' # Make a survey from an orthogonal array of profiles
 #' design_ortho <- cbc_design(
 #'   profiles = profiles,
-#'   n_resp   = 300, # Number of respondents
+#'   n_resp   = 100, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
 #'   n_q      = 6,   # Number of questions per respondent
 #'   method   = 'orthogonal'
 #' )
 #'
-#' # Make a survey design from all possible profiles
-#' # with a "no choice" option
+#' # Make a survey by randomly sampling from all possible profiles
+#' # and include a "no choice" option
 #' design_full_nochoice <- cbc_design(
 #'   profiles  = profiles,
-#'   n_resp    = 300, # Number of respondents
+#'   n_resp    = 100, # Number of respondents
 #'   n_alts    = 3,   # Number of alternatives per question
 #'   n_q       = 6,   # Number of questions per respondent
 #'   no_choice = TRUE
 #' )
 #'
-#' # Make a survey design from all possible profiles
+#' # Make a survey by randomly sampling from all possible profiles
 #' # with each level of the "type" attribute appearing as an alternative
 #' design_full_labeled <- cbc_design(
-#'   profiles  = profiles,
-#'   n_resp    = 300, # Number of respondents
-#'   n_alts    = 3,   # Number of alternatives per question
-#'   n_q       = 6,   # Number of questions per respondent
-#'   label     = "type"
+#'   profiles = profiles,
+#'   n_resp   = 100, # Number of respondents
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6,   # Number of questions per respondent
+#'   label    = "type"
 #' )
 #'
 #' # Make a Bayesian D-efficient design with a prior model specified
 #' # Note that by speed can be improved by setting parallel = TRUE
 #' design_bayesian <- cbc_design(
 #'     profiles  = profiles,
-#'     n_resp    = 300, # Number of respondents
+#'     n_resp    = 100, # Number of respondents
 #'     n_alts    = 3,   # Number of alternatives per question
 #'     n_q       = 6,   # Number of questions per respondent
-#'     n_start   = 1,   # Defauls to 5, set to 1 here for a quick example
+#'     n_start   = 1,   # Defaults to 5, set to 1 here for a quick example
 #'     priors = list(
 #'         price     = -0.1,
 #'         type      = c(0.1, 0.2),
