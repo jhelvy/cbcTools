@@ -276,6 +276,7 @@ make_design_random <- function(
   }
   design$blockID <- 1
   design <- reorder_cols(design)
+  design$blockID <- NULL
   row.names(design) <- NULL
   return(design)
 }
@@ -453,6 +454,9 @@ make_design_full <- function(
     design <- add_no_choice(design, n_alts)
   }
   design <- reorder_cols(design)
+  if (n_blocks == 1) {
+    design$blockID <- NULL
+  }
   return(design)
 }
 
@@ -555,7 +559,8 @@ make_design_orthogonal <- function(
     oa <- join_profiles(oa, profiles, type_ids)
     design <- make_random_sets(oa, n_alts)
     design$blockID <- 1
-    design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks)
+    design <- repeat_design(design, n_resp, n_alts, n_q, n_blocks = 1)
+    design$blockID <- NULL
     return(design)
 }
 
