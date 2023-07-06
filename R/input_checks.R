@@ -41,10 +41,12 @@ check_design_method <- function(method, priors) {
   }
   # Check that an appropriate method is used
 
-  if (! method %in% c('random', 'full', 'orthogonal', 'CEA', 'Modfed')) {
+  if (! method %in% c(
+    'random', 'full', 'orthogonal', 'deff', 'CEA', 'Modfed'
+  )) {
     stop(
       'The "method" argument must be set to "random", "full", ',
-      '"orthogonal", "Modfed", or "CEA"'
+      '"orthogonal", "deff", "CEA", or "Modfed"'
     )
   }
   return(method)
@@ -100,6 +102,14 @@ check_inputs_design <- function(
         stop("Orthogonal designs cannot use restricted profiles")
       }
     }
+
+  # Check that the deff design method does not use a label
+
+  if (method == 'deff') {
+    if (!is.null(label)) {
+      stop("D-efficient designs cannot be labeled.")
+    }
+  }
 
     # The labeled design isn't yet supported for Bayesian D-efficient designs
 

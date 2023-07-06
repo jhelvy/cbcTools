@@ -21,6 +21,7 @@ Suggests:
     testthat,
     tibble
 Imports:
+    AlgDesign,
     DoE.base,
     fastDummies,
     ggplot2,

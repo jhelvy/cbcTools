@@ -31,8 +31,8 @@
 #'   argument will be ignored as its value is defined by the unique number of
 #'   levels in the `label` variable. Defaults to `NULL`.
 #' @param method Choose the design method to use: `"random"`, `"full"`,
-#'   `"orthogonal"`, `"CEA"` or `"Modfed"`. Defaults to `"random"`. See details
-#'   below for complete description of each method.
+#'   `"orthogonal"`, `"deff"`, `"CEA"`, or `"Modfed"`. Defaults to `"random"`.
+#'   See details below for complete description of each method.
 #' @param priors A list of one or more assumed prior parameters used to generate
 #'   a Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
@@ -55,6 +55,7 @@
 #' - `"random"`
 #' - `"full"`
 #' - `"orthogonal"`
+#' - `"deff"`
 #' - `"CEA"`
 #' - `"Modfed"`
 #'
@@ -109,6 +110,16 @@
 #'   main effects at the expense of information about interaction effects. For
 #'   more information about orthogonal designs, see `?DoE.base::oa.design` as
 #'   well as the JSS article on the {DoE.base} package (Grömping, 2018).
+#'
+#'   The `"deff"` method creates a "D-Efficient" design where an array from
+#'   `profiles` is found that maximizes the D efficiency using the Federov
+#'   algorithm, with the total number of unique choice sets determined by
+#'   `n_q*n_blocks`. Choice sets are then created by randomly sampling from this
+#'   array *without replacement*. The choice sets are then repeated to meet the
+#'   desired number of survey respondents (determined by `n_resp`). If blocking
+#'   is used, choice set blocks are created from the d-efficient array. For more
+#'   information about the underlying algorithm for this method, see
+#'   `?AlgDesign::optFederov`.
 #'
 #'   The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
 #'   Bayesian D-efficient design for the choice sets, with the total number of
@@ -168,6 +179,15 @@
 #'   n_alts   = 3,   # Number of alternatives per question
 #'   n_q      = 6,   # Number of questions per respondent
 #'   method   = 'orthogonal'
+#' )
+#'
+#' # Make a D-efficient design
+#' design_deff <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp   = 100, # Number of respondents
+#'   n_alts   = 3,   # Number of alternatives per question
+#'   n_q      = 6,   # Number of questions per respondent
+#'   method   = 'deff'
 #' )
 #'
 #' # Make a survey by randomly sampling from all possible profiles
@@ -256,7 +276,11 @@ cbc_design <- function(
     )
   } else if (method == 'orthogonal') {
     design <- make_design_orthogonal(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice
+    )
+  } else if (method == 'deff') {
+    design <- make_design_deff(
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice
     )
   } else {
     design <- make_design_bayesian(
@@ -607,11 +631,8 @@ make_design_full_labeled <- function(
   profiles$profileID <- NULL
   profiles <- profiles[!duplicated(profiles),]
   profiles$profileID <- seq(nrow(profiles))
-  profiles <- cbind(
-    profiles[,ncol(profiles)],
-    profiles[,1:(ncol(profiles)-1)]
-  )
-  names(profiles)[1] <- 'profileID'
+  profiles <- profiles[c(
+    'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
   if (n_blocks > 1) {
     # Make blocks
     design <- suppressMessages(as.data.frame(DoE.base::fac.design(
@@ -642,7 +663,7 @@ make_design_full_labeled <- function(
 # Orthogonal Design ----
 
 make_design_orthogonal <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice
 ) {
     # First obtain the orthogonal array
     oa <- suppressMessages(as.data.frame(DoE.base::oa.design(
@@ -681,9 +702,59 @@ make_design_orthogonal <- function(
     }
     design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
     if (no_choice) {
+      warning(
+        'Using a "no choice" option with orthogonal designs may damage the ',
+        'orthogonality properties.'
+      )
       design <- add_no_choice(design, n_alts)
     }
     return(design)
+}
+
+# D-Efficient Design ----
+
+make_design_deff <- function(
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice
+) {
+  # First obtain the d-efficient array
+  des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q)
+  profiles <- merge(des$design, profiles, all.x = TRUE)
+  profiles <- profiles[c(
+    'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
+
+
+
+  if (n_blocks > 1) {
+    q_per_resp <- nrow(oa) / n_blocks
+    if (q_per_resp %% 1 != 0) {
+      stop(
+        'The number of blocks used cannot be evenly divided into the ',
+        'orthogonal array. Use a different number for "n_blocks" that ',
+        'is as factor of ', nrow(oa)
+      )
+    }
+    if (q_per_resp < n_q) {
+      stop(
+        'The orthogonal array cannot be divided into ', n_blocks,
+        ' blocks such that each respondent sees ', n_q,
+        ' questions. Either decrease "n_blocks" or increase "n_q".'
+      )
+    }
+    oa$blockID <- rep(seq(n_blocks), each = q_per_resp)
+    # Create random choice sets within each block
+    choice_sets <- make_random_sets_by_block(oa, n_alts, n_blocks)
+  } else {
+    choice_sets <- make_random_sets(oa, n_alts)
+  }
+  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
+  if (no_choice) {
+    warning(
+      'Using a "no choice" option with orthogonal designs may damage the ',
+      'orthogonality properties.'
+    )
+    design <- add_no_choice(design, n_alts)
+  }
+  return(design)
 }
 
 # Bayesian D-efficient Design ----
