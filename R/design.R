@@ -746,19 +746,18 @@ make_design_bayesian <- function(
     design <- design_raw$design
     names(design) <- varnames
     design <- join_profiles(design, profiles)
+
     if (no_choice) {
-      design <- add_no_choice_bayesian(
-        design, n_alts, varnames[type_ids$discrete]
-      )
+      design <- add_no_choice_bayesian(design, n_alts, varnames[type_ids$discrete])
     }
 
-    # Include probs?
     if (probs) {
       design$probs <- as.vector(t(D$probs))
     }
 
-    # Repeat design to match number of respondents
     design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
+
+    # Repeat design to match number of respondents
     design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
 
     # Print DB error
@@ -816,7 +815,7 @@ add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
   # First dummy code categorical variables
   design$obsID <- rep(seq(nrow(design) / n_alts), each = n_alts)
   design$altID <- rep(seq(n_alts), nrow(design) / n_alts)
-  design <- design[which(design$altID != (n_alts + 1)), ]
+  design <- design[which(design$altID != n_alts), ]
   design <- fastDummies::dummy_cols(
     design,
     select_columns = varnames_discrete,
@@ -829,7 +828,7 @@ add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
   design_og$altID <- n_alts
   design_og$profileID <- 0
   design_og[,
-    which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
+            which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
   design_og$no_choice <- 1
   design <- rbind(design, design_og)
   design <- design[order(design$obsID, design$altID), ]
