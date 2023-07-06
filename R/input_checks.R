@@ -39,6 +39,14 @@ check_design_method <- function(method, priors) {
       method <- 'CEA'
     }
   }
+  # Check that an appropriate method is used
+
+  if (! method %in% c('random', 'full', 'orthogonal', 'CEA', 'Modfed')) {
+    stop(
+      'The "method" argument must be set to "random", "full", ',
+      '"orthogonal", "Modfed", or "CEA"'
+    )
+  }
   return(method)
 }
 
@@ -67,16 +75,18 @@ check_inputs_design <- function(
     }
 
     if (n_blocks > n_resp) {
-        stop("Maximum allowable number of blocks is one block per respondent")
+      stop("Maximum allowable number of blocks is one block per respondent")
     }
 
-    # Check that an appropriate method is used
-
-    if (! method %in% c('random', 'full', 'orthogonal', 'CEA', 'Modfed')) {
+    if ((n_blocks > 1) & (method == 'random')) {
+      stop('The "random" method cannot use blocking.')
+      if ((method == 'full') & profiles_restricted) {
         stop(
-            'The "method" argument must be set to "random", "full", ',
-            '"orthogonal", "Modfed", or "CEA"'
+          'The "full" method cannot use restricted profiles when blocking ',
+          'is used. Either set "n_blocks" to 1 or use an unrestricted ',
+          'set of profiles'
         )
+      }
     }
 
     # Check that orthogonal design method does not use a label or a

@@ -116,10 +116,12 @@
 #'   repeated to meet the desired number of survey respondents (determined by
 #'   `n_resp`). If `"CEA"` or `"Modfed"` is used without specifying `priors`, a
 #'   prior of all `0`s will be used and a warning message stating this will be
-#'   shown. Restricted sets of `profiles` can only be used with `"Modfed"`. For
-#'   more details on Bayesian D-efficient designs, see `?idefix::CEA` and
-#'   `?idefix::Modfed` as well as the JSS article on the {idefix} package
-#'   (Traets et al, 2020).
+#'   shown. In the opposite case, if `priors` are specified but neither Bayesian
+#'   method is used, the `"CEA"` method will be used and a warning stating this
+#'   will be shown. Restricted sets of `profiles` can only be used with
+#'   `"Modfed"`. For more details on Bayesian D-efficient designs, see
+#'   `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
+#'   {idefix} package (Traets et al, 2020).
 #' @references Grömping, U. (2018). R Package DoE.base for Factorial
 #'   Experiments. Journal of Statistical Software, 85(5), 1–41,
 #'   \doi{10.18637/jss.v085.i05} Traets, F., Sanchez, D. G., & Vandebroek, M.
