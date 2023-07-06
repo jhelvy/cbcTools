@@ -296,12 +296,6 @@ get_type_ids <- function(profiles) {
 
 join_profiles <- function(design, profiles) {
 
-  # Replaces the generated design with rows from profiles, which ensures
-  # factor levels in profiles are maintained in design
-
-  # Keep track of row order in design
-  design$row_id <- seq(nrow(design))
-
   # Before joining profiles, ensure that all the data types are the same
   # as in profiles, otherwise join won't work properly
 
@@ -319,8 +313,7 @@ join_profiles <- function(design, profiles) {
 
   # Join on profileIDs, then reorder to retain design order
   varnames <- names(profiles[, 2:ncol(profiles)])
-  design <- merge(design, profiles, by = varnames, all.x = TRUE)
-  design <- design[order(design$row_id),]
+  design <- merge(design, profiles, by = varnames, all.x = TRUE, sort = FALSE)
   if ('blockID' %in% names(design)) { varnames <- c(varnames, 'blockID') }
   design <- design[c('profileID', varnames)]
   return(design)
@@ -509,16 +502,7 @@ design_rand_sample <- function(profiles, n_resp, n_alts, n_q) {
 }
 
 design_rand_sample_label <- function(profiles, n_resp, n_alts, n_q, label) {
-  n_levels <- length(unique(profiles[, label]))
-  if (n_levels != n_alts) {
-    warning(
-      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
-      " to match the number of unique levels in the ", label,
-      " variable.\n"
-    )
-    # Over-ride user-provided n_alts as it is determined by the label
-    n_alts <- n_levels
-  }
+  n_alts <- override_label_alts(profiles, label, n_alts)
   # Randomize rows by label
   labels <- split(profiles, profiles[label])
   design <- sample_profiles_by_group(labels, size = n_resp * n_q)
@@ -560,6 +544,20 @@ add_label_id <- function(design) {
   return(design)
 }
 
+override_label_alts <- function(profiles, label, n_alts) {
+  n_levels <- length(unique(profiles[, label]))
+  if (n_levels != n_alts) {
+    warning(
+      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
+      " to match the number of unique levels in the ", label,
+      " variable.\n"
+    )
+    # Over-ride user-provided n_alts as it is determined by the label
+    n_alts <- n_levels
+  }
+  return(n_alts)
+}
+
 # Full Factorial Design ----
 
 # Arrange copies of the full set of profiles into choice sets by sampling
@@ -568,6 +566,11 @@ add_label_id <- function(design) {
 make_design_full <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
 ) {
+  if (!is.null(label)) {
+    return(make_design_full_labeled(
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+    ))
+  }
   if (n_blocks > 1) {
     # Make blocks
     design <- suppressMessages(as.data.frame(DoE.base::fac.design(
@@ -584,6 +587,49 @@ make_design_full <- function(
   } else {
     choice_sets <- make_random_sets(profiles, n_alts)
   }
+  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
+  if (no_choice) {
+    design <- add_no_choice(design, n_alts)
+  }
+  return(design)
+}
+
+make_design_full_labeled <- function(
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+) {
+  n_alts <- override_label_alts(profiles, label, n_alts)
+  labels <- unique(profiles[,label])
+  profiles_orig <- profiles
+  # Remove the label column from profiles
+  profiles[label] <- NULL
+  profiles$profileID <- NULL
+  profiles <- profiles[!duplicated(profiles),]
+  profiles$profileID <- seq(nrow(profiles))
+  profiles <- cbind(
+    profiles[,ncol(profiles)],
+    profiles[,1:(ncol(profiles)-1)]
+  )
+  names(profiles)[1] <- 'profileID'
+  if (n_blocks > 1) {
+    # Make blocks
+    design <- suppressMessages(as.data.frame(DoE.base::fac.design(
+      factor.names = get_profile_list(profiles),
+      blocks = n_blocks,
+      block.name = "blockID"
+    )))
+    # Make blockID a number, then join on profileIDs
+    design$blockID <- as.numeric(as.character(design$blockID))
+    design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
+    profiles <- join_profiles(design, profiles)
+    # Create random choice sets within each block
+    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
+  } else {
+    choice_sets <- make_random_sets(profiles, n_alts)
+  }
+  # Add label attribute and original profileIDs
+  choice_sets[label] <- rep(labels, nrow(choice_sets) / length(labels))
+  choice_sets$profileID <- NULL
+  choice_sets <- merge(choice_sets, profiles_orig, all.x = TRUE, sort = FALSE)
   design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
