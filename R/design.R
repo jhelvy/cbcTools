@@ -2,55 +2,55 @@
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
 #' design where each row is an alternative. Generate a variety of survey
-#' designs, including full factorial designs, orthogonal designs, and
-#' Bayesian D-efficient designs as well as designs with "no choice" options
-#' and "labeled" (also known as "alternative specific") designs.
+#' designs, including full factorial designs, orthogonal designs, and Bayesian
+#' D-efficient designs as well as designs with "no choice" options and "labeled"
+#' (also known as "alternative specific") designs.
 #'
 #' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
-#' @param profiles A data frame in which each row is a possible profile.
-#' This can be generated using the `cbc_profiles()` function.
+#' @param profiles A data frame in which each row is a possible profile. This
+#'   can be generated using the `cbc_profiles()` function.
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
 #' @param n_blocks Number of blocks used in Orthogonal or Bayesian D-efficient
-#' designs. Max allowable is one block per respondent. Defaults to `1`, meaning
-#' every respondent sees the same choice set.
-#' @param n_draws Number of draws used in simulating the prior distribution
-#' used in Bayesian D-efficient designs. Defaults to `50`.
+#'   designs. Max allowable is one block per respondent. Defaults to `1`,
+#'   meaning every respondent sees the same choice set.
+#' @param n_draws Number of draws used in simulating the prior distribution used
+#'   in Bayesian D-efficient designs. Defaults to `50`.
 #' @param n_start A numeric value indicating the number of random start designs
-#' to use in obtaining a Bayesian D-efficient design. The default is `5`.
-#' Increasing `n_start` can result in a more efficient design at the expense
-#' of increased computational time.
-#' @param no_choice Include a "no choice" option in the choice sets? Defaults
-#' to `FALSE`. If `TRUE`, the total number of alternatives per question will be
-#' one more than the provided `n_alts` argument.
-#' @param label The name of the variable to use in a "labeled" design
-#' (also called an "alternative-specific design") such that each set of
-#' alternatives contains one of each of the levels in the `label` attribute.
-#' Currently not compatible with Bayesian D-efficient designs. If used,
-#' the `n_alts` argument will be ignored as its value is defined by the unique
-#' number of levels in the `label` variable. Defaults to `NULL`.
+#'   to use in obtaining a Bayesian D-efficient design. The default is `5`.
+#'   Increasing `n_start` can result in a more efficient design at the expense
+#'   of increased computational time.
+#' @param no_choice Include a "no choice" option in the choice sets? Defaults to
+#'   `FALSE`. If `TRUE`, the total number of alternatives per question will be
+#'   one more than the provided `n_alts` argument.
+#' @param label The name of the variable to use in a "labeled" design (also
+#'   called an "alternative-specific design") such that each set of alternatives
+#'   contains one of each of the levels in the `label` attribute. Currently not
+#'   compatible with Bayesian D-efficient designs. If used, the `n_alts`
+#'   argument will be ignored as its value is defined by the unique number of
+#'   levels in the `label` variable. Defaults to `NULL`.
 #' @param method Choose the design method to use: `"random"`, `"full"`,
-#' `"orthogonal"`, `"CEA"` or `"Modfed"`. Defaults to `"random"`. See details
-#' below for complete description of each method.
-#' @param priors A list of one or more assumed prior parameters used to
-#' generate a Bayesian D-efficient design. Defaults to `NULL`
+#'   `"orthogonal"`, `"CEA"` or `"Modfed"`. Defaults to `"random"`. See details
+#'   below for complete description of each method.
+#' @param priors A list of one or more assumed prior parameters used to generate
+#'   a Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
-#' Only required if `no_choice = TRUE`. Defaults to `NULL`.
-#' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting
-#' design includes average predicted probabilities for each alternative in each
-#' choice set given the sample from the prior preference distribution.
-#' Defaults to `FALSE`.
+#'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
+#' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting design
+#'   includes average predicted probabilities for each alternative in each
+#'   choice set given the sample from the prior preference distribution.
+#'   Defaults to `FALSE`.
 #' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
-#' object will be a list containing the design and the DB-error score.
-#' Defaults to `FALSE`.
+#'   object will be a list containing the design and the DB-error score.
+#'   Defaults to `FALSE`.
 #' @param max_iter A numeric value indicating the maximum number allowed
-#' iterations when searching for a Bayesian D-efficient design. The default is
-#' 50.
+#'   iterations when searching for a Bayesian D-efficient design. The default is
+#'   50.
 #' @param parallel Logical value indicating whether computations should be done
-#' over multiple cores. The default is `FALSE`.
-#' @details
-#' The `method` argument determines the design method used. Options are:
+#'   over multiple cores. The default is `FALSE`.
+#' @details The `method` argument determines the design method used. Options
+#'   are:
 #'
 #' - `"random"`
 #' - `"full"`
@@ -58,67 +58,69 @@
 #' - `"CEA"`
 #' - `"Modfed"`
 #'
-#' All methods ensure that the two following criteria are met:
+#'   All methods ensure that the two following criteria are met:
 #'
-#'   1. No two profiles are the same within any one choice set.
-#'   2. No two choice sets are the same within any one respondent.
+#'   1. No two profiles are the same within any one choice set. 2. No two choice
+#'   sets are the same within any one respondent.
 #'
-#' The table below summarizes method compatibility with other design options.
+#'   The table below summarizes method compatibility with other design options.
 #'
-#' | Method         | Include "no choice"? | Labeled designs?  | Restricted profiles? | Blocking? |
-#' |----------------|----------------------|-------------------|----------------------|-----------|
-#' | `"random"`     | ✅                   | ✅                | ✅                    | ❌        |
-#' | `"full"`       | ✅                   | ✅                | ✅                    | ✅        |
-#' | `"orthogonal"` | ✅                   | ❌                | ❌                    | ❌        |
-#' | `"CEA"`        | ✅                   | ❌                | ❌                    | ✅        |
-#' | `"Modfed"`     | ✅                   | ❌                | ✅                    | ✅        |
+#'   | Method         | Include "no choice"? | Labeled designs?  | Restricted
+#'   profiles? | Blocking? |
+#'   |----------------|----------------------|-------------------|----------------------|-----------|
+#'   | `"random"`     | ✅                   | ✅                | ✅ | ❌        |
+#'   | `"full"`       | ✅                   | ✅                | ✅ | ✅        |
+#'   | `"orthogonal"` | ✅                   | ❌                | ❌ | ❌        |
+#'   | `"CEA"`        | ✅                   | ❌                | ❌ | ✅        |
+#'   | `"Modfed"`     | ✅                   | ❌                | ✅ | ✅        |
 #'
-#' The `"random"` method (the default) creates a design where choice sets are
-#' created by randomly sampling from the full set of `profiles`. This means
-#' that few (if any) respondents will see the same sets of choice sets. This
-#' method is less efficient than other approaches and may lead to a deficient
-#' experiment in smaller sample sizes, though it guarantees equal ability to
-#' estimate main and interaction effects.
+#'   The `"random"` method (the default) creates a design where choice sets are
+#'   created by randomly sampling from the full set of `profiles` with
+#'   replacement. This means that few (if any) respondents will see the same
+#'   sets of choice sets. This method is less efficient than other approaches
+#'   and may lead to a deficient experiment in smaller sample sizes, though it
+#'   guarantees equal ability to estimate main and interaction effects.
 #'
-#' The `"full"` method for ("full factorial") creates a design where a fixed
-#' set of choice sets is created by randomly sampling from the full set of
-#' `profiles`, which is then repeated to meet the desired number of survey
-#' respondents (`n_resp`). If blocking is used, choice set blocks are created using
-#' mutually exclusive subsets of `profiles` within each block. This method is
-#' less efficient than other approaches and may lead to a deficient experiment
-#' in smaller sample sizes, though it guarantees equal ability to estimate main
-#' and interaction effects. For more information about blocking with full
-#' factorial designs, see `?DoE.base::fac.design` as well as the JSS article on
-#' the {DoE.base} package (Grömping, 2018).
+#'   For all other methods, a fixed set of choice sets is first created
+#'   following a particular strategy, and then the choice sets are repeated to
+#'   meet the desired number of survey respondents (determined by `n_resp`).
 #'
-#' The `"orthogonal"` method creates a design where an orthogonal array from
-#' the full set of `profiles` is found. A fixed set of choice sets is created by
-#' randomly sampling from this orthogonal array, which is then repeated to meet
-#' the desired number of survey respondents (`n_resp`). For cases where an
-#' orthogonal array cannot be found, a full factorial design is used. This
-#' approach is also sometimes called a "main effects" design since orthogonal
-#' arrays focus the information on the main effects at the expense of
-#' information about interaction effects. For more information about orthogonal
-#' designs, see `?DoE.base::oa.design` as well as the JSS article on the
-#' {DoE.base} package (Grömping, 2018).
+#'   The `"full"` method for ("full factorial") creates a design where choice
+#'   sets are created by randomly sampling from the full set of `profiles`
+#'   without replacement. If blocking is used, choice set blocks are created
+#'   using mutually exclusive subsets of `profiles` within each block. This
+#'   method is less efficient than other approaches and may lead to a deficient
+#'   experiment in smaller sample sizes, though it guarantees equal ability to
+#'   estimate main and interaction effects. For more information about blocking
+#'   with full factorial designs, see `?DoE.base::fac.design` as well as the JSS
+#'   article on the {DoE.base} package (Grömping, 2018).
 #'
-#' The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
-#' Bayesian D-efficient design. A fixed set of choice sets is first found and
-#' then repeated to meet the desired number of survey respondents (`n_resp`).
-#' The total number of unique choice sets is determined by `n_q*n_blocks`.
-#' If `"CEA"` or `"Modfed"` is used without specifying `priors`, a prior of all
-#' `0`s will be used and a warning message stating this will be shown.
-#' Restricted sets of `profiles` can only be used with `"Modfed"`. For more
-#' details on Bayesian D-efficient designs, see `?idefix::CEA` and
-#' `?idefix::Modfed` as well as the JSS article on the {idefix} package
-#' (Traets et al, 2020).
-#' @references
-#' Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41,
-#' \doi{10.18637/jss.v085.i05}
-#' Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
-#' \doi{10.18637/jss.v096.i03}
+#'   The `"orthogonal"` method creates a design where an orthogonal array from
+#'   the full set of `profiles` is found and then choice sets are created by
+#'   randomly sampling from this orthogonal array without replacement. For cases
+#'   where an orthogonal array cannot be found, a full factorial design is used.
+#'   This approach is also sometimes called a "main effects" design since
+#'   orthogonal arrays focus the information on the main effects at the expense
+#'   of information about interaction effects. For more information about
+#'   orthogonal designs, see `?DoE.base::oa.design` as well as the JSS article
+#'   on the {DoE.base} package (Grömping, 2018).
+#'
+#'   The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
+#'   Bayesian D-efficient design for the choice sets, with the total number of
+#'   unique choice sets determined by `n_q*n_blocks`. If `"CEA"` or `"Modfed"`
+#'   is used without specifying `priors`, a prior of all `0`s will be used and a
+#'   warning message stating this will be shown. Restricted sets of `profiles`
+#'   can only be used with `"Modfed"`. For more details on Bayesian D-efficient
+#'   designs, see `?idefix::CEA` and `?idefix::Modfed` as well as the JSS
+#'   article on the {idefix} package (Traets et al, 2020).
+#' @references Grömping, U. (2018). R Package DoE.base for Factorial
+#'   Experiments. Journal of Statistical Software, 85(5), 1–41,
+#'   \doi{10.18637/jss.v085.i05} Traets, F., Sanchez, D. G., & Vandebroek, M.
+#'   (2020). Generating Optimal Designs for Discrete Choice Experiments in R:
+#'   The idefix Package. Journal of Statistical Software, 96(3), 1–41,
+#'   \doi{10.18637/jss.v096.i03}
 #' @return A data frame containing a choice-based conjoint survey design where
-#' each row is an alternative.
+#'   each row is an alternative.
 #' @export
 #' @examples
 #' library(cbcTools)
@@ -261,7 +263,7 @@ cbc_design <- function(
 
 # Random Design ----
 
-# Sample from profiles to create randomized choice sets
+# Sample from profiles with replacement to create randomized choice sets
 
 make_design_random <- function(
   profiles, n_resp, n_alts, n_q, no_choice, label
@@ -439,6 +441,9 @@ reorder_cols <- function(design) {
 }
 
 # Full Factorial Design ----
+
+# Arrange copies of the full set of profiles into choice sets by sampling
+# without replacement
 
 make_design_full <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
