@@ -66,6 +66,7 @@ check_inputs_design <- function(
     priors,
     prior_no_choice,
     probs,
+    keep_deff,
     keep_db_error,
     max_iter,
     parallel,

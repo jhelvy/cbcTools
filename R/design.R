@@ -40,6 +40,9 @@
 #' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting design
 #'   includes average predicted probabilities for each alternative in each
 #'   choice set given the sample from the prior preference distribution.
+#'   Defaults to `FALSE`.'
+#' @param keep_deff If `TRUE`, for D-efficient designs the returned
+#'   object will be a list containing the design and the D-efficiency score.
 #'   Defaults to `FALSE`.
 #' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
 #'   object will be a list containing the design and the DB-error score.
@@ -240,6 +243,7 @@ cbc_design <- function(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
+  keep_deff = FALSE,
   keep_db_error = FALSE,
   max_iter = 50,
   parallel = FALSE
@@ -260,6 +264,7 @@ cbc_design <- function(
     priors,
     prior_no_choice,
     probs,
+    keep_deff,
     keep_db_error,
     max_iter,
     parallel,
@@ -280,7 +285,7 @@ cbc_design <- function(
     )
   } else if (method == 'deff') {
     design <- make_design_deff(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_deff
     )
   } else {
     design <- make_design_bayesian(
@@ -714,45 +719,30 @@ make_design_orthogonal <- function(
 # D-Efficient Design ----
 
 make_design_deff <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_deff
 ) {
   # First obtain the d-efficient array
-  des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q)
+  des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q*n_blocks)
+  deff <- des$Ge
   profiles <- merge(des$design, profiles, all.x = TRUE)
   profiles <- profiles[c(
     'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
-
-
-
   if (n_blocks > 1) {
-    q_per_resp <- nrow(oa) / n_blocks
-    if (q_per_resp %% 1 != 0) {
-      stop(
-        'The number of blocks used cannot be evenly divided into the ',
-        'orthogonal array. Use a different number for "n_blocks" that ',
-        'is as factor of ', nrow(oa)
-      )
-    }
-    if (q_per_resp < n_q) {
-      stop(
-        'The orthogonal array cannot be divided into ', n_blocks,
-        ' blocks such that each respondent sees ', n_q,
-        ' questions. Either decrease "n_blocks" or increase "n_q".'
-      )
-    }
-    oa$blockID <- rep(seq(n_blocks), each = q_per_resp)
-    # Create random choice sets within each block
-    choice_sets <- make_random_sets_by_block(oa, n_alts, n_blocks)
+    profiles$blockID <- rep(seq(n_blocks), each = nrow(profiles) / n_blocks)
+    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
   } else {
-    choice_sets <- make_random_sets(oa, n_alts)
+    choice_sets <- make_random_sets(profiles, n_alts)
   }
   design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
   if (no_choice) {
-    warning(
-      'Using a "no choice" option with orthogonal designs may damage the ',
-      'orthogonality properties.'
-    )
     design <- add_no_choice(design, n_alts)
+  }
+  # Print D-efficiency
+  message("D-efficient design found with D-efficiency of ", round(deff, 5))
+
+  # Return list containing the design and DB error if keep_deff = TRUE
+  if (keep_deff) {
+    return(list(design = design, deff = deff))
   }
   return(design)
 }
