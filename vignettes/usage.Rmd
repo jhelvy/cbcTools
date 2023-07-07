@@ -5,8 +5,14 @@ vignette: >
   %\VignetteIndexEntry{Usage}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
+  \usepackage{xcolor}
+  \usepackage{bbding}
 bibliography: "`r here::here('vignettes', 'library.bib')`"
+classoption: dvipsnames # For other colors in xcolors
 ---
+
+\newcommand{\checkgreen}{\textcolor{Green}{\Checkmark}}
+\newcommand{\xred}{\textcolor{red}{\XSolid}}
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(
@@ -99,6 +105,32 @@ All methods ensure that the two following criteria are met:
 
 The table below summarizes method compatibility with other design options, including the ability to include a "no choice" option, the creation of a "labeled" design (also called a "alternative-specific" design), the use of restricted profile, and the use of blocking.
 
+```{r, eval=knitr::is_latex_output(), echo=FALSE}
+knitr::asis_output('
+\begin{table}[ht]
+    \caption{Summary of addition options supported by each design method.}
+    \vspace{-20pt}
+    \begin{center}
+    \renewcommand{\arraystretch}{1.1}
+        \begin{tabular}{lllll}
+            \toprule[1.5pt]
+            Method & Include no choice & Labeled designs & Use restricted profiles & Blocking \\
+            \midrule
+            \code{"random"}     & \checkgreen & \checkgreen & \checkgreen & \xred \\
+            \code{"full"}       & \checkgreen & \checkgreen & \checkgreen & \checkgreen \\
+            \code{"orthogonal"} & \checkgreen & \xred & \xred & \checkgreen \\
+            \code{"dopt"}       & \checkgreen & \xred & \checkgreen & \checkgreen \\
+            \code{"CEA"}        & \checkgreen & \xred & \xred & \checkgreen \\
+            \code{"Modfed"}     & \checkgreen & \xred & \checkgreen & \checkgreen \\
+            \bottomrule[1pt]
+        \end{tabular}
+    \end{center}
+\end{table}
+')
+```
+
+```{r, eval=knitr::is_html_output(), echo=FALSE}
+knitr::asis_output('
 Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocking?
 ---|---|---|---|---
 `"random"`     | ✅ | ✅ | ✅ | ❌
@@ -107,6 +139,8 @@ Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocki
 `"dopt"`       | ✅ | ❌ | ✅ | ✅
 `"CEA"`        | ✅ | ❌ | ❌ | ✅
 `"Modfed"`     | ✅ | ❌ | ✅ | ✅
+')
+```
 
 The returned `design` data frame contains a choice-based conjoint survey design where each row is an alternative. It includes the following columns:
 
