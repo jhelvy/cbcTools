@@ -64,10 +64,13 @@
 #'
 #'   All methods ensure that the two following criteria are met:
 #'
-#'   1. No two profiles are the same within any one choice set. 2. No two choice
-#'   sets are the same within any one respondent.
+#'   1. No two profiles are the same within any one choice set.
+#'   2. No two choice sets are the same within any one respondent.
 #'
-#'   The table below summarizes method compatibility with other design options.
+#'   The table below summarizes method compatibility with other design options,
+#'   including the ability to include a "no choice" option, the creation of a
+#'   "labeled" design (also called a "alternative-specific" design), the use
+#'   of restricted profile, and the use of blocking.
 #'
 #'   Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocking?
 #'   ---|---|---|---|---
@@ -84,9 +87,6 @@
 #'   sets of choice sets. This method is less efficient than other approaches
 #'   and may lead to a deficient experiment in smaller sample sizes, though it
 #'   guarantees equal ability to estimate main and interaction effects.
-#'
-#'   For all other methods, a fixed set of choice sets is first created
-#'   following a particular strategy, and then the choice sets are
 #'
 #'   The `"full"` method for ("full factorial") creates a design where choice
 #'   sets are created by randomly sampling from the full set of `profiles`
@@ -116,13 +116,13 @@
 #'   more information about orthogonal designs, see `?DoE.base::oa.design` as
 #'   well as the JSS article on the {DoE.base} package (Grömping, 2018).
 #'
-#'   The `"deff"` method creates a "D-Efficient" design where an array from
+#'   The `"deff"` method creates a "D-efficient" design where an array from
 #'   `profiles` is found that maximizes the D efficiency using the Federov
 #'   algorithm, with the total number of unique choice sets determined by
 #'   `n_q*n_blocks`. Choice sets are then created by randomly sampling from this
 #'   array *without replacement*. The choice sets are then repeated to meet the
 #'   desired number of survey respondents (determined by `n_resp`). If blocking
-#'   is used, choice set blocks are created from the d-efficient array. For more
+#'   is used, choice set blocks are created from the D-efficient array. For more
 #'   information about the underlying algorithm for this method, see
 #'   `?AlgDesign::optFederov`.
 #'
@@ -144,8 +144,16 @@
 #'   (2020). Generating Optimal Designs for Discrete Choice Experiments in R:
 #'   The idefix Package. Journal of Statistical Software, 96(3), 1–41,
 #'   \doi{10.18637/jss.v096.i03}
-#' @return A data frame containing a choice-based conjoint survey design where
-#'   each row is an alternative.
+#' @return The returned `design` data frame contains a choice-based conjoint
+#' survey design where each row is an alternative. It includes the following
+#' columns:
+#'
+#' - `profileID`: Identifies the profile in `profiles`.
+#' - `respID`: Identifies each survey respondent.
+#' - `qID`: Identifies the choice question answered by the respondent.
+#' - `altID`:Identifies the alternative in any one choice observation.
+#' - `obsID`: Identifies each unique choice observation across all respondents.
+#' - `blockID`: If blocking is used, identifies each unique block.
 #' @export
 #' @examples
 #' library(cbcTools)

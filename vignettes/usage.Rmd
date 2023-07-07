@@ -75,19 +75,32 @@ restricted_profiles
 
 # Generate survey designs
 
-Once a set of profiles is obtained, a conjoint survey can then be generated using the `cbc_design()` function. A variety of survey designs can be generated, including:
+Once a set of profiles is obtained, a conjoint survey can then be generated using the `cbc_design()` function. The `method` argument determines the design method used. Options are:
 
-- Full factorial designs
-- Orthogonal (a.k.a. "main effects") designs
-- Labeled designs (a.k.a. "alternative-specific" designs)
-- Designs with a "no choice" option (a.k.a. "outside good")
-- Bayesian D-efficient designs
+- `"random"`
+- `"full"`
+- `"orthogonal"`
+- `"deff"`
+- `"CEA"`
+- `"Modfed"`
 
-## Full factorial designs
+All methods ensure that the two following criteria are met:
 
-Full factorial designs are obtained by setting `method = 'full'` (the default setting for `method`). This method simply samples from the full set of `profiles`, ensuring that no two profiles are the same in any choice question and that no two choice sets are the same for any one respondent. Blocking can be implemented where blocks are created from subsets of the full factorial design. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Grömping2018].
+1. No two profiles are the same within any one choice set. 
+2. No two choice sets are the same within any one respondent.
 
-The resulting `design` data frame includes the following columns:
+The table below summarizes method compatibility with other design options, including the ability to include a "no choice" option, the creation of a "labeled" design (also called a "alternative-specific" design), the use of restricted profile, and the use of blocking.
+
+Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocking?
+---|---|---|---|---
+`"random"`     | ✅ | ✅ | ✅ | ❌
+`"full"`       | ✅ | ✅ | ✅ | ✅
+`"orthogonal"` | ✅ | ❌ | ❌ | ✅
+`"deff"`       | ✅ | ❌ | ✅ | ✅
+`"CEA"`        | ✅ | ❌ | ❌ | ✅
+`"Modfed"`     | ✅ | ❌ | ✅ | ✅
+
+The returned `design` data frame contains a choice-based conjoint survey design where each row is an alternative. It includes the following columns:
 
 - `profileID`: Identifies the profile in `profiles`.
 - `respID`: Identifies each survey respondent.
@@ -96,44 +109,29 @@ The resulting `design` data frame includes the following columns:
 - `obsID`: Identifies each unique choice observation across all respondents.
 - `blockID`: If blocking is used, identifies each unique block.
 
+## Random designs
+
+The `"random"` method (the default) creates a design where choice sets are created by randomly sampling from the full set of `profiles` *with* replacement. This means that few (if any) respondents will see the same sets of choice sets. This method is less efficient than other approaches and may lead to a deficient experiment in smaller sample sizes, though it guarantees equal ability to estimate main and interaction effects.
+
 ```{r}
-design_full <- cbc_design(
+design_random <- cbc_design(
   profiles = profiles,
   n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6,   # Number of questions per respondent
-  method   = 'full' # This is the default method
+  method   = 'random' # This is the default method
 )
 
-dim(design_full)  # View dimensions
-head(design_full) # Preview first 6 rows
-```
-
-## Orthogonal designs
-
-Orthogonal designs are obtained by setting `method = 'orthogonal'`. This method first finds an orthogonal array from the full set of `profiles` (if possible), then randomly selects from it to create choice sets. For some designs an orthogonal array can't be found, in which case a full factorial design is used. This approach is also sometimes called a "main effects" design since orthogonal arrays focus the information on the main effects at the expense of information about interaction effects. For more information about orthogonal designs, see `?DoE.base::oa.design` as well as the JSS article on the {DoE.base} package [@Grömping2018]
-
-```{r}
-#| message: true
-
-design_ortho <- cbc_design(
-  profiles = profiles,
-  n_resp   = 900, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6,   # Number of questions per respondent
-  method   = 'orthogonal'
-)
-
-dim(design_ortho)  # View dimensions
-head(design_ortho) # Preview first 6 rows
+dim(design_random)  
+head(design_random) 
 ```
 
 ## Labeled designs (a.k.a. "alternative-specific" designs)
 
-You can also make a "labeled" design (also known as "alternative-specific" design) where the levels of one attribute are used as a label by setting the `label` argument to that attribute. This by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, so the `n_alts` argument is overridden. Here is an example of a labeled full factorial survey using the `type` attribute as the label:
+A "labeled" design (also known as "alternative-specific" design) is one where the levels of one attribute are used as a label. This can be created by setting the `label` argument to that attribute. As of now, only `"random"` and `"full"` methods support labeled designs. Since this by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, the `n_alts` argument is overridden. Here is an example of a labeled random design using the `type` attribute as the label:
 
 ```{r}
-design_labeled <- cbc_design(
+design_random_labeled <- cbc_design(
   profiles = profiles,
   n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
@@ -141,15 +139,15 @@ design_labeled <- cbc_design(
   label    = "type" # Set the "type" attribute as the label
 )
 
-dim(design_labeled)
-head(design_labeled)
+dim(design_random_labeled)
+head(design_random_labeled)
 ```
 
 In the above example, you can see in the first six rows of the survey that the `type` attribute is always fixed to be the same order, ensuring that each level in the `type` attribute will always be shown in each choice question.
 
 ## Designs with a "no choice" option (a.k.a. an "outside good")
 
-You can include a "no choice" (also known as an "outside good") option in your survey by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
+A "no choice" (also known as an "outside good") option can be included by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
 
 ```{r}
 design_nochoice <- cbc_design(
@@ -164,9 +162,64 @@ dim(design_nochoice)
 head(design_nochoice)
 ```
 
+## Full factorial designs
+
+The `"full"` method for ("full factorial") creates a design where choice sets are created by randomly sampling from the full set of `profiles` *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created using mutually exclusive subsets of `profiles` within each block. This method produces a design with similar performance with that of the `"random"` method, except the choice sets are repeated and thus there will be many more opportunities for different respondents to see the same choice sets. This method is less efficient than other approaches and may lead to a deficient experiment in smaller sample sizes, though it guarantees equal ability to estimate main and interaction effects. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Gromping2018].
+
+```{r}
+design_full <- cbc_design(
+  profiles = profiles,
+  n_resp   = 900, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'full'
+)
+
+dim(design_full) 
+head(design_full)
+```
+
+## Orthogonal designs
+
+The `"orthogonal"` method creates a design where an orthogonal array from the full set of `profiles` is found and then choice sets are created by randomly sampling from this orthogonal array *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created using mutually exclusive subsets of the orthogonal array within each block. For cases where an orthogonal array cannot be found, a full factorial design is used. This approach is also sometimes called a "main effects" design since orthogonal arrays focus the information on the main effects at the expense of information about interaction effects. For more information about orthogonal designs, see `?DoE.base::oa.design` as well as the JSS article on the {DoE.base} package [@Gromping2018].
+
+```{r}
+#| message: true
+
+design_orthogonal <- cbc_design(
+  profiles = profiles,
+  n_resp   = 900, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'orthogonal'
+)
+
+dim(design_orthogonal) 
+head(design_orthogonal)
+```
+
+## D-efficient designs
+
+The `"deff"` method creates a "D-efficient" design where an array from `profiles` is found that maximizes the D-efficiency using the Federov algorithm, with the total number of unique choice sets determined by `n_q*n_blocks`. The optimization is handled using the [{AlgDesign} package](https://cran.r-project.org/package=AlgDesign). Choice sets are then created by randomly sampling from this array *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created from the D-efficient array. For more information about the underlying algorithm for this method, see `?AlgDesign::optFederov` [@Wheeler2022].
+
+```{r}
+#| message: true
+
+design_deff <- cbc_design(
+  profiles = profiles,
+  n_resp   = 900, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  method   = 'orthogonal'
+)
+
+dim(design_deff) 
+head(design_deff)
+```
+
 ## Bayesian D-efficient designs
 
-Bayesian D-efficient designs are obtained by setting `method = 'CEA'` or `method = 'Modfed'` along with a specified list of `priors` (parameters that define a prior utility model). These designs are optimized to minimize the D-error of the design given a prior model. The optimization is handled using the [{idefix} package](https://cran.r-project.org/web/packages/idefix/index.html). For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use "labeled" designs. If `method` is set to `"CEA"` or `"Modfed"` but without `priors` specified, a prior of all `0`s will be used and a warning message stating this will be shown. If you are using a restricted set of `profiles`, only the `"Modfed"` method can be used as `"CEA"` requires unrestricted `profiles`. For more details on Bayesian D-efficient designs, see `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the {idefix} package [@Traets2020].
+The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a Bayesian D-efficient design for the choice sets, with the total number of unique choice sets determined by `n_q*n_blocks`. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). These designs are optimized to minimize the D-error of the design given a prior model, which is handled using the [{idefix} package](https://cran.r-project.org/web/packages/idefix/index.html). For now, designs are limited to multinomial logit priors (the {idefix} package can generate designs with mixed logit priors). These designs also currently do not support the ability to specify interaction terms in the prior model or use "labeled" designs. If `"CEA"` or `"Modfed"` is used without specifying `priors`, a prior of all `0`s will be used and a warning message stating this will be shown. In the opposite case, if `priors` are specified but neither Bayesian method is used, the `"CEA"` method will be used and a warning stating this will be shown. Restricted sets of `profiles` can only be used with `"Modfed"`. For more details on Bayesian D-efficient designs, see `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the {idefix} package [@Traets2020].
 
 In the example below, the prior model assumes the following parameters:
 
@@ -192,7 +245,7 @@ dim(design_bayesian)
 head(design_bayesian)
 ```
 
-Bayesian D-efficient designs that include a "no choice" option should set `no_choice = TRUE` and also define a prior for the "no choice" option using `prior_no_choice`, e.g.:
+Bayesian D-efficient designs that include a "no choice" option should set `no_choice = TRUE` and also define a prior for the "no choice" option using `prior_no_choice`:
 
 ```{r}
 design_bayesian_no_choice <- cbc_design(
@@ -239,11 +292,7 @@ cbc_overlap(design)
 
 # Simulate choices
 
-You can simulate choices for a given `design` using the `cbc_choices()` function. Choices are simulated using the [{logitr} package](https://jhelvy.github.io/logitr/). For more information, see `?logitr::logitr` as well as the JSS article on the {logitr} package [@Helveston2023].
-
-## Random choices
-
-By default, random choices are simulated:
+Choices for a given design can be simulated using the `cbc_choices()` function. This function requires a `design` argument (a design generated by `cbc_design()`), and an `obsID` argument, which is the column in `design` that identifies each unique choice observation. By default, random choices are simulated:
 
 ```{r}
 data <- cbc_choices(
@@ -254,21 +303,23 @@ data <- cbc_choices(
 head(data)
 ```
 
-## Choices according to a prior
+Choices can also be simulated according to an assumed prior model. For this option, choices are simulated using the `predict.logitr()` method from the [{logitr} package](https://jhelvy.github.io/logitr/) [@Helveston2023], which makes predictions according to multinomial or mixed logit models.
 
-You can also pass a list of prior parameters to define a utility model that will be used to simulate choices. In the example below, the choices are simulated using a utility model with the following parameters:
-
-- 1 continuous parameter for `price`
-- 2 categorical parameters for `type` (`'Gala'` and `'Honeycrisp'`)
-- 2 categorical parameters for `freshness` (`"Average"` and `"Excellent"`)
-
-Note that for categorical variables (`type` and `freshness` in this example), the first level defined when using `cbc_profiles()` is set as the reference level. The example below defines the following utility model for simulating choices for each alternative _j_:
+The example below demonstrates how to simulate choices according to a multinomial logit model with fixed parameters. Note that for categorical variables (`type` and `freshness` in this example), the first level defined when using `cbc_profiles()` is set as the reference level. In this example, the parameters define the following utility model for each alternative _j_:
 
 $$
-u_j = -0.1price_j + 0.1typeGala_j + 0.2typeHoneycrisp_j + 0.1freshnessAverage_j + 0.2freshnessExcellent_j + \varepsilon_j
+u_{j} =
+    -0.1 p_j +
+    0.1 t^\mathrm{Gala}_j + 0.2 t^\mathrm{Honeycrisp}_j +
+    0.1 f^\mathrm{Average}_j + 0.2 f^\mathrm{Excellent}_j +
+    \varepsilon_{j}
 $$
 
-```{r, eval=FALSE}
+where $p$ is price, $t$ is type, and $f$ is freshness.
+
+```{r}
+#| eval: false
+
 data <- cbc_choices(
   design = design,
   obsID = "obsID",
@@ -280,14 +331,16 @@ data <- cbc_choices(
 )
 ```
 
-If you wish to include a prior model with an interaction, you can do so inside the `priors` list. For example, here is the same example as above but with an interaction between `price` and `type` added:
+The prior model used to simulate choices can also include interaction effects. For example, the example below is the same as the previous example but with an added interaction between `price` and `type`:
 
-```{r, eval=FALSE}
+```{r}
+#| eval: false
+
 data <- cbc_choices(
   design = design,
   obsID = "obsID",
   priors = list(
-    price = 0.1,
+    price = -0.1,
     type = c(0.1, 0.2),
     freshness = c(0.1, 0.2),
     `price*type` = c(0.1, 0.5)
@@ -295,9 +348,11 @@ data <- cbc_choices(
 )
 ```
 
-Finally, you can also simulate data for a mixed logit model where parameters follow a normal or log-normal distribution across the population. In the example below, the `randN()` function is used to specify the `type` attribute with 2 random normal parameters with a specified vector of means (`mean`) and standard deviations (`sd`) for each level of `type`. Log-normal parameters are specified using `randLN()`.
+Finally, to simulate choices according to a mixed logit model where parameters follow a normal or log-normal distribution across the population, the `randN()` and `randLN()` functions can be used inside the `priors` list. The example below models the `type` attribute with two random normal parameters using a vector of means (`mean`) and standard deviations (`sd`) for each level of `type`:
 
-```{r, eval=FALSE}
+```{r}
+#| eval: false
+
 data <- cbc_choices(
   design = design,
   obsID = "obsID",
@@ -309,9 +364,13 @@ data <- cbc_choices(
 )
 ```
 
-# Conduct a power analysis
+# Assess power
 
-The simulated choice data can be used to conduct a power analysis by estimating the same model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease (i.e. coefficient estimates become more precise). The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. In the example below, 10 different sample sizes are used. All models are estimated using the [{logitr} package](https://jhelvy.github.io/logitr/). For more information, see `?logitr::logitr` as well as the JSS article on the {logitr} package [@Helveston2023].
+The simulated choice data can be used to conduct a power analysis by estimating a model multiple times with incrementally increasing sample sizes. As the sample size increases, the estimated coefficient standard errors will decrease, enabling the experimenter to identify the sample size required to achieve a desired level of precision.
+
+The `cbc_power()` function achieves this by partitioning the choice data into multiple sizes (defined by the `nbreaks` argument) and then estimating a user-defined choice model on each data subset. Model parameters are defined as a vector of attribute names that refer to column names in the `data` object. All models are estimated using the [{logitr} package](https://jhelvy.github.io/logitr/), and any additional arguments for estimating models with the \pkg{logitr} package can be passed through the `cbc_power()` function. For example, to assess power for a mixed logit model, the `randPars` argument can be used. For more information, see `?logitr::logitr` as well as the JSS article on the {logitr} package [@Helveston2023].
+
+In the example below, the simulated choice data is broken into 10 chunks with increasing sample sizes and a multinomial logit model is estimated on each chunk with parameters for `price`, `type`, and `freshness`.
 
 ```{r}
 power <- cbc_power(
@@ -327,17 +386,17 @@ head(power)
 tail(power)
 ```
 
-The `power` data frame contains the coefficient estimates and standard errors for each sample size. You can quickly visualize the outcome to identify a required sample size for a desired level of parameter precision by using the `plot()` method:
+The returned data frame contains the coefficient estimates and standard errors for each chunk of the data. In the example above, it is clear that the standard errors for a sample size of 900 are much lower than those for a sample size of just 90. This approach can be used to more precisely identify sample size requirements by increasing `nbreaks`.
+
+Visualizing the results of the power analysis can be particularly helpful for identifying sample size requirements. Since the `cbc_power()` function returns a data frame in a "tidy" (or "long") format [@Wickham2014], the results can be conveniently plotted using the popular {ggplot2} package [@Wickham2016]. A `plot.cbc_errors()` method is included in {cbcTools} to create a simple ggplot of the power curves.
 
 ```{r power}
 plot(power)
 ```
 
-If you want to examine any other aspects of the models other than the standard errors, you can set `return_models = TRUE` and `cbc_power()` will return a list of estimated models. The example below prints a summary of the last model in the list of models:
+Researchers may be interested in aspects other than standard errors. By setting `return_models = TRUE`, the `cbc_power()` function will return a list of estimated models (one for each data chunk), which can then be used to examine other model objects. The example below prints a summary of the last model in the list of returned models from a power analysis.
 
 ```{r}
-library(logitr)
-
 models <- cbc_power(
   data    = data,
   pars    = c("price", "type", "freshness"),
