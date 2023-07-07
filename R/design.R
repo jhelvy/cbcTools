@@ -123,7 +123,7 @@
 #'   sampling from this array *without replacement*. The choice sets are then
 #'   repeated to meet the desired number of survey respondents (determined by
 #'   `n_resp`). If blocking is used, choice set blocks are created from the
-#'   D-efficient array. For more information about the underlying algorithm
+#'   D-optimal array. For more information about the underlying algorithm
 #'   for this method, see `?AlgDesign::optFederov`.
 #'
 #'   The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
@@ -734,7 +734,7 @@ make_design_orthogonal <- function(
 make_design_dopt <- function(
     profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
 ) {
-  # First obtain the d-efficient array
+  # First obtain the d-optimal array
   des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q*n_blocks)
   d_eff <- des$Ge
   profiles <- merge(des$design, profiles, all.x = TRUE)
@@ -751,7 +751,7 @@ make_design_dopt <- function(
     design <- add_no_choice(design, n_alts)
   }
   # Print D-efficiency
-  message("D-efficient design found with D-efficiency of ", round(d_eff, 5))
+  message("D-optimal design found with D-efficiency of ", round(d_eff, 5))
 
   # Return list containing the design and DB error if keep_d_eff = TRUE
   if (keep_d_eff) {

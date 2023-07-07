@@ -180,7 +180,7 @@ determined by \code{n_q*n_blocks}. Choice sets are then created by randomly
 sampling from this array \emph{without replacement}. The choice sets are then
 repeated to meet the desired number of survey respondents (determined by
 \code{n_resp}). If blocking is used, choice set blocks are created from the
-D-efficient array. For more information about the underlying algorithm
+D-optimal array. For more information about the underlying algorithm
 for this method, see \code{?AlgDesign::optFederov}.
 
 The \code{"CEA"} and \code{"Modfed"} methods use the specified \code{priors} to create a

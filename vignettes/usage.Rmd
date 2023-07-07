@@ -172,7 +172,7 @@ head(design_orthogonal)
 
 ## D-optimal designs
 
-The `"dopt"` method creates a "D-optimal" design where an array from `profiles` is found that maximizes the D-efficiency of a linear model using the Federov algorithm, with the total number of unique choice sets determined by `n_q*n_blocks`. The optimization is handled using the [{AlgDesign} package](https://cran.r-project.org/package=AlgDesign). Choice sets are then created by randomly sampling from this array *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created from the D-efficient array. For more information about the underlying algorithm for this method, see `?AlgDesign::optFederov` [@Wheeler2022].
+The `"dopt"` method creates a "D-optimal" design where an array from `profiles` is found that maximizes the D-efficiency of a linear model using the Federov algorithm, with the total number of unique choice sets determined by `n_q*n_blocks`. The optimization is handled using the [{AlgDesign} package](https://cran.r-project.org/package=AlgDesign). Choice sets are then created by randomly sampling from this array *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created from the D-optimal array. For more information about the underlying algorithm for this method, see `?AlgDesign::optFederov` [@Wheeler2022].
 
 ```{r}
 #| message: true
