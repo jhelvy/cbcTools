@@ -75,7 +75,15 @@ restricted_profiles
 
 # Generate survey designs
 
-Once a set of profiles is obtained, a conjoint survey can then be generated using the `cbc_design()` function. The `method` argument determines the design method used. Options are:
+Once a set of profiles is obtained, a conjoint survey can then be generated using the `cbc_design()` function. The function takes several arguments that are common to all design methods:
+
+- `profiles`: A data frame of profiles (generated with `cbc_profiles()`) to use in the design (with or without restrictions).
+- `n_resp`: The number of respondents in the survey.
+- `n_alts`: The number of alternatives per question.
+- `n_q`: The number of questions per respondent.
+- `method`: The design strategy to use (defaults to `"random"`).
+
+The `method` argument determines the design method used. Options are:
 
 - `"random"`
 - `"full"`
@@ -126,42 +134,6 @@ dim(design_random)
 head(design_random) 
 ```
 
-## Labeled designs (a.k.a. "alternative-specific" designs)
-
-A "labeled" design (also known as "alternative-specific" design) is one where the levels of one attribute are used as a label. This can be created by setting the `label` argument to that attribute. As of now, only `"random"` and `"full"` methods support labeled designs. Since this by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, the `n_alts` argument is overridden. Here is an example of a labeled random design using the `type` attribute as the label:
-
-```{r}
-design_random_labeled <- cbc_design(
-  profiles = profiles,
-  n_resp   = 900, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6,   # Number of questions per respondent
-  label    = "type" # Set the "type" attribute as the label
-)
-
-dim(design_random_labeled)
-head(design_random_labeled)
-```
-
-In the above example, you can see in the first six rows of the survey that the `type` attribute is always fixed to be the same order, ensuring that each level in the `type` attribute will always be shown in each choice question.
-
-## Designs with a "no choice" option (a.k.a. an "outside good")
-
-A "no choice" (also known as an "outside good") option can be included by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative.
-
-```{r}
-design_nochoice <- cbc_design(
-  profiles  = profiles,
-  n_resp    = 900, # Number of respondents
-  n_alts    = 3, # Number of alternatives per question
-  n_q       = 6, # Number of questions per respondent
-  no_choice = TRUE
-)
-
-dim(design_nochoice)
-head(design_nochoice)
-```
-
 ## Full factorial designs
 
 The `"full"` method for ("full factorial") creates a design where choice sets are created by randomly sampling from the full set of `profiles` *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created using mutually exclusive subsets of `profiles` within each block. This method produces a design with similar performance with that of the `"random"` method, except the choice sets are repeated and thus there will be many more opportunities for different respondents to see the same choice sets. This method is less efficient than other approaches and may lead to a deficient experiment in smaller sample sizes, though it guarantees equal ability to estimate main and interaction effects. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Gromping2018].
@@ -210,7 +182,7 @@ design_deff <- cbc_design(
   n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6,   # Number of questions per respondent
-  method   = 'orthogonal'
+  method   = 'deff'
 )
 
 dim(design_deff) 
@@ -245,7 +217,43 @@ dim(design_bayesian)
 head(design_bayesian)
 ```
 
-Bayesian D-efficient designs that include a "no choice" option should set `no_choice = TRUE` and also define a prior for the "no choice" option using `prior_no_choice`:
+## Labeled designs (a.k.a. "alternative-specific" designs)
+
+A "labeled" design (also known as "alternative-specific" design) is one where the levels of one attribute are used as a label. This can be created by setting the `label` argument to that attribute. As of now, only `"random"` and `"full"` methods support labeled designs. Since this by definition sets the number of alternatives in each question to the number of levels in the chosen attribute, the `n_alts` argument is overridden. Here is an example of a labeled random design using the `type` attribute as the label:
+
+```{r}
+design_random_labeled <- cbc_design(
+  profiles = profiles,
+  n_resp   = 900, # Number of respondents
+  n_alts   = 3,   # Number of alternatives per question
+  n_q      = 6,   # Number of questions per respondent
+  label    = "type" # Set the "type" attribute as the label
+)
+
+dim(design_random_labeled)
+head(design_random_labeled)
+```
+
+In the above example, you can see in the first six rows of the survey that the `type` attribute is always fixed to be the same order, ensuring that each level in the `type` attribute will always be shown in each choice question.
+
+## Designs with a "no choice" option (a.k.a. an "outside good")
+
+A "no choice" (also known as an "outside good") option can be included by setting `no_choice = TRUE`. If included, all categorical attributes will be dummy-coded to appropriately dummy-code the "no choice" alternative. All design methods can have a "no choice" added.
+
+```{r}
+design_nochoice <- cbc_design(
+  profiles  = profiles,
+  n_resp    = 900, # Number of respondents
+  n_alts    = 3, # Number of alternatives per question
+  n_q       = 6, # Number of questions per respondent
+  no_choice = TRUE
+)
+
+dim(design_nochoice)
+head(design_nochoice)
+```
+
+For Bayesian D-efficient designs that include a "no choice" option, a prior for the "no choice" option must also be provided using `prior_no_choice`:
 
 ```{r}
 design_bayesian_no_choice <- cbc_design(
