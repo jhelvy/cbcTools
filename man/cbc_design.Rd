@@ -283,12 +283,14 @@ design_bayesian <- cbc_design(
 )
 }
 \references{
-Grömping, U. (2018). R Package DoE.base for Factorial
-Experiments. Journal of Statistical Software, 85(5), 1–41,
-\doi{10.18637/jss.v085.i05} Traets, F., Sanchez, D. G., & Vandebroek, M.
-(2020). Generating Optimal Designs for Discrete Choice Experiments in R:
-The idefix Package. Journal of Statistical Software, 96(3), 1–41,
+Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41
+\doi{10.18637/jss.v085.i05}
+
+Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
 \doi{10.18637/jss.v096.i03}
+
+Wheeler B (2022)._AlgDesign: Algorithmic Experimental Design. R package version 1.2.1,
+\href{https://CRAN.R-project.org/package=AlgDesign}{https://CRAN.R-project.org/package=AlgDesign}.
 }
 \keyword{DoE.base}
 \keyword{design}
