@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.5.0
+
+- Further revisions to the `method` argument in the `cbc_design()` function.
+- Added the `"random"` and `"dopt"` methods.
 - Added restrictions so that orthogonal designs cannot use the `label` argument or restricted profile sets (as either of these would result in a non-orthogonal design).
 
 # cbcTools 0.4.0
