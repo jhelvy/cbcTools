@@ -88,7 +88,7 @@ The `method` argument determines the design method used. Options are:
 - `"random"`
 - `"full"`
 - `"orthogonal"`
-- `"deff"`
+- `"dopt"`
 - `"CEA"`
 - `"Modfed"`
 
@@ -104,7 +104,7 @@ Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocki
 `"random"`     | ✅ | ✅ | ✅ | ❌
 `"full"`       | ✅ | ✅ | ✅ | ✅
 `"orthogonal"` | ✅ | ❌ | ❌ | ✅
-`"deff"`       | ✅ | ❌ | ✅ | ✅
+`"dopt"`       | ✅ | ❌ | ✅ | ✅
 `"CEA"`        | ✅ | ❌ | ❌ | ✅
 `"Modfed"`     | ✅ | ❌ | ✅ | ✅
 
@@ -136,7 +136,7 @@ head(design_random)
 
 ## Full factorial designs
 
-The `"full"` method for ("full factorial") creates a design where choice sets are created by randomly sampling from the full set of `profiles` *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created using mutually exclusive subsets of `profiles` within each block. This method produces a design with similar performance with that of the `"random"` method, except the choice sets are repeated and thus there will be many more opportunities for different respondents to see the same choice sets. This method is less efficient than other approaches and may lead to a deficient experiment in smaller sample sizes, though it guarantees equal ability to estimate main and interaction effects. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Gromping2018].
+The `"full"` method for ("full factorial") creates a design where choice sets are created by randomly sampling from the full set of `profiles` *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created using mutually exclusive subsets of `profiles` within each block. This method produces a design with similar performance with that of the `"random"` method, except the choice sets are repeated and thus there will be many more opportunities for different respondents to see the same choice sets. For more information about blocking with full factorial designs, see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base} package [@Gromping2018].
 
 ```{r}
 design_full <- cbc_design(
@@ -170,23 +170,23 @@ dim(design_orthogonal)
 head(design_orthogonal)
 ```
 
-## D-efficient designs
+## D-optimal designs
 
-The `"deff"` method creates a "D-efficient" design where an array from `profiles` is found that maximizes the D-efficiency using the Federov algorithm, with the total number of unique choice sets determined by `n_q*n_blocks`. The optimization is handled using the [{AlgDesign} package](https://cran.r-project.org/package=AlgDesign). Choice sets are then created by randomly sampling from this array *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created from the D-efficient array. For more information about the underlying algorithm for this method, see `?AlgDesign::optFederov` [@Wheeler2022].
+The `"dopt"` method creates a "D-optimal" design where an array from `profiles` is found that maximizes the D-efficiency of a linear model using the Federov algorithm, with the total number of unique choice sets determined by `n_q*n_blocks`. The optimization is handled using the [{AlgDesign} package](https://cran.r-project.org/package=AlgDesign). Choice sets are then created by randomly sampling from this array *without replacement*. The choice sets are then repeated to meet the desired number of survey respondents (determined by `n_resp`). If blocking is used, choice set blocks are created from the D-efficient array. For more information about the underlying algorithm for this method, see `?AlgDesign::optFederov` [@Wheeler2022].
 
 ```{r}
 #| message: true
 
-design_deff <- cbc_design(
+design_dopt <- cbc_design(
   profiles = profiles,
   n_resp   = 900, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6,   # Number of questions per respondent
-  method   = 'deff'
+  method   = 'dopt'
 )
 
-dim(design_deff) 
-head(design_deff)
+dim(design_dopt)
+head(design_dopt)
 ```
 
 ## Bayesian D-efficient designs
@@ -234,7 +234,7 @@ dim(design_random_labeled)
 head(design_random_labeled)
 ```
 
-In the above example, you can see in the first six rows of the survey that the `type` attribute is always fixed to be the same order, ensuring that each level in the `type` attribute will always be shown in each choice question.
+In the above example, the `type` attribute is now fixed to be the same order for every choice question, ensuring that each level in the `type` attribute will always be shown in each choice question.
 
 ## Designs with a "no choice" option (a.k.a. an "outside good")
 

@@ -31,7 +31,7 @@
 #'   argument will be ignored as its value is defined by the unique number of
 #'   levels in the `label` variable. Defaults to `NULL`.
 #' @param method Choose the design method to use: `"random"`, `"full"`,
-#'   `"orthogonal"`, `"deff"`, `"CEA"`, or `"Modfed"`. Defaults to `"random"`.
+#'   `"orthogonal"`, `"dopt"`, `"CEA"`, or `"Modfed"`. Defaults to `"random"`.
 #'   See details below for complete description of each method.
 #' @param priors A list of one or more assumed prior parameters used to generate
 #'   a Bayesian D-efficient design. Defaults to `NULL`
@@ -41,12 +41,12 @@
 #'   includes average predicted probabilities for each alternative in each
 #'   choice set given the sample from the prior preference distribution.
 #'   Defaults to `FALSE`.'
-#' @param keep_deff If `TRUE`, for D-efficient designs the returned
-#'   object will be a list containing the design and the D-efficiency score.
-#'   Defaults to `FALSE`.
-#' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the returned
-#'   object will be a list containing the design and the DB-error score.
-#'   Defaults to `FALSE`.
+#' @param keep_d_eff If `TRUE`, for D-optimal designs (`method = "dopt"`) the
+#'   returned object will be a list containing the design and the D-efficiency
+#'   score. Defaults to `FALSE`.
+#' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the
+#'   returned object will be a list containing the design and the DB-error
+#'   score. Defaults to `FALSE`.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #'   iterations when searching for a Bayesian D-efficient design. The default is
 #'   50.
@@ -58,7 +58,7 @@
 #' - `"random"`
 #' - `"full"`
 #' - `"orthogonal"`
-#' - `"deff"`
+#' - `"dopt"`
 #' - `"CEA"`
 #' - `"Modfed"`
 #'
@@ -77,7 +77,7 @@
 #'   `"random"`     | ✅ | ✅ | ✅ | ❌
 #'   `"full"`       | ✅ | ✅ | ✅ | ✅
 #'   `"orthogonal"` | ✅ | ❌ | ❌ | ✅
-#'   `"deff"`       | ✅ | ❌ | ✅ | ✅
+#'   `"dopt"`       | ✅ | ❌ | ✅ | ✅
 #'   `"CEA"`        | ✅ | ❌ | ❌ | ✅
 #'   `"Modfed"`     | ✅ | ❌ | ✅ | ✅
 #'
@@ -116,15 +116,15 @@
 #'   more information about orthogonal designs, see `?DoE.base::oa.design` as
 #'   well as the JSS article on the {DoE.base} package (Grömping, 2018).
 #'
-#'   The `"deff"` method creates a "D-efficient" design where an array from
-#'   `profiles` is found that maximizes the D efficiency using the Federov
-#'   algorithm, with the total number of unique choice sets determined by
-#'   `n_q*n_blocks`. Choice sets are then created by randomly sampling from this
-#'   array *without replacement*. The choice sets are then repeated to meet the
-#'   desired number of survey respondents (determined by `n_resp`). If blocking
-#'   is used, choice set blocks are created from the D-efficient array. For more
-#'   information about the underlying algorithm for this method, see
-#'   `?AlgDesign::optFederov`.
+#'   The `"dopt"` method creates a "D-optimal" design where an array from
+#'   `profiles` is found that maximizes the D-efficiency of a linear model
+#'   using the Federov algorithm, with the total number of unique choice sets
+#'   determined by `n_q*n_blocks`. Choice sets are then created by randomly
+#'   sampling from this array *without replacement*. The choice sets are then
+#'   repeated to meet the desired number of survey respondents (determined by
+#'   `n_resp`). If blocking is used, choice set blocks are created from the
+#'   D-efficient array. For more information about the underlying algorithm
+#'   for this method, see `?AlgDesign::optFederov`.
 #'
 #'   The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
 #'   Bayesian D-efficient design for the choice sets, with the total number of
@@ -196,13 +196,13 @@
 #'   method   = 'orthogonal'
 #' )
 #'
-#' # Make a D-efficient design
-#' design_deff <- cbc_design(
+#' # Make a D-optimal design
+#' design_dopt <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 100, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
 #'   n_q      = 6,   # Number of questions per respondent
-#'   method   = 'deff'
+#'   method   = 'dopt'
 #' )
 #'
 #' # Make a survey by randomly sampling from all possible profiles
@@ -255,7 +255,7 @@ cbc_design <- function(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  keep_deff = FALSE,
+  keep_d_eff = FALSE,
   keep_db_error = FALSE,
   max_iter = 50,
   parallel = FALSE
@@ -276,7 +276,7 @@ cbc_design <- function(
     priors,
     prior_no_choice,
     probs,
-    keep_deff,
+    keep_d_eff,
     keep_db_error,
     max_iter,
     parallel,
@@ -295,9 +295,9 @@ cbc_design <- function(
     design <- make_design_orthogonal(
       profiles, n_resp, n_alts, n_q, n_blocks, no_choice
     )
-  } else if (method == 'deff') {
-    design <- make_design_deff(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_deff
+  } else if (method == 'dopt') {
+    design <- make_design_dopt(
+      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
     )
   } else {
     design <- make_design_bayesian(
@@ -729,14 +729,14 @@ make_design_orthogonal <- function(
     return(design)
 }
 
-# D-Efficient Design ----
+# D-optimal Design ----
 
-make_design_deff <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_deff
+make_design_dopt <- function(
+    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
 ) {
   # First obtain the d-efficient array
   des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q*n_blocks)
-  deff <- des$Ge
+  d_eff <- des$Ge
   profiles <- merge(des$design, profiles, all.x = TRUE)
   profiles <- profiles[c(
     'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
@@ -751,11 +751,11 @@ make_design_deff <- function(
     design <- add_no_choice(design, n_alts)
   }
   # Print D-efficiency
-  message("D-efficient design found with D-efficiency of ", round(deff, 5))
+  message("D-efficient design found with D-efficiency of ", round(d_eff, 5))
 
-  # Return list containing the design and DB error if keep_deff = TRUE
-  if (keep_deff) {
-    return(list(design = design, deff = deff))
+  # Return list containing the design and DB error if keep_d_eff = TRUE
+  if (keep_d_eff) {
+    return(list(design = design, d_eff = d_eff))
   }
   return(design)
 }

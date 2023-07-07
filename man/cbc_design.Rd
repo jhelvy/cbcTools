@@ -18,7 +18,7 @@ cbc_design(
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
-  keep_deff = FALSE,
+  keep_d_eff = FALSE,
   keep_db_error = FALSE,
   max_iter = 50,
   parallel = FALSE
@@ -58,7 +58,7 @@ argument will be ignored as its value is defined by the unique number of
 levels in the \code{label} variable. Defaults to \code{NULL}.}
 
 \item{method}{Choose the design method to use: \code{"random"}, \code{"full"},
-\code{"orthogonal"}, \code{"deff"}, \code{"CEA"}, or \code{"Modfed"}. Defaults to \code{"random"}.
+\code{"orthogonal"}, \code{"dopt"}, \code{"CEA"}, or \code{"Modfed"}. Defaults to \code{"random"}.
 See details below for complete description of each method.}
 
 \item{priors}{A list of one or more assumed prior parameters used to generate
@@ -72,13 +72,13 @@ includes average predicted probabilities for each alternative in each
 choice set given the sample from the prior preference distribution.
 Defaults to \code{FALSE}.'}
 
-\item{keep_deff}{If \code{TRUE}, for D-efficient designs the returned
-object will be a list containing the design and the D-efficiency score.
-Defaults to \code{FALSE}.}
+\item{keep_d_eff}{If \code{TRUE}, for D-optimal designs (\code{method = "dopt"}) the
+returned object will be a list containing the design and the D-efficiency
+score. Defaults to \code{FALSE}.}
 
-\item{keep_db_error}{If \code{TRUE}, for Bayesian D-efficient designs the returned
-object will be a list containing the design and the DB-error score.
-Defaults to \code{FALSE}.}
+\item{keep_db_error}{If \code{TRUE}, for Bayesian D-efficient designs the
+returned object will be a list containing the design and the DB-error
+score. Defaults to \code{FALSE}.}
 
 \item{max_iter}{A numeric value indicating the maximum number allowed
 iterations when searching for a Bayesian D-efficient design. The default is
@@ -114,7 +114,7 @@ are:
 \item \code{"random"}
 \item \code{"full"}
 \item \code{"orthogonal"}
-\item \code{"deff"}
+\item \code{"dopt"}
 \item \code{"CEA"}
 \item \code{"Modfed"}
 
@@ -132,7 +132,7 @@ of restricted profile, and the use of blocking.\tabular{lllll}{
    \code{"random"} \tab ✅ \tab ✅ \tab ✅ \tab ❌ \cr
    \code{"full"} \tab ✅ \tab ✅ \tab ✅ \tab ✅ \cr
    \code{"orthogonal"} \tab ✅ \tab ❌ \tab ❌ \tab ✅ \cr
-   \code{"deff"} \tab ✅ \tab ❌ \tab ✅ \tab ✅ \cr
+   \code{"dopt"} \tab ✅ \tab ❌ \tab ✅ \tab ✅ \cr
    \code{"CEA"} \tab ✅ \tab ❌ \tab ❌ \tab ✅ \cr
    \code{"Modfed"} \tab ✅ \tab ❌ \tab ✅ \tab ✅ \cr
 }
@@ -173,15 +173,15 @@ main effects at the expense of information about interaction effects. For
 more information about orthogonal designs, see \code{?DoE.base::oa.design} as
 well as the JSS article on the {DoE.base} package (Grömping, 2018).
 
-The \code{"deff"} method creates a "D-efficient" design where an array from
-\code{profiles} is found that maximizes the D efficiency using the Federov
-algorithm, with the total number of unique choice sets determined by
-\code{n_q*n_blocks}. Choice sets are then created by randomly sampling from this
-array \emph{without replacement}. The choice sets are then repeated to meet the
-desired number of survey respondents (determined by \code{n_resp}). If blocking
-is used, choice set blocks are created from the D-efficient array. For more
-information about the underlying algorithm for this method, see
-\code{?AlgDesign::optFederov}.
+The \code{"dopt"} method creates a "D-optimal" design where an array from
+\code{profiles} is found that maximizes the D-efficiency of a linear model
+using the Federov algorithm, with the total number of unique choice sets
+determined by \code{n_q*n_blocks}. Choice sets are then created by randomly
+sampling from this array \emph{without replacement}. The choice sets are then
+repeated to meet the desired number of survey respondents (determined by
+\code{n_resp}). If blocking is used, choice set blocks are created from the
+D-efficient array. For more information about the underlying algorithm
+for this method, see \code{?AlgDesign::optFederov}.
 
 The \code{"CEA"} and \code{"Modfed"} methods use the specified \code{priors} to create a
 Bayesian D-efficient design for the choice sets, with the total number of
@@ -236,13 +236,13 @@ design_orthogonal <- cbc_design(
   method   = 'orthogonal'
 )
 
-# Make a D-efficient design
-design_deff <- cbc_design(
+# Make a D-optimal design
+design_dopt <- cbc_design(
   profiles = profiles,
   n_resp   = 100, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6,   # Number of questions per respondent
-  method   = 'deff'
+  method   = 'dopt'
 )
 
 # Make a survey by randomly sampling from all possible profiles
