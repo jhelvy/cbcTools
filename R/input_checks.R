@@ -31,11 +31,11 @@ check_design_method <- function(method, priors) {
   # Check that an appropriate method is used
 
   if (! method %in% c(
-    'random', 'full', 'orthogonal', 'deff', 'CEA', 'Modfed'
+    'random', 'full', 'orthogonal', 'dopt', 'CEA', 'Modfed'
   )) {
     stop(
       'The "method" argument must be set to "random", "full", ',
-      '"orthogonal", "deff", "CEA", or "Modfed"'
+      '"orthogonal", "dopt", "CEA", or "Modfed"'
     )
   }
 
@@ -71,7 +71,7 @@ check_inputs_design <- function(
     priors,
     prior_no_choice,
     probs,
-    keep_deff,
+    keep_d_eff,
     keep_db_error,
     max_iter,
     parallel,
@@ -119,7 +119,7 @@ check_inputs_design <- function(
       if (!method %in% c('random', 'full')) {
         stop(
           'Restricted profile sets can only be used with the "random", "full" ',
-          '"deff", or "Modfed" methods'
+          '"dopt", or "Modfed" methods'
         )
       }
     }
