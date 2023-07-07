@@ -435,7 +435,8 @@ get_col_types <- function(data) {
 }
 
 reorder_cols <- function(design) {
-  metaNames <- c("profileID", "respID", "qID", "altID", "obsID", "blockID")
+  metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
+  if ('blockID' %in% names(design)) { metaNames <- c(metaNames, 'blockID') }
   varNames <- setdiff(names(design), metaNames)
   design <- as.data.frame(design)[, c(metaNames, varNames)]
   return(design)

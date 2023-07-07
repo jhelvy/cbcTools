@@ -89,7 +89,10 @@ check_inputs_design <- function(
     }
 
     if ((n_blocks > 1) & (method == 'random')) {
-      stop('The "random" method cannot use blocking.')
+      stop(
+        'The "random" method cannot use blocking. Either change the design ',
+        'method or set "n_blocks = 1"'
+      )
       if ((method == 'full') & profiles_restricted) {
         stop(
           'The "full" method cannot use restricted profiles when blocking ',
