@@ -410,7 +410,7 @@ models <- cbc_power(
 summary(models[[10]])
 ```
 
-## Pipe it all together!
+# Pipe it all together!
 
 One of the convenient features of how the package is written is that the object generated in each step is used as the first argument to the function for the next step. Thus, just like in the overall program diagram, the functions can be piped together. For example, the "pipeline" below uses the Base R pipe operator (`|>`) to generate profiles, generate a design, simulate choices according to a prior utility model, conduct a power analysis, and then finally plot the results:
 
