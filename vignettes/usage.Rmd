@@ -124,6 +124,8 @@ The returned `design` data frame contains a choice-based conjoint survey design 
 The `"random"` method (the default) creates a design where choice sets are created by randomly sampling from the full set of `profiles` *with* replacement. This means that few (if any) respondents will see the same sets of choice sets. This method is less efficient than other approaches and may lead to a deficient experiment in smaller sample sizes, though it guarantees equal ability to estimate main and interaction effects.
 
 ```{r}
+set.seed(5678)
+
 design_random <- cbc_design(
   profiles = profiles,
   n_resp   = 900, # Number of respondents
