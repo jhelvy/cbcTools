@@ -218,40 +218,13 @@ design_random <- cbc_design(
   n_q      = 6    # Number of questions per respondent
 )
 
-# Make a survey using a full factorial design
+# Make a survey using a full factorial design and include a "no choice" option
 design_full <- cbc_design(
   profiles = profiles,
   n_resp   = 100, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6,   # Number of questions per respondent
-  method   = 'full'
-)
-
-# Make a survey from an orthogonal array of profiles
-design_orthogonal <- cbc_design(
-  profiles = profiles,
-  n_resp   = 100, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6,   # Number of questions per respondent
-  method   = 'orthogonal'
-)
-
-# Make a D-optimal design
-design_dopt <- cbc_design(
-  profiles = profiles,
-  n_resp   = 100, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6,   # Number of questions per respondent
-  method   = 'dopt'
-)
-
-# Make a survey by randomly sampling from all possible profiles
-# and include a "no choice" option
-design_random_nochoice <- cbc_design(
-  profiles  = profiles,
-  n_resp    = 100, # Number of respondents
-  n_alts    = 3,   # Number of alternatives per question
-  n_q       = 6,   # Number of questions per respondent
+  method   = 'full', # Change this to use a different method, e.g. 'orthogonal', or 'dopt'
   no_choice = TRUE
 )
 
