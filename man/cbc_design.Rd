@@ -129,12 +129,12 @@ including the ability to include a "no choice" option, the creation of a
 "labeled" design (also called a "alternative-specific" design), the use
 of restricted profile, and the use of blocking.\tabular{lllll}{
    Method \tab Include "no choice"? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \cr
-   \code{"random"} \tab ✅ \tab ✅ \tab ✅ \tab ❌ \cr
-   \code{"full"} \tab ✅ \tab ✅ \tab ✅ \tab ✅ \cr
-   \code{"orthogonal"} \tab ✅ \tab ❌ \tab ❌ \tab ✅ \cr
-   \code{"dopt"} \tab ✅ \tab ❌ \tab ✅ \tab ✅ \cr
-   \code{"CEA"} \tab ✅ \tab ❌ \tab ❌ \tab ✅ \cr
-   \code{"Modfed"} \tab ✅ \tab ❌ \tab ✅ \tab ✅ \cr
+   \code{"random"} \tab Yes \tab Yes \tab Yes \tab No \cr
+   \code{"full"} \tab Yes \tab Yes \tab Yes \tab Yes \cr
+   \code{"orthogonal"} \tab Yes \tab No \tab No \tab Yes \cr
+   \code{"dopt"} \tab Yes \tab No \tab Yes \tab Yes \cr
+   \code{"CEA"} \tab Yes \tab No \tab No \tab Yes \cr
+   \code{"Modfed"} \tab Yes \tab No \tab Yes \tab Yes \cr
 }
 
 

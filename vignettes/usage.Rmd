@@ -8,11 +8,7 @@ vignette: >
   \usepackage{xcolor}
   \usepackage{bbding}
 bibliography: "`r here::here('vignettes', 'library.bib')`"
-classoption: dvipsnames # For other colors in xcolors
 ---
-
-\newcommand{\checkgreen}{\textcolor{Green}{\Checkmark}}
-\newcommand{\xred}{\textcolor{red}{\XSolid}}
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(

@@ -74,12 +74,12 @@
 #'
 #'   Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocking?
 #'   ---|---|---|---|---
-#'   `"random"`     | ✅ | ✅ | ✅ | ❌
-#'   `"full"`       | ✅ | ✅ | ✅ | ✅
-#'   `"orthogonal"` | ✅ | ❌ | ❌ | ✅
-#'   `"dopt"`       | ✅ | ❌ | ✅ | ✅
-#'   `"CEA"`        | ✅ | ❌ | ❌ | ✅
-#'   `"Modfed"`     | ✅ | ❌ | ✅ | ✅
+#'   `"random"`     | Yes | Yes | Yes | No
+#'   `"full"`       | Yes | Yes | Yes | Yes
+#'   `"orthogonal"` | Yes | No  | No  | Yes
+#'   `"dopt"`       | Yes | No  | Yes | Yes
+#'   `"CEA"`        | Yes | No  | No  | Yes
+#'   `"Modfed"`     | Yes | No  | Yes | Yes
 #'
 #'   The `"random"` method (the default) creates a design where choice sets are
 #'   created by randomly sampling from the full set of `profiles` *with
