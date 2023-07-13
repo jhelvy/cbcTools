@@ -27,8 +27,22 @@ check_inputs_restrict <- function(profiles) {
 }
 
 check_design_method <- function(method, priors) {
+
+  # Check that an appropriate method is used
+
+  if (! method %in% c(
+    'random', 'full', 'orthogonal', 'dopt', 'CEA', 'Modfed'
+  )) {
+    stop(
+      'The "method" argument must be set to "random", "full", ',
+      '"orthogonal", "dopt", "CEA", or "Modfed"'
+    )
+  }
+
+  # Check that a Bayesian method is used if priors are used
+
   if (!is.null(priors)) {
-    if (! method_is_bayesian(method)) {
+    if (!method_is_bayesian(method)) {
       # Set method to 'CEA' if priors are specified and
       # user didn't specify an appropriate method.
       warning(
@@ -39,6 +53,7 @@ check_design_method <- function(method, priors) {
       method <- 'CEA'
     }
   }
+
   return(method)
 }
 
@@ -56,61 +71,73 @@ check_inputs_design <- function(
     priors,
     prior_no_choice,
     probs,
+    keep_d_eff,
     keep_db_error,
     max_iter,
-    parallel
+    parallel,
+    profiles_restricted
 ) {
+
+    # Checks on blocking
 
     if (n_blocks < 1) {
       stop('n_blocks must be greater than or equal to 1')
     }
 
     if (n_blocks > n_resp) {
-        stop("Maximum allowable number of blocks is one block per respondent")
+      stop("Maximum allowable number of blocks is one block per respondent")
     }
 
-    # If using a Bayesian D-efficient design with a no choice option, user must
-    # specify a value for prior_no_choice
-    if (no_choice) {
-      if (!is.null(priors) & is.null(prior_no_choice)) {
+    if ((n_blocks > 1) & (method == 'random')) {
+      stop(
+        'The "random" method cannot use blocking. Either change the design ',
+        'method or set "n_blocks = 1"'
+      )
+      if ((method == 'full') & profiles_restricted) {
         stop(
-          'If "no_choice = TRUE", you must specify the prior utility ',
-          'value for the "no choice" option using prior_no_choice'
+          'The "full" method cannot use restricted profiles when blocking ',
+          'is used. Either set "n_blocks" to 1 or use an unrestricted ',
+          'set of profiles'
         )
       }
     }
 
-    # The labeled design isn't yet supported for Bayesian D-efficient designs
+    # Checks on labeled designs
 
-    if (!is.null(label) & method_is_bayesian(method)) {
-      stop(
-        'The use of the "label" argument is currently not compatible with ',
-        'Bayesian D-efficient designs'
-      )
+    if (!is.null(label)) {
+      if (!method %in% c('random', 'full')) {
+        stop(
+          'Labeled designs are currently only supported with the "random" or ',
+          '"full" method.'
+        )
+      }
     }
 
-    # Check that an appropriate method is used
+    # Check on restricted profile sets
 
-    if (! method %in% c('full', 'orthogonal', 'CEA', 'Modfed')) {
+    if (profiles_restricted) {
+      if (!method %in% c('random', 'full')) {
         stop(
-            'The "method" argument must be set to "full", "orthogonal", ',
-            '"Modfed", or "CEA"'
+          'Restricted profile sets can only be used with the "random", "full" ',
+          '"dopt", or "Modfed" methods'
         )
+      }
     }
 
     # Check that priors are appropriate if specified
 
     if (!is.null(priors)) {
 
-        # Check that user specified an appropriate method
-        # This should already be handled
-        if (! method_is_bayesian(method)) {
-            stop(
-                'Since "priors" are specified, the "method" argument must ',
-                'be either "Modfed" or "CEA" to obtain a Bayesian ',
-                'D-efficient design'
-            )
-        }
+      # If using a Bayesian D-efficient design with a no choice option,
+      # user must specify a value for prior_no_choice
+
+      if (no_choice & is.null(prior_no_choice)) {
+        stop(
+          'If "no_choice = TRUE" with the "CEA" or "Modfed" method, you must ',
+          'specify the prior utility for the "no choice" option using ',
+          '"prior_no_choice"'
+        )
+      }
 
         # Check that prior names aren't missing
         prior_names <- names(priors)
