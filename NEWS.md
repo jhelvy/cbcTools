@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.5.1
+
+- Patch to fix a joining issue in the `join_profiles()` function (#27)
+
 # cbcTools 0.5.0
 
 - Further revisions to the `method` argument in the `cbc_design()` function.

@@ -312,6 +312,10 @@ get_type_ids <- function(profiles) {
 
 join_profiles <- function(design, profiles) {
 
+  # Preserve row order
+
+  design$row_order <- seq(nrow(design))
+
   # Before joining profiles, ensure that all the data types are the same
   # as in profiles, otherwise join won't work properly
 
@@ -330,6 +334,8 @@ join_profiles <- function(design, profiles) {
   # Join on profileIDs, then reorder to retain design order
   varnames <- names(profiles[, 2:ncol(profiles)])
   design <- merge(design, profiles, by = varnames, all.x = TRUE, sort = FALSE)
+  design <- design[order(design$row_order),]
+  design$row_order <- NULL
   if ('blockID' %in% names(design)) { varnames <- c(varnames, 'blockID') }
   design <- design[c('profileID', varnames)]
   return(design)
