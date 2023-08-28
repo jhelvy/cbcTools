@@ -24,6 +24,7 @@ Suggests:
     tibble
 Imports:
     AlgDesign,
+    broom,
     DoE.base,
     fastDummies,
     ggplot2,

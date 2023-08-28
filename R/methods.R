@@ -78,11 +78,11 @@ print.cbc_models <- function (
 #'
 #' # Visualize the results
 #' plot(power)
-plot.cbc_errors <- function (x, ...) {
+plot.cbc_power <- function (x, ...) {
   plot <- ggplot2::ggplot(x) +
     geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
     geom_point(
-      aes(x = .data$sampleSize, y = .data$se, color = .data$coef),
+      aes(x = .data$sampleSize, y = .data$p.value, color = .data$term),
       size = 1.8
     ) +
     expand_limits(y = 0) +
@@ -91,7 +91,7 @@ plot.cbc_errors <- function (x, ...) {
     labs(
       color = "Coefficient",
       x = "Sample size",
-      y = "Standard error"
+      y = "P Value"
     )
   return(plot)
 }

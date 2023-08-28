@@ -174,9 +174,11 @@ cbc_power <- function(
       class(models) <- c("cbc_models", "list")
       return(models)
     }
-    errors <- extract_errors(models)
-    class(errors) <- c("cbc_errors", "data.frame")
-    return(errors)
+    sampleSize <- unlist(lapply(models, function(x) x$sampleSize))
+    results <- do.call(rbind, lapply(models, broom::tidy))
+    results$sampleSize <- rep(sampleSize, each = length(coef(models[[1]])))
+    class(results) <- c("cbc_power", "data.frame")
+    return(results)
 }
 
 set_num_cores <- function(n_cores) {
@@ -221,21 +223,6 @@ make_data_list <- function(data, obsID, nbreaks, n_q) {
     return(dataList)
 }
 
-extract_errors <- function(models) {
-    sampleSize <- unlist(lapply(models, function(x) x$sampleSize))
-    est <- lapply(models, function(x) stats::coef(x))
-    se <- lapply(models, function(x) logitr::se(x))
-    names <- lapply(est, names)
-    results <- data.frame(
-        sampleSize = rep(sampleSize, each = length(est[[1]])),
-        coef = do.call(c, names),
-        est = do.call(c, est),
-        se = do.call(c, se)
-    )
-    row.names(results) <- NULL
-    return(results)
-}
-
 #' Plot a comparison of different design powers
 #'
 #' This function creates a ggplot2 object comparing the power curves of
@@ -249,7 +236,7 @@ extract_errors <- function(models) {
 #' @importFrom rlang .data
 #' @export
 #' @examples
-#' \dontrun{
+#' \dontest{
 #' library(cbcTools)
 #'
 #' # Generate all possible profiles
