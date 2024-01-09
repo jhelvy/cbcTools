@@ -35,5 +35,5 @@ Imports:
     rlang,
     stats,
     utils
-URL: https://github.com/jhelvy/cbcTools
+URL: https://github.com/jhelvy/cbcTools, https://jhelvy.github.io/cbcTools/
 BugReports: https://github.com/jhelvy/cbcTools/issues
