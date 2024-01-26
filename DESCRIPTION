@@ -1,6 +1,6 @@
 Package: cbcTools
 Title: Choice-Based Conjoint Experiment Design Generation and Power Evaluation in R
-Version: 0.5.1
+Version: 0.5.2
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",

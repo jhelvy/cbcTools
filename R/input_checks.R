@@ -116,7 +116,7 @@ check_inputs_design <- function(
     # Check on restricted profile sets
 
     if (profiles_restricted) {
-      if (!method %in% c('random', 'full')) {
+      if (!method %in% c('random', 'full', 'dopt', 'Modfed')) {
         stop(
           'Restricted profile sets can only be used with the "random", "full" ',
           '"dopt", or "Modfed" methods'
