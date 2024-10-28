@@ -106,6 +106,18 @@ sim_choices_rand <- function(design, obsID) {
 }
 
 sim_choices_prior <- function(design, obsID, priors, n_draws) {
+  # # Add random choices
+  # design <- sim_choices_rand(design, obsID)
+  # # Estimate a 1-iteration model to get the model object prepared
+  # suppressMessages(model <- logitr::logitr(
+  #   data  = design,
+  #   obsID = obsID,
+  #   outcome = 'choice',
+  #   pars  = names(priors),
+  #   options = list(maxeval = 1)
+  # ))
+  # # Update model coefficients
+  # model$coefficients
   model <- def_model_prior(design, priors, n_draws)
   result <- stats::predict(
     object     = model,
@@ -148,7 +160,7 @@ def_model_prior <- function(design, priors, n_draws) {
     parIDs       = parIDs,
     standardDraws = getStandardDraws(parIDs, n_draws),
     # Create data object
-    data = list(factorLevels = codedData$factorLevels),
+    data = list(factorLevels = codedData$factorLevels, X = codedData$X),
     # Create n object, which stores counts of various variables
     n = list(
       vars       = length(parSetup),
@@ -207,20 +219,20 @@ get_parIDs <- function(parSetup) {
   ))
 }
 
-get_coefs <- function(pars, parNamesCoded, randPars, randParsCoded) {
+get_coefs <- function(priors, parNamesCoded, randPars, randParsCoded) {
   # Define random parameter names
   parNamesRand <- names(randPars)
   parNamesRandCoded <- names(randParsCoded)
   # Get all fixed parameters
-  parsFixed <- unlist(pars[!names(pars) %in% parNamesRand])
+  parsFixed <- unlist(priors[!names(priors) %in% parNamesRand])
   names(parsFixed) <- parNamesCoded[!parNamesCoded %in% parNamesRandCoded]
   if (length(randPars) == 0) {
     return(parsFixed)
   }
   # Get all the random parameters
-  parsRand_mean <- unlist(lapply(pars[parNamesRand], function(x) x$pars$mean))
+  parsRand_mean <- unlist(lapply(priors[parNamesRand], function(x) x$pars$mean))
   names(parsRand_mean) <- parNamesRandCoded
-  parsRand_sd <- unlist(lapply(pars[parNamesRand], function(x) x$pars$sd))
+  parsRand_sd <- unlist(lapply(priors[parNamesRand], function(x) x$pars$sd))
   names(parsRand_sd) <- paste0("sd_", parNamesRandCoded)
   # Order and rename the coefficients
   coefs <- c(parsFixed, parsRand_mean)
