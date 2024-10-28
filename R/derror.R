@@ -2,10 +2,10 @@
 #'
 #' @param design A data frame containing a choice experiment design created
 #'   by `cbc_design()`
-#' @param obsID The name of the column in `design` that identifies each choice
-#' observation. Defaults to `"obsID"`.
 #' @param priors A numeric vector of prior parameter values, list with
 #'   mean/sigma for Bayesian priors, or `NULL` for D0-error (default)
+#' @param obsID The name of the column in `design` that identifies each choice
+#' observation. Defaults to `"obsID"`.
 #' @param n_draws Number of draws for DB-error calculation if using Bayesian
 #'   priors
 #' @param exclude Character vector of attribute names to exclude from D-error
@@ -55,8 +55,8 @@
 #' @export
 cbc_d_error <- function(
   design,
-  obsID = "obsID",
   priors = NULL,
+  obsID = "obsID",
   n_draws = 200,
   exclude = NULL
 ) {
