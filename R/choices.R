@@ -225,7 +225,10 @@ get_coefs <- function(priors, parNamesCoded, randPars, randParsCoded) {
   parNamesRandCoded <- names(randParsCoded)
   # Get all fixed parameters
   parsFixed <- unlist(priors[!names(priors) %in% parNamesRand])
-  names(parsFixed) <- parNamesCoded[!parNamesCoded %in% parNamesRandCoded]
+  if (!is.null(parsFixed)) {
+    # Might have a situation where all pars are random
+    names(parsFixed) <- parNamesCoded[!parNamesCoded %in% parNamesRandCoded]
+  }
   if (length(randPars) == 0) {
     return(parsFixed)
   }
