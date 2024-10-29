@@ -2,9 +2,9 @@
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
 #' design where each row is an alternative. Generate a variety of survey
-#' designs, including full factorial designs, orthogonal designs, and Bayesian
-#' D-efficient designs as well as designs with "no choice" options and "labeled"
-#' (also known as "alternative specific") designs.
+#' designs, including full factorial designs, orthogonal designs, D-efficient designs,
+#' and Bayesian D-efficient designs as well as designs with "no choice" options
+#' and "labeled" (also known as "alternative specific") designs.
 #'
 #' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
 #' @param profiles A data frame in which each row is a possible profile. This
@@ -31,16 +31,16 @@
 #'   argument will be ignored as its value is defined by the unique number of
 #'   levels in the `label` variable. Defaults to `NULL`.
 #' @param method Choose the design method to use: `"random"`, `"full"`,
-#'   `"orthogonal"`, `"dopt"`, `"CEA"`, or `"Modfed"`. Defaults to `"random"`.
-#'   See details below for complete description of each method.
+#'   `"orthogonal"`, `"dopt"`, `"CEA"`, `"Modfed"`, or `"efficient"`.
+#'   Defaults to `"random"`. See details below for complete description of each method.
 #' @param priors A list of one or more assumed prior parameters used to generate
-#'   a Bayesian D-efficient design. Defaults to `NULL`
+#'   a D-efficient or Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting design
 #'   includes average predicted probabilities for each alternative in each
 #'   choice set given the sample from the prior preference distribution.
-#'   Defaults to `FALSE`.'
+#'   Defaults to `FALSE`.
 #' @param keep_d_eff If `TRUE`, for D-optimal designs (`method = "dopt"`) the
 #'   returned object will be a list containing the design and the D-efficiency
 #'   score. Defaults to `FALSE`.
@@ -48,104 +48,47 @@
 #'   returned object will be a list containing the design and the DB-error
 #'   score. Defaults to `FALSE`.
 #' @param max_iter A numeric value indicating the maximum number allowed
-#'   iterations when searching for a Bayesian D-efficient design. The default is
-#'   50.
+#'   iterations when searching for a D-efficient or Bayesian D-efficient design.
+#'   The default is 50.
 #' @param parallel Logical value indicating whether computations should be done
 #'   over multiple cores. The default is `FALSE`.
+#'
 #' @details The `method` argument determines the design method used. Options
 #'   are:
 #'
-#' - `"random"`
-#' - `"full"`
-#' - `"orthogonal"`
-#' - `"dopt"`
-#' - `"CEA"`
-#' - `"Modfed"`
+#' - `"random"`: Creates a design by randomly sampling from profiles
+#' - `"full"`: Creates a full factorial design
+#' - `"orthogonal"`: Creates an orthogonal array design
+#' - `"dopt"`: Creates a D-optimal design
+#' - `"CEA"`: Creates a Bayesian D-efficient design using the CEA algorithm
+#' - `"Modfed"`: Creates a Bayesian D-efficient design using the Modified Federov algorithm
+#' - `"efficient"`: Creates a D-efficient design using sequential improvement
 #'
 #'   All methods ensure that the two following criteria are met:
 #'
 #'   1. No two profiles are the same within any one choice set.
 #'   2. No two choice sets are the same within any one respondent.
 #'
-#'   The table below summarizes method compatibility with other design options,
-#'   including the ability to include a "no choice" option, the creation of a
-#'   "labeled" design (also called a "alternative-specific" design), the use
-#'   of restricted profile, and the use of blocking.
+#'   The table below summarizes method compatibility with other design options:
 #'
-#'   Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocking?
-#'   ---|---|---|---|---
-#'   `"random"`     | Yes | Yes | Yes | No
-#'   `"full"`       | Yes | Yes | Yes | Yes
-#'   `"orthogonal"` | Yes | No  | No  | Yes
-#'   `"dopt"`       | Yes | No  | Yes | Yes
-#'   `"CEA"`        | Yes | No  | No  | Yes
-#'   `"Modfed"`     | Yes | No  | Yes | Yes
+#'   Method        | No choice? | Labeled designs? | Restricted profiles? | Blocking?
+#'   --------------|------------|------------------|---------------------|----------
+#'   `"random"`    | Yes        | Yes             | Yes                 | No
+#'   `"full"`      | Yes        | Yes             | Yes                 | Yes
+#'   `"orthogonal"`| Yes        | No              | No                  | Yes
+#'   `"dopt"`      | Yes        | No              | Yes                 | Yes
+#'   `"CEA"`       | Yes        | No              | No                  | Yes
+#'   `"Modfed"`    | Yes        | No              | Yes                 | Yes
+#'   `"efficient"` | Yes        | No              | No                  | Yes
 #'
-#'   The `"random"` method (the default) creates a design where choice sets are
-#'   created by randomly sampling from the full set of `profiles` *with
-#'   *replacement. This means that few (if any) respondents will see the same
-#'   sets of choice sets. This method is less efficient than other approaches
-#'   and may lead to a deficient experiment in smaller sample sizes, though it
-#'   guarantees equal ability to estimate main and interaction effects.
+#' The `"efficient"` method creates a design by sequentially improving D-efficiency:
+#' 1. Start with a random design
+#' 2. Compute initial D-error
+#' 3. For each question, alternative and attribute:
+#'    - Try all possible level changes
+#'    - Keep changes that improve D-error
+#' 4. Repeat until no further improvements or max iterations reached
 #'
-#'   The `"full"` method for ("full factorial") creates a design where choice
-#'   sets are created by randomly sampling from the full set of `profiles`
-#'   *without replacement*. The choice sets are then repeated to meet the
-#'   desired number of survey respondents (determined by `n_resp`). If blocking
-#'   is used, choice set blocks are created using mutually exclusive subsets of
-#'   `profiles` within each block. This method produces a design with similar
-#'   performance with that of the `"random"` method, except the choice sets are
-#'   repeated and thus there will be many more opportunities for different
-#'   respondents to see the same choice sets. This method is less efficient than
-#'   other approaches and may lead to a deficient experiment in smaller sample
-#'   sizes, though it guarantees equal ability to estimate main and interaction
-#'   effects. For more information about blocking with full factorial designs,
-#'   see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base}
-#'   package (Grömping, 2018).
-#'
-#'   The `"orthogonal"` method creates a design where an orthogonal array from
-#'   the full set of `profiles` is found and then choice sets are created by
-#'   randomly sampling from this orthogonal array *without replacement*. The
-#'   choice sets are then repeated to meet the desired number of survey
-#'   respondents (determined by `n_resp`). If blocking is used, choice set
-#'   blocks are created using mutually exclusive subsets of the orthogonal array
-#'   within each block. For cases where an orthogonal array cannot be found, a
-#'   full factorial design is used. This approach is also sometimes called a
-#'   "main effects" design since orthogonal arrays focus the information on the
-#'   main effects at the expense of information about interaction effects. For
-#'   more information about orthogonal designs, see `?DoE.base::oa.design` as
-#'   well as the JSS article on the {DoE.base} package (Grömping, 2018).
-#'
-#'   The `"dopt"` method creates a "D-optimal" design where an array from
-#'   `profiles` is found that maximizes the D-efficiency of a linear model
-#'   using the Federov algorithm, with the total number of unique choice sets
-#'   determined by `n_q*n_blocks`. Choice sets are then created by randomly
-#'   sampling from this array *without replacement*. The choice sets are then
-#'   repeated to meet the desired number of survey respondents (determined by
-#'   `n_resp`). If blocking is used, choice set blocks are created from the
-#'   D-optimal array. For more information about the underlying algorithm
-#'   for this method, see `?AlgDesign::optFederov`.
-#'
-#'   The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
-#'   Bayesian D-efficient design for the choice sets, with the total number of
-#'   unique choice sets determined by `n_q*n_blocks`. The choice sets are then
-#'   repeated to meet the desired number of survey respondents (determined by
-#'   `n_resp`). If `"CEA"` or `"Modfed"` is used without specifying `priors`, a
-#'   prior of all `0`s will be used and a warning message stating this will be
-#'   shown. In the opposite case, if `priors` are specified but neither Bayesian
-#'   method is used, the `"CEA"` method will be used and a warning stating this
-#'   will be shown. Restricted sets of `profiles` can only be used with
-#'   `"Modfed"`. For more details on Bayesian D-efficient designs, see
-#'   `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
-#'   {idefix} package (Traets et al, 2020).
-#' @references Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41
-#' \doi{10.18637/jss.v085.i05}
-#'
-#'   Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
-#' \doi{10.18637/jss.v096.i03}
-#'
-#' Wheeler B (2022)._AlgDesign: Algorithmic Experimental Design. R package version 1.2.1,
-#' \href{https://CRAN.R-project.org/package=AlgDesign}{https://CRAN.R-project.org/package=AlgDesign}.
 #' @return The returned `design` data frame contains a choice-based conjoint
 #' survey design where each row is an alternative. It includes the following
 #' columns:
@@ -153,14 +96,23 @@
 #' - `profileID`: Identifies the profile in `profiles`.
 #' - `respID`: Identifies each survey respondent.
 #' - `qID`: Identifies the choice question answered by the respondent.
-#' - `altID`:Identifies the alternative in any one choice observation.
+#' - `altID`: Identifies the alternative in any one choice observation.
 #' - `obsID`: Identifies each unique choice observation across all respondents.
 #' - `blockID`: If blocking is used, identifies each unique block.
+#'
+#' @references
+#' Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41
+#' \doi{10.18637/jss.v085.i05}
+#'
+#' Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
+#' \doi{10.18637/jss.v096.i03}
+#'
+#' Wheeler B (2022). _AlgDesign: Algorithmic Experimental Design_. R package version 1.2.1,
+#' \href{https://CRAN.R-project.org/package=AlgDesign}{https://CRAN.R-project.org/package=AlgDesign}.
+#'
 #' @export
 #' @examples
 #' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
 #'
 #' # Generate all possible profiles
 #' profiles <- cbc_profiles(
@@ -169,8 +121,7 @@
 #'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
-#' # Make a survey by randomly sampling from all possible profiles
-#' # (This is the default setting where method = 'random')
+#' # Make a random survey design (default)
 #' design_random <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp   = 100, # Number of respondents
@@ -178,34 +129,27 @@
 #'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
-#' # Make a survey using a full factorial design and include a "no choice" option
-#' design_full <- cbc_design(
+#' # Make a D-efficient design with priors
+#' design_efficient <- cbc_design(
 #'   profiles = profiles,
-#'   n_resp   = 100, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6,   # Number of questions per respondent
-#'   method   = 'full', # Change this to use a different method, e.g. 'orthogonal', or 'dopt'
-#'   no_choice = TRUE
+#'   n_resp   = 100,
+#'   n_alts   = 3,
+#'   n_q      = 6,
+#'   method   = "efficient",
+#'   priors = list(
+#'     price     = -0.1,
+#'     type      = c(0.1, 0.2),
+#'     freshness = c(0.1, 0.2)
+#'   )
 #' )
 #'
-#' # Make a survey by randomly sampling from all possible profiles
-#' # with each level of the "type" attribute appearing as an alternative
-#' design_random_labeled <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 100, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6,   # Number of questions per respondent
-#'   label    = "type"
-#' )
-#'
-#' # Make a Bayesian D-efficient design with a prior model specified
-#' # Note that by speed can be improved by setting parallel = TRUE
+#' # Make a Bayesian D-efficient design
 #' design_bayesian <- cbc_design(
 #'     profiles  = profiles,
-#'     n_resp    = 100, # Number of respondents
-#'     n_alts    = 3,   # Number of alternatives per question
-#'     n_q       = 6,   # Number of questions per respondent
-#'     n_start   = 1,   # Defaults to 5, set to 1 here for a quick example
+#'     n_resp    = 100,
+#'     n_alts    = 3,
+#'     n_q       = 6,
+#'     n_start   = 5,
 #'     priors = list(
 #'         price     = -0.1,
 #'         type      = c(0.1, 0.2),
@@ -215,73 +159,95 @@
 #'     parallel = FALSE
 #' )
 cbc_design <- function(
-  profiles,
-  n_resp,
-  n_alts,
-  n_q,
-  n_blocks = 1,
-  n_draws = 50,
-  n_start = 5,
-  no_choice = FALSE,
-  label = NULL,
-  method = "random",
-  priors = NULL,
-  prior_no_choice = NULL,
-  probs = FALSE,
-  keep_d_eff = FALSE,
-  keep_db_error = FALSE,
-  max_iter = 50,
-  parallel = FALSE
+        profiles,
+        n_resp,
+        n_alts,
+        n_q,
+        n_blocks = 1,
+        n_draws = 50,
+        n_start = 5,
+        no_choice = FALSE,
+        label = NULL,
+        method = "random",
+        priors = NULL,
+        prior_no_choice = NULL,
+        probs = FALSE,
+        keep_d_eff = FALSE,
+        keep_db_error = FALSE,
+        max_iter = 50,
+        parallel = FALSE
 ) {
-  method <- check_design_method(method, priors)
-  profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
-  check_inputs_design(
-    profiles,
-    n_resp,
-    n_alts,
-    n_q,
-    n_blocks,
-    n_draws,
-    n_start,
-    no_choice,
-    label,
-    method,
-    priors,
-    prior_no_choice,
-    probs,
-    keep_d_eff,
-    keep_db_error,
-    max_iter,
-    parallel,
-    profiles_restricted
-  )
-  profiles <- as.data.frame(profiles) # tibbles break things
-  if (method == 'random') {
-    design <- make_design_random(
-      profiles, n_resp, n_alts, n_q, no_choice, label
+    method <- check_design_method(method, priors)
+    profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
+
+    # Add checks for the efficient method
+    if (method == 'efficient') {
+        if (!is.null(label)) {
+            stop('Labeled designs are not currently supported with the "efficient" method.')
+        }
+        if (profiles_restricted) {
+            stop('Restricted profile sets are not currently supported with the "efficient" method.')
+        }
+    }
+
+    check_inputs_design(
+        profiles,
+        n_resp,
+        n_alts,
+        n_q,
+        n_blocks,
+        n_draws,
+        n_start,
+        no_choice,
+        label,
+        method,
+        priors,
+        prior_no_choice,
+        probs,
+        keep_d_eff,
+        keep_db_error,
+        max_iter,
+        parallel,
+        profiles_restricted
     )
-  } else if (method == 'full') {
-    design <- make_design_full(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-    )
-  } else if (method == 'orthogonal') {
-    design <- make_design_orthogonal(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice
-    )
-  } else if (method == 'dopt') {
-    design <- make_design_dopt(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
-    )
-  } else {
-    design <- make_design_bayesian(
-      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
-      label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
-      parallel, profiles_restricted
-    )
-  }
-  design <- reorder_cols(design)
-  row.names(design) <- NULL
-  return(design)
+
+    profiles <- as.data.frame(profiles)
+
+    if (method == 'random') {
+        design <- make_design_random(
+            profiles, n_resp, n_alts, n_q, no_choice, label
+        )
+    } else if (method == 'full') {
+        design <- make_design_full(
+            profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
+        )
+    } else if (method == 'orthogonal') {
+        design <- make_design_orthogonal(
+            profiles, n_resp, n_alts, n_q, n_blocks, no_choice
+        )
+    } else if (method == 'dopt') {
+        design <- make_design_dopt(
+            profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
+        )
+    } else if (method == 'efficient') {
+        design <- make_design_efficient(
+            profiles, n_resp, n_alts, n_q, n_blocks, priors, max_iter
+        )
+    } else {
+        design <- make_design_bayesian(
+            profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start,
+            no_choice, label, method, priors, prior_no_choice, probs,
+            keep_db_error, max_iter, parallel, profiles_restricted
+        )
+    }
+
+    if (no_choice && method != 'efficient') {
+        design <- add_no_choice(design, n_alts)
+    }
+
+    design <- reorder_cols(design)
+    row.names(design) <- NULL
+    return(design)
 }
 
 # General helpers ----
@@ -935,4 +901,99 @@ add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
   design <- design[order(design$obsID, design$altID), ]
   design[,c('altID', 'obsID')] <- NULL
   return(design)
+}
+
+
+# Helper function to implement the efficient algorithm for choice model designs
+make_design_efficient <- function(
+    profiles,
+    n_resp,
+    n_alts,
+    n_q,
+    n_blocks = 1,
+    priors = NULL,
+    max_iter = 50,
+    obsID = "obsID"
+) {
+    # 1. Start with random design
+    design <- make_design_random(profiles, n_resp, n_alts, n_q)
+
+    # 2. Compute initial D-error
+    current_d_error <- cbc_d_error(design, priors, obsID)
+
+    # 3. Begin main optimization loop
+    iter <- 1
+    improved <- TRUE
+
+    while (improved && iter <= max_iter) {
+        improved <- FALSE
+
+        # Store D-error at start of iteration
+        start_d_error <- current_d_error
+
+        # Loop through questions
+        for (s in 1:n_q) {
+            # Store D-error before modifying question
+            question_start_d_error <- current_d_error
+            question_improved <- TRUE
+
+            while (question_improved) {
+                question_improved <- FALSE
+
+                # Loop through alternatives
+                for (j in 1:n_alts) {
+                    # Loop through attributes
+                    for (f in 2:ncol(profiles)) { # Start at 2 to skip profileID
+                        # Get current level
+                        current_level <- design[design$qID == s & design$altID == j, names(profiles)[f]]
+
+                        # Try each possible level
+                        levels <- unique(profiles[,f])
+                        best_d_error <- current_d_error
+                        best_level <- current_level
+
+                        for (l in levels) {
+                            # Skip if same as current level
+                            if (l == current_level) next
+
+                            # Create temporary design with new level
+                            temp_design <- design
+                            temp_design[temp_design$qID == s & temp_design$altID == j, names(profiles)[f]] <- l
+
+                            # Calculate D-error for temporary design
+                            temp_d_error <- cbc_d_error(temp_design, priors, obsID)
+
+                            # Update best if improvement found
+                            if (temp_d_error < best_d_error) {
+                                best_d_error <- temp_d_error
+                                best_level <- l
+                            }
+                        }
+
+                        # Update design if improvement found
+                        if (best_d_error < current_d_error) {
+                            design[design$qID == s & design$altID == j, names(profiles)[f]] <- best_level
+                            current_d_error <- best_d_error
+                            question_improved <- TRUE
+                        }
+                    }
+                }
+            }
+
+            # Check if question modifications improved overall D-error
+            if (current_d_error < question_start_d_error) {
+                improved <- TRUE
+            }
+        }
+
+        iter <- iter + 1
+    }
+
+    # Repeat the optimized design to match number of respondents
+    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
+
+    # Print final D-error
+    message("Efficient design found with D-error of ", round(current_d_error, 5))
+
+    return(design)
 }

@@ -26,35 +26,31 @@ check_inputs_restrict <- function(profiles) {
   }
 }
 
+# Update the check_design_method function to include the efficient method
 check_design_method <- function(method, priors) {
-
-  # Check that an appropriate method is used
-
-  if (! method %in% c(
-    'random', 'full', 'orthogonal', 'dopt', 'CEA', 'Modfed'
-  )) {
-    stop(
-      'The "method" argument must be set to "random", "full", ',
-      '"orthogonal", "dopt", "CEA", or "Modfed"'
-    )
-  }
-
-  # Check that a Bayesian method is used if priors are used
-
-  if (!is.null(priors)) {
-    if (!method_is_bayesian(method)) {
-      # Set method to 'CEA' if priors are specified and
-      # user didn't specify an appropriate method.
-      warning(
-        'Since "priors" are specified, the "method" must be either "CEA" ',
-        'or "Modfed". The specified "method" is being ignored and set to ',
-        '"CEA"\n'
-      )
-      method <- 'CEA'
+    # Add 'efficient' to valid methods
+    if (!method %in% c(
+        'random', 'full', 'orthogonal', 'dopt', 'CEA', 'Modfed', 'efficient'
+    )) {
+        stop(
+            'The "method" argument must be set to "random", "full", ',
+            '"orthogonal", "dopt", "CEA", "Modfed", or "efficient"'
+        )
     }
-  }
 
-  return(method)
+    # Check that a Bayesian method is used if priors are used
+    if (!is.null(priors)) {
+        if (!method_is_bayesian(method) && method != 'efficient') {
+            warning(
+                'Since "priors" are specified, the "method" must be either "CEA", ',
+                '"Modfed", or "efficient". The specified "method" is being ignored and set to ',
+                '"efficient"\n'
+            )
+            method <- 'efficient'
+        }
+    }
+
+    return(method)
 }
 
 check_inputs_design <- function(
