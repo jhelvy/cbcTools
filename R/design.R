@@ -129,53 +129,40 @@
 #'   n_q      = 6    # Number of questions per respondent
 #' )
 #'
-#' # Make a D-efficient design with priors
-#' design_efficient <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 100,
-#'   n_alts   = 3,
-#'   n_q      = 6,
-#'   method   = "efficient",
-#'   priors = list(
-#'     price     = -0.1,
-#'     type      = c(0.1, 0.2),
-#'     freshness = c(0.1, 0.2)
-#'   )
+#' # Create priors
+#' priors <- cbc_priors(
+#'   price = -0.5,
+#'   type = c(0.2, 0.3),
+#'   freshness = c(0.4, 0.8)
 #' )
 #'
-#' # Make a Bayesian D-efficient design
-#' design_bayesian <- cbc_design(
-#'     profiles  = profiles,
-#'     n_resp    = 100,
-#'     n_alts    = 3,
-#'     n_q       = 6,
-#'     n_start   = 5,
-#'     priors = list(
-#'         price     = -0.1,
-#'         type      = c(0.1, 0.2),
-#'         freshness = c(0.1, 0.2)
-#'     ),
-#'     method = "CEA",
-#'     parallel = FALSE
+#' # Make an efficient design with priors
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_resp = 100,
+#'   n_alts = 3,
+#'   n_q = 6,
+#'   method = "efficient",
+#'   priors = priors
 #' )
 cbc_design <- function(
-        profiles,
-        n_resp,
-        n_alts,
-        n_q,
-        n_blocks = 1,
-        n_draws = 50,
-        n_start = 5,
-        no_choice = FALSE,
-        label = NULL,
-        method = "random",
-        priors = NULL,
-        prior_no_choice = NULL,
-        probs = FALSE,
-        keep_d_eff = FALSE,
-        keep_db_error = FALSE,
-        max_iter = 50,
-        parallel = FALSE
+  profiles,
+  n_resp,
+  n_alts,
+  n_q,
+  n_blocks = 1,
+  n_draws = 50,
+  n_start = 5,
+  no_choice = FALSE,
+  label = NULL,
+  method = "random",
+  priors = NULL,
+  prior_no_choice = NULL,
+  probs = FALSE,
+  keep_d_eff = FALSE,
+  keep_db_error = FALSE,
+  max_iter = 50,
+  parallel = FALSE
 ) {
     method <- check_design_method(method, priors)
     profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
@@ -213,10 +200,13 @@ cbc_design <- function(
 
     profiles <- as.data.frame(profiles)
 
+    # Start with a random design
+    design_random <- make_design_random(
+      profiles, n_resp, n_alts, n_q, no_choice, label
+    )
+
     if (method == 'random') {
-        design <- make_design_random(
-            profiles, n_resp, n_alts, n_q, no_choice, label
-        )
+        return(design_random)
     } else if (method == 'full') {
         design <- make_design_full(
             profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
@@ -231,7 +221,7 @@ cbc_design <- function(
         )
     } else if (method == 'efficient') {
         design <- make_design_efficient(
-            profiles, n_resp, n_alts, n_q, n_blocks, priors, max_iter
+          design_random, profiles, n_resp, n_alts, n_q, n_blocks, priors, max_iter
         )
     } else {
         design <- make_design_bayesian(
@@ -903,23 +893,22 @@ add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
   return(design)
 }
 
-
 # Helper function to implement the efficient algorithm for choice model designs
 make_design_efficient <- function(
+    design_random,
     profiles,
     n_resp,
     n_alts,
     n_q,
     n_blocks = 1,
     priors = NULL,
-    max_iter = 50,
-    obsID = "obsID"
+    max_iter = 50
 ) {
     # 1. Start with random design
-    design <- make_design_random(profiles, n_resp, n_alts, n_q)
+    design <- design_random
 
     # 2. Compute initial D-error
-    current_d_error <- cbc_d_error(design, priors, obsID)
+    current_d_error <- cbc_d_error(design, priors)
 
     # 3. Begin main optimization loop
     iter <- 1
@@ -942,40 +931,51 @@ make_design_efficient <- function(
 
                 # Loop through alternatives
                 for (j in 1:n_alts) {
-                    # Loop through attributes
-                    for (f in 2:ncol(profiles)) { # Start at 2 to skip profileID
-                        # Get current level
-                        current_level <- design[design$qID == s & design$altID == j, names(profiles)[f]]
+                    # Try each possible profile
+                    current_profileID <- design$profileID[design$qID == s & design$altID == j]
+                    best_d_error <- current_d_error
+                    best_profileID <- current_profileID
 
-                        # Try each possible level
-                        levels <- unique(profiles[,f])
-                        best_d_error <- current_d_error
-                        best_level <- current_level
+                    # Test each possible profile except current one
+                    other_profileIDs <- setdiff(profiles$profileID, current_profileID)
 
-                        for (l in levels) {
-                            # Skip if same as current level
-                            if (l == current_level) next
+                    for (new_profileID in other_profileIDs) {
+                        # Create temporary design with new profile
+                        temp_design <- design
+                        temp_design$profileID[temp_design$qID == s & temp_design$altID == j] <- new_profileID
 
-                            # Create temporary design with new level
-                            temp_design <- design
-                            temp_design[temp_design$qID == s & temp_design$altID == j, names(profiles)[f]] <- l
+                        # Join the profile attributes
+                        temp_design <- merge(
+                            temp_design[,c("profileID", "respID", "qID", "altID", "obsID")],
+                            profiles,
+                            by = "profileID",
+                            sort = FALSE
+                        )
+                        temp_design <- temp_design[order(temp_design$obsID),]
 
-                            # Calculate D-error for temporary design
-                            temp_d_error <- cbc_d_error(temp_design, priors, obsID)
+                        # Calculate D-error for temporary design
+                        temp_d_error <- cbc_d_error(temp_design, priors)
 
-                            # Update best if improvement found
-                            if (temp_d_error < best_d_error) {
-                                best_d_error <- temp_d_error
-                                best_level <- l
-                            }
+                        # Update best if improvement found
+                        if (temp_d_error < best_d_error) {
+                            best_d_error <- temp_d_error
+                            best_profileID <- new_profileID
                         }
+                    }
 
-                        # Update design if improvement found
-                        if (best_d_error < current_d_error) {
-                            design[design$qID == s & design$altID == j, names(profiles)[f]] <- best_level
-                            current_d_error <- best_d_error
-                            question_improved <- TRUE
-                        }
+                    # Update design if improvement found
+                    if (best_d_error < current_d_error) {
+                        design$profileID[design$qID == s & design$altID == j] <- best_profileID
+                        # Join the profile attributes
+                        design <- merge(
+                            design[,c("profileID", "respID", "qID", "altID", "obsID")],
+                            profiles,
+                            by = "profileID",
+                            sort = FALSE
+                        )
+                        design <- design[order(design$obsID),]
+                        current_d_error <- best_d_error
+                        question_improved <- TRUE
                     }
                 }
             }
