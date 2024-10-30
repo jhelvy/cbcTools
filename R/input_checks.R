@@ -84,18 +84,12 @@ check_inputs_design <- function(
       stop("Maximum allowable number of blocks is one block per respondent")
     }
 
-    if ((n_blocks > 1) & (method == 'random')) {
+    if ((method == 'full') & profiles_restricted) {
       stop(
-        'The "random" method cannot use blocking. Either change the design ',
-        'method or set "n_blocks = 1"'
+        'The "full" method cannot use restricted profiles when blocking ',
+        'is used. Either set "n_blocks" to 1 or use an unrestricted ',
+        'set of profiles'
       )
-      if ((method == 'full') & profiles_restricted) {
-        stop(
-          'The "full" method cannot use restricted profiles when blocking ',
-          'is used. Either set "n_blocks" to 1 or use an unrestricted ',
-          'set of profiles'
-        )
-      }
     }
 
     # Checks on labeled designs

@@ -62,13 +62,12 @@ cbc_d_error <- function(
 ) {
 
   # Validate that input is a cbc_design object
-  required_cols <- c("profileID", "respID", "qID", "altID", "obsID")
-  if (!all(required_cols %in% names(design))) {
+  if (!all(get_id_names() %in% names(design))) {
     stop("Design must be created by cbc_design()")
   }
 
   # Get attribute columns (all columns except the required ones)
-  pars <- setdiff(names(design), required_cols)
+  pars <- get_var_names(design)
 
   # Remove excluded attributes
   if (!is.null(exclude)) {

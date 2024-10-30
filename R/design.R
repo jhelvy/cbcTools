@@ -202,8 +202,9 @@ cbc_design <- function(
 
     # Start with a random design
     design_random <- make_design_random(
-      profiles, n_resp, n_alts, n_q, no_choice, label
+      profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
     )
+    varNames <- get_var_names(design_random)
 
     if (method == 'random') {
         return(design_random)
@@ -221,7 +222,7 @@ cbc_design <- function(
         )
     } else if (method == 'efficient') {
         design <- make_design_efficient(
-          design_random, profiles, n_resp, n_alts, n_q, n_blocks, priors, max_iter
+          design_random, varNames, profiles, n_resp, n_alts, n_q, n_blocks, priors, max_iter
         )
     } else {
         design <- make_design_bayesian(
@@ -235,8 +236,6 @@ cbc_design <- function(
         design <- add_no_choice(design, n_alts)
     }
 
-    design <- reorder_cols(design)
-    row.names(design) <- NULL
     return(design)
 }
 
@@ -372,10 +371,7 @@ get_col_types <- function(data) {
 }
 
 reorder_cols <- function(design) {
-  metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
-  if ('blockID' %in% names(design)) { metaNames <- c(metaNames, 'blockID') }
-  varNames <- setdiff(names(design), metaNames)
-  design <- as.data.frame(design)[, c(metaNames, varNames)]
+  design <- as.data.frame(design)[, c(get_id_names(), get_var_names(design))]
   return(design)
 }
 
@@ -447,7 +443,7 @@ repeat_sets <- function(choice_sets, n_resp, n_alts, n_q, n_blocks) {
 # Sample from profiles with replacement to create randomized choice sets
 
 make_design_random <- function(
-  profiles, n_resp, n_alts, n_q, no_choice, label
+  profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
 ) {
   if (is.null(label)) {
     design <- design_rand_sample(profiles, n_resp, n_alts, n_q)
@@ -457,6 +453,9 @@ make_design_random <- function(
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
   }
+  design <- set_block_ids(design, n_blocks)
+  design <- reorder_cols(design)
+  row.names(design) <- NULL
   return(design)
 }
 
@@ -896,6 +895,7 @@ add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
 # Helper function to implement the efficient algorithm for choice model designs
 make_design_efficient <- function(
     design_random,
+    varNames,
     profiles,
     n_resp,
     n_alts,
@@ -904,13 +904,45 @@ make_design_efficient <- function(
     priors = NULL,
     max_iter = 50
 ) {
-    # 1. Start with random design
+    # Start with random design
     design <- design_random
 
-    # 2. Compute initial D-error
+    # Get random subsets to start for each block
+    design <- design[which(design_random$respID %in% seq(n_blocks)),]
+    design <- set_block_ids(design, n_blocks)
+    error_random <- cbc_d_error(design, priors)
+    design_list <- split(design, design$blockID)
+
+    # Find an efficient design for each starting design block
+    design_list_eff <- list()
+    for (i in 1:n_blocks) {
+        design_list_eff[[i]] <- find_d_efficient_design(design_list[[i]], priors)
+    }
+
+    # Merge designs
+    design <- do.call(rbind, design_list_eff)
+    d_error <- cbc_d_error(design, priors)
+
+    # Repeat the optimized design to match number of respondents
+    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
+
+    # Print final D-error
+    eff <- (error_random - d_error) / d_error
+    message(
+        "Efficient design found with D-error of ", round(d_error, 5),
+        ", which is ", scales::percent(eff, accuracy = 0.01), " more efficient ",
+        "than a random design"
+    )
+
+    return(design)
+}
+
+find_d_efficient_design <- function(design, priors) {
+
+    # Compute initial D-error
     current_d_error <- cbc_d_error(design, priors)
 
-    # 3. Begin main optimization loop
+    # Begin main optimization loop
     iter <- 1
     improved <- TRUE
 
@@ -932,26 +964,21 @@ make_design_efficient <- function(
                 # Loop through alternatives
                 for (j in 1:n_alts) {
                     # Try each possible profile
-                    current_profileID <- design$profileID[design$qID == s & design$altID == j]
+                    j_profileIDs <- design[which(design$qID == s),]$profileID
+                    j_rowID <- which(design$qID == s & design$altID == j)
+                    best_row <- design[j_rowID,]
                     best_d_error <- current_d_error
-                    best_profileID <- current_profileID
 
                     # Test each possible profile except current one
-                    other_profileIDs <- setdiff(profiles$profileID, current_profileID)
+                    other_profileIDs <- setdiff(profiles$profileID, j_profileIDs)
 
                     for (new_profileID in other_profileIDs) {
                         # Create temporary design with new profile
                         temp_design <- design
-                        temp_design$profileID[temp_design$qID == s & temp_design$altID == j] <- new_profileID
-
-                        # Join the profile attributes
-                        temp_design <- merge(
-                            temp_design[,c("profileID", "respID", "qID", "altID", "obsID")],
-                            profiles,
-                            by = "profileID",
-                            sort = FALSE
-                        )
-                        temp_design <- temp_design[order(temp_design$obsID),]
+                        new_profile <- profiles[which(profiles$profileID == new_profileID),]
+                        temp_row <- temp_design[j_rowID,]
+                        temp_row[,c('profileID', varNames)] <- new_profile
+                        temp_design[j_rowID,] <- temp_row
 
                         # Calculate D-error for temporary design
                         temp_d_error <- cbc_d_error(temp_design, priors)
@@ -959,21 +986,13 @@ make_design_efficient <- function(
                         # Update best if improvement found
                         if (temp_d_error < best_d_error) {
                             best_d_error <- temp_d_error
-                            best_profileID <- new_profileID
+                            best_row <- temp_row
                         }
                     }
 
                     # Update design if improvement found
                     if (best_d_error < current_d_error) {
-                        design$profileID[design$qID == s & design$altID == j] <- best_profileID
-                        # Join the profile attributes
-                        design <- merge(
-                            design[,c("profileID", "respID", "qID", "altID", "obsID")],
-                            profiles,
-                            by = "profileID",
-                            sort = FALSE
-                        )
-                        design <- design[order(design$obsID),]
+                        design[j_rowID,] <- best_row
                         current_d_error <- best_d_error
                         question_improved <- TRUE
                     }
@@ -988,12 +1007,5 @@ make_design_efficient <- function(
 
         iter <- iter + 1
     }
-
-    # Repeat the optimized design to match number of respondents
-    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
-
-    # Print final D-error
-    message("Efficient design found with D-error of ", round(current_d_error, 5))
-
     return(design)
 }
