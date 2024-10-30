@@ -916,7 +916,7 @@ make_design_efficient <- function(
     # Find an efficient design for each starting design block
     design_list_eff <- list()
     for (i in 1:n_blocks) {
-        design_list_eff[[i]] <- find_d_efficient_design(design_list[[i]], priors)
+        design_list_eff[[i]] <- find_d_efficient_design(design_list[[i]], priors, varNames, max_iter, n_q, n_alts)
     }
 
     # Merge designs
@@ -937,7 +937,7 @@ make_design_efficient <- function(
     return(design)
 }
 
-find_d_efficient_design <- function(design, priors) {
+find_d_efficient_design <- function(design, priors, varNames, max_iter, n_q, n_alts) {
 
     # Compute initial D-error
     current_d_error <- cbc_d_error(design, priors)
