@@ -16,7 +16,7 @@
 #'   designs. Max allowable is one block per respondent. Defaults to `1`,
 #'   meaning every respondent sees the same choice set.
 #' @param n_draws Number of draws used in simulating the prior distribution used
-#'   in Bayesian D-efficient designs. Defaults to `50`.
+#'   in Bayesian D-efficient designs. Defaults to `100`.
 #' @param n_start A numeric value indicating the number of random start designs
 #'   to use in obtaining a Bayesian D-efficient design. The default is `5`.
 #'   Increasing `n_start` can result in a more efficient design at the expense
@@ -151,7 +151,7 @@ cbc_design <- function(
   n_alts,
   n_q,
   n_blocks = 1,
-  n_draws = 50,
+  n_draws = 100,
   n_start = 5,
   no_choice = FALSE,
   label = NULL,
@@ -1007,5 +1007,70 @@ find_d_efficient_design <- function(design, priors, varNames, max_iter, n_q, n_a
 
         iter <- iter + 1
     }
+    return(design)
+}
+
+
+make_design_efficient2 <- function(
+    design_random,
+    varNames,
+    profiles,
+    obsID,
+    n_resp,
+    n_alts,
+    n_q,
+    n_draws,
+    n_blocks = 1,
+    priors = NULL,
+    max_iter = 50
+) {
+    # Start with random design
+    design <- design_random
+
+    # Get random subsets to start for each block
+    design <- design[which(design_random$respID %in% seq(n_blocks)),]
+    design <- set_block_ids(design, n_blocks)
+    error_random <- cbc_d_error(design, priors)
+    design_list <- split(design, design$blockID)
+
+    # Define the prior model
+    null_prior <- FALSE
+    if (is.null(priors)) {
+        priors <- setup_null_priors(design, get_var_names(design))
+        null_prior <- TRUE
+    }
+
+    # Find an efficient design for each starting design block
+    result_list <- list()
+    for (i in 1:n_blocks) {
+        result <- optimize_design(
+            design_list[[i]],
+            profiles,
+            priors,
+            obsID,
+            n_q,
+            n_alts,
+            max_iter,
+            n_draws,
+            null_prior
+        )
+        result_list[[i]] <- result$design
+    }
+
+    # Merge designs
+    design <- do.call(rbind, result_list)
+    d_error <- cbc_d_error(design, priors)
+
+    # Repeat the optimized design to match number of respondents
+    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
+
+    # Print final D-error
+    eff <- (error_random - d_error) / d_error
+    message(
+        "Efficient design found with D-error of ", round(d_error, 5),
+        ", which is ", scales::percent(eff, accuracy = 0.01), " more efficient ",
+        "than a random design"
+    )
+
     return(design)
 }
