@@ -222,7 +222,7 @@ cbc_design <- function(
         )
     } else if (method == 'efficient') {
         design <- make_design_efficient(
-          design_random, varNames, profiles, n_resp, n_alts, n_q, n_blocks, priors, max_iter
+          design_random, varNames, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter
         )
     } else {
         design <- make_design_bayesian(
@@ -900,129 +900,10 @@ make_design_efficient <- function(
     n_resp,
     n_alts,
     n_q,
-    n_blocks = 1,
-    priors = NULL,
-    max_iter = 50
-) {
-    # Start with random design
-    design <- design_random
-
-    # Get random subsets to start for each block
-    design <- design[which(design_random$respID %in% seq(n_blocks)),]
-    design <- set_block_ids(design, n_blocks)
-    error_random <- cbc_d_error(design, priors)
-    design_list <- split(design, design$blockID)
-
-    # Find an efficient design for each starting design block
-    design_list_eff <- list()
-    for (i in 1:n_blocks) {
-        design_list_eff[[i]] <- find_d_efficient_design(design_list[[i]], priors, varNames, max_iter, n_q, n_alts)
-    }
-
-    # Merge designs
-    design <- do.call(rbind, design_list_eff)
-    d_error <- cbc_d_error(design, priors)
-
-    # Repeat the optimized design to match number of respondents
-    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
-
-    # Print final D-error
-    eff <- (error_random - d_error) / d_error
-    message(
-        "Efficient design found with D-error of ", round(d_error, 5),
-        ", which is ", scales::percent(eff, accuracy = 0.01), " more efficient ",
-        "than a random design"
-    )
-
-    return(design)
-}
-
-find_d_efficient_design <- function(design, priors, varNames, max_iter, n_q, n_alts) {
-
-    # Compute initial D-error
-    current_d_error <- cbc_d_error(design, priors)
-
-    # Begin main optimization loop
-    iter <- 1
-    improved <- TRUE
-
-    while (improved && iter <= max_iter) {
-        improved <- FALSE
-
-        # Store D-error at start of iteration
-        start_d_error <- current_d_error
-
-        # Loop through questions
-        for (s in 1:n_q) {
-            # Store D-error before modifying question
-            question_start_d_error <- current_d_error
-            question_improved <- TRUE
-
-            while (question_improved) {
-                question_improved <- FALSE
-
-                # Loop through alternatives
-                for (j in 1:n_alts) {
-                    # Try each possible profile
-                    j_profileIDs <- design[which(design$qID == s),]$profileID
-                    j_rowID <- which(design$qID == s & design$altID == j)
-                    best_row <- design[j_rowID,]
-                    best_d_error <- current_d_error
-
-                    # Test each possible profile except current one
-                    other_profileIDs <- setdiff(profiles$profileID, j_profileIDs)
-
-                    for (new_profileID in other_profileIDs) {
-                        # Create temporary design with new profile
-                        temp_design <- design
-                        new_profile <- profiles[which(profiles$profileID == new_profileID),]
-                        temp_row <- temp_design[j_rowID,]
-                        temp_row[,c('profileID', varNames)] <- new_profile
-                        temp_design[j_rowID,] <- temp_row
-
-                        # Calculate D-error for temporary design
-                        temp_d_error <- cbc_d_error(temp_design, priors)
-
-                        # Update best if improvement found
-                        if (temp_d_error < best_d_error) {
-                            best_d_error <- temp_d_error
-                            best_row <- temp_row
-                        }
-                    }
-
-                    # Update design if improvement found
-                    if (best_d_error < current_d_error) {
-                        design[j_rowID,] <- best_row
-                        current_d_error <- best_d_error
-                        question_improved <- TRUE
-                    }
-                }
-            }
-
-            # Check if question modifications improved overall D-error
-            if (current_d_error < question_start_d_error) {
-                improved <- TRUE
-            }
-        }
-
-        iter <- iter + 1
-    }
-    return(design)
-}
-
-
-make_design_efficient2 <- function(
-    design_random,
-    varNames,
-    profiles,
-    obsID,
-    n_resp,
-    n_alts,
-    n_q,
     n_draws,
-    n_blocks = 1,
-    priors = NULL,
-    max_iter = 50
+    n_blocks,
+    priors,
+    max_iter
 ) {
     # Start with random design
     design <- design_random
@@ -1047,7 +928,7 @@ make_design_efficient2 <- function(
             design_list[[i]],
             profiles,
             priors,
-            obsID,
+            varNames,
             n_q,
             n_alts,
             max_iter,

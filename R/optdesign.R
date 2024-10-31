@@ -1,15 +1,15 @@
 # Helper function to initialize model and precompute matrices for d-error calculation
-initialize_design_optimization <- function(design, priors, obsID = 'obsID', n_draws, null_prior) {
+initialize_design_optimization <- function(design, priors, n_draws, null_prior) {
     # Create model once at the start - this won't change during optimization
     model <- def_model_prior(design, priors, n_draws)
 
     # Initial encoding of design matrix
-    obsID_vector <- design[,obsID]
+    obsID_vector <- design$obsID
     X_list <- split(as.data.frame(model$data$X), obsID_vector)
     X_list <- lapply(X_list, as.matrix)
 
     # Initial probability calculations
-    probs <- sim_probs_prior(design, obsID, model, null_prior)$predicted_prob
+    probs <- sim_probs_prior(design, model, null_prior)$predicted_prob
     P_list <- split(probs, obsID_vector)
 
     # Pre-compute initial information matrices for each choice set
@@ -36,7 +36,7 @@ initialize_design_optimization <- function(design, priors, obsID = 'obsID', n_dr
 }
 
 # Helper function to update a single choice set in the optimization
-update_choice_set <- function(opt_state, temp_rows, obsID, s, q_rowIDs, null_prior) {
+update_choice_set <- function(opt_state, temp_rows, s, q_rowIDs, null_prior) {
     # Update design
     opt_state$design[q_rowIDs,] <- temp_rows
 
@@ -52,7 +52,7 @@ update_choice_set <- function(opt_state, temp_rows, obsID, s, q_rowIDs, null_pri
 
     # Update P_list for this observation
     if (!null_prior) {
-        new_probs <- sim_probs_prior(temp_rows, obsID, model, null_prior)$predicted_prob
+        new_probs <- sim_probs_prior(temp_rows, opt_state$model, null_prior)$predicted_prob
     } else {
         new_probs <- opt_state$P_list[[s]]
     }
@@ -73,9 +73,9 @@ update_choice_set <- function(opt_state, temp_rows, obsID, s, q_rowIDs, null_pri
 }
 
 # Main optimization function that uses the helpers
-optimize_design <- function(initial_design, profiles, priors, obsID, n_q, n_alts, max_iter, n_draws, null_prior) {
+optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_alts, max_iter, n_draws, null_prior) {
     # Initialize optimization state
-    opt_state <- initialize_design_optimization(initial_design, priors, obsID, n_draws, null_prior)
+    opt_state <- initialize_design_optimization(initial_design, priors, n_draws, null_prior)
 
     iter <- 1
     improved <- TRUE
@@ -111,7 +111,7 @@ optimize_design <- function(initial_design, profiles, priors, obsID, n_q, n_alts
                         temp_rows[j,] <- temp_row_j
 
                         # Update optimization state for this choice set
-                        temp_state <- update_choice_set(opt_state, temp_rows, obsID, s, q_rowIDs, null_prior)
+                        temp_state <- update_choice_set(opt_state, temp_rows, s, q_rowIDs, null_prior)
                         temp_d_error <- temp_state$d_error
                         # Update state if improvement found
                         if (temp_d_error < best_d_error) {

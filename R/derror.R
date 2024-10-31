@@ -56,7 +56,6 @@
 cbc_d_error <- function(
   design,
   priors = NULL,
-  obsID = "obsID",
   n_draws = 200,
   exclude = NULL
 ) {
@@ -87,10 +86,10 @@ cbc_d_error <- function(
   model <- def_model_prior(design, priors, n_draws)
 
   # Get predicted probabilities
-  design <- sim_probs_prior(design, obsID, model, null_prior)
+  design <- sim_probs_prior(design, model, null_prior)
 
   # Convert design to model matrices by question
-  obsID_vector <- as.vector(design[obsID])
+  obsID_vector <- design$obsID
   X_list <- split(as.data.frame(model$data$X), obsID_vector)
   X_list <- lapply(X_list, as.matrix)
 
@@ -116,9 +115,9 @@ setup_null_priors <- function(design, pars) {
   return(priors)
 }
 
-sim_probs_prior <- function(design, obsID, model, null_prior) {
+sim_probs_prior <- function(design, model, null_prior) {
   if (null_prior) {
-    reps <- table(design[obsID])
+    reps <- table(design['obsID'])
     probs <- 1 / reps
     design$predicted_prob <- rep(probs, times = reps)
     return(design)
@@ -126,7 +125,7 @@ sim_probs_prior <- function(design, obsID, model, null_prior) {
   result <- stats::predict(
     object     = model,
     newdata    = design,
-    obsID      = obsID,
+    obsID      = 'obsID',
     type       = "prob",
     returnData = TRUE
   )
