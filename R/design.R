@@ -167,16 +167,6 @@ cbc_design <- function(
     method <- check_design_method(method, priors)
     profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
 
-    # Add checks for the efficient method
-    if (method == 'efficient') {
-        if (!is.null(label)) {
-            stop('Labeled designs are not currently supported with the "efficient" method.')
-        }
-        if (profiles_restricted) {
-            stop('Restricted profile sets are not currently supported with the "efficient" method.')
-        }
-    }
-
     check_inputs_design(
         profiles,
         n_resp,
@@ -222,7 +212,7 @@ cbc_design <- function(
         )
     } else if (method == 'efficient') {
         design <- make_design_efficient(
-          design_random, varNames, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter
+          design_random, varNames, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter, label
         )
     } else {
         design <- make_design_bayesian(
@@ -903,7 +893,8 @@ make_design_efficient <- function(
     n_draws,
     n_blocks,
     priors,
-    max_iter
+    max_iter,
+    label
 ) {
     # Start with random design
     design <- design_random
@@ -933,7 +924,8 @@ make_design_efficient <- function(
             n_alts,
             max_iter,
             n_draws,
-            null_prior
+            null_prior,
+            label
         )
         result_list[[i]] <- result$design
     }

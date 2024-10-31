@@ -95,10 +95,10 @@ check_inputs_design <- function(
     # Checks on labeled designs
 
     if (!is.null(label)) {
-      if (!method %in% c('random', 'full')) {
+      if (!method %in% c('random', 'full', 'efficient')) {
         stop(
-          'Labeled designs are currently only supported with the "random" or ',
-          '"full" method.'
+          'Labeled designs are currently only supported with the "random", ',
+          '"full", and "efficient" methods.'
         )
       }
     }

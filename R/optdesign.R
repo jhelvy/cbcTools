@@ -72,8 +72,20 @@ update_choice_set <- function(opt_state, temp_rows, s, q_rowIDs, null_prior) {
     return(opt_state)
 }
 
-# Main optimization function that uses the helpers
-optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_alts, max_iter, n_draws, null_prior) {
+# Helper function to get eligible profiles for a labeled design
+get_eligible_profiles <- function(profiles, current_profileIDs, label = NULL, current_label_value = NULL) {
+    # If no label is specified, return all profiles except current ones
+    if (is.null(label)) {
+        return(setdiff(profiles$profileID, current_profileIDs))
+    }
+
+    # For labeled designs, only return profiles matching the current label value
+    matching_profiles <- profiles[which(profiles[[label]] == current_label_value), ]
+    return(setdiff(matching_profiles$profileID, current_profileIDs))
+}
+
+# Updated optimize_design function with label handling
+optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_alts, max_iter, n_draws, null_prior, label = NULL) {
     # Initialize optimization state
     opt_state <- initialize_design_optimization(initial_design, priors, n_draws, null_prior)
 
@@ -95,13 +107,23 @@ optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_a
 
                 # Get current profiles in this question
                 current_profileIDs <- question_rows$profileID
-                temp_profileIDs <- setdiff(profiles$profileID, current_profileIDs)
 
                 # Loop through alternatives
                 for (j in 1:n_alts) {
                     best_d_error <- opt_state$d_error
 
-                    # Try each possible profile except current ones
+                    # Get current label value for this alternative if using labels
+                    current_label_value <- if (!is.null(label)) question_rows[j, label] else NULL
+
+                    # Get eligible profiles for this alternative
+                    temp_profileIDs <- get_eligible_profiles(
+                        profiles,
+                        current_profileIDs,
+                        label,
+                        current_label_value
+                    )
+
+                    # Try each possible profile
                     for (new_profileID in temp_profileIDs) {
                         # Create temporary design with new profile
                         temp_rows <- question_rows
@@ -113,6 +135,7 @@ optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_a
                         # Update optimization state for this choice set
                         temp_state <- update_choice_set(opt_state, temp_rows, s, q_rowIDs, null_prior)
                         temp_d_error <- temp_state$d_error
+
                         # Update state if improvement found
                         if (temp_d_error < best_d_error) {
                             best_d_error <- temp_d_error
@@ -135,4 +158,3 @@ optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_a
 
     return(opt_state)
 }
-
