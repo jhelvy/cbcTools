@@ -33,6 +33,7 @@
 #' @param method Choose the design method to use: `"random"`, `"full"`,
 #'   `"orthogonal"`, `"dopt"`, `"CEA"`, `"Modfed"`, or `"efficient"`.
 #'   Defaults to `"random"`. See details below for complete description of each method.
+#' @param randomize Logical. If `TRUE`, both the choice question order and the order of the alternatives within a given choice question will be randomized across each respondent. Does not apply to design created using the `"random"` method. Defaults to `TRUE`.
 #' @param priors A list of one or more assumed prior parameters used to generate
 #'   a D-efficient or Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
@@ -156,6 +157,7 @@ cbc_design <- function(
   no_choice = FALSE,
   label = NULL,
   method = "random",
+  randomize = TRUE,
   priors = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
@@ -178,6 +180,7 @@ cbc_design <- function(
         no_choice,
         label,
         method,
+        randomize,
         priors,
         prior_no_choice,
         probs,
@@ -192,7 +195,7 @@ cbc_design <- function(
 
     # Blocks ignored for "random" method
     if (method == "random" & n_blocks > 1) {
-      message("Blocks are ignored for random designs as each respondent sees a different set")
+      message("Blocking is ignored for random designs as each respondent sees a different set.")
       n_blocks <- 1
     }
 
@@ -218,7 +221,7 @@ cbc_design <- function(
         )
     } else if (method == 'efficient') {
         design <- make_design_efficient(
-          design_random, varNames, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter, label
+          design_random, varNames, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter, label, randomize
         )
     } else {
         design <- make_design_bayesian(
@@ -413,7 +416,7 @@ sample_random_sets <- function(profiles, n_alts, n_q) {
   return(sets)
 }
 
-repeat_sets <- function(choice_sets, n_resp, n_alts, n_q, n_blocks) {
+repeat_sets <- function(choice_sets, n_resp, n_alts, n_q, n_blocks, randomize) {
   # Repeat choice sets to match number of respondents
   if (n_blocks > 1) {
     choice_sets <- split(choice_sets, choice_sets$blockID)
@@ -431,6 +434,51 @@ repeat_sets <- function(choice_sets, n_resp, n_alts, n_q, n_blocks) {
   }
   design <- design[1:(n_resp*n_q*n_alts), ]
   design <- add_metadata(design, n_resp, n_alts, n_q)
+
+  # Randomize question and alternative order if requested
+  if (randomize) {
+    return(randomize_design(design, n_resp, n_alts, n_q, n_blocks))
+  }
+
+  return(design)
+}
+
+randomize_design <- function(design, n_resp, n_alts, n_q, n_blocks) {
+  # Split design by respondent
+  resp_designs <- split(design, design$respID)
+
+  # For each respondent
+  for (r in seq_along(resp_designs)) {
+    resp_design <- resp_designs[[r]]
+
+    # Randomize question order
+    new_q_order <- sample(1:n_q)
+
+    # Create mapping from old to new question order
+    q_map <- data.frame(
+      old_qID = seq(n_q),
+      new_qID = new_q_order
+    )
+
+    # Update question IDs
+    resp_design$qID <- q_map$new_qID[match(resp_design$qID, q_map$old_qID)]
+
+    # For each question, randomize alternative order
+    for (q in 1:n_q) {
+      q_rows <- which(resp_design$qID == q)
+      new_alt_order <- sample(1:n_alts)
+      resp_design$altID[q_rows] <- new_alt_order
+    }
+
+    resp_designs[[r]] <- resp_design
+  }
+
+  # Recombine designs and update obsID
+  design <- do.call(rbind, resp_designs)
+  design <- design[order(design$respID, design$qID, design$altID), ]
+  design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
+  row.names(design) <- NULL
+
   return(design)
 }
 
@@ -888,7 +936,9 @@ add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
   return(design)
 }
 
-# Helper function to implement the efficient algorithm for choice model designs
+
+# Efficient Design ----
+
 make_design_efficient <- function(
     design_random,
     varNames,
@@ -900,16 +950,16 @@ make_design_efficient <- function(
     n_blocks,
     priors,
     max_iter,
-    label
+    label,
+    randomize
 ) {
     # Start with random design
     design <- design_random
 
     # Get random subsets to start for each block
     design <- design[which(design_random$respID %in% seq(n_blocks)),]
-    design <- set_block_ids(design, n_blocks)
-    error_random <- cbc_d_error(design, priors)
-    design_list <- split(design, design$blockID)
+    n_questions <- n_q*n_blocks
+    design$qID <- design$obsID
 
     # Define the prior model
     null_prior <- FALSE
@@ -918,37 +968,31 @@ make_design_efficient <- function(
         null_prior <- TRUE
     }
 
-    # Find an efficient design for each starting design block
-    result_list <- list()
-    for (i in 1:n_blocks) {
-        result <- optimize_design(
-            design_list[[i]],
-            profiles,
-            priors,
-            varNames,
-            n_q,
-            n_alts,
-            max_iter,
-            n_draws,
-            null_prior,
-            label
-        )
-        result_list[[i]] <- result$design
-    }
+    # Find an efficient design
+    result <- optimize_design(
+        design,
+        profiles,
+        priors,
+        varNames,
+        n_questions,
+        n_alts,
+        max_iter,
+        n_draws,
+        null_prior,
+        label
+    )
 
     # Merge designs
-    design <- do.call(rbind, result_list)
+    design <- result$design
+    design <- set_block_ids(design, n_blocks)
     d_error <- cbc_d_error(design, priors)
 
     # Repeat the optimized design to match number of respondents
-    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
+    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks, randomize)
 
     # Print final D-error
-    eff <- (error_random - d_error) / d_error
     message(
-        "Efficient design found with D-error of ", round(d_error, 5),
-        ", which is ", scales::percent(eff, accuracy = 0.01), " more efficient ",
-        "than a random design"
+        "Efficient design found, D-error: ", round(d_error, 5)
     )
 
     return(design)

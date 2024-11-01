@@ -64,6 +64,7 @@ check_inputs_design <- function(
     no_choice,
     label,
     method,
+    randomize,
     priors,
     prior_no_choice,
     probs,
