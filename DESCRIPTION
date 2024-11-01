@@ -23,11 +23,8 @@ Suggests:
     testthat,
     tibble
 Imports:
-    AlgDesign,
-    DoE.base,
     fastDummies,
     ggplot2,
-    idefix,
     logitr (>= 1.0.1),
     MASS,
     parallel,

@@ -30,40 +30,22 @@
 #'   compatible with Bayesian D-efficient designs. If used, the `n_alts`
 #'   argument will be ignored as its value is defined by the unique number of
 #'   levels in the `label` variable. Defaults to `NULL`.
-#' @param method Choose the design method to use: `"random"`, `"full"`,
-#'   `"orthogonal"`, `"dopt"`, `"CEA"`, `"Modfed"`, or `"efficient"`.
+#' @param method Choose the design method to use `"random"` or `"efficient"`.
 #'   Defaults to `"random"`. See details below for complete description of each method.
 #' @param randomize Logical. If `TRUE`, both the choice question order and the order of the alternatives within a given choice question will be randomized across each respondent. Does not apply to design created using the `"random"` method. Defaults to `TRUE`.
 #' @param priors A list of one or more assumed prior parameters used to generate
 #'   a D-efficient or Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
-#' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting design
-#'   includes average predicted probabilities for each alternative in each
-#'   choice set given the sample from the prior preference distribution.
-#'   Defaults to `FALSE`.
-#' @param keep_d_eff If `TRUE`, for D-optimal designs (`method = "dopt"`) the
-#'   returned object will be a list containing the design and the D-efficiency
-#'   score. Defaults to `FALSE`.
-#' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the
-#'   returned object will be a list containing the design and the DB-error
-#'   score. Defaults to `FALSE`.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #'   iterations when searching for a D-efficient or Bayesian D-efficient design.
 #'   The default is 50.
-#' @param parallel Logical value indicating whether computations should be done
-#'   over multiple cores. The default is `FALSE`.
 #'
 #' @details The `method` argument determines the design method used. Options
 #'   are:
 #'
 #' - `"random"`: Creates a design by randomly sampling from profiles
-#' - `"full"`: Creates a full factorial design
-#' - `"orthogonal"`: Creates an orthogonal array design
-#' - `"dopt"`: Creates a D-optimal design
-#' - `"CEA"`: Creates a Bayesian D-efficient design using the CEA algorithm
-#' - `"Modfed"`: Creates a Bayesian D-efficient design using the Modified Federov algorithm
-#' - `"efficient"`: Creates a D-efficient design using sequential improvement
+#' - `"efficient"`: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the `priors` argument.
 #'
 #'   All methods ensure that the two following criteria are met:
 #'
@@ -73,43 +55,28 @@
 #'   The table below summarizes method compatibility with other design options:
 #'
 #'   Method        | No choice? | Labeled designs? | Restricted profiles? | Blocking?
-#'   --------------|------------|------------------|---------------------|----------
-#'   `"random"`    | Yes        | Yes             | Yes                 | No
-#'   `"full"`      | Yes        | Yes             | Yes                 | Yes
-#'   `"orthogonal"`| Yes        | No              | No                  | Yes
-#'   `"dopt"`      | Yes        | No              | Yes                 | Yes
-#'   `"CEA"`       | Yes        | No              | No                  | Yes
-#'   `"Modfed"`    | Yes        | No              | Yes                 | Yes
-#'   `"efficient"` | Yes        | No              | No                  | Yes
+#'   --------------|------------|------------------|----------------------|----------
+#'   `"random"`    | Yes        | Yes              | Yes                  | No
+#'   `"efficient"` | No         | Yes              | Yes                  | Yes
 #'
 #' The `"efficient"` method creates a design by sequentially improving D-efficiency:
 #' 1. Start with a random design
 #' 2. Compute initial D-error
-#' 3. For each question, alternative and attribute:
-#'    - Try all possible level changes
-#'    - Keep changes that improve D-error
-#' 4. Repeat until no further improvements or max iterations reached
+#' 3. For each question, alternative, and attribute:
+#'    - Try all possible level changes to the attribute.
+#'    - Keep changes that improve the D-error.
+#' 4. Repeat until no further improvements or max iterations are reached
 #'
 #' @return The returned `design` data frame contains a choice-based conjoint
 #' survey design where each row is an alternative. It includes the following
 #' columns:
 #'
 #' - `profileID`: Identifies the profile in `profiles`.
+#' - `blockID`: If blocking is used, identifies each unique block.
 #' - `respID`: Identifies each survey respondent.
 #' - `qID`: Identifies the choice question answered by the respondent.
 #' - `altID`: Identifies the alternative in any one choice observation.
 #' - `obsID`: Identifies each unique choice observation across all respondents.
-#' - `blockID`: If blocking is used, identifies each unique block.
-#'
-#' @references
-#' Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41
-#' \doi{10.18637/jss.v085.i05}
-#'
-#' Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
-#' \doi{10.18637/jss.v096.i03}
-#'
-#' Wheeler B (2022). _AlgDesign: Algorithmic Experimental Design_. R package version 1.2.1,
-#' \href{https://CRAN.R-project.org/package=AlgDesign}{https://CRAN.R-project.org/package=AlgDesign}.
 #'
 #' @export
 #' @examples
@@ -160,78 +127,58 @@ cbc_design <- function(
   randomize = TRUE,
   priors = NULL,
   prior_no_choice = NULL,
-  probs = FALSE,
-  keep_d_eff = FALSE,
-  keep_db_error = FALSE,
   max_iter = 50,
   parallel = FALSE
 ) {
-    method <- check_design_method(method, priors)
     profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
 
     check_inputs_design(
-        profiles,
-        n_resp,
-        n_alts,
-        n_q,
-        n_blocks,
-        n_draws,
-        n_start,
-        no_choice,
-        label,
-        method,
-        randomize,
-        priors,
-        prior_no_choice,
-        probs,
-        keep_d_eff,
-        keep_db_error,
-        max_iter,
-        parallel,
-        profiles_restricted
+      profiles,
+      n_resp,
+      n_alts,
+      n_q,
+      n_blocks,
+      n_draws,
+      n_start,
+      no_choice,
+      label,
+      method,
+      randomize,
+      priors,
+      prior_no_choice,
+      max_iter,
+      parallel
     )
 
     profiles <- as.data.frame(profiles)
 
-    # Blocks ignored for "random" method
-    if (method == "random" & n_blocks > 1) {
-      message("Blocking is ignored for random designs as each respondent sees a different set.")
-      n_blocks <- 1
+    if (method == "random") {
+      # Blocks ignored for "random" method
+      if (n_blocks > 1) {
+        message('Blocking is ignored for designs using the "random" method since each respondent sees a different set.')
+        n_blocks <- 1
+      }
+      # Priors ignored for "random" method
+      if (!is.null(priors)) {
+        message('priors are ignored for designs using the "random" method.')
+        priors <- NULL
+      }
     }
 
     # Start with a random design
     design_random <- make_design_random(
       profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
     )
-    varNames <- get_var_names(design_random)
 
-    if (method == 'random') {
-        return(design_random)
-    } else if (method == 'full') {
-        design <- make_design_full(
-            profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-        )
-    } else if (method == 'orthogonal') {
-        design <- make_design_orthogonal(
-            profiles, n_resp, n_alts, n_q, n_blocks, no_choice
-        )
-    } else if (method == 'dopt') {
-        design <- make_design_dopt(
-            profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
-        )
-    } else if (method == 'efficient') {
-        design <- make_design_efficient(
-          design_random, varNames, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter, label, randomize
-        )
+    if (method == 'efficient') {
+      design <- make_design_efficient(
+        design_random, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter, label, randomize
+      )
     } else {
-        design <- make_design_bayesian(
-            profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start,
-            no_choice, label, method, priors, prior_no_choice, probs,
-            keep_db_error, max_iter, parallel, profiles_restricted
-        )
+        design <- design_random
     }
 
-    if (no_choice && method != 'efficient') {
+    if (no_choice & (method != 'efficient')) {
         design <- add_no_choice(design, n_alts)
     }
 
@@ -580,368 +527,10 @@ override_label_alts <- function(profiles, label, n_alts) {
   return(n_alts)
 }
 
-# Full Factorial Design ----
-
-# Arrange copies of the full set of profiles into choice sets by sampling
-# without replacement
-
-make_design_full <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-) {
-  if (!is.null(label)) {
-    return(make_design_full_labeled(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-    ))
-  }
-  if (n_blocks > 1) {
-    # Make blocks
-    design <- suppressMessages(as.data.frame(DoE.base::fac.design(
-        factor.names = get_profile_list(profiles),
-        blocks = n_blocks,
-        block.name = "blockID"
-    )))
-    # Make blockID a number, then join on profileIDs
-    design$blockID <- as.numeric(as.character(design$blockID))
-    design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
-    profiles <- join_profiles(design, profiles)
-    # Create random choice sets within each block
-    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
-  } else {
-    choice_sets <- make_random_sets(profiles, n_alts)
-  }
-  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  return(design)
-}
-
-make_design_full_labeled <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-) {
-  n_alts <- override_label_alts(profiles, label, n_alts)
-  labels <- unique(profiles[,label])
-  profiles_orig <- profiles
-  # Remove the label column from profiles
-  profiles[label] <- NULL
-  profiles$profileID <- NULL
-  profiles <- profiles[!duplicated(profiles),]
-  profiles$profileID <- seq(nrow(profiles))
-  profiles <- profiles[c(
-    'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
-  if (n_blocks > 1) {
-    # Make blocks
-    design <- suppressMessages(as.data.frame(DoE.base::fac.design(
-      factor.names = get_profile_list(profiles),
-      blocks = n_blocks,
-      block.name = "blockID"
-    )))
-    # Make blockID a number, then join on profileIDs
-    design$blockID <- as.numeric(as.character(design$blockID))
-    design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
-    profiles <- join_profiles(design, profiles)
-    # Create random choice sets within each block
-    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
-  } else {
-    choice_sets <- make_random_sets(profiles, n_alts)
-  }
-  # Add label attribute and original profileIDs
-  choice_sets[label] <- rep(labels, nrow(choice_sets) / length(labels))
-  choice_sets$profileID <- NULL
-  choice_sets <- merge(choice_sets, profiles_orig, all.x = TRUE, sort = FALSE)
-  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  return(design)
-}
-
-# Orthogonal Design ----
-
-make_design_orthogonal <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice
-) {
-    # First obtain the orthogonal array
-    oa <- suppressMessages(as.data.frame(DoE.base::oa.design(
-      factor.names = get_profile_list(profiles)
-    )))
-    if (nrow(oa) == nrow(profiles)) {
-      message("No orthogonal array found; using full factorial for design")
-    } else {
-      message(
-        "Orthogonal array found; using ", nrow(oa), " out of ",
-        nrow(profiles), " profiles for design"
-      )
-    }
-    oa <- join_profiles(oa, profiles)
-    if (n_blocks > 1) {
-      q_per_resp <- nrow(oa) / n_blocks
-      if (q_per_resp %% 1 != 0) {
-        stop(
-          'The number of blocks used cannot be evenly divided into the ',
-          'orthogonal array. Use a different number for "n_blocks" that ',
-          'is as factor of ', nrow(oa)
-        )
-      }
-      if (q_per_resp < n_q) {
-        stop(
-          'The orthogonal array cannot be divided into ', n_blocks,
-          ' blocks such that each respondent sees ', n_q,
-          ' questions. Either decrease "n_blocks" or increase "n_q".'
-        )
-      }
-      oa$blockID <- rep(seq(n_blocks), each = q_per_resp)
-      # Create random choice sets within each block
-      choice_sets <- make_random_sets_by_block(oa, n_alts, n_blocks)
-    } else {
-      choice_sets <- make_random_sets(oa, n_alts)
-    }
-    design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-    if (no_choice) {
-      warning(
-        'Using a "no choice" option with orthogonal designs may damage the ',
-        'orthogonality properties.'
-      )
-      design <- add_no_choice(design, n_alts)
-    }
-    return(design)
-}
-
-# D-optimal Design ----
-
-make_design_dopt <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
-) {
-  # First obtain the d-optimal array
-  des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q*n_blocks)
-  d_eff <- des$Ge
-  profiles <- merge(des$design, profiles, all.x = TRUE)
-  profiles <- profiles[c(
-    'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
-  if (n_blocks > 1) {
-    profiles$blockID <- rep(seq(n_blocks), each = nrow(profiles) / n_blocks)
-    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
-  } else {
-    choice_sets <- make_random_sets(profiles, n_alts)
-  }
-  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  # Print D-efficiency
-  message("D-optimal design found with D-efficiency of ", round(d_eff, 5))
-
-  # Return list containing the design and DB error if keep_d_eff = TRUE
-  if (keep_d_eff) {
-    return(list(design = design, d_eff = d_eff))
-  }
-  return(design)
-}
-
-# Bayesian D-efficient Design ----
-
-make_design_bayesian <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
-    label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
-    parallel, profiles_restricted
-) {
-    # Set up levels and coding
-    profile_list <- get_profile_list(profiles)
-    type_ids <- get_type_ids(profiles)
-    lvl.names <- unname(profile_list)
-    lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
-    coding <- rep("C", length(lvls))
-    c.lvls <- NULL
-    if (any(type_ids$continuous)) {
-        c.lvls <- lvl.names[type_ids$continuous]
-    }
-    # lvl.names must be all characters for decoding process
-    lvl.names <- lapply(lvl.names, function(x) as.character(x))
-    if (any(type_ids$discrete)) {
-        coding[type_ids$discrete] <- "D"
-    }
-    no_choice_alt <- NULL
-    alt_cte <- rep(0, n_alts)
-    if (no_choice) {
-        n_alts <- n_alts + 1
-        alt_cte <- c(alt_cte, 1)
-        no_choice_alt <- n_alts
-    }
-
-    # Setup priors
-    profile_lvls <- profiles[, 2:ncol(profiles)]
-    varnames <- names(profile_lvls)
-    if (is.null(priors)) {
-        # No priors specified, so use all 0s
-        warning(
-            'Since the ', method, ' method is used but no priors were ',
-            'specified, a zero prior will be used (all coefficients set to 0)'
-        )
-        priors <- lapply(profile_list, function(x) rep(0, length(x) - 1))
-        priors[type_ids$continuous] <- 0
-    }
-    # Make sure order of priors matches order of attributes in profiles
-    mu <- unlist(priors[varnames])
-    if (no_choice) {
-        mu <- c(prior_no_choice, mu)
-    }
-    sigma <- diag(length(mu))
-    par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
-    n_alt_cte <- sum(alt_cte)
-    if (n_alt_cte >= 1) {
-        par_draws <- list(
-            par_draws[, 1:n_alt_cte],
-            par_draws[, (n_alt_cte + 1):ncol(par_draws)])
-    }
-
-    # Make the design
-    if (profiles_restricted & (method == "CEA")) {
-      # "CEA" method only works with unrestricted profile set
-      method <- "Modfed"
-      warning(
-        'The "CEA" algorithm requires the use of an unrestricted set of ',
-        'profiles, so "Modfed" is being used instead.\n'
-      )
-    }
-    if (method == "CEA") {
-        D <- idefix::CEA(
-            lvls = lvls,
-            coding = coding,
-            par.draws = par_draws,
-            c.lvls = c.lvls,
-            n.alts = n_alts,
-            n.sets = n_q*n_blocks,
-            no.choice = no_choice,
-            n.start = n_start,
-            alt.cte = alt_cte,
-            parallel = parallel
-        )
-    } else {
-        D <- idefix::Modfed(
-            cand.set = defineCandidateSet(
-              lvls, coding, c.lvls, profile_lvls, type_ids, profiles_restricted
-            ),
-            par.draws = par_draws,
-            n.alts = n_alts,
-            n.sets = n_q*n_blocks,
-            no.choice = no_choice,
-            n.start = n_start,
-            alt.cte = alt_cte,
-            parallel = parallel
-        )
-    }
-
-    # Decode the design
-    design_raw <- idefix::Decode(
-        des = D$design,
-        n.alts = n_alts,
-        alt.cte = alt_cte,
-        lvl.names = lvl.names,
-        c.lvls = c.lvls,
-        coding = coding,
-        no.choice = no_choice_alt
-    )
-
-    # Join on profileIDs to design
-    design <- design_raw$design
-    names(design) <- varnames
-    design <- join_profiles(design, profiles)
-
-    if (no_choice) {
-      design <- add_no_choice_bayesian(design, n_alts, varnames[type_ids$discrete])
-    }
-
-    if (probs) {
-      design$probs <- as.vector(t(D$probs))
-    }
-
-    design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
-
-    # Repeat design to match number of respondents
-    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
-
-    # Print DB error
-    message(
-        "Bayesian D-efficient design found with DB-error of ",
-        round(D$error, 5)
-    )
-
-    # Return list containing the design and DB error if keep_db_error = TRUE
-    if (keep_db_error) {
-        return(list(design = design, db_err = D$error))
-    }
-
-    return(design)
-}
-
-defineCandidateSet <- function(
-    lvls, coding, c.lvls, profile_lvls, type_ids, profiles_restricted
-) {
-  # Make candidate set with profiles, assuming non-restricted
-  cand_set <- idefix::Profiles(
-    lvls = lvls,
-    coding = coding,
-    c.lvls = c.lvls
-  )
-  if (!profiles_restricted) { return(cand_set) }
-
-  # If restricted, need to manually dummy-code profiles to avoid
-  # including restricted profiles
-  cand_set_res <- fastDummies::dummy_cols(
-    profile_lvls,
-    select_columns = names(profile_lvls)[type_ids$discrete],
-    remove_first_dummy = TRUE,
-    remove_selected_columns = TRUE
-  )
-  name_order <- names(profile_lvls)
-  names_coded <- names(cand_set_res)
-  cols <- c()
-  for (i in seq_len(length(coding))) {
-    if (coding[i] == "C") {
-      name_match <- name_order[i]
-    } else {
-      name_match <- names_coded[grepl(paste0(name_order[i], "_"), names_coded)]
-    }
-    cols <- c(cols, name_match)
-  }
-  cand_set_res <- cand_set_res[,cols]
-  names(cand_set_res) <- colnames(cand_set)
-  cand_set_res <- as.matrix(cand_set_res)
-  row.names(cand_set_res) <- seq(nrow(cand_set_res))
-  return(cand_set_res)
-}
-
-add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
-  # First dummy code categorical variables
-  design$obsID <- rep(seq(nrow(design) / n_alts), each = n_alts)
-  design$altID <- rep(seq(n_alts), nrow(design) / n_alts)
-  design <- design[which(design$altID != n_alts), ]
-  design <- fastDummies::dummy_cols(
-    design,
-    select_columns = varnames_discrete,
-    remove_first_dummy = TRUE
-  )
-  design <- design[,which(! names(design) %in% varnames_discrete)]
-  design$no_choice <- 0
-  # Insert dummy-coded outside good rows
-  design_og <- design[which(design$altID == 1), ]
-  design_og$altID <- n_alts
-  design_og$profileID <- 0
-  design_og[,
-            which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
-  design_og$no_choice <- 1
-  design <- rbind(design, design_og)
-  design <- design[order(design$obsID, design$altID), ]
-  design[,c('altID', 'obsID')] <- NULL
-  return(design)
-}
-
-
 # Efficient Design ----
 
 make_design_efficient <- function(
     design_random,
-    varNames,
     profiles,
     n_resp,
     n_alts,
@@ -955,6 +544,7 @@ make_design_efficient <- function(
 ) {
     # Start with random design
     design <- design_random
+    varNames <- get_var_names(design)
 
     # Get random subsets to start for each block
     design <- design[which(design_random$respID %in% seq(n_blocks)),]
@@ -964,7 +554,7 @@ make_design_efficient <- function(
     # Define the prior model
     null_prior <- FALSE
     if (is.null(priors)) {
-        priors <- setup_null_priors(design, get_var_names(design))
+        priors <- setup_null_priors(design, varNames)
         null_prior <- TRUE
     }
 

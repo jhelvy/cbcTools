@@ -11,10 +11,6 @@
   )
 }
 
-method_is_bayesian <- function(method) {
-    return(method %in% c('CEA', 'Modfed'))
-}
-
 get_id_names <- function() {
     return(c("profileID", "blockID", "respID", "qID", "altID", "obsID"))
 }

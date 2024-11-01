@@ -26,33 +26,6 @@ check_inputs_restrict <- function(profiles) {
   }
 }
 
-# Update the check_design_method function to include the efficient method
-check_design_method <- function(method, priors) {
-    # Add 'efficient' to valid methods
-    if (!method %in% c(
-        'random', 'full', 'orthogonal', 'dopt', 'CEA', 'Modfed', 'efficient'
-    )) {
-        stop(
-            'The "method" argument must be set to "random", "full", ',
-            '"orthogonal", "dopt", "CEA", "Modfed", or "efficient"'
-        )
-    }
-
-    # Check that a Bayesian method is used if priors are used
-    if (!is.null(priors)) {
-        if (!method_is_bayesian(method) && method != 'efficient') {
-            warning(
-                'Since "priors" are specified, the "method" must be either "CEA", ',
-                '"Modfed", or "efficient". The specified "method" is being ignored and set to ',
-                '"efficient"\n'
-            )
-            method <- 'efficient'
-        }
-    }
-
-    return(method)
-}
-
 check_inputs_design <- function(
     profiles,
     n_resp,
@@ -67,12 +40,8 @@ check_inputs_design <- function(
     randomize,
     priors,
     prior_no_choice,
-    probs,
-    keep_d_eff,
-    keep_db_error,
     max_iter,
-    parallel,
-    profiles_restricted
+    parallel
 ) {
 
     # Checks on blocking
@@ -85,34 +54,10 @@ check_inputs_design <- function(
       stop("Maximum allowable number of blocks is one block per respondent")
     }
 
-    if ((method == 'full') & profiles_restricted) {
-      stop(
-        'The "full" method cannot use restricted profiles when blocking ',
-        'is used. Either set "n_blocks" to 1 or use an unrestricted ',
-        'set of profiles'
-      )
-    }
+    # Check on proper method arg
 
-    # Checks on labeled designs
-
-    if (!is.null(label)) {
-      if (!method %in% c('random', 'full', 'efficient')) {
-        stop(
-          'Labeled designs are currently only supported with the "random", ',
-          '"full", and "efficient" methods.'
-        )
-      }
-    }
-
-    # Check on restricted profile sets
-
-    if (profiles_restricted) {
-      if (!method %in% c('random', 'full', 'dopt', 'Modfed')) {
-        stop(
-          'Restricted profile sets can only be used with the "random", "full" ',
-          '"dopt", or "Modfed" methods'
-        )
-      }
+    if (!method %in% c('random', 'efficient')) {
+      stop('The "method" argument must be set to "random" or "efficient"')
     }
 
     # Check that priors are appropriate if specified
@@ -124,43 +69,43 @@ check_inputs_design <- function(
 
       if (no_choice & is.null(prior_no_choice)) {
         stop(
-          'If "no_choice = TRUE" with the "CEA" or "Modfed" method, you must ',
+          'If "no_choice = TRUE", you must ',
           'specify the prior utility for the "no choice" option using ',
           '"prior_no_choice"'
         )
       }
 
-        # Check that prior names aren't missing
-        prior_names <- names(priors)
-        profile_lvls <- profiles[,2:ncol(profiles)]
-        missing <- setdiff(names(profile_lvls), prior_names)
-        if (length(missing) > 0) {
-            stop(
-                '"priors" is missing the following variables: \n\n',
-                paste(missing, collapse = "\n")
-            )
-        }
+      # Check that prior names aren't missing
+      prior_names <- names(priors)
+      profile_lvls <- profiles[,2:ncol(profiles)]
+      missing <- setdiff(names(profile_lvls), prior_names)
+      if (length(missing) > 0) {
+          stop(
+              '"priors" is missing the following variables: \n\n',
+              paste(missing, collapse = "\n")
+          )
+      }
 
-        # Check that prior levels aren't missing
-        type_ids <- get_type_ids(profiles)
-        for (id in which(type_ids$discrete)) {
-            n_lvls <- length(unique(profile_lvls[,id])) - 1
-            if (length(priors[[id]]) != n_lvls) {
-                stop(
-                    'Invalid number of values provided in "priors" for the "',
-                    prior_names[id], '" attribute. Please provide ', n_lvls,
-                    ' values'
-                )
-            }
-        }
-        for (id in which(type_ids$continuous)) {
-            if (length(priors[[id]]) != 1) {
-                stop(
-                    'Invalid number of values provided in "priors" for the "',
-                    prior_names[id], '" attribute. Please provide 1 value'
-                )
-            }
-        }
+      # Check that prior levels aren't missing
+      type_ids <- get_type_ids(profiles)
+      for (id in which(type_ids$discrete)) {
+          n_lvls <- length(unique(profile_lvls[,id])) - 1
+          if (length(priors[[id]]) != n_lvls) {
+              stop(
+                  'Invalid number of values provided in "priors" for the "',
+                  prior_names[id], '" attribute. Please provide ', n_lvls,
+                  ' values'
+              )
+          }
+      }
+      for (id in which(type_ids$continuous)) {
+          if (length(priors[[id]]) != 1) {
+              stop(
+                  'Invalid number of values provided in "priors" for the "',
+                  prior_names[id], '" attribute. Please provide 1 value'
+              )
+          }
+      }
     }
 
     # Check that the number of alternatives per observation is larger than
