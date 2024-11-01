@@ -190,6 +190,12 @@ cbc_design <- function(
 
     profiles <- as.data.frame(profiles)
 
+    # Blocks ignored for "random" method
+    if (method == "random" & n_blocks > 1) {
+      message("Blocks are ignored for random designs as each respondent sees a different set")
+      n_blocks <- 1
+    }
+
     # Start with a random design
     design_random <- make_design_random(
       profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
