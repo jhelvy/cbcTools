@@ -106,18 +106,6 @@ sim_choices_rand <- function(design, obsID) {
 }
 
 sim_choices_prior <- function(design, obsID, priors, n_draws) {
-  # # Add random choices
-  # design <- sim_choices_rand(design, obsID)
-  # # Estimate a 1-iteration model to get the model object prepared
-  # suppressMessages(model <- logitr::logitr(
-  #   data  = design,
-  #   obsID = obsID,
-  #   outcome = 'choice',
-  #   pars  = names(priors),
-  #   options = list(maxeval = 1)
-  # ))
-  # # Update model coefficients
-  # model$coefficients
   model <- def_model_prior(design, priors, n_draws)
   result <- stats::predict(
     object     = model,
