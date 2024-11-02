@@ -17,21 +17,21 @@
 #' @return A structured prior specification object
 #' @export
 #' @examples
-# # Create profiles for an example conjoint about apples
-# profiles <- cbc_profiles(
-#   price     = c(1, 1.5, 2, 2.5, 3),
-#   type      = c("Fuji", "Gala", "Honeycrisp"),
-#   freshness = c("Poor", "Average", "Excellent")
-# )
-#
-# # Example 1: Simple fixed parameters with unnamed vectors
-# priors <- cbc_priors(
-#   profiles = profiles,
-#   price = -0.5,
-#   type = c(0.2, 0.3),          # Dummy-coded categorical
-#   freshness = c(0.4, 0.8)      # Dummy-coded categorical
-# )
-
+#' # Create profiles for an example conjoint about apples
+#' profiles <- cbc_profiles(
+#'   price     = c(1, 1.5, 2, 2.5, 3),
+#'   type      = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c("Poor", "Average", "Excellent")
+#' )
+#'
+#' # Example 1: Simple fixed parameters with unnamed vectors
+#' priors <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.5,
+#'   type = c(0.2, 0.3),          # Dummy-coded categorical
+#'   freshness = c(0.4, 0.8)      # Dummy-coded categorical
+#' )
+#'
 #' # Example 2: Using named vectors for categorical variables
 #' priors <- cbc_priors(
 #'   profiles = profiles,

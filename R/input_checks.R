@@ -37,109 +37,121 @@ check_inputs_design <- function(
     no_choice,
     label,
     method,
-    randomize,
+    randomize_questions,
+    randomize_alts,
     priors,
     prior_no_choice,
     max_iter,
     parallel
 ) {
 
-    # Checks on blocking
+  # Checks on blocking
 
-    if (n_blocks < 1) {
-      stop('n_blocks must be greater than or equal to 1')
-    }
+  if (n_blocks < 1) {
+    stop('n_blocks must be greater than or equal to 1')
+  }
 
-    if (n_blocks > n_resp) {
-      stop("Maximum allowable number of blocks is one block per respondent")
-    }
+  if (n_blocks > n_resp) {
+    stop("Maximum allowable number of blocks is one block per respondent")
+  }
 
-    # Check on proper method arg
+  # Check on proper method arg
 
-    if (!method %in% c('random', 'efficient')) {
-      stop('The "method" argument must be set to "random" or "efficient"')
-    }
+  if (!method %in% c('random', 'sequential')) {
+    stop('The "method" argument must be set to "random" or "sequential"')
+  }
 
-    # Check that priors are appropriate if specified
+  # Check that randomize parameters are logical
 
-    if (!is.null(priors)) {
+  if (!is.logical(randomize_questions)) {
+      stop("randomize_questions must be TRUE or FALSE")
+  }
+  if (!is.logical(randomize_alts)) {
+      stop("randomize_alts must be TRUE or FALSE")
+  }
 
-      # If using a Bayesian D-efficient design with a no choice option,
-      # user must specify a value for prior_no_choice
+  # Check that priors are appropriate if specified
 
-      if (no_choice & is.null(prior_no_choice)) {
-        stop(
-          'If "no_choice = TRUE", you must ',
-          'specify the prior utility for the "no choice" option using ',
-          '"prior_no_choice"'
-        )
-      }
+  if (!is.null(priors)) {
 
-      # Check that prior names aren't missing
-      prior_names <- names(priors)
-      profile_lvls <- profiles[,2:ncol(profiles)]
-      missing <- setdiff(names(profile_lvls), prior_names)
-      if (length(missing) > 0) {
-          stop(
-              '"priors" is missing the following variables: \n\n',
-              paste(missing, collapse = "\n")
-          )
-      }
+    # If using a D-efficient design with a no choice option in the priors,
+    # user must specify a value for prior_no_choice
 
-      # Check that prior levels aren't missing
-      type_ids <- get_type_ids(profiles)
-      for (id in which(type_ids$discrete)) {
-          n_lvls <- length(unique(profile_lvls[,id])) - 1
-          if (length(priors[[id]]) != n_lvls) {
-              stop(
-                  'Invalid number of values provided in "priors" for the "',
-                  prior_names[id], '" attribute. Please provide ', n_lvls,
-                  ' values'
-              )
-          }
-      }
-      for (id in which(type_ids$continuous)) {
-          if (length(priors[[id]]) != 1) {
-              stop(
-                  'Invalid number of values provided in "priors" for the "',
-                  prior_names[id], '" attribute. Please provide 1 value'
-              )
-          }
-      }
-    }
-
-    # Check that the number of alternatives per observation is larger than
-    # the number of unique profiles
-    if (n_alts > nrow(profiles)) {
+    if (no_choice & is.null(prior_no_choice)) {
       stop(
-        'The number of alternatives per observation, specified by "n_alts", ',
-        "is larger than the number of unique profiles. Either decrease ",
-        '"n_alts" to be less than ', nrow(profiles), " or add more ",
-        "attributes / levels to increase the number of profiles."
+        'If "no_choice = TRUE", you must ',
+        'specify the prior utility for the "no choice" option using ',
+        '"prior_no_choice"'
       )
     }
 
-    # Check that number of questions per respondents is larger than the
-    # unique number of choice sets
-    if (n_q > floor(nrow(profiles) / n_alts)) {
-        # The first if statement is because the next one only matters with a
-        # small number of profiles, so most cases where n is large the next
-        # if statement isn't necessary. If the number of profiles is too large,
-        # the next if statement will error because R integers have a maximum
-        # value of 2^31 - 1. See this issue:
-        # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
-        n <- nrow(profiles)
-        k <- n_alts
-        ncomb <- choose(n, k) # More robust
-        # ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
-        if (n_q > ncomb) {
-          stop(
-            'The number of questions per respondent, specified by "n_q", ',
-            "is larger than the number of unique sets of choice sets. ",
-            'You can correct this by decreasing "n_q" to be less than ',
-            ncomb, ', decreasing "n_alts", or add more attributes / levels ',
-            "to increase the number of choice set combinations."
-          )
+    # Check that prior names aren't missing
+    attr_info <- get_attribute_info(profiles)
+    prior_names <- names(attr_info)
+    profile_lvls <- profiles[,2:ncol(profiles)]
+    missing <- setdiff(names(profile_lvls), prior_names)
+    if (length(missing) > 0) {
+        stop(
+            '"priors" is missing the following variables: \n\n',
+            paste(missing, collapse = "\n")
+        )
+    }
+
+    # Check that prior levels aren't missing
+    type_ids <- get_type_ids(profiles)
+    prior_means <- priors$means
+    for (id in which(type_ids$discrete)) {
+        n_lvls <- length(unique(profile_lvls[,id])) - 1
+        if (length(prior_means[[id]]) != n_lvls) {
+            stop(
+                'Invalid number of values provided in "priors" for the "',
+                prior_names[id], '" attribute. Please provide ', n_lvls,
+                ' values'
+            )
         }
     }
+    for (id in which(type_ids$continuous)) {
+        if (length(prior_means[[id]]) != 1) {
+            stop(
+                'Invalid number of values provided in "priors" for the "',
+                prior_names[id], '" attribute. Please provide 1 value'
+            )
+        }
+    }
+  }
+
+  # Check that the number of alternatives per observation is larger than
+  # the number of unique profiles
+  if (n_alts > nrow(profiles)) {
+    stop(
+      'The number of alternatives per observation, specified by "n_alts", ',
+      "is larger than the number of unique profiles. Either decrease ",
+      '"n_alts" to be less than ', nrow(profiles), " or add more ",
+      "attributes / levels to increase the number of profiles."
+    )
+  }
+
+  # Check that number of questions per respondents is larger than the
+  # unique number of choice sets
+  if (n_q > floor(nrow(profiles) / n_alts)) {
+      # The first if statement is because the next one only matters with a
+      # small number of profiles, so most cases where n is large the next
+      # if statement isn't necessary. If the number of profiles is too large,
+      # the next if statement will error because R integers have a maximum
+      # value of 2^31 - 1. See this issue:
+      # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
+      n <- nrow(profiles)
+      k <- n_alts
+      ncomb <- choose(n, k) # More robust
+      # ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
+      if (n_q > ncomb) {
+        stop(
+          'The number of questions per respondent, specified by "n_q", ',
+          "is larger than the number of unique sets of choice sets. ",
+          'You can correct this by decreasing "n_q" to be less than ',
+          ncomb, ', decreasing "n_alts", or add more attributes / levels ',
+          "to increase the number of choice set combinations."
+        )
+      }
+  }
 }

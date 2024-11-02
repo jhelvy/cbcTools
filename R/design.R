@@ -2,9 +2,9 @@
 #'
 #' This function creates a data frame containing a choice-based conjoint survey
 #' design where each row is an alternative. Generate a variety of survey
-#' designs, including full factorial designs, orthogonal designs, D-efficient designs,
-#' and Bayesian D-efficient designs as well as designs with "no choice" options
-#' and "labeled" (also known as "alternative specific") designs.
+#' designs, including random design, D-efficient designs, and Bayesian
+#' D-efficient designs as well as designs with "no choice" options, blocking,
+#' and "labeled" designs (also known as "alternative specific" designs).
 #'
 #' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
 #' @param profiles A data frame in which each row is a possible profile. This
@@ -12,27 +12,30 @@
 #' @param n_resp Number of survey respondents.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used in Orthogonal or Bayesian D-efficient
+#' @param n_blocks Number of blocks used D-efficient or Bayesian D-efficient
 #'   designs. Max allowable is one block per respondent. Defaults to `1`,
 #'   meaning every respondent sees the same choice set.
 #' @param n_draws Number of draws used in simulating the prior distribution used
 #'   in Bayesian D-efficient designs. Defaults to `100`.
 #' @param n_start A numeric value indicating the number of random start designs
-#'   to use in obtaining a Bayesian D-efficient design. The default is `5`.
-#'   Increasing `n_start` can result in a more efficient design at the expense
-#'   of increased computational time.
+#'   to use in obtaining a D-efficient or Bayesian D-efficient design.
+#'   The default is `1`. Increasing `n_start` can result in a more efficient
+#'   design at the expense of increased computational time.
 #' @param no_choice Include a "no choice" option in the choice sets? Defaults to
 #'   `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #'   one more than the provided `n_alts` argument.
 #' @param label The name of the variable to use in a "labeled" design (also
-#'   called an "alternative-specific design") such that each set of alternatives
-#'   contains one of each of the levels in the `label` attribute. Currently not
-#'   compatible with Bayesian D-efficient designs. If used, the `n_alts`
-#'   argument will be ignored as its value is defined by the unique number of
-#'   levels in the `label` variable. Defaults to `NULL`.
-#' @param method Choose the design method to use `"random"` or `"efficient"`.
-#'   Defaults to `"random"`. See details below for complete description of each method.
-#' @param randomize Logical. If `TRUE`, both the choice question order and the order of the alternatives within a given choice question will be randomized across each respondent. Does not apply to design created using the `"random"` method. Defaults to `TRUE`.
+#'   called an "alternative-specific" design) such that each set of alternatives
+#'   contains one of each of the levels in the `label` attribute. If used, the
+#'   `n_alts` argument will be ignored as its value is defined by the unique
+#'   number of levels in the `label` attribute Defaults to `NULL`.
+#' @param method Choose the design method to use. Options include `"random"`
+#'   and `"sequential"`. Defaults to `"random"`. See details below for complete
+#'   description of each method.
+#' @param randomize Logical. If `TRUE`, both the choice question order and the
+#'   order of the alternatives within a given choice question will be
+#'   randomized across each respondent. Does not apply to design created using
+#'   the `"random"` method. Defaults to `TRUE`.
 #' @param priors A list of one or more assumed prior parameters used to generate
 #'   a D-efficient or Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
@@ -45,7 +48,7 @@
 #'   are:
 #'
 #' - `"random"`: Creates a design by randomly sampling from profiles
-#' - `"efficient"`: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the `priors` argument.
+#' - `"sequential"`: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the `priors` argument that include a covariance matrix.
 #'
 #'   All methods ensure that the two following criteria are met:
 #'
@@ -57,9 +60,9 @@
 #'   Method        | No choice? | Labeled designs? | Restricted profiles? | Blocking?
 #'   --------------|------------|------------------|----------------------|----------
 #'   `"random"`    | Yes        | Yes              | Yes                  | No
-#'   `"efficient"` | No         | Yes              | Yes                  | Yes
+#'   `"sequential"` | No         | Yes              | Yes                  | Yes
 #'
-#' The `"efficient"` method creates a design by sequentially improving D-efficiency:
+#' The `"sequential"` method creates a design by sequentially improving D-efficiency:
 #' 1. Start with a random design
 #' 2. Compute initial D-error
 #' 3. For each question, alternative, and attribute:
@@ -104,81 +107,102 @@
 #'   freshness = c(0.4, 0.8)
 #' )
 #'
-#' # Make an efficient design with priors
+#' # Make a D-efficient design with priors using the "sequential" method
 #' design <- cbc_design(
 #'   profiles = profiles,
 #'   n_resp = 100,
 #'   n_alts = 3,
 #'   n_q = 6,
-#'   method = "efficient",
+#'   method = "sequential",
 #'   priors = priors
 #' )
 cbc_design <- function(
-  profiles,
-  n_resp,
-  n_alts,
-  n_q,
-  n_blocks = 1,
-  n_draws = 100,
-  n_start = 5,
-  no_choice = FALSE,
-  label = NULL,
-  method = "random",
-  randomize = TRUE,
-  priors = NULL,
-  prior_no_choice = NULL,
-  max_iter = 50,
-  parallel = FALSE
+    profiles,
+    n_resp,
+    n_alts,
+    n_q,
+    n_blocks = 1,
+    n_draws = 100,
+    n_start = 5,
+    no_choice = FALSE,
+    label = NULL,
+    method = "random",
+    randomize_questions = TRUE,
+    randomize_alts = TRUE,
+    priors = NULL,
+    prior_no_choice = NULL,
+    max_iter = 50,
+    parallel = FALSE
 ) {
     profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
 
     check_inputs_design(
-      profiles,
-      n_resp,
-      n_alts,
-      n_q,
-      n_blocks,
-      n_draws,
-      n_start,
-      no_choice,
-      label,
-      method,
-      randomize,
-      priors,
-      prior_no_choice,
-      max_iter,
-      parallel
+        profiles,
+        n_resp,
+        n_alts,
+        n_q,
+        n_blocks,
+        n_draws,
+        n_start,
+        no_choice,
+        label,
+        method,
+        randomize_questions,
+        randomize_alts,
+        priors,
+        prior_no_choice,
+        max_iter,
+        parallel
     )
 
     profiles <- as.data.frame(profiles)
 
+    # Overrides ----
+
+    # Override randomize_alts for labeled designs
+    if (!is.null(label) & randomize_alts & method != 'random') {
+        message(
+          "Alternative order randomization is disabled for labeled designs.\n",
+          "Setting randomize_alts <- FALSE\n")
+        randomize_alts <- FALSE
+    }
+
+    # Override n_blocks and priors for method = "random"
     if (method == "random") {
-      # Blocks ignored for "random" method
-      if (n_blocks > 1) {
-        message('Blocking is ignored for designs using the "random" method since each respondent sees a different set.')
-        n_blocks <- 1
-      }
-      # Priors ignored for "random" method
-      if (!is.null(priors)) {
-        message('priors are ignored for designs using the "random" method.')
-        priors <- NULL
-      }
+        # Blocks ignored for "random" method
+        if (n_blocks > 1) {
+            message(
+                'Blocking is ignored for designs using the "random" method ',
+                'since each respondent sees a different set.\n',
+                "Setting n_blocks <- 1\n"
+            )
+            n_blocks <- 1
+        }
+        # Priors ignored for "random" method
+        if (!is.null(priors)) {
+            message(
+                'priors are ignored for designs using the "random" method.\n',
+                "Setting prior <- NULL\n"
+            )
+            priors <- NULL
+        }
     }
 
     # Start with a random design
     design_random <- make_design_random(
-      profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
+        profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
     )
 
-    if (method == 'efficient') {
-      design <- make_design_efficient(
-        design_random, profiles, n_resp, n_alts, n_q, n_draws, n_blocks, priors, max_iter, label, randomize
-      )
+    if (method == 'sequential') {
+        design <- make_design_sequential(
+            design_random, profiles, n_resp, n_alts, n_q, n_draws, n_blocks,
+            priors, max_iter, label, randomize_questions, randomize_alts
+        )
     } else {
         design <- design_random
     }
 
-    if (no_choice & (method != 'efficient')) {
+    if (no_choice & (method != 'sequential')) {
         design <- add_no_choice(design, n_alts)
     }
 
@@ -363,70 +387,89 @@ sample_random_sets <- function(profiles, n_alts, n_q) {
   return(sets)
 }
 
-repeat_sets <- function(choice_sets, n_resp, n_alts, n_q, n_blocks, randomize) {
-  # Repeat choice sets to match number of respondents
-  if (n_blocks > 1) {
-    choice_sets <- split(choice_sets, choice_sets$blockID)
-    n_resp_block <- ceiling(n_resp / n_blocks)
-    n_reps <- ceiling(n_resp_block / (nrow(choice_sets[[1]]) / n_alts / n_q))
-    design <- list()
-    for (i in seq_len(n_blocks)) {
-      set <- choice_sets[[i]]
-      temp <- set[rep(seq_len(nrow(set)), n_reps), ]
-      design[[i]] <- temp[1:(n_resp_block*n_q*n_alts), ]
+# Updated repeat_sets function to handle separate randomization options
+repeat_sets <- function(
+    choice_sets,
+    n_resp,
+    n_alts,
+    n_q,
+    n_blocks,
+    randomize_questions,
+    randomize_alts
+) {
+    # Repeat choice sets to match number of respondents
+    if (n_blocks > 1) {
+        choice_sets <- split(choice_sets, choice_sets$blockID)
+        n_resp_block <- ceiling(n_resp / n_blocks)
+        n_reps <- ceiling(n_resp_block / (nrow(choice_sets[[1]]) / n_alts / n_q))
+        design <- list()
+        for (i in seq_len(n_blocks)) {
+            set <- choice_sets[[i]]
+            temp <- set[rep(seq_len(nrow(set)), n_reps), ]
+            design[[i]] <- temp[1:(n_resp_block*n_q*n_alts), ]
+        }
+        design <- do.call(rbind, design)
+    } else {
+        design <- choice_sets[rep(seq_len(nrow(choice_sets)), n_resp), ]
     }
-    design <- do.call(rbind, design)
-  } else {
-    design <- choice_sets[rep(seq_len(nrow(choice_sets)), n_resp), ]
-  }
-  design <- design[1:(n_resp*n_q*n_alts), ]
-  design <- add_metadata(design, n_resp, n_alts, n_q)
+    design <- design[1:(n_resp*n_q*n_alts), ]
+    design <- add_metadata(design, n_resp, n_alts, n_q)
 
-  # Randomize question and alternative order if requested
-  if (randomize) {
-    return(randomize_design(design, n_resp, n_alts, n_q, n_blocks))
-  }
+    # Randomize question and/or alternative order if requested
+    if (randomize_questions | randomize_alts) {
+        design <- randomize_design(
+            design, n_resp, n_alts, n_q, n_blocks,
+            randomize_questions, randomize_alts
+        )
+    }
 
-  return(design)
+    return(design)
 }
 
-randomize_design <- function(design, n_resp, n_alts, n_q, n_blocks) {
-  # Split design by respondent
-  resp_designs <- split(design, design$respID)
+randomize_design <- function(
+    design, n_resp, n_alts, n_q, n_blocks,
+    randomize_questions, randomize_alts
+) {
+    # Split design by respondent
+    resp_designs <- split(design, design$respID)
 
-  # For each respondent
-  for (r in seq_along(resp_designs)) {
-    resp_design <- resp_designs[[r]]
+    # For each respondent
+    for (r in seq_along(resp_designs)) {
+        resp_design <- resp_designs[[r]]
 
-    # Randomize question order
-    new_q_order <- sample(1:n_q)
+        # Randomize question order if requested
+        if (randomize_questions) {
+            new_q_order <- sample(1:n_q)
 
-    # Create mapping from old to new question order
-    q_map <- data.frame(
-      old_qID = seq(n_q),
-      new_qID = new_q_order
-    )
+            # Create mapping from old to new question order
+            q_map <- data.frame(
+                old_qID = seq(n_q),
+                new_qID = new_q_order
+            )
 
-    # Update question IDs
-    resp_design$qID <- q_map$new_qID[match(resp_design$qID, q_map$old_qID)]
+            # Update question IDs
+            resp_design$qID <- q_map$new_qID[match(resp_design$qID, q_map$old_qID)]
+        }
 
-    # For each question, randomize alternative order
-    for (q in 1:n_q) {
-      q_rows <- which(resp_design$qID == q)
-      new_alt_order <- sample(1:n_alts)
-      resp_design$altID[q_rows] <- new_alt_order
+        # Randomize alternative order if requested
+        if (randomize_alts) {
+            for (q in 1:n_q) {
+                q_rows <- which(resp_design$qID == q)
+                new_alt_order <- sample(1:n_alts)
+                resp_design$altID[q_rows] <- new_alt_order
+            }
+        }
+
+        resp_designs[[r]] <- resp_design
     }
 
-    resp_designs[[r]] <- resp_design
-  }
+    # Recombine designs and update obsID
+    design <- do.call(rbind, resp_designs)
+    design <- design[order(design$respID, design$qID, design$altID), ]
+    design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
+    row.names(design) <- NULL
 
-  # Recombine designs and update obsID
-  design <- do.call(rbind, resp_designs)
-  design <- design[order(design$respID, design$qID, design$altID), ]
-  design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
-  row.names(design) <- NULL
-
-  return(design)
+    return(design)
 }
 
 # Random Design ----
@@ -527,9 +570,9 @@ override_label_alts <- function(profiles, label, n_alts) {
   return(n_alts)
 }
 
-# Efficient Design ----
+# Sequential D-Efficient Design ----
 
-make_design_efficient <- function(
+make_design_sequential <- function(
     design_random,
     profiles,
     n_resp,
@@ -540,7 +583,8 @@ make_design_efficient <- function(
     priors,
     max_iter,
     label,
-    randomize
+    randomize_questions,
+    randomize_alts
 ) {
     # Start with random design
     design <- design_random
@@ -578,11 +622,15 @@ make_design_efficient <- function(
     d_error <- cbc_d_error(design, priors)
 
     # Repeat the optimized design to match number of respondents
-    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks, randomize)
+    design <- repeat_sets(
+        design, n_resp, n_alts, n_q, n_blocks,
+        randomize_questions, randomize_alts
+    )
 
     # Print final D-error
     message(
-        "Efficient design found, D-error: ", round(d_error, 5)
+        "Efficient design found using the sequential method\n",
+        "D-error: ", round(d_error, 5)
     )
 
     return(design)
