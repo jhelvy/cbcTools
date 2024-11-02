@@ -4,12 +4,27 @@
 \alias{cbc_priors}
 \title{Create prior specifications for CBC models}
 \usage{
-cbc_priors(..., sd = NULL, correlation = NULL, distribution = NULL)
+cbc_priors(
+  profiles,
+  mean,
+  sd = NULL,
+  correlation = NULL,
+  distribution = NULL,
+  n_draws = 100
+)
 }
 \arguments{
-\item{...}{Named arguments for each parameter's priors. For continuous variables,
-provide a single value. For categorical variables, provide a vector of values
-one less than the number of levels (dummy coding).}
+\item{profiles}{A data frame of profiles created by cbc_profiles()}
+
+\item{mean}{A named list where each element specifies the mean prior for an attribute:
+\itemize{
+\item For continuous variables, provide a single value
+\item For categorical variables, provide either:
+\itemize{
+\item An unnamed vector of values one less than the number of levels (dummy coding)
+\item A named vector mapping specific levels to coefficients (remaining level becomes reference)
+}
+}}
 
 \item{sd}{Optional named list of standard deviations for random parameters}
 
@@ -19,62 +34,53 @@ one less than the number of levels (dummy coding).}
 parameters ("normal" or "lognormal")}
 }
 \value{
-A structured prior specification object
+A structured prior specification object including a logitr model object
 }
 \description{
 Creates a standardized prior specification object for use in CBC analysis
-functions like cbc_choices() and cbc_d_error().
+functions like cbc_choices() and cbc_d_error(). Supports both named and unnamed
+vectors for categorical attributes, where named vectors explicitly map levels
+to coefficients.
 }
 \examples{
-# Example 1: Simple fixed parameters
-priors <- cbc_priors(
-  price = -0.5,
-  type = c(0.2, 0.3),          # Dummy-coded categorical
-  freshness = c(0.4, 0.8)      # Dummy-coded categorical
+# Create profiles for an example conjoint about apples
+profiles <- cbc_profiles(
+  price     = c(1, 1.5, 2, 2.5, 3),
+  type      = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c("Poor", "Average", "Excellent")
 )
 
-# Example 2: Independent random parameters
+# Example 1: Simple fixed parameters with unnamed vectors
 priors <- cbc_priors(
-  price = -0.5,
-  type = c(0.2, 0.3),
-  freshness = c(0.4, 0.8),
-  sd = list(
-    price = 0.4,
-    type = c(0.4, 0.4)
+  profiles = profiles,
+  mean = list(
+    price = -0.5,
+    type = c(0.2, 0.3),          # Dummy-coded categorical
+    freshness = c(0.4, 0.8)      # Dummy-coded categorical
   )
 )
 
-# Example 3: Correlated random parameters
+# Example 2: Using named vectors for categorical variables
 priors <- cbc_priors(
-  price = -0.5,
-  type = c(0.2, 0.3),
-  freshness = c(0.4, 0.8),
-  sd = list(
-    price = 0.4,
-    type = c(0.4, 0.4),
-    freshness = c(0.4, 0.4)
-  ),
-  correlation = matrix(c(
-    1.00, 0.30, 0.30, 0.00, 0.00,
-    0.30, 1.00, 0.30, 0.00, 0.00,
-    0.30, 0.30, 1.00, 0.00, 0.00,
-    0.00, 0.00, 0.00, 1.00, 0.30,
-    0.00, 0.00, 0.00, 0.30, 1.00
-  ), 5, 5)
+  profiles = profiles,
+  mean = list(
+    price = -0.5,
+    type = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp as reference
+    freshness = c("Poor" = -0.4, "Average" = 0.1)  # Excellent as reference
+  )
 )
 
-# Example 4: Mixed distributions
+# Example 3: Mixed approach with random parameters
 priors <- cbc_priors(
-  price = -0.5,
-  type = c(0.2, 0.3),
-  freshness = c(0.4, 0.8),
+  profiles = profiles,
+  mean = list(
+    price = -0.5,
+    type = c("Fuji" = 0.2, "Gala" = 0.3),
+    freshness = c(0.4, 0.8)
+  ),
   sd = list(
     price = 0.4,
     type = c(0.4, 0.4)
-  ),
-  distribution = c(
-    price = "lognormal",
-    type = "normal"
   )
 )
 }

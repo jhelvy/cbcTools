@@ -4,13 +4,7 @@
 \alias{cbc_d_error}
 \title{Compute D-error for a choice experiment design}
 \usage{
-cbc_d_error(
-  design,
-  priors = NULL,
-  obsID = "obsID",
-  n_draws = 200,
-  exclude = NULL
-)
+cbc_d_error(design, priors = NULL, n_draws = 200, exclude = NULL)
 }
 \arguments{
 \item{design}{A data frame containing a choice experiment design created
@@ -19,14 +13,14 @@ by \code{cbc_design()}}
 \item{priors}{A numeric vector of prior parameter values, list with
 mean/sigma for Bayesian priors, or \code{NULL} for D0-error (default)}
 
-\item{obsID}{The name of the column in \code{design} that identifies each choice
-observation. Defaults to \code{"obsID"}.}
-
 \item{n_draws}{Number of draws for DB-error calculation if using Bayesian
 priors}
 
 \item{exclude}{Character vector of attribute names to exclude from D-error
 calculation}
+
+\item{obsID}{The name of the column in \code{design} that identifies each choice
+observation. Defaults to \code{"obsID"}.}
 }
 \value{
 The D-error value

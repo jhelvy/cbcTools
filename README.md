@@ -7,7 +7,8 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.org/package=cbcTools)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/cbcTools?color=blue)](https://cran.r-project.org/package=cbcTools)
+[![metacran
+downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
 Functions for designing surveys and conducting power analyses for
@@ -59,12 +60,11 @@ it if you cited it - you can get the citation by typing
 
 ``` r
 citation("cbcTools")
-#> 
 #> To cite cbcTools in publications use:
 #> 
-#> Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
-#> Conjoint Survey Experiments_. R package, <URL:
-#> https://jhelvy.github.io/cbcTools/>.
+#>   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
+#>   Conjoint Survey Experiments_. R package,
+#>   <https://jhelvy.github.io/cbcTools/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 

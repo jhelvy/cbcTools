@@ -4,13 +4,10 @@
 \alias{cbc_choices}
 \title{Simulate choices for a survey design}
 \usage{
-cbc_choices(design, obsID = "obsID", priors = NULL, n_draws = 100)
+cbc_choices(design, priors = NULL, n_draws = 100)
 }
 \arguments{
 \item{design}{A data frame of a survey design.}
-
-\item{obsID}{The name of the column in \code{design} that identifies each choice
-observation. Defaults to \code{"obsID"}.}
 
 \item{priors}{A list of one or more prior parameters that define a prior
 (assumed) utility model used to simulate choices for the \code{survey} data frame.
