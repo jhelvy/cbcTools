@@ -134,51 +134,80 @@ sim_choices_prior <- function(design, obsID, priors, n_draws) {
 }
 
 def_model_prior <- function(design, priors, n_draws) {
-  parNamesFull <- names(priors)
-  parNames <- drop_interactions(names(priors))
-  # Separate out random and fixed parameters
-  parNamesRand <- names(priors[lapply(priors, class) == "list"])
-  parNamesFixed <- parNames[!parNames %in% parNamesRand]
-  # Make sure continuous vars are numeric
-  cNames <- get_continuous_names(design, parNames)
-  if (length(cNames) > 0) {
-    design[, cNames] <- lapply(design[cNames], as.numeric)
-  }
-  # Define all other model objects
-  randPars <- unlist(lapply(priors[parNamesRand], function(x) x$type))
-  codedData <- logitr::recodeData(design, parNamesFull, randPars)
-  parNamesCoded <- codedData$pars
-  randParsCoded <- codedData$randPars
-  parSetup <- get_parSetup(parNamesCoded, randParsCoded)
-  parIDs <- get_parIDs(parSetup)
-  coefs <- get_coefs(priors, parNamesCoded, randPars, randParsCoded)
-  return(structure(list(
-    coefficients = coefs,
-    modelType    = ifelse(length(parNamesRand) > 0, "mxl", "mnl"),
-    modelSpace   = "pref",
-    parSetup     = parSetup,
-    parIDs       = parIDs,
-    standardDraws = getStandardDraws(parIDs, n_draws),
-    # Create data object
-    data = list(factorLevels = codedData$factorLevels, X = codedData$X),
-    # Create n object, which stores counts of various variables
-    n = list(
-      vars       = length(parSetup),
-      parsFixed  = length(which(parSetup == "f")),
-      parsRandom = length(which(parSetup != "f")),
-      draws      = n_draws,
-      pars       = length(coefs),
-      multiStarts = 1
-    ),
-    inputs = list(
-      pars       = parNamesFull,
-      price      = NULL,
-      randPars   = randPars,
-      numDraws   = n_draws,
-      numMultiStarts = 1,
-      correlation = FALSE
-    )
-  ), class = "logitr"))
+    # Extract parameters from the new cbc_priors structure
+    if (inherits(priors, "cbc_priors")) {
+        means <- priors$means
+        sds <- priors$sd
+        correlation <- priors$correlation
+        distributions <- priors$distribution
+    } else {
+        # Handle legacy prior format for backward compatibility
+        means <- priors
+        sds <- NULL
+        correlation <- NULL
+        distributions <- NULL
+    }
+
+    # Get parameter names, handling interactions
+    parNamesFull <- names(means)
+    parNames <- drop_interactions(names(means))
+
+    # Identify random parameters based on sd specification
+    parNamesRand <- if (!is.null(sds)) names(sds) else character(0)
+    parNamesFixed <- setdiff(parNames, parNamesRand)
+
+    # Make sure continuous vars are numeric
+    cNames <- get_continuous_names(design, parNames)
+    if (length(cNames) > 0) {
+        design[, cNames] <- lapply(design[cNames], as.numeric)
+    }
+
+    # Set up random parameter distributions
+    randPars <- if (!is.null(distributions)) {
+        distributions[parNamesRand]
+    } else {
+        # Default to normal distribution if not specified
+        stats::setNames(rep("n", length(parNamesRand)), parNamesRand)
+    }
+
+    # Recode data for model estimation
+    codedData <- logitr::recodeData(design, parNamesFull, randPars)
+    parNamesCoded <- codedData$pars
+    randParsCoded <- codedData$randPars
+
+    # Set up parameter structure
+    parSetup <- get_parSetup(parNamesCoded, randParsCoded)
+    parIDs <- get_parIDs(parSetup)
+
+    # Get coefficients
+    coefs <- get_coefs_new(means, sds, parNamesCoded, randParsCoded)
+
+    # Create and return the model object
+    return(structure(list(
+        coefficients = coefs,
+        modelType = if (length(parNamesRand) > 0) "mxl" else "mnl",
+        modelSpace = "pref",
+        parSetup = parSetup,
+        parIDs = parIDs,
+        standardDraws = getStandardDraws(parIDs, n_draws),
+        data = list(factorLevels = codedData$factorLevels, X = codedData$X),
+        n = list(
+            vars = length(parSetup),
+            parsFixed = length(which(parSetup == "f")),
+            parsRandom = length(which(parSetup != "f")),
+            draws = n_draws,
+            pars = length(coefs),
+            multiStarts = 1
+        ),
+        inputs = list(
+            pars = parNamesFull,
+            price = NULL,
+            randPars = randPars,
+            numDraws = n_draws,
+            numMultiStarts = 1,
+            correlation = !is.null(correlation)
+        )
+    ), class = "logitr"))
 }
 
 drop_interactions <- function(parNames) {
@@ -243,6 +272,52 @@ get_coefs <- function(priors, parNamesCoded, randPars, randParsCoded) {
   # Add the sigma coefficients
   coefs <- c(coefs, parsRand_sd)
   return(coefs)
+}
+
+# New helper function to handle coefficient extraction with new prior structure
+# created using cbc_priors
+get_coefs_new <- function(means, sds, parNamesCoded, randParsCoded) {
+    # Get names of random parameters
+    parNamesRand <- if (!is.null(sds)) names(sds) else character(0)
+    parNamesRandCoded <- names(randParsCoded)
+
+    # Handle fixed parameters
+    parsFixed <- unlist(means[!names(means) %in% parNamesRand])
+    if (!is.null(parsFixed)) {
+        names(parsFixed) <- parNamesCoded[!parNamesCoded %in% parNamesRandCoded]
+    }
+
+    # If no random parameters, return fixed parameters
+    if (length(parNamesRand) == 0) {
+        return(parsFixed)
+    }
+
+    # Handle random parameters
+    parsRand_mean <- unlist(lapply(means[parNamesRand], function(x) {
+        if (is.numeric(x) && !is.null(names(x))) {
+            return(x)  # Named vector for categorical
+        } else {
+            return(as.numeric(x))  # Single value or unnamed vector
+        }
+    }))
+    names(parsRand_mean) <- parNamesRandCoded
+
+    # Handle standard deviations
+    parsRand_sd <- unlist(lapply(sds[parNamesRand], function(x) {
+        if (is.numeric(x) && !is.null(names(x))) {
+            return(x)  # Named vector for categorical
+        } else {
+            return(as.numeric(x))  # Single value or unnamed vector
+        }
+    }))
+    names(parsRand_sd) <- paste0("sd_", parNamesRandCoded)
+
+    # Combine and order coefficients
+    coefs <- c(parsFixed, parsRand_mean)
+    coefs <- coefs[parNamesCoded]
+    coefs <- c(coefs, parsRand_sd)
+
+    return(coefs)
 }
 
 # Modified from {logitr}

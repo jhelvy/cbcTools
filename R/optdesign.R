@@ -85,9 +85,22 @@ get_eligible_profiles <- function(profiles, current_profileIDs, label = NULL, cu
 }
 
 # Updated optimize_design function with label handling
-optimize_design <- function(initial_design, profiles, priors, varNames, n_q, n_alts, max_iter, n_draws, null_prior, label = NULL) {
+optimize_design <- function(
+    initial_design,
+    profiles,
+    priors,
+    varNames,
+    n_q,
+    n_alts,
+    max_iter,
+    n_draws,
+    null_prior,
+    label = NULL
+) {
     # Initialize optimization state
-    opt_state <- initialize_design_optimization(initial_design, priors, n_draws, null_prior)
+    opt_state <- initialize_design_optimization(
+        initial_design, priors, n_draws, null_prior
+    )
 
     iter <- 1
     improved <- TRUE
