@@ -6,6 +6,7 @@
   - New `"efficient"` method added for obtaining D-efficient designs.
   - Old methods removed: `"full"`, `"orthogonal"`, `"dopt"`, `"CEA"`, and `"Modfed"`. Now there are only `"random"` and `"efficient"` designs
   - Bayesian D-efficient designs are now created by setting `method = "efficient"` and a set of priors with a diagonal or full covariance matrix.
+  - New `randomize = TRUE` argument in `cbc_design()` to randomize the order of questions and alternatives across respondents, addresses #29.
 - New `cbc_d_error()` function added to obtain the D-error of a given design.
 - New `cbc_priors()` function for defining a variety of prior model coefficients.
 - Coefficients for levels of an attribute in cbc_priors can be named vectors, addressing #24.
