@@ -6,10 +6,11 @@
 #' to coefficients.
 #'
 #' @param profiles A data frame of profiles created by cbc_profiles()
-#' @param ... Named arguments for each parameter's priors. For continuous variables,
-#'   provide a single value. For categorical variables, provide either:
-#'   - An unnamed vector of values one less than the number of levels (dummy coding)
-#'   - A named vector mapping specific levels to coefficients (remaining level becomes reference)
+#' @param mean A named list where each element specifies the mean prior for an attribute:
+#'   - For continuous variables, provide a single value
+#'   - For categorical variables, provide either:
+#'     - An unnamed vector of values one less than the number of levels (dummy coding)
+#'     - A named vector mapping specific levels to coefficients (remaining level becomes reference)
 #' @param sd Optional named list of standard deviations for random parameters
 #' @param correlation Optional correlation matrix for random parameters
 #' @param distribution Optional named vector specifying distribution type for random
@@ -27,54 +28,62 @@
 #' # Example 1: Simple fixed parameters with unnamed vectors
 #' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.5,
-#'   type = c(0.2, 0.3),          # Dummy-coded categorical
-#'   freshness = c(0.4, 0.8)      # Dummy-coded categorical
+#'   mean = list(
+#'     price = -0.5,
+#'     type = c(0.2, 0.3),          # Dummy-coded categorical
+#'     freshness = c(0.4, 0.8)      # Dummy-coded categorical
+#'   )
 #' )
 #'
 #' # Example 2: Using named vectors for categorical variables
 #' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.5,
-#'   type = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp as reference
-#'   freshness = c("Poor" = -0.4, "Average" = 0.1)  # Excellent as reference
+#'   mean = list(
+#'     price = -0.5,
+#'     type = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp as reference
+#'     freshness = c("Poor" = -0.4, "Average" = 0.1)  # Excellent as reference
+#'   )
 #' )
 #'
 #' # Example 3: Mixed approach with random parameters
 #' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.5,
-#'   type = c("Fuji" = 0.2, "Gala" = 0.3),
-#'   freshness = c(0.4, 0.8),
+#'   mean = list(
+#'     price = -0.5,
+#'     type = c("Fuji" = 0.2, "Gala" = 0.3),
+#'     freshness = c(0.4, 0.8)
+#'   ),
 #'   sd = list(
 #'     price = 0.4,
 #'     type = c(0.4, 0.4)
 #'   )
 #' )
 cbc_priors <- function(
-    profiles,
-    ...,
-    sd = NULL,
-    correlation = NULL,
-    distribution = NULL,
-    n_draws = 100
+        profiles,
+        mean,
+        sd = NULL,
+        correlation = NULL,
+        distribution = NULL,
+        n_draws = 100
 ) {
     # Validate profiles input
     if (!inherits(profiles, "data.frame") || !"profileID" %in% names(profiles)) {
         stop("'profiles' must be a data frame created by cbc_profiles()")
     }
 
+    # Validate mean is a list
+    if (!is.list(mean)) {
+        stop("'mean' must be a named list of prior specifications")
+    }
+
     # Get attribute information from profiles
     attr_info <- get_attribute_info(profiles)
 
-    # Capture the means
-    means <- list(...)
-
     # Validate attribute names
-    check_attribute_names(means, attr_info)
+    check_attribute_names(mean, attr_info)
 
     # Process and validate each mean parameter
-    means <- process_mean_parameters(means, attr_info)
+    means <- process_mean_parameters(mean, attr_info)
 
     # Validate sd if provided
     if (!is.null(sd)) {
@@ -358,30 +367,55 @@ process_mean_parameters <- function(means, attr_info) {
 
 # Helper function to validate sd specification
 check_sd_specification <- function(sd, means, attr_info) {
-  if (!is.list(sd)) {
-    stop("sd must be a named list")
-  }
-
-  # Check that all sd parameters correspond to existing means
-  invalid_sds <- setdiff(names(sd), names(means))
-  if (length(invalid_sds) > 0) {
-    stop("SD specified for non-existent parameters: ",
-         paste(invalid_sds, collapse = ", "))
-  }
-
-  # Check lengths match for each parameter
-  for (param in names(sd)) {
-    if (attr_info[[param]]$type == "continuous") {
-      if (length(sd[[param]]) != 1) {
-        stop("SD for continuous attribute '", param, "' must be a single value")
-      }
-    } else {
-      if (length(sd[[param]]) != length(means[[param]])) {
-        stop("SD for categorical attribute '", param,
-             "' must match length of means specification")
-      }
+    if (!is.list(sd)) {
+        stop("sd must be a named list")
     }
-  }
+
+    # Check that all sd parameters correspond to existing means
+    invalid_sds <- setdiff(names(sd), names(means))
+    if (length(invalid_sds) > 0) {
+        stop("SD specified for non-existent parameters: ",
+             paste(invalid_sds, collapse = ", "))
+    }
+
+    # Check lengths and levels match for each parameter
+    for (param in names(sd)) {
+        if (attr_info[[param]]$type == "continuous") {
+            if (length(sd[[param]]) != 1) {
+                stop("SD for continuous attribute '", param, "' must be a single value")
+            }
+        } else {
+            mean_val <- means[[param]]
+            sd_val <- sd[[param]]
+
+            # Check if both are named vectors
+            mean_has_names <- !is.null(names(mean_val))
+            sd_has_names <- !is.null(names(sd_val))
+
+            # If either has names, both should have names
+            if (mean_has_names || sd_has_names) {
+                if (!mean_has_names || !sd_has_names) {
+                    stop("For attribute '", param, "', if either mean or sd has named levels, both must have named levels")
+                }
+
+                # Check that the levels match exactly
+                mean_levels <- sort(names(mean_val))
+                sd_levels <- sort(names(sd_val))
+
+                if (!identical(mean_levels, sd_levels)) {
+                    stop("For attribute '", param, "', mean and sd must use the same levels. ",
+                         "\nMean levels: ", paste(mean_levels, collapse = ", "),
+                         "\nSD levels: ", paste(sd_levels, collapse = ", "))
+                }
+            } else {
+                # For unnamed vectors, just check lengths match
+                if (length(sd_val) != length(mean_val)) {
+                    stop("For attribute '", param, "', sd must have same length as mean specification ",
+                         "(", length(mean_val), " values)")
+                }
+            }
+        }
+    }
 }
 
 #' Display attribute levels and dummy coding for a CBC design
