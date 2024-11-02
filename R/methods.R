@@ -1,3 +1,64 @@
+# Print method for cbc_priors objects
+#' @export
+print.cbc_priors <- function(x, ...) {
+  cat("CBC Prior Specification:\n\n")
+
+  # Print means with full level information
+  cat("Means:\n")
+  for (attr in names(x$means)) {
+    cat("  ", attr, ":\n", sep = "")
+
+    if (x$attr_info[[attr]]$type == "continuous") {
+      # Get all unique values in sequential order
+      levels <- sort(unique(x$attr_info[[attr]]$levels))
+      cat("    Continuous attribute with levels:\n",
+          "    ", paste(levels, collapse = ", "), "\n",
+          "    Coefficient: ", round(x$means[[attr]], 3), "\n",
+          sep = "")
+    } else {
+      # Find reference level (the one not in names of means)
+      all_levels <- x$attr_info[[attr]]$levels
+      coef_levels <- names(x$means[[attr]])
+      ref_level <- setdiff(all_levels, coef_levels)
+
+      cat("    Categorical attribute (reference level: ", ref_level, ")\n", sep = "")
+      for (level in names(x$means[[attr]])) {
+        cat("    ", level, ": ", round(x$means[[attr]][[level]], 3), "\n", sep = "")
+      }
+    }
+    cat("\n")
+  }
+
+  # Print SDs if present
+  if (!is.null(x$sd)) {
+    cat("Standard Deviations:\n")
+    for (attr in names(x$sd)) {
+      cat("  ", attr, ": ", sep = "")
+      if (length(x$sd[[attr]]) == 1) {
+        cat(round(x$sd[[attr]], 3), "\n")
+      } else {
+        cat(paste(round(x$sd[[attr]], 3), collapse = ", "), "\n")
+      }
+    }
+    cat("\n")
+  }
+
+  # Print correlation if present
+  if (!is.null(x$correlation)) {
+    cat("Correlation Matrix:\n")
+    print(round(x$correlation, 3))
+    cat("\n")
+  }
+
+  # Print distributions if present
+  if (!is.null(x$distribution)) {
+    cat("Distributions:\n")
+    print(x$distribution)
+  }
+
+  invisible(x)
+}
+
 #' Methods for cbc_models objects
 #'
 #' Miscellaneous methods for `cbc_models` class objects.

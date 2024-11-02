@@ -3,11 +3,12 @@
 # cbcTools 0.6.0
 
 - Major revisions made to `cbc_design()` function.
-- New `"efficient"` method added for obtaining D-efficient designs.
-- Old methods removed: `"full"`, `"orthogonal"`, `"dopt"`, `"CEA"`, and `"Modfed"`. Now there are only `"random"` and `"efficient"` designs
-- Bayesian D-efficient designs are now created by setting `method = "efficient"` and a set of priors with a diagonal or full covariance matrix.
+  - New `"efficient"` method added for obtaining D-efficient designs.
+  - Old methods removed: `"full"`, `"orthogonal"`, `"dopt"`, `"CEA"`, and `"Modfed"`. Now there are only `"random"` and `"efficient"` designs
+  - Bayesian D-efficient designs are now created by setting `method = "efficient"` and a set of priors with a diagonal or full covariance matrix.
 - New `cbc_d_error()` function added to obtain the D-error of a given design.
 - New `cbc_priors()` function for defining a variety of prior model coefficients.
+- Coefficients for levels of an attribute in cbc_priors can be named vectors, addressing #24.
 - New `cbc_levels()` function for viewing a summary of the levels in a design.
 
 # cbcTools 0.5.2
