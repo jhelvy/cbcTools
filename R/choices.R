@@ -7,8 +7,6 @@
 #' @keywords logitr mnl mxl mixed logit simulation
 #'
 #' @param design A data frame of a survey design.
-#' @param obsID The name of the column in `design` that identifies each choice
-#' observation. Defaults to `"obsID"`.
 #' @param priors A list of one or more prior parameters that define a prior
 #' (assumed) utility model used to simulate choices for the `survey` data frame.
 #' If `NULL` (the default), choices will be randomly assigned.
@@ -82,18 +80,17 @@
 #' )
 cbc_choices <- function(
   design,
-  obsID = "obsID",
   priors = NULL,
   n_draws = 100
 ) {
   if (is.null(priors)) {
-    return(sim_choices_rand(design, obsID))
+    return(sim_choices_rand(design))
   }
-  return(sim_choices_prior(design, obsID, priors, n_draws))
+  return(sim_choices_prior(design, priors, n_draws))
 }
 
-sim_choices_rand <- function(design, obsID) {
-  nrows <- table(design[obsID])
+sim_choices_rand <- function(design) {
+  nrows <- table(design['obsID'])
   choices <- list()
   for (i in seq_len(length(nrows))) {
     n <- nrows[i]
@@ -105,12 +102,11 @@ sim_choices_rand <- function(design, obsID) {
   return(design)
 }
 
-sim_choices_prior <- function(design, obsID, priors, n_draws) {
-  model <- def_model_prior(design, priors, n_draws)
+sim_choices_prior <- function(design, priors, n_draws) {
   result <- stats::predict(
-    object     = model,
+    object     = priors$model,
     newdata    = design,
-    obsID      = obsID,
+    obsID      = "obsID",
     type       = "outcome",
     returnData = TRUE
   )
@@ -121,232 +117,10 @@ sim_choices_prior <- function(design, obsID, priors, n_draws) {
   return(result)
 }
 
-def_model_prior <- function(design, priors, n_draws) {
-    # Extract parameters from the new cbc_priors structure
-    if (inherits(priors, "cbc_priors")) {
-        means <- priors$means
-        sds <- priors$sd
-        correlation <- priors$correlation
-        distributions <- priors$distribution
-    } else {
-        # Handle legacy prior format for backward compatibility
-        means <- priors
-        sds <- NULL
-        correlation <- NULL
-        distributions <- NULL
-    }
-
-    # Get parameter names, handling interactions
-    parNamesFull <- names(means)
-    parNames <- drop_interactions(names(means))
-
-    # Identify random parameters based on sd specification
-    parNamesRand <- if (!is.null(sds)) names(sds) else character(0)
-    parNamesFixed <- setdiff(parNames, parNamesRand)
-
-    # Make sure continuous vars are numeric
-    cNames <- get_continuous_names(design, parNames)
-    if (length(cNames) > 0) {
-        design[, cNames] <- lapply(design[cNames], as.numeric)
-    }
-
-    # Set up random parameter distributions
-    randPars <- if (!is.null(distributions)) {
-        distributions[parNamesRand]
-    } else {
-        # Default to normal distribution if not specified
-        stats::setNames(rep("n", length(parNamesRand)), parNamesRand)
-    }
-
-    # Recode data for model estimation
-    codedData <- logitr::recodeData(design, parNamesFull, randPars)
-    parNamesCoded <- codedData$pars
-    randParsCoded <- codedData$randPars
-
-    # Set up parameter structure
-    parSetup <- get_parSetup(parNamesCoded, randParsCoded)
-    parIDs <- get_parIDs(parSetup)
-
-    # Get coefficients
-    coefs <- get_coefs_new(means, sds, parNamesCoded, randParsCoded)
-
-    # Create and return the model object
-    return(structure(list(
-        coefficients = coefs,
-        modelType = if (length(parNamesRand) > 0) "mxl" else "mnl",
-        modelSpace = "pref",
-        parSetup = parSetup,
-        parIDs = parIDs,
-        standardDraws = getStandardDraws(parIDs, n_draws),
-        data = list(factorLevels = codedData$factorLevels, X = codedData$X),
-        n = list(
-            vars = length(parSetup),
-            parsFixed = length(which(parSetup == "f")),
-            parsRandom = length(which(parSetup != "f")),
-            draws = n_draws,
-            pars = length(coefs),
-            multiStarts = 1
-        ),
-        inputs = list(
-            pars = parNamesFull,
-            price = NULL,
-            randPars = randPars,
-            numDraws = n_draws,
-            numMultiStarts = 1,
-            correlation = !is.null(correlation)
-        )
-    ), class = "logitr"))
-}
-
 drop_interactions <- function(parNames) {
   ints <- grepl("\\*", parNames)
   if (any(ints)) {
     return(parNames[ints == FALSE])
   }
   return(parNames)
-}
-
-get_continuous_names <- function(design, parNames) {
-  levels <- lapply(design[parNames], function(x) unique(x))
-  type_numeric <- unlist(lapply(levels, is.numeric))
-  return(names(type_numeric[type_numeric]))
-}
-
-# Modified from {logitr}
-get_parSetup <- function(parNames, randPars) {
-  parSetup <- rep("f", length(parNames))
-  for (i in seq_len(length(parNames))) {
-    name <- parNames[i]
-    if (name %in% names(randPars)) {
-      parSetup[i] <- randPars[name]
-    }
-  }
-  names(parSetup) <- parNames
-  return(parSetup)
-}
-
-# Modified from {logitr}
-get_parIDs <- function(parSetup) {
-  return(list(
-    f  = which(parSetup == "f"),
-    r  = which(parSetup != "f"),
-    n  = which(parSetup == "n"),
-    ln = which(parSetup == "ln"),
-    cn = which(parSetup == "cn")
-  ))
-}
-
-get_coefs <- function(priors, parNamesCoded, randPars, randParsCoded) {
-  # Define random parameter names
-  parNamesRand <- names(randPars)
-  parNamesRandCoded <- names(randParsCoded)
-  # Get all fixed parameters
-  parsFixed <- unlist(priors[!names(priors) %in% parNamesRand])
-  if (!is.null(parsFixed)) {
-    # Might have a situation where all pars are random
-    names(parsFixed) <- parNamesCoded[!parNamesCoded %in% parNamesRandCoded]
-  }
-  if (length(randPars) == 0) {
-    return(parsFixed)
-  }
-  # Get all the random parameters
-  parsRand_mean <- unlist(lapply(priors[parNamesRand], function(x) x$pars$mean))
-  names(parsRand_mean) <- parNamesRandCoded
-  parsRand_sd <- unlist(lapply(priors[parNamesRand], function(x) x$pars$sd))
-  names(parsRand_sd) <- paste0("sd_", parNamesRandCoded)
-  # Order and rename the coefficients
-  coefs <- c(parsFixed, parsRand_mean)
-  coefs <- coefs[parNamesCoded]
-  # Add the sigma coefficients
-  coefs <- c(coefs, parsRand_sd)
-  return(coefs)
-}
-
-# New helper function to handle coefficient extraction with new prior structure
-# created using cbc_priors
-get_coefs_new <- function(means, sds, parNamesCoded, randParsCoded) {
-    # Get names of random parameters
-    parNamesRand <- if (!is.null(sds)) names(sds) else character(0)
-    parNamesRandCoded <- names(randParsCoded)
-
-    # Handle fixed parameters
-    parsFixed <- unlist(means[!names(means) %in% parNamesRand])
-    if (!is.null(parsFixed)) {
-        names(parsFixed) <- parNamesCoded[!parNamesCoded %in% parNamesRandCoded]
-    }
-
-    # If no random parameters, return fixed parameters
-    if (length(parNamesRand) == 0) {
-        return(parsFixed)
-    }
-
-    # Handle random parameters
-    parsRand_mean <- unlist(lapply(means[parNamesRand], function(x) {
-        if (is.numeric(x) && !is.null(names(x))) {
-            return(x)  # Named vector for categorical
-        } else {
-            return(as.numeric(x))  # Single value or unnamed vector
-        }
-    }))
-    names(parsRand_mean) <- parNamesRandCoded
-
-    # Handle standard deviations
-    parsRand_sd <- unlist(lapply(sds[parNamesRand], function(x) {
-        if (is.numeric(x) && !is.null(names(x))) {
-            return(x)  # Named vector for categorical
-        } else {
-            return(as.numeric(x))  # Single value or unnamed vector
-        }
-    }))
-    names(parsRand_sd) <- paste0("sd_", parNamesRandCoded)
-
-    # Combine and order coefficients
-    coefs <- c(parsFixed, parsRand_mean)
-    coefs <- coefs[parNamesCoded]
-    coefs <- c(coefs, parsRand_sd)
-
-    return(coefs)
-}
-
-# Modified from {logitr}
-getStandardDraws <- function(parIDs, numDraws) {
-    numBetas <- length(parIDs$f) + length(parIDs$r)
-    draws <- as.matrix(randtoolbox::halton(numDraws, numBetas, normal = TRUE))
-    draws[, parIDs$f] <- 0 * draws[, parIDs$f]
-    return(draws)
-}
-
-#' Define a prior (assumed) model parameter as normally-distributed.
-#'
-#' Define a prior (assumed) model parameter as normally-distributed.
-#' Used in the `cbc_choices()` function.
-#'
-#' @param mean Vector of means, defaults to `0`.
-#' @param sd Vector of standard deviations, defaults to `1`.
-#' @return A list defining normally-distributed parameters of the prior
-#' (assumed) utility model used to simulate choices in the `cbc_choices()`
-#' function.
-#' @export
-#' @examples
-#' # Insert example
-randN <- function(mean = 0, sd = 1) {
-  return(list(pars = list(mean = mean, sd = sd), type = "n"))
-}
-
-#' Define prior (assumed) model parameter as log-normally-distributed.
-#'
-#' Define prior (assumed) model parameter as log-normally-distributed.
-#' Used in the `cbc_choices()` function.
-#'
-#' @param mean Mean of the distribution on the log scale, defaults to `0`.
-#' @param sd Standard deviation of the distribution on the log scale,
-#' defaults to `1`.
-#' @return A list defining log-normally-distributed parameters of the prior
-#' (assumed) utility model used to simulate choices in the `cbc_choices()`
-#' function.
-#' @export
-#' @examples
-#' # Insert example
-randLN <- function(mean = 0, sd = 1) {
-  return(list(pars = list(mean = mean, sd = sd), type = "ln"))
 }
