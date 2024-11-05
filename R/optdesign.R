@@ -1,7 +1,7 @@
 # Helper function to initialize model and precompute matrices for d-error calculation
 initialize_design_optimization <- function(design, priors, n_draws, null_prior) {
     # Create model once at the start - this won't change during optimization
-    model <- def_model_prior(design, priors, n_draws)
+    model <- priors$model
 
     # Initial encoding of design matrix
     obsID_vector <- design$obsID

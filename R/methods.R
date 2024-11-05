@@ -1,62 +1,59 @@
-# Print method for cbc_priors objects
+#' Print method for cbc_priors objects
 #' @export
 print.cbc_priors <- function(x, ...) {
-  cat("CBC Prior Specification:\n\n")
+    cat("CBC Prior Specifications:\n\n")
 
-  # Print means with full level information
-  cat("Means:\n")
-  for (attr in names(x$means)) {
-    cat("  ", attr, ":\n", sep = "")
+    for (attr in names(x$param_specs)) {
+        spec <- x$param_specs[[attr]]
+        is_categorical <- is.null(x$attr_info[[attr]]$range)
 
-    if (x$attr_info[[attr]]$type == "continuous") {
-      # Get all unique values in sequential order
-      levels <- sort(unique(x$attr_info[[attr]]$levels))
-      cat("    Continuous attribute with levels:\n",
-          "    ", paste(levels, collapse = ", "), "\n",
-          "    Coefficient: ", round(x$means[[attr]], 3), "\n",
-          sep = "")
-    } else {
-      # Find reference level (the one not in names of means)
-      all_levels <- x$attr_info[[attr]]$levels
-      coef_levels <- names(x$means[[attr]])
-      ref_level <- setdiff(all_levels, coef_levels)
+        # Print attribute name
+        cat(attr, ":\n", sep = "")
 
-      cat("    Categorical attribute (reference level: ", ref_level, ")\n", sep = "")
-      for (level in names(x$means[[attr]])) {
-        cat("    ", level, ": ", round(x$means[[attr]][[level]], 3), "\n", sep = "")
-      }
+        if (spec$type == "fixed") {
+            if (is_categorical) {
+                # Get reference level (the one not in names of values)
+                all_levels <- x$attr_info[[attr]]$levels
+                coef_levels <- names(spec$values)
+                ref_level <- setdiff(all_levels, coef_levels)
+
+                cat("  Fixed categorical (reference level: ", ref_level, ")\n", sep = "")
+                for (level in names(spec$values)) {
+                    cat("    ", level, ": ", round(spec$values[level], 3), "\n", sep = "")
+                }
+            } else {
+                cat("  Fixed continuous\n")
+                cat("    Coefficient: ", round(spec$values, 3), "\n")
+            }
+        } else {  # Random parameter
+            dist_names <- c(n = "Normal", ln = "Log-normal", cn = "Censored normal")
+            cat("  Random - ", dist_names[spec$dist], " distribution\n", sep = "")
+
+            if (is_categorical) {
+                all_levels <- x$attr_info[[attr]]$levels
+                coef_levels <- names(spec$mean)
+                ref_level <- setdiff(all_levels, coef_levels)
+
+                cat("  (reference level: ", ref_level, ")\n", sep = "")
+                for (level in names(spec$mean)) {
+                    cat("    ", level, ":\n", sep = "")
+                    cat("      Mean: ", round(spec$mean[level], 3), "\n", sep = "")
+                    cat("      SD:   ", round(spec$sd[level], 3), "\n", sep = "")
+                }
+            } else {
+                cat("    Mean: ", round(spec$mean, 3), "\n", sep = "")
+                cat("    SD:   ", round(spec$sd, 3), "\n", sep = "")
+            }
+        }
+        cat("\n")
     }
-    cat("\n")
-  }
 
-  # Print SDs if present
-  if (!is.null(x$sd)) {
-    cat("Standard Deviations:\n")
-    for (attr in names(x$sd)) {
-      cat("  ", attr, ": ", sep = "")
-      if (length(x$sd[[attr]]) == 1) {
-        cat(round(x$sd[[attr]], 3), "\n")
-      } else {
-        cat(paste(round(x$sd[[attr]], 3), collapse = ", "), "\n")
-      }
+    if (!is.null(x$correlation)) {
+        cat("Correlation Matrix:\n")
+        print(round(x$correlation, 3))
     }
-    cat("\n")
-  }
 
-  # Print correlation if present
-  if (!is.null(x$correlation)) {
-    cat("Correlation Matrix:\n")
-    print(round(x$correlation, 3))
-    cat("\n")
-  }
-
-  # Print distributions if present
-  if (!is.null(x$distribution)) {
-    cat("Distributions:\n")
-    print(x$distribution)
-  }
-
-  invisible(x)
+    invisible(x)
 }
 
 #' Methods for cbc_models objects

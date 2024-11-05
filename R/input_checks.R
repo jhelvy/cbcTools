@@ -32,7 +32,6 @@ check_inputs_design <- function(
     n_alts,
     n_q,
     n_blocks,
-    n_draws,
     n_start,
     no_choice,
     label,

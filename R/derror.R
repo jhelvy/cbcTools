@@ -83,7 +83,6 @@ cbc_d_error <- function(
     priors <- setup_null_priors(design, pars)
     null_prior <- TRUE
   }
-  model <- def_model_prior(design, priors, n_draws)
 
   # Get predicted probabilities
   design <- sim_probs_prior(design, model, null_prior)
