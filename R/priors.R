@@ -13,6 +13,8 @@
 #'       - A named vector mapping levels to coefficients (remaining level becomes reference)
 #'   - For random parameters: use rand() to specify distribution and parameters
 #' @param correlation Optional correlation matrix for random parameters
+#' @param n_draws Number of draws for DB-error calculation if using Bayesian
+#'   priors. Defaults to `100`
 #' @return A structured prior specification object including parameter draws for
 #'   random coefficients
 #' @export
@@ -86,110 +88,78 @@
 #'   freshness = c(0.4, 0.8),
 #'   correlation = correlation
 #' )
-cbc_priors <- function(profiles, ..., correlation = NULL) {
-    # Validate profiles input
-    if (!inherits(profiles, "data.frame") || !"profileID" %in% names(profiles)) {
-        stop("'profiles' must be a data frame created by cbc_profiles()")
-    }
+cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
+  # Validate profiles input
+  if (!inherits(profiles, "data.frame") || !"profileID" %in% names(profiles)) {
+    stop("'profiles' must be a data frame created by cbc_profiles()")
+  }
 
-    # Get attribute information
-    attr_info <- get_attribute_info(profiles)
+  # Get attribute information and combine with parameter specifications
+  params <- list(...)
+  attrs <- get_combined_attr_info(profiles, params)
 
-    # Process provided parameters
-    params <- list(...)
+  # Process parameters into standardized format
+  processed_params <- process_parameters(attrs)
 
-    # Validate all attributes are specified
-    check_attribute_names(params, attr_info)
+  # Separate fixed and random parameters
+  fixed_params <- processed_params$fixed
+  random_params <- processed_params$random
 
-    # Process parameters into standardized format
-    processed_params <- process_parameters(params, attr_info)
+  # Generate parameter draws if we have random parameters
+  if (length(random_params) > 0) {
+    # Set up random parameters specification for logitr
+    randPars <- lapply(random_params, function(x) x$dist)
 
-    # Separate fixed and random parameters
-    fixed_params <- processed_params$fixed
-    random_params <- processed_params$random
+    # Get parameter names
+    parNames <- c(names(fixed_params), names(random_params))
 
-    # Store parameter specifications in a structured format for printing
-    param_specs <- list()
+    # Create coded data structure
+    means <- c(fixed_params, lapply(random_params, function(x) x$mean))
+    model_data <- prepare_profiles_for_model(profiles, means, attrs)
+    codedData <- logitr::recodeData(model_data, parNames, randPars)
 
-    # Process fixed parameters
-    for (attr in names(fixed_params)) {
-        param_specs[[attr]] <- list(
-            type = "fixed",
-            values = fixed_params[[attr]]
-        )
-    }
+    # Set up parameter structure
+    codedParNames <- codedData$pars
+    parSetup <- get_parSetup(codedParNames, codedData$randPars)
+    parIDs <- get_parIDs(parSetup)
 
-    # Process random parameters
-    for (attr in names(random_params)) {
-        param_specs[[attr]] <- list(
-            type = "random",
-            dist = random_params[[attr]]$dist,
-            mean = random_params[[attr]]$mean,
-            sd = random_params[[attr]]$sd
-        )
-    }
+    # Combine all parameters for draws
+    all_means <- c(
+      unlist(fixed_params),
+      unlist(lapply(random_params, function(x) x$mean))
+    )
+    all_sds <- unlist(lapply(random_params, function(x) x$sd))
+    names(all_means) <- codedParNames
+    names(all_sds) <- names(codedData$randPars)
 
-    # Create parameter draws for random parameters if any exist
-    if (length(random_params) > 0) {
-        # Set up random parameters specification for logitr
-        randPars <- lapply(random_params, function(x) x$dist)
-
-        # Get parameter names
-        parNames <- c(names(fixed_params), names(random_params))
-
-        # Create coded data structure
-        model_data <- prepare_profiles_for_model(
-            profiles, c(
-                fixed_params,
-                lapply(random_params, function(x) x$mean)),
-            attr_info
-        )
-        codedData <- logitr::recodeData(model_data, parNames, randPars)
-
-        # Set up parameter structure
-        parSetup <- get_parSetup(codedData$pars, randPars)
-        parIDs <- get_parIDs(parSetup)
-
-        # Combine all parameters for draws
-        all_means <- c(
-            unlist(fixed_params),
-            unlist(lapply(random_params, function(x) x$mean))
-        )
-        all_sds <- unlist(lapply(random_params, function(x) x$sd))
-
-        # Set up n list for makeBetaDraws
-        n <- list(
-            vars = length(parSetup),
-            parsFixed = length(which(parSetup == "f")),
-            parsRandom = length(which(parSetup != "f")),
-            draws = 100,  # Default number of draws
-            pars = length(all_means) + length(all_sds)
-        )
-
-        # Generate parameter draws
-        standardDraws <- getStandardDraws(parIDs, n$draws, "halton")
-        par_draws <- makeBetaDraws(
-            c(all_means, all_sds),
-            parIDs,
-            n,
-            standardDraws,
-            correlation
-        )
-    } else {
-        par_draws <- NULL
-    }
-
-    # Create return object
-    result <- list(
-        pars = c(fixed_params, lapply(random_params, function(x) x$mean)),
-        par_draws = par_draws,
-        correlation = correlation,
-        attr_info = attr_info,
-        param_specs = param_specs  # Add structured parameter specifications
+    # Set up n list for makeBetaDraws
+    n <- list(
+      vars = length(parSetup),
+      parsFixed = length(which(parSetup == "f")),
+      parsRandom = length(which(parSetup != "f")),
+      draws = n_draws,
+      pars = length(all_means) + length(all_sds)
     )
 
-    class(result) <- c("cbc_priors", "list")
-    return(result)
+    # Generate parameter draws
+    standardDraws <- getStandardDraws(parIDs, n$draws, "halton")
+    par_draws <- makeBetaDraws(
+      all_means, all_sds, parIDs, n, standardDraws, correlation
+    )
+  } else {
+    par_draws <- NULL
+  }
+
+  # Create return object
+  result <- list(
+    attrs = attrs,
+    pars = c(fixed_params, lapply(random_params, function(x) x$mean)),
+    correlation = correlation,
+    par_draws = par_draws
+  )
+
+  class(result) <- c("cbc_priors", "list")
+  return(result)
 }
 
 # Helper function to create random parameter specifications
@@ -208,113 +178,96 @@ rand <- function(dist = "n", mean, sd) {
     )
 }
 
-# Helper function to process parameters into standardized format
-process_parameters <- function(params, attr_info) {
-    fixed <- list()
-    random <- list()
+# Helper function to combine attribute info with parameter specifications
+get_combined_attr_info <- function(profiles, params) {
+  # Remove profileID column
+  profile_attrs <- profiles[, -which(names(profiles) == "profileID")]
 
-    for (attr in names(params)) {
-        param <- params[[attr]]
+  # Validate all attributes are specified
+  missing_attrs <- setdiff(names(profile_attrs), names(params))
+  if (length(missing_attrs) > 0) {
+    stop("Missing prior specifications for attributes: ",
+         paste(missing_attrs, collapse = ", "))
+  }
 
-        if (inherits(param, "cbc_random_par")) {
-            # Random parameter
-            random[[attr]] <- param
-        } else {
-            # Fixed parameter
-            if (attr_info[[attr]]$type == "continuous") {
-                if (!is.numeric(param) || length(param) != 1) {
-                    stop("Prior for continuous attribute '", attr,
-                         "' must be a single numeric value")
-                }
-                fixed[[attr]] <- param
-            } else {
-                # Categorical attribute
-                if (!is.null(names(param))) {
-                    # Validate named levels
-                    invalid_levels <- setdiff(names(param), attr_info[[attr]]$levels)
-                    if (length(invalid_levels) > 0) {
-                        stop("Invalid levels for '", attr, "': ",
-                             paste(invalid_levels, collapse = ", "))
-                    }
-                } else {
-                    # Validate length for unnamed vector
-                    if (length(param) != length(attr_info[[attr]]$levels) - 1) {
-                        stop("Prior for categorical attribute '", attr,
-                             "' must have ", length(attr_info[[attr]]$levels) - 1,
-                             " values")
-                    }
-                    # Add names based on non-reference levels
-                    names(param) <- attr_info[[attr]]$levels[-1]
-                }
-                fixed[[attr]] <- param
-            }
-        }
+  # Check for extra attributes
+  extra_attrs <- setdiff(names(params), names(profile_attrs))
+  if (length(extra_attrs) > 0) {
+    stop("Prior specifications provided for non-existent attributes: ",
+         paste(extra_attrs, collapse = ", "))
+  }
+
+  # Create combined information for each attribute
+  attrs <- lapply(names(profile_attrs), function(attr) {
+    values <- profile_attrs[[attr]]
+    param <- params[[attr]]
+
+    # Base structure
+    info <- list(
+      continuous = is.numeric(values),
+      levels = if (is.numeric(values)) sort(unique(values)) else levels(values),
+      random = inherits(param, "cbc_random_par")
+    )
+
+    # Add range for continuous variables
+    if (info$continuous) {
+      info$range <- range(values)
     }
 
-    return(list(fixed = fixed, random = random))
+    # Add distribution info for random parameters
+    if (info$random) {
+      info$dist <- param$dist
+      info$mean <- param$mean
+      info$sd <- param$sd
+    } else {
+      info$mean <- param
+    }
+
+    return(info)
+  })
+  names(attrs) <- names(profile_attrs)
+  return(attrs)
 }
 
-# Helper function to extract attribute information from profiles
-get_attribute_info <- function(profiles) {
-    # Remove profileID column
-    attrs <- profiles[, -which(names(profiles) == "profileID")]
+# Helper function to process parameters based on combined attribute info
+process_parameters <- function(attrs) {
+  fixed <- list()
+  random <- list()
 
-    # Get information for each attribute
-    attr_info <- lapply(names(attrs), function(attr) {
-        values <- attrs[[attr]]
-        is_continuous <- is.numeric(values)
+  for (attr in names(attrs)) {
+    info <- attrs[[attr]]
 
-        if (is_continuous) {
-            list(
-                type = "continuous",
-                range = range(values),
-                levels = unique(values)  # Store all unique values for continuous attributes
-            )
-        } else {
-            list(
-                type = "categorical",
-                levels = if (is.factor(values)) levels(values) else unique(values)
-            )
-        }
-    })
-    names(attr_info) <- names(attrs)
-    return(attr_info)
-}
-
-# Helper function to validate attribute names
-check_attribute_names <- function(means, attr_info) {
-    # Check for missing attributes
-    missing_attrs <- setdiff(names(attr_info), names(means))
-    if (length(missing_attrs) > 0) {
-        stop("Missing prior specifications for attributes: ",
-             paste(missing_attrs, collapse = ", "))
+    if (info$random) {
+      random[[attr]] <- list(
+        dist = info$dist,
+        mean = info$mean,
+        sd = info$sd
+      )
+    } else {
+      fixed[[attr]] <- info$mean
     }
+  }
 
-    # Check for extra attributes
-    extra_attrs <- setdiff(names(means), names(attr_info))
-    if (length(extra_attrs) > 0) {
-        stop("Prior specifications provided for non-existent attributes: ",
-             paste(extra_attrs, collapse = ", "))
-    }
+  return(list(fixed = fixed, random = random))
 }
 
 # Helper function to prepare profiles for model creation
-prepare_profiles_for_model <- function(profiles, means, attr_info) {
+prepare_profiles_for_model <- function(profiles, means, attrs) {
     model_data <- profiles
 
     # Process each attribute
-    for (attr in names(attr_info)) {
-        if (attr_info[[attr]]$type == "categorical") {
+    for (attr in names(attrs)) {
+        if (!attrs[[attr]]$continuous) {
             # Get reference level based on provided priors
             if (!is.null(names(means[[attr]]))) {
                 # Named vector case
-                all_levels <- attr_info[[attr]]$levels
+                all_levels <- attrs[[attr]]$levels
                 coef_levels <- names(means[[attr]])
                 ref_level <- setdiff(all_levels, coef_levels)[1]
                 levels_order <- c(ref_level, coef_levels)
             } else {
                 # Unnamed vector case
-                levels_order <- attr_info[[attr]]$levels
+                levels_order <- attrs[[attr]]$levels
             }
 
             # Convert to factor with specified level order
@@ -352,32 +305,33 @@ get_parIDs <- function(parSetup) {
     ))
 }
 
-# Copied from {logitr}
-makeBetaDraws <- function(pars, parIDs, n_vars, standardDraws, correlation) {
-    pars_mean <- pars[seq_len(n$vars)]
-    pars_sd <- pars[(n$vars + 1):n$pars]
-    # First scale the draws according to the covariance matrix
-    if (correlation) {
-        lowerMat <- matrix(0, n$parsRandom, n$parsRandom)
-        lowerMat[lower.tri(lowerMat, diag = TRUE)] <- pars_sd
-    } else {
-        lowerMat <- diag(pars_sd, ncol = length(pars_sd))
-    }
-    scaledDraws <- standardDraws
-    scaledDraws[,parIDs$r] <- scaledDraws[,parIDs$r] %*% lowerMat
-    # Now shift the draws according to the means
-    meanMat <- matrix(rep(pars_mean, n$draws), ncol = n$vars, byrow = TRUE)
-    betaDraws <- meanMat + scaledDraws
-    # log-normal draws: Exponentiate
-    if (length(parIDs$ln) > 0) {
-        betaDraws[, parIDs$ln] <- exp(betaDraws[, parIDs$ln])
-    }
-    # Censored normal draws: Censor
-    if (length(parIDs$cn) > 0) {
-        betaDraws[, parIDs$cn] <- pmax(betaDraws[, parIDs$cn], 0)
-    }
-    return(betaDraws)
+# Returns shifted normal draws for each parameter
+makeBetaDraws <- function(
+  pars_mean, pars_sd, parIDs, n, standardDraws, correlation
+) {
+  # First scale the draws according to the covariance matrix
+  if (!is.null(correlation)) {
+    lowerMat <- matrix(0, n$parsRandom, n$parsRandom)
+    lowerMat[lower.tri(lowerMat, diag = TRUE)] <- pars_sd
+  } else {
+    lowerMat <- diag(pars_sd, ncol = length(pars_sd))
+  }
+  scaledDraws <- standardDraws
+  scaledDraws[,parIDs$r] <- scaledDraws[,parIDs$r] %*% lowerMat
+  # Now shift the draws according to the means
+  meanMat <- matrix(rep(pars_mean, n$draws), ncol = n$vars, byrow = TRUE)
+  betaDraws <- meanMat + scaledDraws
+  # log-normal draws: Exponentiate
+  if (length(parIDs$ln) > 0) {
+    betaDraws[, parIDs$ln] <- exp(betaDraws[, parIDs$ln])
+  }
+  # Censored normal draws: Censor
+  if (length(parIDs$cn) > 0) {
+    betaDraws[, parIDs$cn] <- pmax(betaDraws[, parIDs$cn], 0)
+  }
+  return(betaDraws)
 }
+
 
 getStandardDraws <- function(parIDs, numDraws, drawType) {
     numBetas <- length(parIDs$f) + length(parIDs$r)

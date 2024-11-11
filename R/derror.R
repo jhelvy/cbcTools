@@ -7,7 +7,7 @@
 #' @param obsID The name of the column in `design` that identifies each choice
 #' observation. Defaults to `"obsID"`.
 #' @param n_draws Number of draws for DB-error calculation if using Bayesian
-#'   priors
+#'   priors. Defaults to `100`.
 #' @param exclude Character vector of attribute names to exclude from D-error
 #'   calculation
 #' @return The D-error value
@@ -56,7 +56,7 @@
 cbc_d_error <- function(
   design,
   priors = NULL,
-  n_draws = 200,
+  n_draws = 100,
   exclude = NULL
 ) {
 
