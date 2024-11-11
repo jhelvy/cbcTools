@@ -217,9 +217,19 @@ get_combined_attr_info <- function(profiles, params) {
     # Add distribution info for random parameters
     if (info$random) {
       info$dist <- param$dist
+      if (!info$continuous && is.numeric(param$mean)) {
+        # For unnamed categorical parameters, assign names based on levels
+        names(param$mean) <- info$levels[-1]  # All but first level
+        names(param$sd) <- info$levels[-1]    # All but first level
+      }
       info$mean <- param$mean
       info$sd <- param$sd
     } else {
+      # For fixed parameters
+      if (!info$continuous && is.numeric(param)) {
+        # For unnamed categorical parameters, assign names based on levels
+        names(param) <- info$levels[-1]  # All but first level
+      }
       info$mean <- param
     }
 

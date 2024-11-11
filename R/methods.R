@@ -12,17 +12,18 @@ print.cbc_priors <- function(x, ...) {
     # Print variable type and levels
     if (info$continuous) {
       cat("  Continuous variable\n")
-      cat("  Levels: ", paste(info$levels, collapse = ', '), '\n', sep = "")
+      cat("  Levels:", paste(info$levels, collapse = ", "), "\n")
+      ref_level <- NULL
     } else {
       cat("  Categorical variable\n")
-      # Determine reference level
+      cat("  Levels:", paste(info$levels, collapse = ", "), "\n")
+      # Determine reference level for categorical variables
       if (!is.null(names(info$mean))) {
         ref_level <- setdiff(info$levels, names(info$mean))[1]
-        cat("  Reference level: ", ref_level, "\n", sep = "")
       } else {
         ref_level <- info$levels[1]
-        cat("  Reference level: ", ref_level, "\n", sep = "")
       }
+      cat("  Reference level: ", ref_level, "\n", sep = "")
     }
 
     # Print parameter specifications
@@ -44,7 +45,9 @@ print.cbc_priors <- function(x, ...) {
       } else {
         # Continuous or unnamed categorical parameters
         cat("    Mean: ", round(info$mean, 3),
-            if (is.vector(info$mean)) paste0(" (vs ", ref_level, ")") else "",
+            if (!is.null(ref_level) && is.vector(info$mean))
+              paste0(" (vs ", ref_level, ")")
+            else "",
             "\n", sep = "")
         cat("    SD:   ", round(info$sd, 3), "\n", sep = "")
       }
@@ -58,7 +61,9 @@ print.cbc_priors <- function(x, ...) {
       } else {
         # Continuous or unnamed categorical parameters
         cat("    Coefficient: ", round(info$mean, 3),
-            if (is.vector(info$mean)) paste0(" (vs ", ref_level, ")") else "",
+            if (!is.null(ref_level) && is.vector(info$mean))
+              paste0(" (vs ", ref_level, ")")
+            else "",
             "\n", sep = "")
       }
     }
