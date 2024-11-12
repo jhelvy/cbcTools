@@ -1,18 +1,17 @@
 #' Create prior specifications for CBC models
 #'
 #' Creates a standardized prior specification object for use in CBC analysis
-#' functions like cbc_choices() and cbc_d_error(). Supports both fixed and random
+#' functions like `cbc_choices()` and `cbc_d_error()`. Supports both fixed and random
 #' parameters, with flexible specification of categorical variable levels.
 #'
-#' @param profiles A data frame of profiles created by cbc_profiles()
+#' @param profiles A data frame of profiles created by `cbc_profiles()`
 #' @param ... Named arguments specifying priors for each attribute:
 #'   - For fixed parameters:
 #'     - Continuous variables: provide a single numeric value
 #'     - Categorical variables: provide either:
 #'       - An unnamed vector of values one less than the number of levels (dummy coding)
 #'       - A named vector mapping levels to coefficients (remaining level becomes reference)
-#'   - For random parameters: use rand() to specify distribution and parameters
-#' @param correlation Optional correlation matrix for random parameters
+#'   - For random parameters: use `rand_spec()` to specify distribution, parameters, and correlations
 #' @param n_draws Number of draws for DB-error calculation if using Bayesian
 #'   priors. Defaults to `100`
 #' @return A structured prior specification object including parameter draws for
@@ -30,8 +29,8 @@
 #' priors <- cbc_priors(
 #'   profiles = profiles,
 #'   price = -0.5,
-#'   type = c(0.2, 0.3),          # Dummy-coded categorical (Honeycrisp reference)
-#'   freshness = c(0.4, 0.8)      # Dummy-coded categorical (Poor reference)
+#'   type = c(0.2, 0.3),      # Dummy-coded categorical (Honeycrisp reference)
+#'   freshness = c(0.4, 0.8)  # Dummy-coded categorical (Poor reference)
 #' )
 #'
 #' # Example 2: Using named vectors for categorical variables
@@ -46,7 +45,7 @@
 #' priors <- cbc_priors(
 #'   profiles = profiles,
 #'   price = -0.5,  # Fixed parameter
-#'   type = rand(   # Random parameter - normal distribution
+#'   type = rand_spec(  # Random parameter - normal distribution
 #'     dist = "n",
 #'     mean = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp reference
 #'     sd = c("Fuji" = 0.4, "Gala" = 0.4)
@@ -57,7 +56,7 @@
 #' # Example 4: Log-normal distribution for price coefficient
 #' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   price = rand(
+#'   price = rand_spec(
 #'     dist = "ln",    # Log-normal distribution for price
 #'     mean = -0.5,    # Single value for continuous variable
 #'     sd = 0.4
@@ -66,27 +65,35 @@
 #'   freshness = c(0.4, 0.8)
 #' )
 #'
-#' # Example 5: Using correlation matrix with multiple random parameters
-#' correlation <- matrix(
-#'   c(1.0, 0.3,
-#'     0.3, 1.0),
-#'   nrow = 2
-#' )
-#'
+#' # Example 5: Random parameters with correlations
 #' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   price = rand(
-#'     dist = "n",
+#'   price = rand_spec(
+#'     dist = "ln",
 #'     mean = -0.5,
-#'     sd = 0.4
+#'     sd = 0.4,
+#'     correlations = list(
+#'       # Correlate with all type levels
+#'       cor_spec(with = "type", value = 0.3),
+#'       # Correlate with specific level
+#'       cor_spec(with = "type", level = "Fuji", value = 0.4)
+#'     )
 #'   ),
-#'   type = rand(
+#'   type = rand_spec(
 #'     dist = "n",
 #'     mean = c("Fuji" = 0.2, "Gala" = 0.3),
-#'     sd = c("Fuji" = 0.4, "Gala" = 0.4)
+#'     sd = c("Fuji" = 0.4, "Gala" = 0.4),
+#'     correlations = list(
+#'       # Correlate between levels
+#'       cor_spec(
+#'         with = "type",
+#'         level = "Fuji",
+#'         with_level = "Gala",
+#'         value = 0.5
+#'       )
+#'     )
 #'   ),
-#'   freshness = c(0.4, 0.8),
-#'   correlation = correlation
+#'   freshness = c(0.4, 0.8)
 #' )
 cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   # Validate profiles input
@@ -125,6 +132,9 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   # Generate parameter draws if we have random parameters
   if (length(random_params) > 0) {
 
+    # Build correlation matrix from specifications
+    cor_mat <- build_correlation_matrix(attrs, random_params)
+
     # Set up parameter structure
     parSetup <- get_parSetup(codedParNames, codedData$randPars)
     parIDs <- get_parIDs(parSetup)
@@ -146,17 +156,18 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
     # Generate parameter draws
     standardDraws <- getStandardDraws(parIDs, n$draws, "halton")
     par_draws <- makeBetaDraws(
-      all_means, all_sds, parIDs, n, standardDraws, correlation
+      all_means, all_sds, parIDs, n, standardDraws, cor_mat
     )
   } else {
     par_draws <- NULL
+    cor_mat <- NULL
   }
 
   # Create return object
   result <- list(
     attrs = attrs,
     pars = all_means,
-    correlation = correlation,
+    correlation = cor_mat,
     par_draws = par_draws
   )
 
@@ -164,20 +175,220 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   return(result)
 }
 
-# Helper function to create random parameter specifications
-rand <- function(dist = "n", mean, sd) {
-    if (!dist %in% c("n", "ln", "cn")) {
-        stop('dist must be one of "n" (normal), "ln" (log-normal), or "cn" (censored normal)')
-    }
+#' Create a random parameter specification
+#'
+#' @param dist Character. Distribution type: "n" for normal, "ln" for log-normal,
+#'   or "cn" for censored normal
+#' @param mean Numeric. Mean parameter value(s)
+#' @param sd Numeric. Standard deviation parameter value(s)
+#' @param correlations List of correlation specifications created by cor_spec()
+#' @return A random parameter specification list
+#' @export
+#' @examples
+#' # For a continuous parameter
+#' rand_spec(dist = "ln", mean = -0.5, sd = 0.4)
+#'
+#' # For a categorical parameter with correlations
+#' rand_spec(
+#'   dist = "n",
+#'   mean = c("Fuji" = 0.2, "Gala" = 0.3),
+#'   sd = c("Fuji" = 0.4, "Gala" = 0.4),
+#'   correlations = list(
+#'     cor_spec(with = "price", value = 0.3),
+#'     cor_spec(with = "type", level = "Fuji", with_level = "Gala", value = 0.5)
+#'   )
+#' )
+rand_spec <- function(dist = "n", mean, sd, correlations = NULL) {
+  if (!dist %in% c("n", "ln", "cn")) {
+    stop('dist must be one of "n" (normal), "ln" (log-normal), or "cn" (censored normal)')
+  }
 
-    structure(
-        list(
-            dist = dist,
-            mean = mean,
-            sd = sd
-        ),
-        class = "cbc_random_par"
-    )
+  if (!is.null(correlations)) {
+    if (!is.list(correlations)) {
+      stop("correlations must be a list of correlation specifications created by cor_spec()")
+    }
+    if (!all(sapply(correlations, inherits, "cbc_correlation"))) {
+      stop("all correlations must be created using cor_spec()")
+    }
+  }
+
+  structure(
+    list(
+      dist = dist,
+      mean = mean,
+      sd = sd,
+      correlations = correlations
+    ),
+    class = "cbc_random_par"
+  )
+}
+
+#' Create a correlation specification for random parameters
+#'
+#' @param with Character. Name of attribute to correlate with
+#' @param value Numeric. Correlation value between -1 and 1
+#' @param level Character. For categorical variables, specific level to correlate from
+#' @param with_level Character. For categorical variables, specific level to correlate with
+#' @return A correlation specification list
+#' @export
+#' @examples
+#' # Correlate with entire attribute
+#' cor_spec(with = "price", value = 0.3)
+#'
+#' # Correlate with specific level
+#' cor_spec(with = "type", level = "Fuji", value = 0.3)
+#'
+#' # Correlate between levels
+#' cor_spec(with = "type", level = "Fuji", with_level = "Gala", value = 0.5)
+cor_spec <- function(with, value, level = NULL, with_level = NULL) {
+  if (!is.numeric(value) || value < -1 || value > 1) {
+    stop("Correlation value must be between -1 and 1")
+  }
+
+  structure(
+    list(
+      attr = with,
+      value = value,
+      level = level,
+      with_level = with_level
+    ),
+    class = "cbc_correlation"
+  )
+}
+
+# Helper function to build correlation matrix from random parameter specifications
+build_correlation_matrix <- function(attrs, random_params) {
+  # Get list of all random parameters and their levels
+  par_names <- c()
+  for (attr in names(random_params)) {
+    if (attrs[[attr]]$continuous) {
+      par_names <- c(par_names, attr)
+    } else {
+      # For categorical variables, add a name for each coefficient
+      categorical_names <- names(attrs[[attr]]$mean)
+      par_names <- c(par_names, paste0(attr, ".", categorical_names))
+    }
+  }
+
+  # Initialize correlation matrix
+  n_pars <- length(par_names)
+  cor_mat <- diag(n_pars)
+  rownames(cor_mat) <- colnames(cor_mat) <- par_names
+
+  # Process correlations from each random parameter
+  for (attr1 in names(random_params)) {
+    param <- random_params[[attr1]]
+    if (!is.null(param$correlations)) {
+      for (cor in param$correlations) {
+        attr2 <- cor$attr
+
+        # Validate that correlated attribute exists and is random
+        if (!(attr2 %in% names(random_params))) {
+          stop(sprintf(
+            "Cannot correlate with '%s' - it must be a random parameter specified using rand_spec()",
+            attr2
+          ))
+        }
+
+        # Handle different correlation specifications
+        if (attrs[[attr1]]$continuous) {
+          if (!is.null(cor$level)) {
+            # Validate level exists
+            if (!cor$level %in% names(attrs[[attr2]]$mean)) {
+              stop(sprintf(
+                "Invalid level '%s' for attribute '%s'",
+                cor$level, attr2
+              ))
+            }
+            # Continuous with specific level of categorical
+            rows <- attr1
+            cols <- paste0(attr2, ".", cor$level)
+          } else {
+            if (attrs[[attr2]]$continuous) {
+              # Continuous with continuous
+              rows <- attr1
+              cols <- attr2
+            } else {
+              # Continuous with all levels of categorical
+              rows <- attr1
+              cols <- paste0(attr2, ".", names(attrs[[attr2]]$mean))
+            }
+          }
+        } else {
+          if (!is.null(cor$with_level)) {
+            # Validate levels exist
+            if (!cor$level %in% names(attrs[[attr1]]$mean)) {
+              stop(sprintf(
+                "Invalid level '%s' for attribute '%s'",
+                cor$level, attr1
+              ))
+            }
+            if (!cor$with_level %in% names(attrs[[attr2]]$mean)) {
+              stop(sprintf(
+                "Invalid level '%s' for attribute '%s'",
+                cor$with_level, attr2
+              ))
+            }
+            # Between specific levels
+            rows <- paste0(attr1, ".", cor$level)
+            cols <- paste0(attr2, ".", cor$with_level)
+          } else if (!is.null(cor$level)) {
+            if (!cor$level %in% names(attrs[[attr1]]$mean)) {
+              stop(sprintf(
+                "Invalid level '%s' for attribute '%s'",
+                cor$level, attr1
+              ))
+            }
+            if (attrs[[attr2]]$continuous) {
+              # Between level and continuous variable
+              rows <- paste0(attr1, ".", cor$level)
+              cols <- attr2
+            } else {
+              # Between level and all levels of other categorical
+              rows <- paste0(attr1, ".", cor$level)
+              cols <- paste0(attr2, ".", names(attrs[[attr2]]$mean))
+            }
+          } else {
+            if (attrs[[attr2]]$continuous) {
+              # Between all levels and continuous variable
+              rows <- paste0(attr1, ".", names(attrs[[attr1]]$mean))
+              cols <- attr2
+            } else {
+              # Between all levels of both categoricals
+              rows <- paste0(attr1, ".", names(attrs[[attr1]]$mean))
+              cols <- paste0(attr2, ".", names(attrs[[attr2]]$mean))
+            }
+          }
+        }
+
+        # Set correlations for all combinations
+        for (row in rows) {
+          for (col in cols) {
+            # Verify row and column exist in matrix
+            if (!row %in% rownames(cor_mat)) {
+              stop(sprintf("Parameter '%s' not found in correlation matrix", row))
+            }
+            if (!col %in% colnames(cor_mat)) {
+              stop(sprintf("Parameter '%s' not found in correlation matrix", col))
+            }
+
+            # Don't set correlation with self
+            if (row != col) {
+              cor_mat[row, col] <- cor$value
+              cor_mat[col, row] <- cor$value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  # Validate correlation matrix is positive definite
+  if (!all(eigen(cor_mat)$values > 0)) {
+    stop("Specified correlations result in an invalid correlation matrix. Try specifying fewer or smaller correlations.")
+  }
+
+  return(cor_mat)
 }
 
 # Helper function to combine attribute info with parameter specifications
@@ -226,6 +437,7 @@ get_combined_attr_info <- function(profiles, params) {
     # Validate and process parameters
     if (info$random) {
       info$dist <- param$dist
+      info$correlations <- param$correlations  # Preserve correlations
       if (!info$continuous) {
         if (!is.null(names(param$mean))) {
           # Validate named vector levels
@@ -315,7 +527,8 @@ process_parameters <- function(attrs) {
       random[[attr]] <- list(
         dist = info$dist,
         mean = info$mean,
-        sd = info$sd
+        sd = info$sd,
+        correlations = info$correlations  # Preserve correlations
       )
     } else {
       fixed[[attr]] <- info$mean
@@ -385,8 +598,9 @@ makeBetaDraws <- function(
 ) {
   # First scale the draws according to the covariance matrix
   if (!is.null(correlation)) {
-    lowerMat <- matrix(0, n$parsRandom, n$parsRandom)
-    lowerMat[lower.tri(lowerMat, diag = TRUE)] <- pars_sd
+    lowerMat <- cor_mat^2
+    diag(lowerMat) <- pars_sd
+    lowerMat[!lower.tri(lowerMat, diag = TRUE)] <- 0
   } else {
     lowerMat <- diag(pars_sd, ncol = length(pars_sd))
   }
