@@ -5,6 +5,11 @@
 #' parameters, with flexible specification of categorical variable levels.
 #'
 #' @param profiles A data frame of profiles created by `cbc_profiles()`
+#' @param n_draws Number of draws for DB-error calculation if using Bayesian
+#'   priors. Defaults to `100`
+#' @param draw_type Specify the draw type as a character: `"halton"`
+#'   (the default) or `"sobol"` (recommended for models with more than 5
+#'   random parameters).
 #' @param ... Named arguments specifying priors for each attribute:
 #'   - For fixed parameters:
 #'     - Continuous variables: provide a single numeric value
@@ -12,8 +17,6 @@
 #'       - An unnamed vector of values one less than the number of levels (dummy coding)
 #'       - A named vector mapping levels to coefficients (remaining level becomes reference)
 #'   - For random parameters: use `rand_spec()` to specify distribution, parameters, and correlations
-#' @param n_draws Number of draws for DB-error calculation if using Bayesian
-#'   priors. Defaults to `100`
 #' @return A structured prior specification object including parameter draws for
 #'   random coefficients
 #' @export
@@ -95,7 +98,12 @@
 #'   ),
 #'   freshness = c(0.4, 0.8)
 #' )
-cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
+cbc_priors <- function(
+  profiles,
+  n_draws = 100,
+  draw_type = "halton",
+  ...
+) {
   # Validate profiles input
   if (!inherits(profiles, "data.frame") || !"profileID" %in% names(profiles)) {
     stop("'profiles' must be a data frame created by cbc_profiles()")
@@ -123,11 +131,11 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   model_data <- prepare_profiles_for_model(profiles, means, attrs)
   codedData <- logitr::recodeData(model_data, parNames, randPars)
   codedParNames <- codedData$pars
-  all_means <- c(
+  pars_mean <- c(
     unlist(fixed_params),
     unlist(lapply(random_params, function(x) x$mean))
   )
-  names(all_means) <- codedParNames
+  names(pars_mean) <- codedParNames
 
   # Generate parameter draws if we have random parameters
   if (length(random_params) > 0) {
@@ -140,9 +148,9 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
     parIDs <- get_parIDs(parSetup)
 
     # Combine all parameters for draws
-    all_sds <- unlist(lapply(random_params, function(x) x$sd))
+    pars_sd <- unlist(lapply(random_params, function(x) x$sd))
 
-    names(all_sds) <- names(codedData$randPars)
+    names(pars_sd) <- names(codedData$randPars)
 
     # Set up n list for makeBetaDraws
     n <- list(
@@ -150,13 +158,13 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
       parsFixed = length(which(parSetup == "f")),
       parsRandom = length(which(parSetup != "f")),
       draws = n_draws,
-      pars = length(all_means) + length(all_sds)
+      pars = length(pars_mean) + length(pars_sd)
     )
 
     # Generate parameter draws
-    standardDraws <- getStandardDraws(parIDs, n$draws, "halton")
+    standardDraws <- getStandardDraws(parIDs, n$draws, draw_type)
     par_draws <- makeBetaDraws(
-      all_means, all_sds, parIDs, n, standardDraws, cor_mat
+      pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat
     )
   } else {
     par_draws <- NULL
@@ -166,7 +174,7 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   # Create return object
   result <- list(
     attrs = attrs,
-    pars = all_means,
+    pars = pars_mean,
     correlation = cor_mat,
     par_draws = par_draws
   )
@@ -594,25 +602,25 @@ get_parIDs <- function(parSetup) {
 
 # Returns shifted normal draws for each parameter
 makeBetaDraws <- function(
-  pars_mean, pars_sd, parIDs, n, standardDraws, correlation
+  pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat
 ) {
+
   # First scale the draws according to the covariance matrix
-  if (!is.null(correlation)) {
-    lowerMat <- cor_mat^2
-    diag(lowerMat) <- pars_sd
-    lowerMat[!lower.tri(lowerMat, diag = TRUE)] <- 0
-  } else {
-    lowerMat <- diag(pars_sd, ncol = length(pars_sd))
-  }
+  lowerMat <- cor_mat^2
+  diag(lowerMat) <- pars_sd
+  lowerMat[!lower.tri(lowerMat, diag = TRUE)] <- 0
   scaledDraws <- standardDraws
   scaledDraws[,parIDs$r] <- scaledDraws[,parIDs$r] %*% lowerMat
+
   # Now shift the draws according to the means
   meanMat <- matrix(rep(pars_mean, n$draws), ncol = n$vars, byrow = TRUE)
   betaDraws <- meanMat + scaledDraws
+
   # log-normal draws: Exponentiate
   if (length(parIDs$ln) > 0) {
     betaDraws[, parIDs$ln] <- exp(betaDraws[, parIDs$ln])
   }
+
   # Censored normal draws: Censor
   if (length(parIDs$cn) > 0) {
     betaDraws[, parIDs$cn] <- pmax(betaDraws[, parIDs$cn], 0)
@@ -620,13 +628,16 @@ makeBetaDraws <- function(
   return(betaDraws)
 }
 
-
-getStandardDraws <- function(parIDs, numDraws, drawType) {
+getStandardDraws <- function(parIDs, numDraws, draw_type) {
     numBetas <- length(parIDs$f) + length(parIDs$r)
-    if (drawType == 'sobol') {
-        draws <- as.matrix(randtoolbox::sobol(numDraws, numBetas, normal = TRUE))
+    if (draw_type == 'sobol') {
+        draws <- as.matrix(randtoolbox::sobol(
+          numDraws, numBetas, normal = TRUE
+        ))
     } else {
-        draws <- as.matrix(randtoolbox::halton(numDraws, numBetas, normal = TRUE))
+        draws <- as.matrix(randtoolbox::halton(
+          numDraws, numBetas, normal = TRUE
+        ))
     }
     draws[, parIDs$f] <- 0 * draws[, parIDs$f]
     return(draws)
