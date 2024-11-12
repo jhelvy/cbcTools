@@ -105,31 +105,33 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   fixed_params <- processed_params$fixed
   random_params <- processed_params$random
 
+  # Set up random parameters specification for logitr
+  randPars <- lapply(random_params, function(x) x$dist)
+
+  # Get parameter names
+  parNames <- c(names(fixed_params), names(random_params))
+
+  # Create coded data structure
+  means <- c(fixed_params, lapply(random_params, function(x) x$mean))
+  model_data <- prepare_profiles_for_model(profiles, means, attrs)
+  codedData <- logitr::recodeData(model_data, parNames, randPars)
+  codedParNames <- codedData$pars
+  all_means <- c(
+    unlist(fixed_params),
+    unlist(lapply(random_params, function(x) x$mean))
+  )
+  names(all_means) <- codedParNames
+
   # Generate parameter draws if we have random parameters
   if (length(random_params) > 0) {
-    # Set up random parameters specification for logitr
-    randPars <- lapply(random_params, function(x) x$dist)
-
-    # Get parameter names
-    parNames <- c(names(fixed_params), names(random_params))
-
-    # Create coded data structure
-    means <- c(fixed_params, lapply(random_params, function(x) x$mean))
-    model_data <- prepare_profiles_for_model(profiles, means, attrs)
-    codedData <- logitr::recodeData(model_data, parNames, randPars)
 
     # Set up parameter structure
-    codedParNames <- codedData$pars
     parSetup <- get_parSetup(codedParNames, codedData$randPars)
     parIDs <- get_parIDs(parSetup)
 
     # Combine all parameters for draws
-    all_means <- c(
-      unlist(fixed_params),
-      unlist(lapply(random_params, function(x) x$mean))
-    )
     all_sds <- unlist(lapply(random_params, function(x) x$sd))
-    names(all_means) <- codedParNames
+
     names(all_sds) <- names(codedData$randPars)
 
     # Set up n list for makeBetaDraws
@@ -153,7 +155,7 @@ cbc_priors <- function(profiles, ..., correlation = NULL, n_draws = 100) {
   # Create return object
   result <- list(
     attrs = attrs,
-    pars = c(fixed_params, lapply(random_params, function(x) x$mean)),
+    pars = all_means,
     correlation = correlation,
     par_draws = par_draws
   )
@@ -202,10 +204,17 @@ get_combined_attr_info <- function(profiles, params) {
     values <- profile_attrs[[attr]]
     param <- params[[attr]]
 
+    # Get all levels from profiles
+    all_levels <- if (is.numeric(values)) {
+      sort(unique(values))
+    } else {
+      if (is.factor(values)) levels(values) else unique(values)
+    }
+
     # Base structure
     info <- list(
       continuous = is.numeric(values),
-      levels = if (is.numeric(values)) sort(unique(values)) else levels(values),
+      levels = all_levels,
       random = inherits(param, "cbc_random_par")
     )
 
@@ -214,23 +223,78 @@ get_combined_attr_info <- function(profiles, params) {
       info$range <- range(values)
     }
 
-    # Add distribution info for random parameters
+    # Validate and process parameters
     if (info$random) {
       info$dist <- param$dist
-      if (!info$continuous && is.numeric(param$mean)) {
-        # For unnamed categorical parameters, assign names based on levels
-        names(param$mean) <- info$levels[-1]  # All but first level
-        names(param$sd) <- info$levels[-1]    # All but first level
+      if (!info$continuous) {
+        if (!is.null(names(param$mean))) {
+          # Validate named vector levels
+          invalid_levels <- setdiff(names(param$mean), all_levels)
+          if (length(invalid_levels) > 0) {
+            stop(sprintf(
+              "Invalid level(s) provided for '%s': %s\nValid levels are: %s",
+              attr,
+              paste(invalid_levels, collapse = ", "),
+              paste(all_levels, collapse = ", ")
+            ))
+          }
+          # Validate that sd has same names as mean
+          if (!identical(names(param$mean), names(param$sd))) {
+            stop(sprintf(
+              "Names for mean and sd must match for random parameter '%s'",
+              attr
+            ))
+          }
+          info$mean <- param$mean
+          info$sd <- param$sd
+        } else {
+          # Unnamed vector case - assign names based on remaining levels
+          remaining_levels <- all_levels[-1]  # All but first level
+          if (length(param$mean) != length(remaining_levels)) {
+            stop(sprintf(
+              "Incorrect number of values for '%s'. Expected %d values (one less than the number of levels)",
+              attr, length(remaining_levels)
+            ))
+          }
+          names(param$mean) <- remaining_levels
+          names(param$sd) <- remaining_levels
+          info$mean <- param$mean
+          info$sd <- param$sd
+        }
+      } else {
+        info$mean <- param$mean
+        info$sd <- param$sd
       }
-      info$mean <- param$mean
-      info$sd <- param$sd
     } else {
-      # For fixed parameters
-      if (!info$continuous && is.numeric(param)) {
-        # For unnamed categorical parameters, assign names based on levels
-        names(param) <- info$levels[-1]  # All but first level
+      # Fixed parameters
+      if (!info$continuous) {
+        if (!is.null(names(param))) {
+          # Validate named vector levels
+          invalid_levels <- setdiff(names(param), all_levels)
+          if (length(invalid_levels) > 0) {
+            stop(sprintf(
+              "Invalid level(s) provided for '%s': %s\nValid levels are: %s",
+              attr,
+              paste(invalid_levels, collapse = ", "),
+              paste(all_levels, collapse = ", ")
+            ))
+          }
+          info$mean <- param
+        } else {
+          # Unnamed vector case - assign names based on remaining levels
+          remaining_levels <- all_levels[-1]  # All but first level
+          if (length(param) != length(remaining_levels)) {
+            stop(sprintf(
+              "Incorrect number of values for '%s'. Expected %d values (one less than the number of levels)",
+              attr, length(remaining_levels)
+            ))
+          }
+          names(param) <- remaining_levels
+          info$mean <- param
+        }
+      } else {
+        info$mean <- param
       }
-      info$mean <- param
     }
 
     return(info)
