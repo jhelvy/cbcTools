@@ -2,165 +2,147 @@
 #'
 #' @param design A data frame containing a choice experiment design created
 #'   by `cbc_design()`
-#' @param priors A numeric vector of prior parameter values, list with
-#'   mean/sigma for Bayesian priors, or `NULL` for D0-error (default)
-#' @param obsID The name of the column in `design` that identifies each choice
-#' observation. Defaults to `"obsID"`.
-#' @param n_draws Number of draws for DB-error calculation if using Bayesian
-#'   priors. Defaults to `100`.
+#' @param priors A cbc_priors object created by cbc_priors(), or NULL for D0-error
 #' @param exclude Character vector of attribute names to exclude from D-error
 #'   calculation
 #' @return The D-error value
 #' @details
-#' For Bayesian priors (DB-error), you can specify either:
-#' * A list with 'mean' and 'sd' vectors for uncorrelated parameters
-#' * A list with 'mean' vector and 'sigma' matrix for correlated parameters
-#'
-#' @examples
-#' # Create profiles
-#' profiles <- cbc_profiles(
-#'   price     = seq(1, 5, 0.5),
-#'   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Generate design
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp = 100,
-#'   n_alts = 3,
-#'   n_q = 6
-#' )
-#'
-#' # DB-error with uncorrelated priors
-#' db_error1 <- cbc_d_error(design,
-#'   priors = list(
-#'     mean = c(-0.5, 0.2, 0.3, 0.4, 0.8),
-#'     sd = rep(0.4, 5)
-#'   ))
-#'
-#' # DB-error with correlated priors
-#' sigma <- matrix(c(
-#'   0.16, 0.06, 0.06, 0.00, 0.00,
-#'   0.06, 0.16, 0.06, 0.00, 0.00,
-#'   0.06, 0.06, 0.16, 0.00, 0.00,
-#'   0.00, 0.00, 0.00, 0.16, 0.06,
-#'   0.00, 0.00, 0.00, 0.06, 0.16
-#' ), 5, 5)
-#' db_error2 <- cbc_d_error(design,
-#'   priors = list(
-#'     mean = c(-0.5, 0.2, 0.3, 0.4, 0.8),
-#'     sigma = sigma
-#'   ))
+#' Computes either D-error (with fixed priors) or DB-error (with random draws)
+#' depending on whether parameter draws are included in the priors object.
 #' @export
-cbc_d_error <- function(
-  design,
-  priors = NULL,
-  n_draws = 100,
-  exclude = NULL
-) {
-
+cbc_d_error <- function(design, priors = NULL, exclude = NULL) {
   # Validate that input is a cbc_design object
   if (!all(get_id_names() %in% names(design))) {
     stop("Design must be created by cbc_design()")
   }
 
-  # Get attribute columns (all columns except the required ones)
-  pars <- get_var_names(design)
+  # Validate priors object
+  randPars <- NULL
+  par_draws <- NULL
+  if (!is.null(priors)) {
+    if (!inherits(priors, "cbc_priors")) {
+      stop("priors must be created using cbc_priors()")
+    }
+    randPars <- names(which(sapply(priors$attrs, function(x) x$random)))
+    if (!is.null(priors$par_draws)) {
+      par_draws <- priors$par_draws
+    }
+  }
+
+  # Get attribute columns (excluding metadata columns)
+  atts <- get_var_names(design)
 
   # Remove excluded attributes
   if (!is.null(exclude)) {
-    pars <- setdiff(pars, exclude)
+    atts <- setdiff(atts, exclude)
   }
 
-  if (length(pars) == 0) {
-    stop("No attribute columns found in design")
+  if (length(atts) == 0) {
+    stop("No attribute columns found in design after exclusions")
   }
 
-  # Define the prior model
-  null_prior <- FALSE
-  if (is.null(priors)) {
-    priors <- setup_null_priors(design, pars)
-    null_prior <- TRUE
-  }
-
-  # Get predicted probabilities
-  design <- sim_probs_prior(design, model, null_prior)
-
-  # Convert design to model matrices by question
-  obsID_vector <- design$obsID
-  X_list <- split(as.data.frame(model$data$X), obsID_vector)
+  # Encode design matrix and split into list by obsID
+  obsID <- design$obsID
+  reps <- table(obsID)
+  codedData <- logitr::recodeData(design, atts, randPars)
+  X <- codedData$X
+  X_list <- split(as.data.frame(X), obsID)
   X_list <- lapply(X_list, as.matrix)
 
+  # If no draws, then compute standard D error, otherwise use DB error
+  if (is.null(par_draws)) {
+
+    # Get predicted probabilities
+    probs <- compute_probs(obsID, reps, atts, priors, X)
+
+    # Compute D error
+    d_error <- compute_d_error(X_list, probs, obsID)
+
+    return(d_error)
+  }
+
+  return(compute_db_error(par_draws, X, X_list, obsID, reps))
+}
+
+compute_probs <- function(obsID, reps, atts, priors, X) {
+  if (is.null(priors)) {
+    return(compute_probs_null(reps))
+  }
+  return(compute_probs_prior(obsID, reps, atts, priors, X))
+}
+
+compute_probs_null <- function(reps) {
+  probs <- 1 / reps
+  return(rep(probs, times = reps))
+}
+
+compute_probs_prior <- function(obsID, reps, atts, priors, X) {
+  V <- X %*% priors$pars
+  return(logit(V, obsID, reps))
+}
+
+# Helper function to predict choice probabilities
+logit <- function(V, obsID, reps) {
+  expV <- exp(V)
+  sumExpV <- rowsum(expV, group = obsID, reorder = FALSE)
+  return(expV / sumExpV[rep(seq_along(reps), reps),])
+}
+
+logit_draws <- function(par_draws, X, obsID, reps) {
+  VDraws <- X %*% t(par_draws)
+  return(logit(VDraws, obsID, reps))
+}
+
+compute_d_error <- function(X_list, probs, obsID) {
   # Convert probabilities into list of vectors
-  P_list <- split(design$predicted_prob, obsID_vector)
+  P_list <- split(probs, obsID)
 
-  # Compute D-error
-  d_error <- compute_d_error(X_list, P_list)
-
-  return(d_error)
-}
-
-setup_null_priors <- function(design, pars) {
-  X <- design[pars]
-  n_levels <- apply(X, 2, function(x) length(unique(x)))
-  types <- unlist(lapply(lapply(X, class), function(x) x[1]))
-  discIDs <- which(types %in% c("character", "factor"))
-  priors <- as.list(stats::setNames(rep(0, length(pars)), pars))
-  for (i in 1:length(discIDs)) {
-    id <- discIDs[i]
-    priors[[id]] <- rep(0, n_levels[id] - 1)
-  }
-  return(priors)
-}
-
-sim_probs_prior <- function(design, model, null_prior) {
-  if (null_prior) {
-    reps <- table(design['obsID'])
-    probs <- 1 / reps
-    design$predicted_prob <- rep(probs, times = reps)
-    return(design)
-  }
-  result <- stats::predict(
-    object     = model,
-    newdata    = design,
-    obsID      = 'obsID',
-    type       = "prob",
-    returnData = TRUE
-  )
-  return(result)
-}
-
-compute_d_error <- function(X_list, P_list) {
   # Initialize information matrix
   K <- ncol(X_list[[1]])
-  M <- matrix(0, K, K)
 
-  # Compute information matrix for each choice set
-  for (i in seq_len(length(X_list))) {
-    X <- X_list[[i]]
-    P <- P_list[[i]]
-
-    # Add to information matrix
-    P <- diag(as.vector(P)) - tcrossprod(P)
-    M <- M + t(X) %*% P %*% X
-  }
+  # Compute information matrix components for all observations at once
+  M <- Reduce(`+`, Map(function(x, p) {
+    p_mat <- diag(p) - tcrossprod(p)
+    crossprod(x, p_mat %*% x)
+  }, X_list, P_list))
 
   # Compute D-error
-  d_error <- det(M)^(-1/K)
-  return(d_error)
-}
+  return(det(M)^(-1/K))
+ }
 
-#' Compute DB-error using Monte Carlo simulation
-compute_db_error <- function(X_list, mu, sigma, n_draws) {
-  # Generate random draws from multivariate normal distribution
-  draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
+# compute_d_error_slower <- function(X_list, probs, obsID) {
+#   # Convert probabilities into list of vectors
+#   P_list <- split(probs, obsID)
+#
+#   # Initialize information matrix
+#   K <- ncol(X_list[[1]])
+#   M <- matrix(0, K, K)
+#
+#   # Compute information matrix for each choice set
+#   for (i in seq_len(length(X_list))) {
+#     X <- X_list[[i]]
+#     P <- P_list[[i]]
+#
+#     # Add to information matrix
+#     P <- diag(as.vector(P)) - tcrossprod(P)
+#     M <- M + t(X) %*% P %*% X
+#   }
+#
+#   # Compute D-error
+#   d_error <- det(M)^(-1/K)
+#   return(d_error)
+# }
+
+compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
+  P_draws <- logit_draws(par_draws, X, obsID, reps)
+  n_draws <- ncol(P_draws)
 
   # Compute DP-error for each draw
-  d_errors <- apply(draws, 1, function(priors) {
-    compute_d_error(X_list, priors)
+  d_errors <- apply(P_draws, 2, function(x) {
+    compute_d_error(X_list, x, obsID)
   })
 
   # DB-error is average of DP-errors
-  return(mean(d_errors))
+  d_error <- mean(d_errors)
+  return(d_error)
 }
