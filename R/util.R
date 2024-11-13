@@ -27,3 +27,18 @@ set_block_ids <- function(design, n_blocks) {
     }
     return(design)
 }
+
+validate_priors <- function(priors) {
+    if (!is.null(priors)) {
+        if (!inherits(priors, "cbc_priors")) {
+            stop("priors must be created using cbc_priors()")
+        }
+    }
+}
+
+get_rand_pars <- function(priors) {
+    if (is.null(priors)) { return(NULL) }
+    randPars <- names(which(sapply(priors$attrs, function(x) x$random)))
+    if (length(randPars) == 0) { return(NULL) }
+    return(randPars)
+}

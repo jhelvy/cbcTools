@@ -16,18 +16,10 @@ cbc_d_error <- function(design, priors = NULL, exclude = NULL) {
     stop("Design must be created by cbc_design()")
   }
 
-  # Validate priors object
-  randPars <- NULL
-  par_draws <- NULL
-  if (!is.null(priors)) {
-    if (!inherits(priors, "cbc_priors")) {
-      stop("priors must be created using cbc_priors()")
-    }
-    randPars <- names(which(sapply(priors$attrs, function(x) x$random)))
-    if (!is.null(priors$par_draws)) {
-      par_draws <- priors$par_draws
-    }
-  }
+  # Validate priors object and set up objects for random pars
+  validate_priors(priors)
+  randPars <- get_rand_pars(priors)
+  par_draws <- priors$par_draws
 
   # Get attribute columns (excluding metadata columns)
   atts <- get_var_names(design)
@@ -36,7 +28,6 @@ cbc_d_error <- function(design, priors = NULL, exclude = NULL) {
   if (!is.null(exclude)) {
     atts <- setdiff(atts, exclude)
   }
-
   if (length(atts) == 0) {
     stop("No attribute columns found in design after exclusions")
   }
@@ -51,16 +42,11 @@ cbc_d_error <- function(design, priors = NULL, exclude = NULL) {
 
   # If no draws, then compute standard D error, otherwise use DB error
   if (is.null(par_draws)) {
-
-    # Get predicted probabilities
+    # Get predicted probabilities, then compute error
     probs <- compute_probs(obsID, reps, atts, priors, X)
-
-    # Compute D error
     d_error <- compute_d_error(X_list, probs, obsID)
-
     return(d_error)
   }
-
   return(compute_db_error(par_draws, X, X_list, obsID, reps))
 }
 

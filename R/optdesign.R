@@ -1,18 +1,10 @@
 # Helper function to initialize model and precompute matrices for d-error calculation
 initialize_design_optimization <- function(design, priors, varNames) {
 
-    # Validate priors object
-    randPars <- NULL
-    par_draws <- NULL
-    if (!is.null(priors)) {
-        if (!inherits(priors, "cbc_priors")) {
-            stop("priors must be created using cbc_priors()")
-        }
-        randPars <- names(which(sapply(priors$attrs, function(x) x$random)))
-        if (!is.null(priors$par_draws)) {
-            par_draws <- priors$par_draws
-        }
-    }
+    # Validate priors object and set up objects for random pars
+    validate_priors(priors)
+    randPars <- get_rand_pars(priors)
+    par_draws <- priors$par_draws
 
     # Initial encoding of design matrix
     obsID <- design$obsID
@@ -21,38 +13,80 @@ initialize_design_optimization <- function(design, priors, varNames) {
     X <- codedData$X
     X_list <- split(as.data.frame(X), obsID)
     X_list <- lapply(X_list, as.matrix)
+    K <- ncol(X_list[[1]])
 
+    # If no draws, then compute standard D error, otherwise use DB error
+    if (is.null(par_draws)) {
+        P_draws <- NULL
+        n_draws <- NULL
+        draws_list <- NULL
 
+        # Get predicted probabilities, then compute error
+        probs <- compute_probs(obsID, reps, atts, priors, X)
 
+        # Convert probabilities into list of vectors
+        P_list <- split(probs, obsID)
 
+        # Pre-compute initial information matrices for each choice set
+        M_list <- mapply(function(X, P) {
+            P_matrix <- diag(as.vector(P)) - tcrossprod(P)
+            t(X) %*% P_matrix %*% X
+        }, X_list, P_list, SIMPLIFY = FALSE)
 
+        # Compute initial total information matrix and D-error
+        M_total <- Reduce("+", M_list)
 
+        # Compute D-error
+        d_error <- det(M_total)^(-1/K)
+    } else {
+        P_draws <- logit_draws(par_draws, X, obsID, reps)
+        n_draws <- ncol(P_draws)
 
-    # Initial probability calculations
-    probs <- sim_probs_prior(design, model, null_prior)$predicted_prob
-    P_list <- split(probs, obsID)
+        # Sample calc, but storing for each set of parameter draws
+        draws_list <- list()
+        for (i in seq(n_draws)) {
 
-    # Pre-compute initial information matrices for each choice set
-    M_list <- mapply(function(X, P) {
-        P_matrix <- diag(as.vector(P)) - tcrossprod(P)
-        t(X) %*% P_matrix %*% X
-    }, X_list, P_list, SIMPLIFY = FALSE)
+            # Convert probabilities into list of vectors
+            P_list <- split(P_draws[,i], obsID)
 
-    # Compute initial total information matrix and D-error
-    M_total <- Reduce("+", M_list)
-    d_error <- det(M_total)^(-1/ncol(X_list[[1]]))
+            # Pre-compute initial information matrices for each choice set
+            M_list <- mapply(function(X, P) {
+                P_matrix <- diag(as.vector(P)) - tcrossprod(P)
+                t(X) %*% P_matrix %*% X
+            }, X_list, P_list, SIMPLIFY = FALSE)
+
+            # Compute initial total information matrix and D-error
+            M_total <- Reduce("+", M_list)
+
+            # Compute D-error
+            d_error <- det(M_total)^(-1/K)
+
+            # Store in lists of draws
+            draws_list[[i]] <- list(
+                P_list = P_list,
+                M_list = M_list,
+                M_total = M_total,
+                d_error = d_error
+            )
+        }
+
+        # DB-error is average of DP-errors
+        d_error <- mean(unlist(lapply(draws_list, function(x) x$d_error)))
+    }
 
     # Return all precomputed objects
-    list(
+    return(list(
         design = design,
-        model = model,
         X_list = X_list,
         P_list = P_list,
         M_list = M_list,
         M_total = M_total,
         d_error = d_error,
-        K = ncol(X_list[[1]])
-    )
+        K = K,
+        n_draws = n_draws,
+        P_draws = P_draws,
+        draws_list = draws_list
+    ))
 }
 
 # Helper function to update a single choice set in the optimization
