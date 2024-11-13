@@ -1,16 +1,36 @@
 # Helper function to initialize model and precompute matrices for d-error calculation
-initialize_design_optimization <- function(design, priors, n_draws, null_prior) {
-    # Create model once at the start - this won't change during optimization
-    model <- priors$model
+initialize_design_optimization <- function(design, priors, varNames) {
+
+    # Validate priors object
+    randPars <- NULL
+    par_draws <- NULL
+    if (!is.null(priors)) {
+        if (!inherits(priors, "cbc_priors")) {
+            stop("priors must be created using cbc_priors()")
+        }
+        randPars <- names(which(sapply(priors$attrs, function(x) x$random)))
+        if (!is.null(priors$par_draws)) {
+            par_draws <- priors$par_draws
+        }
+    }
 
     # Initial encoding of design matrix
-    obsID_vector <- design$obsID
-    X_list <- split(as.data.frame(model$data$X), obsID_vector)
+    obsID <- design$obsID
+    reps <- table(obsID)
+    codedData <- logitr::recodeData(design, varNames, randPars)
+    X <- codedData$X
+    X_list <- split(as.data.frame(X), obsID)
     X_list <- lapply(X_list, as.matrix)
+
+
+
+
+
+
 
     # Initial probability calculations
     probs <- sim_probs_prior(design, model, null_prior)$predicted_prob
-    P_list <- split(probs, obsID_vector)
+    P_list <- split(probs, obsID)
 
     # Pre-compute initial information matrices for each choice set
     M_list <- mapply(function(X, P) {
@@ -86,21 +106,17 @@ get_eligible_profiles <- function(profiles, current_profileIDs, label = NULL, cu
 
 # Updated optimize_design function with label handling
 optimize_design <- function(
-    initial_design,
+    design,
     profiles,
     priors,
     varNames,
     n_q,
     n_alts,
     max_iter,
-    n_draws,
-    null_prior,
     label = NULL
 ) {
     # Initialize optimization state
-    opt_state <- initialize_design_optimization(
-        initial_design, priors, n_draws, null_prior
-    )
+    opt_state <- initialize_design_optimization(design, priors, varNames)
 
     iter <- 1
     improved <- TRUE

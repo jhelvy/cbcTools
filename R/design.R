@@ -191,7 +191,7 @@ cbc_design <- function(
 
     if (method == 'sequential') {
         design <- make_design_sequential(
-            design_random, profiles, n_resp, n_alts, n_q, n_draws, n_blocks,
+            design_random, profiles, n_resp, n_alts, n_q, n_blocks,
             priors, max_iter, label, randomize_questions, randomize_alts
         )
     } else {
@@ -574,7 +574,6 @@ make_design_sequential <- function(
     n_resp,
     n_alts,
     n_q,
-    n_draws,
     n_blocks,
     priors,
     max_iter,
@@ -600,7 +599,6 @@ make_design_sequential <- function(
         n_questions,
         n_alts,
         max_iter,
-        n_draws,
         label
     )
 
