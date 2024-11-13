@@ -85,10 +85,9 @@ check_inputs_design <- function(
     }
 
     # Check that prior names aren't missing
-    attr_info <- get_attribute_info(profiles)
-    prior_names <- names(attr_info)
-    profile_lvls <- profiles[,2:ncol(profiles)]
-    missing <- setdiff(names(profile_lvls), prior_names)
+    prior_names <- names(priors$attrs)
+    profile_attrs <- get_var_names(profiles)
+    missing <- setdiff(profile_lvls, prior_names)
     if (length(missing) > 0) {
         stop(
             '"priors" is missing the following variables: \n\n',
@@ -98,19 +97,24 @@ check_inputs_design <- function(
 
     # Check that prior levels aren't missing
     type_ids <- get_type_ids(profiles)
-    prior_means <- priors$means
     for (id in which(type_ids$discrete)) {
-        n_lvls <- length(unique(profile_lvls[,id])) - 1
-        if (length(prior_means[[id]]) != n_lvls) {
+        col_index <- id + 1
+        attr <- names(profiles)[col_index]
+        n_lvls <- length(unique(profiles[,col_index])) - 1
+        prior_means <- priors$attrs[[attr]]$mean
+        if (length(prior_means) != n_lvls) {
             stop(
                 'Invalid number of values provided in "priors" for the "',
-                prior_names[id], '" attribute. Please provide ', n_lvls,
+                attr, '" attribute. Please provide ', n_lvls,
                 ' values'
             )
         }
     }
     for (id in which(type_ids$continuous)) {
-        if (length(prior_means[[id]]) != 1) {
+        col_index <- id + 1
+        attr <- names(profiles)[col_index]
+        prior_means <- priors$attrs[[attr]]$mean
+        if (length(prior_means) != 1) {
             stop(
                 'Invalid number of values provided in "priors" for the "',
                 prior_names[id], '" attribute. Please provide 1 value'

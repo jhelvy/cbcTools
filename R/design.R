@@ -591,13 +591,6 @@ make_design_sequential <- function(
     n_questions <- n_q*n_blocks
     design$qID <- design$obsID
 
-    # Define the prior model
-    null_prior <- FALSE
-    if (is.null(priors)) {
-        priors <- setup_null_priors(design, varNames)
-        null_prior <- TRUE
-    }
-
     # Find an efficient design
     result <- optimize_design(
         design,
@@ -608,7 +601,6 @@ make_design_sequential <- function(
         n_alts,
         max_iter,
         n_draws,
-        null_prior,
         label
     )
 
@@ -631,13 +623,6 @@ make_design_sequential <- function(
 
     return(design)
 }
-
-
-
-
-
-
-
 
 #' Display attribute levels and dummy coding for a CBC design
 #'
