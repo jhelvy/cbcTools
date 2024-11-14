@@ -115,21 +115,21 @@
 #'   priors = priors
 #' )
 cbc_design <- function(
-    profiles,
-    n_resp,
-    n_alts,
-    n_q,
-    n_blocks = 1,
-    n_start = 5,
-    no_choice = FALSE,
-    label = NULL,
-    method = "random",
-    randomize_questions = TRUE,
-    randomize_alts = TRUE,
-    priors = NULL,
-    prior_no_choice = NULL,
-    max_iter = 50,
-    parallel = FALSE
+        profiles,
+        n_resp,
+        n_alts,
+        n_q,
+        n_blocks = 1,
+        n_start = 5,
+        no_choice = FALSE,
+        label = NULL,
+        method = "random",
+        randomize_questions = TRUE,
+        randomize_alts = TRUE,
+        priors = NULL,
+        prior_no_choice = NULL,
+        max_iter = 50,
+        parallel = FALSE
 ) {
     profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
 
@@ -155,17 +155,26 @@ cbc_design <- function(
 
     # Overrides ----
 
+    # Override n_start for non-sequential methods
+    if (method != "sequential" && n_start > 1) {
+        message(
+            'Multiple starts are only used with the "sequential" method.\n',
+            "Setting n_start <- 1\n"
+        )
+        n_start <- 1
+    }
+
     # Override randomize_alts for labeled designs
     if (!is.null(label) & randomize_alts & method != 'random') {
         message(
-          "Alternative order randomization is disabled for labeled designs.\n",
-          "Setting randomize_alts <- FALSE\n")
+            "Alternative order randomization is disabled for labeled designs.\n",
+            "Setting randomize_alts <- FALSE\n"
+        )
         randomize_alts <- FALSE
     }
 
     # Override n_blocks and priors for method = "random"
     if (method == "random") {
-        # Blocks ignored for "random" method
         if (n_blocks > 1) {
             message(
                 'Blocking is ignored for designs using the "random" method ',
@@ -174,7 +183,6 @@ cbc_design <- function(
             )
             n_blocks <- 1
         }
-        # Priors ignored for "random" method
         if (!is.null(priors)) {
             message(
                 'priors are ignored for designs using the "random" method.\n',
@@ -192,7 +200,8 @@ cbc_design <- function(
     if (method == 'sequential') {
         design <- make_design_sequential(
             design_random, profiles, n_resp, n_alts, n_q, n_blocks,
-            priors, max_iter, label, randomize_questions, randomize_alts
+            priors, max_iter, label, randomize_questions, randomize_alts,
+            n_start
         )
     } else {
         design <- design_random
@@ -568,6 +577,7 @@ override_label_alts <- function(profiles, label, n_alts) {
 
 # Sequential D-Efficient Design ----
 
+# Modified make_design_sequential function to use existing make_design_random()
 make_design_sequential <- function(
     design_random,
     profiles,
@@ -579,44 +589,105 @@ make_design_sequential <- function(
     max_iter,
     label,
     randomize_questions,
-    randomize_alts
+    randomize_alts,
+    n_start = 1
 ) {
-    # Start with random design
-    design <- design_random
-    varNames <- get_var_names(design)
+    # Set up parallel processing
+    n_cores <- set_num_cores(NULL)
+    message("Running ", n_start, " design searches using ", n_cores, " cores...")
 
-    # Get random subsets to start for each block
-    design <- design[which(design_random$respID %in% seq(n_blocks)),]
-    n_questions <- n_q*n_blocks
-    design$qID <- design$obsID
+    # Create list of different random starts
+    start_designs <- lapply(1:n_start, function(i) {
+        # Generate a new random design for each start
+        design <- make_design_random(profiles, n_blocks, n_blocks, n_alts, n_q,
+                                     no_choice = FALSE, label = label)
 
-    # Find an efficient design
-    result <- optimize_design(
-        design,
-        profiles,
-        priors,
-        varNames,
-        n_questions,
-        n_alts,
-        max_iter,
-        label
-    )
+        # Get subset for blocks and update qID
+        design <- design[which(design$respID %in% seq(n_blocks)),]
+        n_questions <- n_q * n_blocks
+        design$qID <- design$obsID
+
+        return(list(
+            design = design,
+            profiles = profiles,
+            priors = priors,
+            varNames = get_var_names(design),
+            n_questions = n_questions,
+            n_alts = n_alts,
+            max_iter = max_iter,
+            label = label,
+            start_number = i
+        ))
+    })
+
+    # Run optimization in parallel
+    if (Sys.info()[['sysname']] == 'Windows') {
+        cl <- parallel::makeCluster(n_cores, "PSOCK")
+        # Export necessary functions to cluster
+        parallel::clusterExport(cl, c(
+            "optimize_design", "compute_info_matrix", "get_X_matrix",
+            "logit", "logit_draws", "get_eligible_profiles"
+        ), envir = environment())
+
+        results <- suppressMessages(suppressWarnings(
+            parallel::parLapply(
+                cl = cl,
+                start_designs,
+                function(x) {
+                    result <- optimize_design(
+                        x$design, x$profiles, x$priors, x$varNames,
+                        x$n_questions, x$n_alts, x$max_iter, x$label
+                    )
+                    result$start_number <- x$start_number
+                    return(result)
+                }
+            )
+        ))
+        parallel::stopCluster(cl)
+    } else {
+        results <- suppressMessages(suppressWarnings(
+            parallel::mclapply(
+                start_designs,
+                function(x) {
+                    result <- optimize_design(
+                        x$design, x$profiles, x$priors, x$varNames,
+                        x$n_questions, x$n_alts, x$max_iter, x$label
+                    )
+                    result$start_number <- x$start_number
+                    return(result)
+                },
+                mc.cores = n_cores
+            )
+        ))
+    }
+
+    # Find best design based on D-error
+    d_errors <- sapply(results, function(x) x$d_error)
+    best_index <- which.min(d_errors)
+    best_result <- results[[best_index]]
 
     # Merge designs
-    design <- result$design
-    d_error <- result$d_error
+    design <- best_result$design
+    d_error <- best_result$d_error
     design <- set_block_ids(design, n_blocks)
+
+    # Print summary of all starts
+    message("\nD-error results from all starts:")
+    sorted_results <- sort(d_errors)
+    for (i in seq_along(sorted_results)) {
+        idx <- which(d_errors == sorted_results[i])[1]
+        message(sprintf(
+            "Start %d: %.6f %s",
+            results[[idx]]$start_number,
+            sorted_results[i],
+            if(idx == best_index) "  (Best)" else ""
+        ))
+    }
 
     # Repeat the optimized design to match number of respondents
     design <- repeat_sets(
         design, n_resp, n_alts, n_q, n_blocks,
         randomize_questions, randomize_alts
-    )
-
-    # Print final D-error
-    message(
-        "Efficient design found using the sequential method\n",
-        "D-error: ", round(d_error, 5)
     )
 
     return(design)
