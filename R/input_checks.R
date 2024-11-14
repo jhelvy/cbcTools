@@ -87,7 +87,7 @@ check_inputs_design <- function(
     # Check that prior names aren't missing
     prior_names <- names(priors$attrs)
     profile_attrs <- get_var_names(profiles)
-    missing <- setdiff(profile_lvls, prior_names)
+    missing <- setdiff(profile_attrs, prior_names)
     if (length(missing) > 0) {
         stop(
             '"priors" is missing the following variables: \n\n',

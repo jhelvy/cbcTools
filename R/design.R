@@ -604,8 +604,8 @@ make_design_sequential <- function(
 
     # Merge designs
     design <- result$design
+    d_error <- result$d_error
     design <- set_block_ids(design, n_blocks)
-    d_error <- cbc_d_error(design, priors)
 
     # Repeat the optimized design to match number of respondents
     design <- repeat_sets(
