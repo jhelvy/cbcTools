@@ -45,9 +45,11 @@ cbc_d_error <- function(design, priors = NULL, exclude = NULL) {
     # Get predicted probabilities, then compute error
     probs <- compute_probs(obsID, reps, atts, priors, X)
     d_error <- compute_d_error(X_list, probs, obsID)
-    return(d_error)
+  } else {
+    d_error <- compute_db_error(par_draws, X, X_list, obsID, reps)
   }
-  return(compute_db_error(par_draws, X, X_list, obsID, reps))
+  n_blocks <- max(design$blockID)
+  return(d_error*n_blocks)
 }
 
 compute_probs <- function(obsID, reps, atts, priors, X) {

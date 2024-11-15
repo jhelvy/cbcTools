@@ -7,9 +7,8 @@
 #' and "labeled" designs (also known as "alternative specific" designs).
 #'
 #' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
-#' @param profiles A data frame in which each row is a possible profile. This
-#'   can be generated using the `cbc_profiles()` function.
-#' @param n_resp Number of survey respondents.
+#' @param profiles A data frame in which each row is a possible profile
+#'   generated using the `cbc_profiles()` function.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
 #' @param n_blocks Number of blocks used D-efficient or Bayesian D-efficient
@@ -93,7 +92,6 @@
 #' # Make a random survey design (default)
 #' design_random <- cbc_design(
 #'   profiles = profiles,
-#'   n_resp   = 100, # Number of respondents
 #'   n_alts   = 3,   # Number of alternatives per question
 #'   n_q      = 6    # Number of questions per respondent
 #' )
@@ -108,34 +106,31 @@
 #' # Make a D-efficient design with priors using the "sequential" method
 #' design <- cbc_design(
 #'   profiles = profiles,
-#'   n_resp = 100,
 #'   n_alts = 3,
 #'   n_q = 6,
 #'   method = "sequential",
 #'   priors = priors
 #' )
 cbc_design <- function(
-        profiles,
-        n_resp,
-        n_alts,
-        n_q,
-        n_blocks = 1,
-        n_start = 5,
-        no_choice = FALSE,
-        label = NULL,
-        method = "random",
-        randomize_questions = TRUE,
-        randomize_alts = TRUE,
-        priors = NULL,
-        prior_no_choice = NULL,
-        max_iter = 50,
-        parallel = FALSE
+  profiles,
+  n_alts,
+  n_q,
+  n_blocks = 1,
+  n_start = 5,
+  no_choice = FALSE,
+  label = NULL,
+  method = "random",
+  randomize_questions = TRUE,
+  randomize_alts = TRUE,
+  priors = NULL,
+  prior_no_choice = NULL,
+  max_iter = 50,
+  parallel = FALSE
 ) {
     profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
 
     check_inputs_design(
         profiles,
-        n_resp,
         n_alts,
         n_q,
         n_blocks,
@@ -155,34 +150,22 @@ cbc_design <- function(
 
     # Overrides ----
 
-    # Override n_start for non-sequential methods
-    if (method != "sequential" && n_start > 1) {
-        message(
-            'Multiple starts are only used with the "sequential" method.\n',
-            "Setting n_start <- 1\n"
-        )
+    # Override n_start for "random" method
+    if ((method == "random") & (n_start > 1)) {
         n_start <- 1
     }
 
     # Override randomize_alts for labeled designs
     if (!is.null(label) & randomize_alts & method != 'random') {
-        message(
-            "Alternative order randomization is disabled for labeled designs.\n",
-            "Setting randomize_alts <- FALSE\n"
-        )
-        randomize_alts <- FALSE
+      message(
+        "Alternative order randomization is disabled for labeled designs.\n",
+        "Setting randomize_alts <- FALSE\n"
+      )
+      randomize_alts <- FALSE
     }
 
-    # Override n_blocks and priors for method = "random"
+    # Override n_blocks and priors for "random" method
     if (method == "random") {
-        if (n_blocks > 1) {
-            message(
-                'Blocking is ignored for designs using the "random" method ',
-                'since each respondent sees a different set.\n',
-                "Setting n_blocks <- 1\n"
-            )
-            n_blocks <- 1
-        }
         if (!is.null(priors)) {
             message(
                 'priors are ignored for designs using the "random" method.\n',
@@ -192,26 +175,41 @@ cbc_design <- function(
         }
     }
 
-    # Start with a random design
-    design_random <- make_design_random(
-        profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
+    if (method == 'sequential') {
+      result <- make_design_sequential(
+        profiles, n_blocks, n_alts, n_q, n_blocks,
+        priors, max_iter, label, n_start
+      )
+      design <- result$design
+      d_error <- result$d_error
+    } else {
+      design <- make_random_survey(
+        profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label
+      )
+      d_error <- cbc_d_error(design)
+    }
+
+    if (no_choice) {
+      design <- add_no_choice(design, n_alts)
+    }
+
+    # Create return object
+    result <- list(
+      design = design,
+      method = method,
+      n_q = n_q,
+      n_alts = n_alts,
+      n_blocks = n_blocks,
+      no_choice = no_choice,
+      label = label,
+      d_error = d_error,
+      priors = priors,
+      profiles = profiles
     )
 
-    if (method == 'sequential') {
-        design <- make_design_sequential(
-            design_random, profiles, n_resp, n_alts, n_q, n_blocks,
-            priors, max_iter, label, randomize_questions, randomize_alts,
-            n_start
-        )
-    } else {
-        design <- design_random
-    }
-
-    if (no_choice & (method != 'sequential')) {
-        design <- add_no_choice(design, n_alts)
-    }
-
-    return(design)
+    # Set class and return
+    class(result) <- c("cbc_design", "list")
+    return(result)
 }
 
 # General helpers ----
@@ -273,7 +271,7 @@ join_profiles <- function(design, profiles) {
 
 add_metadata <- function(design, n_resp, n_alts, n_q) {
   design$respID <- rep(seq(n_resp), each = n_alts * n_q)
-  design$qID    <- rep(rep(seq(n_q), each = n_alts), n_resp)
+  design$qID    <- rep(seq(n_q), each = n_alts)
   design$altID  <- rep(seq(n_alts), n_resp * n_q)
   design$obsID  <- rep(seq(n_resp * n_q), each = n_alts)
   return(design)
@@ -392,153 +390,65 @@ sample_random_sets <- function(profiles, n_alts, n_q) {
   return(sets)
 }
 
-# Updated repeat_sets function to handle separate randomization options
-repeat_sets <- function(
-    choice_sets,
-    n_resp,
-    n_alts,
-    n_q,
-    n_blocks,
-    randomize_questions,
-    randomize_alts
-) {
-    # Repeat choice sets to match number of respondents
-    if (n_blocks > 1) {
-        choice_sets <- split(choice_sets, choice_sets$blockID)
-        n_resp_block <- ceiling(n_resp / n_blocks)
-        n_reps <- ceiling(n_resp_block / (nrow(choice_sets[[1]]) / n_alts / n_q))
-        design <- list()
-        for (i in seq_len(n_blocks)) {
-            set <- choice_sets[[i]]
-            temp <- set[rep(seq_len(nrow(set)), n_reps), ]
-            design[[i]] <- temp[1:(n_resp_block*n_q*n_alts), ]
-        }
-        design <- do.call(rbind, design)
-    } else {
-        design <- choice_sets[rep(seq_len(nrow(choice_sets)), n_resp), ]
-    }
-    design <- design[1:(n_resp*n_q*n_alts), ]
-    design <- add_metadata(design, n_resp, n_alts, n_q)
-
-    # Randomize question and/or alternative order if requested
-    if (randomize_questions | randomize_alts) {
-        design <- randomize_design(
-            design, n_resp, n_alts, n_q, n_blocks,
-            randomize_questions, randomize_alts
-        )
-    }
-
-    return(design)
-}
-
-randomize_design <- function(
-    design, n_resp, n_alts, n_q, n_blocks,
-    randomize_questions, randomize_alts
-) {
-    # Split design by respondent
-    resp_designs <- split(design, design$respID)
-
-    # For each respondent
-    for (r in seq_along(resp_designs)) {
-        resp_design <- resp_designs[[r]]
-
-        # Randomize question order if requested
-        if (randomize_questions) {
-            new_q_order <- sample(1:n_q)
-
-            # Create mapping from old to new question order
-            q_map <- data.frame(
-                old_qID = seq(n_q),
-                new_qID = new_q_order
-            )
-
-            # Update question IDs
-            resp_design$qID <- q_map$new_qID[match(resp_design$qID, q_map$old_qID)]
-        }
-
-        # Randomize alternative order if requested
-        if (randomize_alts) {
-            for (q in 1:n_q) {
-                q_rows <- which(resp_design$qID == q)
-                new_alt_order <- sample(1:n_alts)
-                resp_design$altID[q_rows] <- new_alt_order
-            }
-        }
-
-        resp_designs[[r]] <- resp_design
-    }
-
-    # Recombine designs and update obsID
-    design <- do.call(rbind, resp_designs)
-    design <- design[order(design$respID, design$qID, design$altID), ]
-    design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
-    row.names(design) <- NULL
-
-    return(design)
-}
-
 # Random Design ----
 
 # Sample from profiles with replacement to create randomized choice sets
 
-make_design_random <- function(
-  profiles, n_blocks, n_resp, n_alts, n_q, no_choice, label
+make_random_survey <- function(
+    profiles, n_blocks, n_resp, n_alts, n_q, label
 ) {
   if (is.null(label)) {
-    design <- design_rand_sample(profiles, n_resp, n_alts, n_q)
+    survey <- survey_rand_sample(profiles, n_resp, n_alts, n_q)
   } else {
-    design <- design_rand_sample_label(profiles, n_resp, n_alts, n_q, label)
+    survey <- survey_rand_sample_label(profiles, n_resp, n_alts, n_q, label)
   }
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  design <- set_block_ids(design, n_blocks)
-  design <- reorder_cols(design)
-  row.names(design) <- NULL
-  return(design)
+  survey <- set_block_ids(survey, n_blocks)
+  survey <- reorder_cols(survey)
+  row.names(survey) <- NULL
+  return(survey)
 }
 
-design_rand_sample <- function(profiles, n_resp, n_alts, n_q) {
-  design <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
-  design <- add_metadata(design, n_resp, n_alts, n_q)
+survey_rand_sample <- function(profiles, n_resp, n_alts, n_q) {
+  survey <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
+  survey <- add_metadata(survey, n_resp, n_alts, n_q)
   # Replace rows with duplicated profiles in each obsID or
   # duplicated choice sets in each respID
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  dup_rows_obs <- get_dup_obs(survey, n_alts)
+  dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
   while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
     # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
     # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
     dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
     new_rows <- sample_profiles(profiles, size = length(dup_rows))
-    design[dup_rows, 1:ncol(new_rows)] <- new_rows
+    survey[dup_rows, 1:ncol(new_rows)] <- new_rows
     # Recalculate duplicates
-    dup_rows_obs <- get_dup_obs(design, n_alts)
-    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+    dup_rows_obs <- get_dup_obs(survey, n_alts)
+    dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
   }
-  return(design)
+  return(survey)
 }
 
-design_rand_sample_label <- function(profiles, n_resp, n_alts, n_q, label) {
+survey_rand_sample_label <- function(profiles, n_resp, n_alts, n_q, label) {
   n_alts <- override_label_alts(profiles, label, n_alts)
   # Randomize rows by label
   labels <- split(profiles, profiles[label])
-  design <- sample_profiles_by_group(labels, size = n_resp * n_q)
+  survey <- sample_profiles_by_group(labels, size = n_resp * n_q)
   # Replace rows with duplicated profiles in each obsID or
   # duplicated choice sets in each respID
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+  survey <- add_metadata(survey, n_resp, n_alts, n_q)
+  dup_rows_obs <- get_dup_obs(survey, n_alts)
+  dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
   while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
     # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
     # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
     dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
     new_rows <- sample_profiles_by_group(labels, size = length(dup_rows) / n_alts)
-    design[dup_rows, 1:ncol(new_rows)] <- new_rows
+    survey[dup_rows, 1:ncol(new_rows)] <- new_rows
     # Recalculate duplicates
-    dup_rows_obs <- get_dup_obs(design, n_alts)
-    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+    dup_rows_obs <- get_dup_obs(survey, n_alts)
+    dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
   }
-  return(design)
+  return(survey)
 }
 
 sample_profiles <- function(profiles, size) {
@@ -577,9 +487,7 @@ override_label_alts <- function(profiles, label, n_alts) {
 
 # Sequential D-Efficient Design ----
 
-# Modified make_design_sequential function to use existing make_design_random()
 make_design_sequential <- function(
-    design_random,
     profiles,
     n_resp,
     n_alts,
@@ -588,39 +496,26 @@ make_design_sequential <- function(
     priors,
     max_iter,
     label,
-    randomize_questions,
-    randomize_alts,
     n_start = 1
 ) {
     # Set up parallel processing
     n_cores <- set_num_cores(NULL)
     message("Running ", n_start, " design searches using ", n_cores, " cores...")
 
-    # Create list of different random starts
+    # Create list of different random starting designs
     start_designs <- lapply(1:n_start, function(i) {
-        # Generate a new random design for each start
-        design <- make_design_random(profiles, n_blocks, n_blocks, n_alts, n_q,
-                                     no_choice = FALSE, label = label)
-
-        # Get subset for blocks and update qID
-        design <- design[which(design$respID %in% seq(n_blocks)),]
-        n_questions <- n_q * n_blocks
+        design <- make_random_survey(
+          profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label
+        )
         design$qID <- design$obsID
-
-        return(list(
-            design = design,
-            profiles = profiles,
-            priors = priors,
-            varNames = get_var_names(design),
-            n_questions = n_questions,
-            n_alts = n_alts,
-            max_iter = max_iter,
-            label = label,
-            start_number = i
-        ))
+        return(design)
     })
 
+    n_questions <- n_q * n_blocks
+    varNames <- get_var_names(start_designs[[1]])
+
     # Run optimization in parallel
+    # Different parallel operation for Windows vs Mac
     if (Sys.info()[['sysname']] == 'Windows') {
         cl <- parallel::makeCluster(n_cores, "PSOCK")
         # Export necessary functions to cluster
@@ -632,14 +527,14 @@ make_design_sequential <- function(
         results <- suppressMessages(suppressWarnings(
             parallel::parLapply(
                 cl = cl,
-                start_designs,
-                function(x) {
-                    result <- optimize_design(
-                        x$design, x$profiles, x$priors, x$varNames,
-                        x$n_questions, x$n_alts, x$max_iter, x$label
-                    )
-                    result$start_number <- x$start_number
-                    return(result)
+                seq_along(start_designs),
+                function(i) {
+                  result <- optimize_design(
+                    start_designs[[i]], profiles, priors, varNames,
+                    n_questions, n_alts, max_iter, n_blocks, label
+                  )
+                  result$start_number <- i
+                  return(result)
                 }
             )
         ))
@@ -647,16 +542,16 @@ make_design_sequential <- function(
     } else {
         results <- suppressMessages(suppressWarnings(
             parallel::mclapply(
-                start_designs,
-                function(x) {
-                    result <- optimize_design(
-                        x$design, x$profiles, x$priors, x$varNames,
-                        x$n_questions, x$n_alts, x$max_iter, x$label
-                    )
-                    result$start_number <- x$start_number
-                    return(result)
-                },
-                mc.cores = n_cores
+              seq_along(start_designs),
+              function(i) {
+                result <- optimize_design(
+                  start_designs[[i]], profiles, priors, varNames,
+                  n_questions, n_alts, max_iter, n_blocks, label
+                )
+                result$start_number <-
+                return(result)
+              },
+              mc.cores = n_cores
             )
         ))
     }
@@ -683,13 +578,6 @@ make_design_sequential <- function(
             if(idx == best_index) "  (Best)" else ""
         ))
     }
-
-    # Repeat the optimized design to match number of respondents
-    design <- repeat_sets(
-        design, n_resp, n_alts, n_q, n_blocks,
-        randomize_questions, randomize_alts
-    )
-
     return(design)
 }
 
@@ -794,4 +682,13 @@ cbc_levels <- function(design, exclude = NULL) {
     cat(")\n")
 
     invisible(attr_info)
+}
+
+set_block_ids <- function(design, n_blocks) {
+  if (n_blocks > 1) {
+    design$blockID <- rep(seq(n_blocks), each = nrow(design) / n_blocks)
+  } else {
+    design$blockID <- 1
+  }
+  return(design)
 }

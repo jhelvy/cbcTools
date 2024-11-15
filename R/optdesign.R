@@ -27,7 +27,7 @@ compute_info_matrix <- function(X_list, P_list) {
     ))
 }
 
-initialize_design_optimization <- function(design, profiles, priors, varNames) {
+initialize_design_optimization <- function(design, profiles, priors, varNames, n_blocks) {
     # Validate priors object and set up objects for random pars
     validate_priors(priors)
     randPars <- get_rand_pars(priors)
@@ -82,7 +82,7 @@ initialize_design_optimization <- function(design, profiles, priors, varNames) {
         M_total <- info_matrices$M_total
 
         # Compute D-error
-        d_error <- det(M_total)^(-1/K)
+        d_error <- det(M_total)^(-1/K)*n_blocks
 
         # Return result list
         result$P_list <- P_list
@@ -111,7 +111,7 @@ initialize_design_optimization <- function(design, profiles, priors, varNames) {
             P_list = P_list,
             M_list = info_matrices$M_list,
             M_total = info_matrices$M_total,
-            d_error = det(info_matrices$M_total)^(-1/K)
+            d_error = det(info_matrices$M_total)^(-1/K)*n_blocks
         )
     }
 
@@ -158,7 +158,7 @@ update_choice_set <- function(opt_state, temp_rows, s, q_rowIDs, null_prior) {
     opt_state$M_list[[s]] <- new_M
 
     # Update D-error
-    opt_state$d_error <- det(opt_state$M_total)^(-1/opt_state$K)
+    opt_state$d_error <- det(opt_state$M_total)^(-1/opt_state$K)*n_blocks
 
     return(opt_state)
 }
@@ -205,7 +205,7 @@ update_choice_set_draws <- function(opt_state, priors, temp_rows, s, q_rowIDs) {
         new_M_totals[[i]] <- new_M_total
 
         # Compute D-error for this draw
-        new_d_errors[i] <- det(new_M_total)^(-1/opt_state$K)
+        new_d_errors[i] <- det(new_M_total)^(-1/opt_state$K)*n_blocks
     }
 
     # Average D-error across draws
@@ -244,10 +244,11 @@ optimize_design <- function(
     n_q,
     n_alts,
     max_iter,
+    n_blocks,
     label
 ) {
     # Initialize optimization state
-    opt_state <- initialize_design_optimization(design, profiles, priors, varNames)
+    opt_state <- initialize_design_optimization(design, profiles, priors, varNames, n_blocks)
 
     # Determine if we're using Bayesian optimization with draws
     using_draws <- !is.null(opt_state$draws_list)

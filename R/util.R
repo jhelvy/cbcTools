@@ -19,15 +19,6 @@ get_var_names <- function(design) {
     return(setdiff(names(design), get_id_names()))
 }
 
-set_block_ids <- function(design, n_blocks) {
-    if (n_blocks > 1) {
-        design$blockID <- rep(seq(n_blocks), each = nrow(design) / n_blocks)
-    } else {
-        design$blockID <- 1
-    }
-    return(design)
-}
-
 validate_priors <- function(priors) {
     if (!is.null(priors)) {
         if (!inherits(priors, "cbc_priors")) {

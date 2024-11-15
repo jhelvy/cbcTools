@@ -78,6 +78,38 @@ print.cbc_priors <- function(x, ...) {
   invisible(x)
 }
 
+#' Print method for cbc_design objects
+#' @export
+print.cbc_design <- function(x, ...) {
+  cat("Choice-Based Conjoint Design\n")
+  cat("============================\n")
+  cat(sprintf("Method: %s\n", x$method))
+  cat(sprintf("Questions per block: %d\n", x$n_q))
+  cat(sprintf("Alternatives per question: %d\n", x$n_alts))
+  cat(sprintf("Number of blocks: %d\n", x$n_blocks))
+  if (!is.null(x$d_error)) {
+    cat(sprintf("D-error: %.6f\n", x$d_error))
+  }
+  if (!is.null(x$priors)) {
+    cat("\nPriors used:\n")
+    print(x$priors)
+  }
+  cat("\nFirst few rows of design:\n")
+  print(utils::head(x$design))
+}
+
+#' Print method for cbc_survey objects
+#' @export
+print.cbc_survey <- function(x, ...) {
+  cat("Choice-Based Conjoint Survey\n")
+  cat("============================\n")
+  cat(sprintf("Number of respondents: %d\n", max(x$respID)))
+  cat(sprintf("Questions per respondent: %d\n", max(x$qID)))
+  cat(sprintf("Alternatives per question: %d\n", max(x$altID)))
+  cat("\nFirst few rows of survey:\n")
+  print(utils::head(x))
+}
+
 #' Methods for cbc_models objects
 #'
 #' Miscellaneous methods for `cbc_models` class objects.
