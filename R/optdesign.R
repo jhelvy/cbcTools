@@ -27,7 +27,7 @@ compute_info_matrix <- function(X_list, P_list) {
     ))
 }
 
-initialize_design_optimization <- function(design, profiles, priors, varNames, n_blocks) {
+initialize_design_optimization <- function(design, profiles, priors, varNames) {
     # Validate priors object and set up objects for random pars
     validate_priors(priors)
     randPars <- get_rand_pars(priors)
@@ -82,7 +82,7 @@ initialize_design_optimization <- function(design, profiles, priors, varNames, n
         M_total <- info_matrices$M_total
 
         # Compute D-error
-        d_error <- det(M_total)^(-1/K)*n_blocks
+        d_error <- det(M_total)^(-1/K)
 
         # Return result list
         result$P_list <- P_list
@@ -111,7 +111,7 @@ initialize_design_optimization <- function(design, profiles, priors, varNames, n
             P_list = P_list,
             M_list = info_matrices$M_list,
             M_total = info_matrices$M_total,
-            d_error = det(info_matrices$M_total)^(-1/K)*n_blocks
+            d_error = det(info_matrices$M_total)^(-1/K)
         )
     }
 
@@ -127,7 +127,7 @@ initialize_design_optimization <- function(design, profiles, priors, varNames, n
     return(result)
 }
 
-update_choice_set <- function(opt_state, temp_rows, s, q_rowIDs, null_prior) {
+update_choice_set <- function(opt_state, priors, temp_rows, s, q_rowIDs) {
     # Update design
     opt_state$design[q_rowIDs,] <- temp_rows
 
@@ -138,7 +138,7 @@ update_choice_set <- function(opt_state, temp_rows, s, q_rowIDs, null_prior) {
     opt_state$X_list[[s]] <- new_X
 
     # Compute new probabilities
-    if (null_prior) {
+    if (is.null(priors)) {
         # Equal probabilities if no priors
         new_probs <- rep(1/nrow(new_X), nrow(new_X))
     } else {
@@ -158,7 +158,7 @@ update_choice_set <- function(opt_state, temp_rows, s, q_rowIDs, null_prior) {
     opt_state$M_list[[s]] <- new_M
 
     # Update D-error
-    opt_state$d_error <- det(opt_state$M_total)^(-1/opt_state$K)*n_blocks
+    opt_state$d_error <- det(opt_state$M_total)^(-1/opt_state$K)
 
     return(opt_state)
 }
@@ -205,7 +205,7 @@ update_choice_set_draws <- function(opt_state, priors, temp_rows, s, q_rowIDs) {
         new_M_totals[[i]] <- new_M_total
 
         # Compute D-error for this draw
-        new_d_errors[i] <- det(new_M_total)^(-1/opt_state$K)*n_blocks
+        new_d_errors[i] <- det(new_M_total)^(-1/opt_state$K)
     }
 
     # Average D-error across draws
@@ -248,7 +248,7 @@ optimize_design <- function(
     label
 ) {
     # Initialize optimization state
-    opt_state <- initialize_design_optimization(design, profiles, priors, varNames, n_blocks)
+    opt_state <- initialize_design_optimization(design, profiles, priors, varNames)
 
     # Determine if we're using Bayesian optimization with draws
     using_draws <- !is.null(opt_state$draws_list)
@@ -311,7 +311,7 @@ optimize_design <- function(
                                     opt_state, priors, temp_rows, s, q_rowIDs)
                             } else {
                                 temp_state <- update_choice_set(
-                                    opt_state, temp_rows, s, q_rowIDs, is.null(priors))
+                                    opt_state, priors, temp_rows, s, q_rowIDs)
                             }
                             temp_d_error <- temp_state$d_error
 

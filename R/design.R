@@ -548,7 +548,7 @@ make_design_sequential <- function(
                   start_designs[[i]], profiles, priors, varNames,
                   n_questions, n_alts, max_iter, n_blocks, label
                 )
-                result$start_number <-
+                result$start_number <- i
                 return(result)
               },
               mc.cores = n_cores
@@ -578,7 +578,7 @@ make_design_sequential <- function(
             if(idx == best_index) "  (Best)" else ""
         ))
     }
-    return(design)
+    return(results[[best_index]])
 }
 
 #' Display attribute levels and dummy coding for a CBC design

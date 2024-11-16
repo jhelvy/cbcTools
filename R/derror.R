@@ -48,8 +48,9 @@ cbc_d_error <- function(design, priors = NULL, exclude = NULL) {
   } else {
     d_error <- compute_db_error(par_draws, X, X_list, obsID, reps)
   }
-  n_blocks <- max(design$blockID)
-  return(d_error*n_blocks)
+  # n_blocks <- max(design$blockID)
+  # return(d_error*n_blocks)
+  return(d_error)
 }
 
 compute_probs <- function(obsID, reps, atts, priors, X) {
