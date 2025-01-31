@@ -1,5 +1,11 @@
 # cbcTools (development version)
 
+# cbcTools 0.5.3
+
+- Updated `cbc_design()` to match new API with {idefix} pkg v1.1.0.
+- Added {idefix} pkg requirement of v1.1.0.
+- Added `sigma` parameter in `cbc_design()`
+
 # cbcTools 0.5.2
 
 - Bug fix in checking input settings (#34)
