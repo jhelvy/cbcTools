@@ -35,6 +35,8 @@
 #'   See details below for complete description of each method.
 #' @param priors A list of one or more assumed prior parameters used to generate
 #'   a Bayesian D-efficient design. Defaults to `NULL`
+#' @param sigma A matrix defining the prior covariance matrix used to generate
+#'   a Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting design
@@ -226,6 +228,7 @@ cbc_design <- function(
     label = NULL,
     method = "random",
     priors = NULL,
+    sigma = NULL,
     prior_no_choice = NULL,
     probs = FALSE,
     keep_d_eff = FALSE,
@@ -786,7 +789,9 @@ make_design_bayesian <- function(
   if (no_choice) {
     mu <- c(prior_no_choice, mu)
   }
-  sigma <- diag(length(mu))
+  if (is.null(sigma)) {
+    sigma <- diag(length(mu))
+  }
   par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
   n_alt_cte <- sum(alt_cte)
   if (n_alt_cte >= 1) {

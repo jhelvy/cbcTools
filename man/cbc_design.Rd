@@ -16,6 +16,7 @@ cbc_design(
   label = NULL,
   method = "random",
   priors = NULL,
+  sigma = NULL,
   prior_no_choice = NULL,
   probs = FALSE,
   keep_d_eff = FALSE,
@@ -62,6 +63,9 @@ levels in the \code{label} variable. Defaults to \code{NULL}.}
 See details below for complete description of each method.}
 
 \item{priors}{A list of one or more assumed prior parameters used to generate
+a Bayesian D-efficient design. Defaults to \code{NULL}}
+
+\item{sigma}{A matrix defining the prior covariance matrix used to generate
 a Bayesian D-efficient design. Defaults to \code{NULL}}
 
 \item{prior_no_choice}{Prior utility value for the "no choice" alternative.
