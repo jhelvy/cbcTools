@@ -2,15 +2,25 @@
 % Please edit documentation in R/derror.R
 \name{cbc_d_error}
 \alias{cbc_d_error}
+\alias{cbc_d_error.cbc_design}
+\alias{cbc_d_error.data.frame}
 \title{Compute D-error for a choice experiment design}
 \usage{
-cbc_d_error(design, priors = NULL, exclude = NULL)
+cbc_d_error(x, ...)
+
+\method{cbc_d_error}{cbc_design}(x, priors = NULL, exclude = NULL, ...)
+
+\method{cbc_d_error}{data.frame}(x, priors = NULL, exclude = NULL, ...)
 }
 \arguments{
-\item{design}{A data frame containing a choice experiment design created
-by \code{cbc_design()}}
+\item{x}{Either a \code{cbc_design} object created by \code{cbc_design()} or a data frame
+containing a choice experiment design}
 
-\item{priors}{A cbc_priors object created by cbc_priors(), or NULL for D0-error}
+\item{...}{Additional arguments passed to methods}
+
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
+D0-error. If \code{x} is a \code{cbc_design} object, the priors from that object will
+be used by default.}
 
 \item{exclude}{Character vector of attribute names to exclude from D-error
 calculation}
@@ -24,4 +34,29 @@ Compute D-error for a choice experiment design
 \details{
 Computes either D-error (with fixed priors) or DB-error (with random draws)
 depending on whether parameter draws are included in the priors object.
+}
+\examples{
+# Create profiles and design
+profiles <- cbc_profiles(
+  price = c(1, 2, 3),
+  type = c("A", "B", "C")
+)
+
+design <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 4
+)
+
+# Compute D-error using design object
+cbc_d_error(design)
+
+# Create priors and compute with them
+priors <- cbc_priors(
+  profiles = profiles,
+  price = -0.5,
+  type = c(0.2, 0.3)
+)
+
+cbc_d_error(design, priors = priors)
 }

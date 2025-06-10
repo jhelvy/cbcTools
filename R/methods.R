@@ -197,6 +197,40 @@ print.cbc_design <- function(x, ...) {
   invisible(x)
 }
 
+#' Print method for D-error comparisons
+#' @param x A cbc_d_error_comparison object
+#' @param ... Additional arguments passed to print
+#' @export
+#' Print method for D-error comparisons
+#' @param x A cbc_d_error_comparison object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_d_error_comparison <- function(x, ...) {
+  cat("D-Error Comparison\n")
+  cat("==================\n")
+  cat("(Lower D-error is better)\n\n")
+
+  # Format the output nicely and remove custom class
+  print_df <- x
+  print_df$d_error <- sprintf("%.6f", print_df$d_error)
+  print_df$relative_efficiency <- sprintf("%.2f", print_df$relative_efficiency)
+
+  # Remove custom class to avoid infinite recursion
+  class(print_df) <- "data.frame"
+  print(print_df, row.names = FALSE)
+
+  cat(sprintf("\nBest design: %s (D-error = %.6f)\n",
+              x$design[1], x$d_error[1]))
+
+  if (nrow(x) > 1) {
+    worst_idx <- nrow(x)
+    improvement <- (x$d_error[worst_idx] - x$d_error[1]) / x$d_error[worst_idx] * 100
+    cat(sprintf("Improvement over worst: %.1f%%\n", improvement))
+  }
+
+  invisible(x)
+}
+
 #' Print method for cbc_survey objects
 #' @export
 print.cbc_survey <- function(x, ...) {
