@@ -7,8 +7,8 @@
 cbc_levels(design, exclude = NULL)
 }
 \arguments{
-\item{design}{A data frame containing a choice experiment design created
-by \code{cbc_design()}}
+\item{design}{A \code{cbc_design} object created by \code{cbc_design()}, or a data frame
+containing a choice experiment design}
 
 \item{exclude}{Optional character vector of attribute names to exclude}
 }
@@ -31,7 +31,6 @@ profiles <- cbc_profiles(
 # Generate design
 design <- cbc_design(
   profiles = profiles,
-  n_resp = 100,
   n_alts = 3,
   n_q = 6
 )

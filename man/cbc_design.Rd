@@ -6,6 +6,7 @@
 \usage{
 cbc_design(
   profiles,
+  priors = NULL,
   n_alts,
   n_q,
   n_blocks = 1,
@@ -15,15 +16,17 @@ cbc_design(
   method = "random",
   randomize_questions = TRUE,
   randomize_alts = TRUE,
-  priors = NULL,
   prior_no_choice = NULL,
   max_iter = 50,
   parallel = FALSE
 )
 }
 \arguments{
-\item{profiles}{A data frame in which each row is a possible profile
-generated using the \code{cbc_profiles()} function.}
+\item{profiles}{A data frame of class \code{cbc_profiles} created using the
+\code{cbc_profiles()} function.}
+
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
+random designs. Required for D-efficient designs.}
 
 \item{n_alts}{Number of alternatives per choice question.}
 
@@ -52,9 +55,6 @@ number of levels in the \code{label} attribute Defaults to \code{NULL}.}
 and \code{"sequential"}. Defaults to \code{"random"}. See details below for complete
 description of each method.}
 
-\item{priors}{A list of one or more assumed prior parameters used to generate
-a D-efficient or Bayesian D-efficient design. Defaults to \code{NULL}}
-
 \item{prior_no_choice}{Prior utility value for the "no choice" alternative.
 Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
 
@@ -62,15 +62,19 @@ Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
 iterations when searching for a D-efficient or Bayesian D-efficient design.
 The default is 50.}
 
+\item{parallel}{Logical value indicating whether to use parallel processing.
+Defaults to \code{FALSE}.}
+
 \item{randomize}{Logical. If \code{TRUE}, both the choice question order and the
 order of the alternatives within a given choice question will be
 randomized across each respondent. Does not apply to design created using
 the \code{"random"} method. Defaults to \code{TRUE}.}
 }
 \value{
-The returned \code{design} data frame contains a choice-based conjoint
-survey design where each row is an alternative. It includes the following
-columns:
+The returned \code{design} object contains a choice-based conjoint
+survey design with class \code{cbc_design}. It includes the following components:
+\itemize{
+\item \code{design}: Data frame where each row is an alternative, including:
 \itemize{
 \item \code{profileID}: Identifies the profile in \code{profiles}.
 \item \code{blockID}: If blocking is used, identifies each unique block.
@@ -78,6 +82,13 @@ columns:
 \item \code{qID}: Identifies the choice question answered by the respondent.
 \item \code{altID}: Identifies the alternative in any one choice observation.
 \item \code{obsID}: Identifies each unique choice observation across all respondents.
+}
+\item \code{profiles}: The original profiles used to create the design
+\item \code{priors}: The priors used (if any)
+\item \code{method}: Design method used
+\item \code{n_q}, \code{n_alts}, \code{n_blocks}: Design parameters
+\item \code{d_error}: D-error of the design
+\item \code{design_info}: Additional metadata about the design
 }
 }
 \description{
@@ -139,6 +150,7 @@ design_random <- cbc_design(
 
 # Create priors
 priors <- cbc_priors(
+  profiles = profiles,
   price = -0.5,
   type = c(0.2, 0.3),
   freshness = c(0.4, 0.8)
@@ -147,10 +159,10 @@ priors <- cbc_priors(
 # Make a D-efficient design with priors using the "sequential" method
 design <- cbc_design(
   profiles = profiles,
+  priors = priors,
   n_alts = 3,
   n_q = 6,
-  method = "sequential",
-  priors = priors
+  method = "sequential"
 )
 }
 \keyword{DoE.base}

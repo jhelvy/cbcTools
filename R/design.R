@@ -7,8 +7,10 @@
 #' and "labeled" designs (also known as "alternative specific" designs).
 #'
 #' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
-#' @param profiles A data frame in which each row is a possible profile
-#'   generated using the `cbc_profiles()` function.
+#' @param profiles A data frame of class `cbc_profiles` created using the
+#'   `cbc_profiles()` function.
+#' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
+#'   random designs. Required for D-efficient designs.
 #' @param n_alts Number of alternatives per choice question.
 #' @param n_q Number of questions per respondent.
 #' @param n_blocks Number of blocks used D-efficient or Bayesian D-efficient
@@ -33,13 +35,13 @@
 #'   order of the alternatives within a given choice question will be
 #'   randomized across each respondent. Does not apply to design created using
 #'   the `"random"` method. Defaults to `TRUE`.
-#' @param priors A list of one or more assumed prior parameters used to generate
-#'   a D-efficient or Bayesian D-efficient design. Defaults to `NULL`
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param max_iter A numeric value indicating the maximum number allowed
 #'   iterations when searching for a D-efficient or Bayesian D-efficient design.
 #'   The default is 50.
+#' @param parallel Logical value indicating whether to use parallel processing.
+#'   Defaults to `FALSE`.
 #'
 #' @details The `method` argument determines the design method used. Options
 #'   are:
@@ -67,16 +69,22 @@
 #'    - Keep changes that improve the D-error.
 #' 4. Repeat until no further improvements or max iterations are reached
 #'
-#' @return The returned `design` data frame contains a choice-based conjoint
-#' survey design where each row is an alternative. It includes the following
-#' columns:
+#' @return The returned `design` object contains a choice-based conjoint
+#' survey design with class `cbc_design`. It includes the following components:
 #'
-#' - `profileID`: Identifies the profile in `profiles`.
-#' - `blockID`: If blocking is used, identifies each unique block.
-#' - `respID`: Identifies each survey respondent.
-#' - `qID`: Identifies the choice question answered by the respondent.
-#' - `altID`: Identifies the alternative in any one choice observation.
-#' - `obsID`: Identifies each unique choice observation across all respondents.
+#' - `design`: Data frame where each row is an alternative, including:
+#'   - `profileID`: Identifies the profile in `profiles`.
+#'   - `blockID`: If blocking is used, identifies each unique block.
+#'   - `respID`: Identifies each survey respondent.
+#'   - `qID`: Identifies the choice question answered by the respondent.
+#'   - `altID`: Identifies the alternative in any one choice observation.
+#'   - `obsID`: Identifies each unique choice observation across all respondents.
+#' - `profiles`: The original profiles used to create the design
+#' - `priors`: The priors used (if any)
+#' - `method`: Design method used
+#' - `n_q`, `n_alts`, `n_blocks`: Design parameters
+#' - `d_error`: D-error of the design
+#' - `design_info`: Additional metadata about the design
 #'
 #' @export
 #' @examples
@@ -98,6 +106,7 @@
 #'
 #' # Create priors
 #' priors <- cbc_priors(
+#'   profiles = profiles,
 #'   price = -0.5,
 #'   type = c(0.2, 0.3),
 #'   freshness = c(0.4, 0.8)
@@ -106,110 +115,218 @@
 #' # Make a D-efficient design with priors using the "sequential" method
 #' design <- cbc_design(
 #'   profiles = profiles,
+#'   priors = priors,
 #'   n_alts = 3,
 #'   n_q = 6,
-#'   method = "sequential",
-#'   priors = priors
+#'   method = "sequential"
 #' )
 cbc_design <- function(
-  profiles,
-  n_alts,
-  n_q,
-  n_blocks = 1,
-  n_start = 5,
-  no_choice = FALSE,
-  label = NULL,
-  method = "random",
-  randomize_questions = TRUE,
-  randomize_alts = TRUE,
-  priors = NULL,
-  prior_no_choice = NULL,
-  max_iter = 50,
-  parallel = FALSE
+    profiles,
+    priors = NULL,
+    n_alts,
+    n_q,
+    n_blocks = 1,
+    n_start = 5,
+    no_choice = FALSE,
+    label = NULL,
+    method = "random",
+    randomize_questions = TRUE,
+    randomize_alts = TRUE,
+    prior_no_choice = NULL,
+    max_iter = 50,
+    parallel = FALSE
 ) {
-    profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
+  # Validate input classes
+  if (!inherits(profiles, "cbc_profiles")) {
+    stop("profiles must be a cbc_profiles object created by cbc_profiles()")
+  }
 
-    check_inputs_design(
-        profiles,
-        n_alts,
-        n_q,
-        n_blocks,
-        n_start,
-        no_choice,
-        label,
-        method,
-        randomize_questions,
-        randomize_alts,
-        priors,
-        prior_no_choice,
-        max_iter,
-        parallel
-    )
-
-    profiles <- as.data.frame(profiles)
-
-    # Overrides ----
-
-    # Override n_start for "random" method
-    if ((method == "random") & (n_start > 1)) {
-        n_start <- 1
+  if (!is.null(priors)) {
+    if (!inherits(priors, "cbc_priors")) {
+      stop("priors must be a cbc_priors object created by cbc_priors()")
     }
+    # Validate compatibility between priors and profiles
+    validate_priors_profiles(priors, profiles)
+  }
 
-    # Override randomize_alts for labeled designs
-    if (!is.null(label) & randomize_alts & method != 'random') {
+  # Check if priors are required for the chosen method
+  if (method == "sequential" && is.null(priors)) {
+    message("The 'sequential' method works better with priors, consider creating priors with cbc_priors().")
+  }
+
+  profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
+
+  check_inputs_design(
+    profiles,
+    n_alts,
+    n_q,
+    n_blocks,
+    n_start,
+    no_choice,
+    label,
+    method,
+    randomize_questions,
+    randomize_alts,
+    priors,
+    prior_no_choice,
+    max_iter,
+    parallel
+  )
+
+  profiles_df <- as.data.frame(profiles)
+
+  # Overrides ----
+
+  # Override n_start for "random" method
+  if ((method == "random") & (n_start > 1)) {
+    n_start <- 1
+  }
+
+  # Override randomize_alts for labeled designs
+  if (!is.null(label) & randomize_alts & method != 'random') {
+    message(
+      "Alternative order randomization is disabled for labeled designs.\n",
+      "Setting randomize_alts <- FALSE\n"
+    )
+    randomize_alts <- FALSE
+  }
+
+  # Override n_blocks and priors for "random" method
+  if (method == "random") {
+    if (!is.null(priors)) {
       message(
-        "Alternative order randomization is disabled for labeled designs.\n",
-        "Setting randomize_alts <- FALSE\n"
+        'priors are ignored for designs using the "random" method.\n',
+        "Setting prior <- NULL\n"
       )
-      randomize_alts <- FALSE
+      priors <- NULL
     }
+  }
 
-    # Override n_blocks and priors for "random" method
-    if (method == "random") {
-        if (!is.null(priors)) {
-            message(
-                'priors are ignored for designs using the "random" method.\n',
-                "Setting prior <- NULL\n"
-            )
-            priors <- NULL
-        }
-    }
-
-    if (method == 'sequential') {
-      result <- make_design_sequential(
-        profiles, n_blocks, n_alts, n_q, n_blocks,
-        priors, max_iter, label, n_start
-      )
-      design <- result$design
-      d_error <- result$d_error
-    } else {
-      design <- make_random_survey(
-        profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label
-      )
-      d_error <- cbc_d_error(design)
-    }
-
-    if (no_choice) {
-      design <- add_no_choice(design, n_alts)
-    }
-
-    # Create return object
-    result <- list(
-      design = design,
-      method = method,
-      n_q = n_q,
-      n_alts = n_alts,
-      n_blocks = n_blocks,
-      no_choice = no_choice,
-      label = label,
-      d_error = d_error,
-      priors = priors,
-      profiles = profiles
+  # Create design ----
+  if (method == 'sequential') {
+    result <- make_design_sequential(
+      profiles_df, n_blocks, n_alts, n_q, n_blocks,
+      priors, max_iter, label, n_start
     )
+    design <- result$design
+    d_error <- result$d_error
+  } else {
+    design <- make_random_survey(
+      profiles_df, n_blocks, n_resp = n_blocks, n_alts, n_q, label
+    )
+    d_error <- cbc_d_error(design, priors)
+  }
 
-    # Set class and return
-    class(result) <- c("cbc_design", "list")
-    return(result)
+  if (no_choice) {
+    design <- add_no_choice(design, n_alts)
+  }
+
+  # Calculate efficiency metrics
+  efficiency_info <- calculate_efficiency_metrics(design, profiles, priors)
+
+  # Create design metadata
+  design_info <- list(
+    created_at = Sys.time(),
+    n_profiles_available = nrow(profiles),
+    n_profiles_used = length(unique(design$profileID)),
+    profile_usage_rate = length(unique(design$profileID)) / nrow(profiles),
+    n_choice_sets = n_blocks * n_q,
+    total_alternatives = nrow(design),
+    restrictions_applied = !is.null(attr(profiles, "restrictions_applied")),
+    n_restrictions = length(attr(profiles, "restrictions_applied") %||% character(0)),
+    efficiency = efficiency_info
+  )
+
+  # Create return object
+  result <- list(
+    design = design,
+    profiles = profiles,
+    priors = priors,
+    method = method,
+    n_q = n_q,
+    n_alts = n_alts,
+    n_blocks = n_blocks,
+    no_choice = no_choice,
+    label = label,
+    d_error = d_error,
+    design_info = design_info
+  )
+
+  # Set class and return
+  class(result) <- c("cbc_design", "list")
+  return(result)
+}
+
+# Helper function to calculate efficiency metrics
+calculate_efficiency_metrics <- function(design, profiles, priors) {
+  efficiency <- list()
+
+  # Calculate attribute balance score
+  tryCatch({
+    balance_info <- get_balance_metrics(design)
+    efficiency$balance_score <- balance_info$score
+    efficiency$balance_details <- balance_info$details
+  }, error = function(e) {
+    efficiency$balance_score <- NA
+  })
+
+  # Calculate attribute overlap score
+  tryCatch({
+    overlap_info <- get_overlap_metrics(design)
+    efficiency$overlap_score <- overlap_info$score
+    efficiency$overlap_details <- overlap_info$details
+  }, error = function(e) {
+    efficiency$overlap_score <- NA
+  })
+
+  return(efficiency)
+}
+
+# Helper function to compute balance metrics
+get_balance_metrics <- function(design) {
+  attr_cols <- get_var_names(design)
+
+  # For each attribute, calculate how balanced the levels are
+  balance_scores <- list()
+
+  for (attr in attr_cols) {
+    counts <- table(design[[attr]])
+    expected_count <- nrow(design) / length(counts)
+    # Calculate deviation from perfect balance (coefficient of variation)
+    cv <- sd(counts) / mean(counts)
+    balance_scores[[attr]] <- 1 / (1 + cv)  # Higher is better, max = 1
+  }
+
+  overall_score <- mean(unlist(balance_scores))
+
+  return(list(
+    score = overall_score,
+    details = balance_scores
+  ))
+}
+
+# Helper function to compute overlap metrics
+get_overlap_metrics <- function(design) {
+  attr_cols <- get_var_names(design)
+
+  overlap_scores <- list()
+
+  for (attr in attr_cols) {
+    # Count how many choice sets have all alternatives with the same level
+    overlap_counts <- tapply(
+      design[[attr]], design$obsID,
+      FUN = function(x) length(unique(x)) == 1
+    )
+    overlap_rate <- mean(overlap_counts)
+    overlap_scores[[attr]] <- overlap_rate
+  }
+
+  overall_score <- mean(unlist(overlap_scores))
+
+  return(list(
+    score = overall_score,
+    details = overlap_scores
+  ))
 }
 
 # General helpers ----
@@ -498,87 +615,87 @@ make_design_sequential <- function(
     label,
     n_start = 1
 ) {
-    # Set up parallel processing
-    n_cores <- set_num_cores(NULL)
-    message("Running ", n_start, " design searches using ", n_cores, " cores...")
+  # Set up parallel processing
+  n_cores <- set_num_cores(NULL)
+  message("Running ", n_start, " design searches using ", n_cores, " cores...")
 
-    # Create list of different random starting designs
-    start_designs <- lapply(1:n_start, function(i) {
-        design <- make_random_survey(
-          profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label
-        )
-        design$qID <- design$obsID
-        return(design)
-    })
+  # Create list of different random starting designs
+  start_designs <- lapply(1:n_start, function(i) {
+    design <- make_random_survey(
+      profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label
+    )
+    design$qID <- design$obsID
+    return(design)
+  })
 
-    n_questions <- n_q * n_blocks
-    varNames <- get_var_names(start_designs[[1]])
+  n_questions <- n_q * n_blocks
+  varNames <- get_var_names(start_designs[[1]])
 
-    # Run optimization in parallel
-    # Different parallel operation for Windows vs Mac
-    if (Sys.info()[['sysname']] == 'Windows') {
-        cl <- parallel::makeCluster(n_cores, "PSOCK")
-        # Export necessary functions to cluster
-        parallel::clusterExport(cl, c(
-            "optimize_design", "compute_info_matrix", "get_X_matrix",
-            "logit", "logit_draws", "get_eligible_profiles"
-        ), envir = environment())
+  # Run optimization in parallel
+  # Different parallel operation for Windows vs Mac
+  if (Sys.info()[['sysname']] == 'Windows') {
+    cl <- parallel::makeCluster(n_cores, "PSOCK")
+    # Export necessary functions to cluster
+    parallel::clusterExport(cl, c(
+      "optimize_design", "compute_info_matrix", "get_X_matrix",
+      "logit", "logit_draws", "get_eligible_profiles"
+    ), envir = environment())
 
-        results <- suppressMessages(suppressWarnings(
-            parallel::parLapply(
-                cl = cl,
-                seq_along(start_designs),
-                function(i) {
-                  result <- optimize_design(
-                    start_designs[[i]], profiles, priors, varNames,
-                    n_questions, n_alts, max_iter, n_blocks, label
-                  )
-                  result$start_number <- i
-                  return(result)
-                }
-            )
-        ))
-        parallel::stopCluster(cl)
-    } else {
-        results <- suppressMessages(suppressWarnings(
-            parallel::mclapply(
-              seq_along(start_designs),
-              function(i) {
-                result <- optimize_design(
-                  start_designs[[i]], profiles, priors, varNames,
-                  n_questions, n_alts, max_iter, n_blocks, label
-                )
-                result$start_number <- i
-                return(result)
-              },
-              mc.cores = n_cores
-            )
-        ))
-    }
+    results <- suppressMessages(suppressWarnings(
+      parallel::parLapply(
+        cl = cl,
+        seq_along(start_designs),
+        function(i) {
+          result <- optimize_design(
+            start_designs[[i]], profiles, priors, varNames,
+            n_questions, n_alts, max_iter, n_blocks, label
+          )
+          result$start_number <- i
+          return(result)
+        }
+      )
+    ))
+    parallel::stopCluster(cl)
+  } else {
+    results <- suppressMessages(suppressWarnings(
+      parallel::mclapply(
+        seq_along(start_designs),
+        function(i) {
+          result <- optimize_design(
+            start_designs[[i]], profiles, priors, varNames,
+            n_questions, n_alts, max_iter, n_blocks, label
+          )
+          result$start_number <- i
+          return(result)
+        },
+        mc.cores = n_cores
+      )
+    ))
+  }
 
-    # Find best design based on D-error
-    d_errors <- sapply(results, function(x) x$d_error)
-    best_index <- which.min(d_errors)
-    best_result <- results[[best_index]]
+  # Find best design based on D-error
+  d_errors <- sapply(results, function(x) x$d_error)
+  best_index <- which.min(d_errors)
+  best_result <- results[[best_index]]
 
-    # Merge designs
-    design <- best_result$design
-    d_error <- best_result$d_error
-    design <- set_block_ids(design, n_blocks)
+  # Merge designs
+  design <- best_result$design
+  d_error <- best_result$d_error
+  design <- set_block_ids(design, n_blocks)
 
-    # Print summary of all starts
-    message("\nD-error results from all starts:")
-    sorted_results <- sort(d_errors)
-    for (i in seq_along(sorted_results)) {
-        idx <- which(d_errors == sorted_results[i])[1]
-        message(sprintf(
-            "Start %d: %.6f %s",
-            results[[idx]]$start_number,
-            sorted_results[i],
-            if(idx == best_index) "  (Best)" else ""
-        ))
-    }
-    return(results[[best_index]])
+  # Print summary of all starts
+  message("\nD-error results from all starts:")
+  sorted_results <- sort(d_errors)
+  for (i in seq_along(sorted_results)) {
+    idx <- which(d_errors == sorted_results[i])[1]
+    message(sprintf(
+      "Start %d: %.6f %s",
+      results[[idx]]$start_number,
+      sorted_results[i],
+      if(idx == best_index) "  (Best)" else ""
+    ))
+  }
+  return(results[[best_index]])
 }
 
 #' Display attribute levels and dummy coding for a CBC design
@@ -586,8 +703,8 @@ make_design_sequential <- function(
 #' Shows how categorical variables will be dummy coded and what each coefficient
 #' represents in the utility function.
 #'
-#' @param design A data frame containing a choice experiment design created
-#'   by `cbc_design()`
+#' @param design A `cbc_design` object created by `cbc_design()`, or a data frame
+#'   containing a choice experiment design
 #' @param exclude Optional character vector of attribute names to exclude
 #' @return Invisibly returns a list containing the coding information, but primarily
 #'   prints formatted information to the console
@@ -603,7 +720,6 @@ make_design_sequential <- function(
 #' # Generate design
 #' design <- cbc_design(
 #'   profiles = profiles,
-#'   n_resp = 100,
 #'   n_alts = 3,
 #'   n_q = 6
 #' )
@@ -611,77 +727,105 @@ make_design_sequential <- function(
 #' # View attribute levels and coding
 #' cbc_levels(design)
 cbc_levels <- function(design, exclude = NULL) {
-    # Get attribute columns (excluding metadata)
-    attr_cols <- get_var_names(design)
+  # Handle both cbc_design objects and data frames
+  if (inherits(design, "cbc_design")) {
+    design_df <- design$design
+    profiles <- design$profiles
+    priors <- design$priors
 
-    if (!is.null(exclude)) {
-        attr_cols <- setdiff(attr_cols, exclude)
+    cat("CBC Design Attribute Information\n")
+    cat("================================\n")
+    cat(sprintf("Design method: %s\n", design$method))
+    if (!is.null(design$d_error)) {
+      cat(sprintf("D-error: %.6f\n", design$d_error))
     }
+    cat("\n")
+  } else {
+    design_df <- design
+    profiles <- NULL
+    priors <- NULL
 
-    # Process each attribute
-    attr_info <- list()
+    cat("CBC Design Attribute Information\n")
+    cat("================================\n\n")
+  }
 
-    cat("CBC Design Attribute Information:\n")
-    cat("===============================\n\n")
+  # Get attribute columns (excluding metadata)
+  attr_cols <- get_var_names(design_df)
 
-    for (attr in attr_cols) {
-        values <- design[[attr]]
-        if (is.numeric(values)) {
-            # Continuous variable
-            cat(sprintf("%-12s: Continuous variable\n", attr))
-            cat(sprintf("              Range: %.2f to %.2f\n",
-                        min(values), max(values)))
-            cat("              Coefficient represents effect of one-unit change\n\n")
+  if (!is.null(exclude)) {
+    attr_cols <- setdiff(attr_cols, exclude)
+  }
 
-            attr_info[[attr]] <- list(
-                type = "continuous",
-                range = range(values)
-            )
+  # Process each attribute
+  attr_info <- list()
 
-        } else {
-            # Categorical variable
-            levels <- unique(sort(as.character(values)))
-            n_levels <- length(levels)
-            base_level <- levels[1]
-            coded_levels <- levels[-1]
+  for (attr in attr_cols) {
+    values <- design_df[[attr]]
+    if (is.numeric(values)) {
+      # Continuous variable
+      cat(sprintf("%-12s: Continuous variable\n", attr))
+      cat(sprintf("              Range: %.2f to %.2f\n",
+                  min(values), max(values)))
+      cat("              Coefficient represents effect of one-unit change\n\n")
 
-            cat(sprintf("%-12s: Categorical variable (%d levels)\n", attr, n_levels))
-            cat("              Base level:", base_level, "\n")
-            for (i in seq_along(coded_levels)) {
-                cat(sprintf("              β%-2d: %s\n",
-                            i, coded_levels[i]))
-            }
-            cat("\n")
+      attr_info[[attr]] <- list(
+        type = "continuous",
+        range = range(values)
+      )
 
-            attr_info[[attr]] <- list(
-                type = "categorical",
-                base_level = base_level,
-                coded_levels = coded_levels
-            )
-        }
+    } else {
+      # Categorical variable
+      levels <- unique(sort(as.character(values)))
+      n_levels <- length(levels)
+      base_level <- levels[1]
+      coded_levels <- levels[-1]
+
+      cat(sprintf("%-12s: Categorical variable (%d levels)\n", attr, n_levels))
+      cat("              Base level:", base_level, "\n")
+      for (i in seq_along(coded_levels)) {
+        cat(sprintf("              β%-2d: %s\n",
+                    i, coded_levels[i]))
+      }
+      cat("\n")
+
+      attr_info[[attr]] <- list(
+        type = "categorical",
+        base_level = base_level,
+        coded_levels = coded_levels
+      )
     }
+  }
 
-    # Example prior specification
-    cat("Example prior specification:\n")
-    cat("------------------------\n")
-    cat("priors <- cbc_priors(\n")
+  # Show priors if available
+  if (!is.null(priors)) {
+    cat("Priors used in this design:\n")
+    cat("--------------------------\n")
+    print(priors)
+    cat("\n")
+  }
 
-    for (attr in attr_cols) {
-        if (attr_info[[attr]]$type == "continuous") {
-            cat(sprintf("    %-12s = 0,  # Effect of one-unit change\n", attr))
-        } else {
-            coefs <- rep("0", length(attr_info[[attr]]$coded_levels))
-            cat(sprintf("    %-12s = c(%s),  # vs %s\n",
-                        attr,
-                        paste(coefs, collapse = ", "),
-                        attr_info[[attr]]$base_level))
-        }
+  # Example prior specification
+  cat("Example prior specification:\n")
+  cat("----------------------------\n")
+  cat("priors <- cbc_priors(\n")
+  cat("    profiles = profiles,\n")
+
+  for (attr in attr_cols) {
+    if (attr_info[[attr]]$type == "continuous") {
+      cat(sprintf("    %-12s = 0,  # Effect of one-unit change\n", attr))
+    } else {
+      coefs <- rep("0", length(attr_info[[attr]]$coded_levels))
+      cat(sprintf("    %-12s = c(%s),  # vs %s\n",
+                  attr,
+                  paste(coefs, collapse = ", "),
+                  attr_info[[attr]]$base_level))
     }
+  }
 
-    cat("    # Add sd = list(...) for random parameters\n")
-    cat(")\n")
+  cat("    # Add sd = list(...) for random parameters\n")
+  cat(")\n")
 
-    invisible(attr_info)
+  invisible(attr_info)
 }
 
 set_block_ids <- function(design, n_blocks) {

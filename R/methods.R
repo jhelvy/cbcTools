@@ -1,3 +1,50 @@
+#' Print method for cbc_profiles objects
+#' @param x A cbc_profiles object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_profiles <- function(x, ...) {
+  cat("CBC Profiles\n")
+  cat("============\n")
+
+  # Display attribute information
+  attr_info <- attr(x, "attribute_info")
+  for (attr in names(attr_info)) {
+    cat(sprintf("%-12s: %s\n", attr, attr_info[[attr]]$summary))
+  }
+
+  # Display profile counts
+  original_count <- attr(x, "original_count")
+  current_count <- nrow(x)
+  total_removed <- attr(x, "total_removed") %||% 0
+
+  cat(sprintf("\nProfiles: %d", current_count))
+  if (total_removed > 0) {
+    cat(sprintf(" (originally %d, %d removed by restrictions)",
+                original_count, total_removed))
+  }
+  cat("\n")
+
+  # Display restrictions if any
+  restrictions <- attr(x, "restrictions_applied")
+  if (!is.null(restrictions) && length(restrictions) > 0) {
+    cat("\nRestrictions applied:\n")
+    for (i in seq_along(restrictions)) {
+      cat(sprintf("  %d. %s\n", i, restrictions[i]))
+    }
+    cat("\n")
+  }
+
+  cat("First few rows:\n")
+  # Remove the class temporarily to avoid infinite recursion
+  class(x) <- "data.frame"
+  print(utils::head(x))
+  if (nrow(x) > 6) {
+    cat(sprintf("... and %d more rows\n", nrow(x) - 6))
+  }
+
+  invisible(x)
+}
+
 #' Print method for cbc_priors objects
 #' @export
 print.cbc_priors <- function(x, ...) {
@@ -78,7 +125,9 @@ print.cbc_priors <- function(x, ...) {
   invisible(x)
 }
 
-#' Print method for cbc_design objects
+#' Enhanced print method for cbc_design objects
+#' @param x A cbc_design object
+#' @param ... Additional arguments passed to print
 #' @export
 print.cbc_design <- function(x, ...) {
   cat("Choice-Based Conjoint Design\n")
@@ -87,15 +136,65 @@ print.cbc_design <- function(x, ...) {
   cat(sprintf("Questions per block: %d\n", x$n_q))
   cat(sprintf("Alternatives per question: %d\n", x$n_alts))
   cat(sprintf("Number of blocks: %d\n", x$n_blocks))
+
+  if (x$no_choice) {
+    cat("No-choice option: Yes\n")
+  }
+  if (!is.null(x$label)) {
+    cat(sprintf("Labeled design using: %s\n", x$label))
+  }
+
+  # Design efficiency
   if (!is.null(x$d_error)) {
     cat(sprintf("D-error: %.6f\n", x$d_error))
   }
-  if (!is.null(x$priors)) {
-    cat("\nPriors used:\n")
-    print(x$priors)
+
+  # Profile usage
+  info <- x$design_info
+  cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",
+              info$n_profiles_used, info$n_profiles_available,
+              info$profile_usage_rate * 100))
+
+  # Restrictions info
+  if (info$restrictions_applied) {
+    cat(sprintf("Profile restrictions: %d applied\n", info$n_restrictions))
   }
+
+  # Efficiency metrics
+  if (!is.null(info$efficiency)) {
+    eff <- info$efficiency
+    if (!is.null(eff$balance_score)) {
+      cat(sprintf("Attribute balance: %.2f (higher is better)\n", eff$balance_score))
+    }
+    if (!is.null(eff$overlap_score)) {
+      cat(sprintf("Attribute overlap: %.2f (lower is better)\n", eff$overlap_score))
+    }
+  }
+
+  # Priors information
+  if (!is.null(x$priors)) {
+    cat("\nPriors summary:\n")
+    n_fixed <- sum(!sapply(x$priors$attrs, function(a) a$random))
+    n_random <- sum(sapply(x$priors$attrs, function(a) a$random))
+    cat(sprintf("  Fixed parameters: %d\n", n_fixed))
+    cat(sprintf("  Random parameters: %d\n", n_random))
+    if (!is.null(x$priors$correlation)) {
+      cat("  Parameter correlations: Yes\n")
+    }
+  }
+
+  cat(sprintf("\nDesign created: %s\n", format(info$created_at, "%Y-%m-%d %H:%M:%S")))
   cat("\nFirst few rows of design:\n")
-  print(utils::head(x$design))
+
+  # Remove class temporarily to avoid infinite recursion
+  design_df <- x$design
+  class(design_df) <- "data.frame"
+  print(utils::head(design_df))
+  if (nrow(design_df) > 6) {
+    cat(sprintf("... and %d more rows\n", nrow(design_df) - 6))
+  }
+
+  invisible(x)
 }
 
 #' Print method for cbc_survey objects

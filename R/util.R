@@ -33,3 +33,24 @@ get_rand_pars <- function(priors) {
     if (length(randPars) == 0) { return(NULL) }
     return(randPars)
 }
+
+# Null-coalescing operator helper
+`%||%` <- function(lhs, rhs) {
+  if (!is.null(lhs)) lhs else rhs
+}
+
+#' Check if object is a cbc_profiles object
+#' @param x Object to check
+#' @return Logical indicating if x is a cbc_profiles object
+#' @export
+is.cbc_profiles <- function(x) {
+  inherits(x, "cbc_profiles")
+}
+
+#' Check if object is a cbc_design object
+#' @param x Object to check
+#' @return Logical indicating if x is a cbc_design object
+#' @export
+is.cbc_design <- function(x) {
+  inherits(x, "cbc_design")
+}

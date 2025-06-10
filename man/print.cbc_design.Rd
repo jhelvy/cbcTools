@@ -2,10 +2,15 @@
 % Please edit documentation in R/methods.R
 \name{print.cbc_design}
 \alias{print.cbc_design}
-\title{Print method for cbc_design objects}
+\title{Enhanced print method for cbc_design objects}
 \usage{
 \method{print}{cbc_design}(x, ...)
 }
+\arguments{
+\item{x}{A cbc_design object}
+
+\item{...}{Additional arguments passed to print}
+}
 \description{
-Print method for cbc_design objects
+Enhanced print method for cbc_design objects
 }
