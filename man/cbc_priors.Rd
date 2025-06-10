@@ -4,43 +4,40 @@
 \alias{cbc_priors}
 \title{Create prior specifications for CBC models}
 \usage{
-cbc_priors(
-  profiles,
-  mean,
-  sd = NULL,
-  correlation = NULL,
-  distribution = NULL,
-  n_draws = 100
-)
+cbc_priors(profiles, n_draws = 100, draw_type = "halton", ...)
 }
 \arguments{
-\item{profiles}{A data frame of profiles created by cbc_profiles()}
+\item{profiles}{A data frame of profiles created by \code{cbc_profiles()}}
 
-\item{mean}{A named list where each element specifies the mean prior for an attribute:
+\item{n_draws}{Number of draws for DB-error calculation if using Bayesian
+priors. Defaults to \code{100}}
+
+\item{draw_type}{Specify the draw type as a character: \code{"halton"}
+(the default) or \code{"sobol"} (recommended for models with more than 5
+random parameters).}
+
+\item{...}{Named arguments specifying priors for each attribute:
 \itemize{
-\item For continuous variables, provide a single value
-\item For categorical variables, provide either:
+\item For fixed parameters:
+\itemize{
+\item Continuous variables: provide a single numeric value
+\item Categorical variables: provide either:
 \itemize{
 \item An unnamed vector of values one less than the number of levels (dummy coding)
-\item A named vector mapping specific levels to coefficients (remaining level becomes reference)
+\item A named vector mapping levels to coefficients (remaining level becomes reference)
 }
+}
+\item For random parameters: use \code{rand_spec()} to specify distribution, parameters, and correlations
 }}
-
-\item{sd}{Optional named list of standard deviations for random parameters}
-
-\item{correlation}{Optional correlation matrix for random parameters}
-
-\item{distribution}{Optional named vector specifying distribution type for random
-parameters ("normal" or "lognormal")}
 }
 \value{
-A structured prior specification object including a logitr model object
+A structured prior specification object including parameter draws for
+random coefficients
 }
 \description{
 Creates a standardized prior specification object for use in CBC analysis
-functions like cbc_choices() and cbc_d_error(). Supports both named and unnamed
-vectors for categorical attributes, where named vectors explicitly map levels
-to coefficients.
+functions like \code{cbc_choices()} and \code{cbc_d_error()}. Supports both fixed and random
+parameters, with flexible specification of categorical variable levels.
 }
 \examples{
 # Create profiles for an example conjoint about apples
@@ -53,34 +50,71 @@ profiles <- cbc_profiles(
 # Example 1: Simple fixed parameters with unnamed vectors
 priors <- cbc_priors(
   profiles = profiles,
-  mean = list(
-    price = -0.5,
-    type = c(0.2, 0.3),          # Dummy-coded categorical
-    freshness = c(0.4, 0.8)      # Dummy-coded categorical
-  )
+  price = -0.5,
+  type = c(0.2, 0.3),      # Dummy-coded categorical (Honeycrisp reference)
+  freshness = c(0.4, 0.8)  # Dummy-coded categorical (Poor reference)
 )
 
 # Example 2: Using named vectors for categorical variables
 priors <- cbc_priors(
   profiles = profiles,
-  mean = list(
-    price = -0.5,
-    type = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp as reference
-    freshness = c("Poor" = -0.4, "Average" = 0.1)  # Excellent as reference
-  )
+  price = -0.5,
+  type = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp as reference
+  freshness = c("Poor" = -0.4, "Average" = 0.1)  # Excellent as reference
 )
 
-# Example 3: Mixed approach with random parameters
+# Example 3: Mixed fixed and random parameters
 priors <- cbc_priors(
   profiles = profiles,
-  mean = list(
-    price = -0.5,
-    type = c("Fuji" = 0.2, "Gala" = 0.3),
-    freshness = c(0.4, 0.8)
+  price = -0.5,  # Fixed parameter
+  type = rand_spec(  # Random parameter - normal distribution
+    dist = "n",
+    mean = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp reference
+    sd = c("Fuji" = 0.4, "Gala" = 0.4)
   ),
-  sd = list(
-    price = 0.4,
-    type = c(0.4, 0.4)
-  )
+  freshness = c(0.4, 0.8)  # Fixed parameter
+)
+
+# Example 4: Log-normal distribution for price coefficient
+priors <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(
+    dist = "ln",    # Log-normal distribution for price
+    mean = -0.5,    # Single value for continuous variable
+    sd = 0.4
+  ),
+  type = c(0.2, 0.3),
+  freshness = c(0.4, 0.8)
+)
+
+# Example 5: Random parameters with correlations
+priors <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(
+    dist = "ln",
+    mean = -0.5,
+    sd = 0.4,
+    correlations = list(
+      # Correlate with all type levels
+      cor_spec(with = "type", value = 0.3),
+      # Correlate with specific level
+      cor_spec(with = "type", level = "Fuji", value = 0.4)
+    )
+  ),
+  type = rand_spec(
+    dist = "n",
+    mean = c("Fuji" = 0.2, "Gala" = 0.3),
+    sd = c("Fuji" = 0.4, "Gala" = 0.4),
+    correlations = list(
+      # Correlate between levels
+      cor_spec(
+        with = "type",
+        level = "Fuji",
+        with_level = "Gala",
+        value = 0.5
+      )
+    )
+  ),
+  freshness = c(0.4, 0.8)
 )
 }

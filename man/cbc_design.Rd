@@ -6,11 +6,9 @@
 \usage{
 cbc_design(
   profiles,
-  n_resp,
   n_alts,
   n_q,
   n_blocks = 1,
-  n_draws = 100,
   n_start = 5,
   no_choice = FALSE,
   label = NULL,
@@ -24,10 +22,8 @@ cbc_design(
 )
 }
 \arguments{
-\item{profiles}{A data frame in which each row is a possible profile. This
-can be generated using the \code{cbc_profiles()} function.}
-
-\item{n_resp}{Number of survey respondents.}
+\item{profiles}{A data frame in which each row is a possible profile
+generated using the \code{cbc_profiles()} function.}
 
 \item{n_alts}{Number of alternatives per choice question.}
 
@@ -36,9 +32,6 @@ can be generated using the \code{cbc_profiles()} function.}
 \item{n_blocks}{Number of blocks used D-efficient or Bayesian D-efficient
 designs. Max allowable is one block per respondent. Defaults to \code{1},
 meaning every respondent sees the same choice set.}
-
-\item{n_draws}{Number of draws used in simulating the prior distribution used
-in Bayesian D-efficient designs. Defaults to \code{100}.}
 
 \item{n_start}{A numeric value indicating the number of random start designs
 to use in obtaining a D-efficient or Bayesian D-efficient design.
@@ -140,7 +133,6 @@ profiles <- cbc_profiles(
 # Make a random survey design (default)
 design_random <- cbc_design(
   profiles = profiles,
-  n_resp   = 100, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 )
@@ -155,7 +147,6 @@ priors <- cbc_priors(
 # Make a D-efficient design with priors using the "sequential" method
 design <- cbc_design(
   profiles = profiles,
-  n_resp = 100,
   n_alts = 3,
   n_q = 6,
   method = "sequential",

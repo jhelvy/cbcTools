@@ -7,8 +7,8 @@
 cbc_restrict(profiles, ...)
 }
 \arguments{
-\item{profiles}{A data frame in which each row is a possible profile.
-This can be generated using the \code{cbc_profiles()} function.}
+\item{profiles}{A data frame of class \code{cbc_profiles} created using the
+\code{cbc_profiles()} function.}
 
 \item{...}{Any number of restricted pairs of attribute levels, defined as
 pairs of logical expressions separated by commas. For example, the
@@ -16,7 +16,7 @@ restriction \code{type == 'Fuji' & freshness == 'Poor'} will eliminate profiles
 such that \code{"Fuji"} type apples will never be shown with \code{"Poor"} freshness.}
 }
 \value{
-A restricted set of profiles as a data frame.
+A restricted set of profiles as a data frame with class \code{cbc_profiles}.
 }
 \description{
 This function returns a restricted set of profiles as a data frame.

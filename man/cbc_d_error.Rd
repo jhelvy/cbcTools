@@ -4,23 +4,16 @@
 \alias{cbc_d_error}
 \title{Compute D-error for a choice experiment design}
 \usage{
-cbc_d_error(design, priors = NULL, n_draws = 200, exclude = NULL)
+cbc_d_error(design, priors = NULL, exclude = NULL)
 }
 \arguments{
 \item{design}{A data frame containing a choice experiment design created
 by \code{cbc_design()}}
 
-\item{priors}{A numeric vector of prior parameter values, list with
-mean/sigma for Bayesian priors, or \code{NULL} for D0-error (default)}
-
-\item{n_draws}{Number of draws for DB-error calculation if using Bayesian
-priors}
+\item{priors}{A cbc_priors object created by cbc_priors(), or NULL for D0-error}
 
 \item{exclude}{Character vector of attribute names to exclude from D-error
 calculation}
-
-\item{obsID}{The name of the column in \code{design} that identifies each choice
-observation. Defaults to \code{"obsID"}.}
 }
 \value{
 The D-error value
@@ -29,46 +22,6 @@ The D-error value
 Compute D-error for a choice experiment design
 }
 \details{
-For Bayesian priors (DB-error), you can specify either:
-\itemize{
-\item A list with 'mean' and 'sd' vectors for uncorrelated parameters
-\item A list with 'mean' vector and 'sigma' matrix for correlated parameters
-}
-}
-\examples{
-# Create profiles
-profiles <- cbc_profiles(
-  price     = seq(1, 5, 0.5),
-  type      = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Poor', 'Average', 'Excellent')
-)
-
-# Generate design
-design <- cbc_design(
-  profiles = profiles,
-  n_resp = 100,
-  n_alts = 3,
-  n_q = 6
-)
-
-# DB-error with uncorrelated priors
-db_error1 <- cbc_d_error(design,
-  priors = list(
-    mean = c(-0.5, 0.2, 0.3, 0.4, 0.8),
-    sd = rep(0.4, 5)
-  ))
-
-# DB-error with correlated priors
-sigma <- matrix(c(
-  0.16, 0.06, 0.06, 0.00, 0.00,
-  0.06, 0.16, 0.06, 0.00, 0.00,
-  0.06, 0.06, 0.16, 0.00, 0.00,
-  0.00, 0.00, 0.00, 0.16, 0.06,
-  0.00, 0.00, 0.00, 0.06, 0.16
-), 5, 5)
-db_error2 <- cbc_d_error(design,
-  priors = list(
-    mean = c(-0.5, 0.2, 0.3, 0.4, 0.8),
-    sigma = sigma
-  ))
+Computes either D-error (with fixed priors) or DB-error (with random draws)
+depending on whether parameter draws are included in the priors object.
 }
