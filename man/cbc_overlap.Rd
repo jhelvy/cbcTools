@@ -2,16 +2,25 @@
 % Please edit documentation in R/inspect.R
 \name{cbc_overlap}
 \alias{cbc_overlap}
+\alias{cbc_overlap.cbc_design}
+\alias{cbc_overlap.data.frame}
 \title{Counts of attribute overlap}
 \usage{
-cbc_overlap(design)
+cbc_overlap(x, ...)
+
+\method{cbc_overlap}{cbc_design}(x, ...)
+
+\method{cbc_overlap}{data.frame}(x, ...)
 }
 \arguments{
-\item{design}{A data frame of a survey design.}
+\item{x}{Either a \code{cbc_design} object created by \code{cbc_design()} or a data frame
+containing a choice experiment design}
+
+\item{...}{Additional arguments passed to methods}
 }
 \value{
-Prints the counts of the number of choice questions that contain
-the unique number of levels for each attribute.
+Invisibly returns the overlap statistics, but primarily prints
+formatted information to the console
 }
 \description{
 This function prints out a summary of the amount of "overlap" across
@@ -37,13 +46,9 @@ profiles <- cbc_profiles(
 # Make a randomized survey design
 design <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
   n_alts   = 3, # Number of alternatives per question
   n_q      = 6 # Number of questions per respondent
 )
-
-# Inspect the design balance
-cbc_balance(design)
 
 # Inspect the design overlap
 cbc_overlap(design)

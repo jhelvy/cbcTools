@@ -2,16 +2,25 @@
 % Please edit documentation in R/inspect.R
 \name{cbc_balance}
 \alias{cbc_balance}
+\alias{cbc_balance.cbc_design}
+\alias{cbc_balance.data.frame}
 \title{Counts of attribute balance}
 \usage{
-cbc_balance(design)
+cbc_balance(x, ...)
+
+\method{cbc_balance}{cbc_design}(x, ...)
+
+\method{cbc_balance}{data.frame}(x, ...)
 }
 \arguments{
-\item{design}{A data frame of a survey design.}
+\item{x}{Either a \code{cbc_design} object created by \code{cbc_design()} or a data frame
+containing a choice experiment design}
+
+\item{...}{Additional arguments passed to methods}
 }
 \value{
-Prints the individual and pairwise counts of the number of times
-each attribute levels in shown in the design.
+Invisibly returns the balance statistics, but primarily prints
+formatted information to the console
 }
 \description{
 This function prints out a summary of the individual and pairwise counts of
@@ -30,19 +39,14 @@ profiles <- cbc_profiles(
 )
 
 # Make a survey design from all possible profiles
-# (This is the default setting where method = 'full' for "full factorial")
 design <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 )
 
 # Inspect the design balance
 cbc_balance(design)
-
-# Inspect the design overlap
-cbc_overlap(design)
 }
 \keyword{balance}
 \keyword{logit}
