@@ -104,9 +104,9 @@ cbc_priors <- function(
   draw_type = "halton",
   ...
 ) {
-  # Validate profiles input
-  if (!inherits(profiles, "data.frame") || !"profileID" %in% names(profiles)) {
-    stop("'profiles' must be a data frame created by cbc_profiles()")
+  # Validate input class
+  if (!inherits(profiles, "cbc_profiles")) {
+    stop("profiles must be a cbc_profiles object created by cbc_profiles()")
   }
 
   # Get attribute information and combine with parameter specifications
@@ -171,12 +171,21 @@ cbc_priors <- function(
     cor_mat <- NULL
   }
 
+  # Store profiles reference and metadata for validation
+  profiles_metadata <- list(
+    attribute_info = attr(profiles, "attribute_info"),
+    n_profiles = nrow(profiles),
+    profile_hash = digest_profiles(profiles)
+  )
+
   # Create return object
   result <- list(
+    profiles_metadata = profiles_metadata,  # For validation
     attrs = attrs,
     pars = pars_mean,
     correlation = cor_mat,
-    par_draws = par_draws
+    par_draws = par_draws,
+    created_at = Sys.time()
   )
 
   class(result) <- c("cbc_priors", "list")
@@ -262,6 +271,68 @@ cor_spec <- function(with, value, level = NULL, with_level = NULL) {
     ),
     class = "cbc_correlation"
   )
+}
+
+#' Validate that priors are compatible with profiles
+#'
+#' This function checks if priors were created for the same profiles structure
+#' @param priors A cbc_priors object
+#' @param profiles A cbc_profiles object
+#' @return Invisibly returns TRUE if compatible, throws error or warning if not
+#' @export
+validate_priors_profiles <- function(priors, profiles) {
+  if (!inherits(priors, "cbc_priors")) {
+    stop("priors must be a cbc_priors object created by cbc_priors()")
+  }
+  if (!inherits(profiles, "cbc_profiles")) {
+    stop("profiles must be a cbc_profiles object created by cbc_profiles()")
+  }
+
+  priors_meta <- priors$profiles_metadata
+  current_hash <- digest_profiles(profiles)
+
+  # Check if profiles structure has changed
+  if (priors_meta$profile_hash != current_hash) {
+    current_attr_info <- attr(profiles, "attribute_info")
+
+    # More detailed comparison
+    if (!identical(priors_meta$attribute_info, current_attr_info)) {
+      warning(
+        "Priors were created for different profile attributes or levels. ",
+        "Consider recreating priors with cbc_priors().",
+        call. = FALSE
+      )
+    } else if (priors_meta$n_profiles != nrow(profiles)) {
+      message(
+        "Priors were created for profiles with ", priors_meta$n_profiles,
+        " rows, but current profiles have ", nrow(profiles), " rows. ",
+        "This is typically fine if you've applied restrictions."
+      )
+    }
+  }
+
+  invisible(TRUE)
+}
+
+# Helper function to create a simple hash of profiles structure
+digest_profiles <- function(profiles) {
+  # Create a simple hash based on attribute info and structure
+  attr_info <- attr(profiles, "attribute_info")
+  structure_string <- paste(
+    names(attr_info),
+    sapply(attr_info, function(x) paste(x$type, x$n_levels, collapse = "_")),
+    collapse = "|"
+  )
+  # Use a simple hash - in production you might want digest::digest()
+  abs(sum(utf8ToInt(structure_string)))
+}
+
+#' Check if object is a cbc_priors object
+#' @param x Object to check
+#' @return Logical indicating if x is a cbc_priors object
+#' @export
+is.cbc_priors <- function(x) {
+  inherits(x, "cbc_priors")
 }
 
 # Helper function to build correlation matrix from random parameter specifications
@@ -548,61 +619,61 @@ process_parameters <- function(attrs) {
 
 # Helper function to prepare profiles for model creation
 prepare_profiles_for_model <- function(profiles, means, attrs) {
-    model_data <- profiles
+  model_data <- profiles
 
-    # Process each attribute
-    for (attr in names(attrs)) {
-        if (!attrs[[attr]]$continuous) {
-            # Get reference level based on provided priors
-            if (!is.null(names(means[[attr]]))) {
-                # Named vector case
-                all_levels <- attrs[[attr]]$levels
-                coef_levels <- names(means[[attr]])
-                ref_level <- setdiff(all_levels, coef_levels)[1]
-                levels_order <- c(ref_level, coef_levels)
-            } else {
-                # Unnamed vector case
-                levels_order <- attrs[[attr]]$levels
-            }
+  # Process each attribute
+  for (attr in names(attrs)) {
+    if (!attrs[[attr]]$continuous) {
+      # Get reference level based on provided priors
+      if (!is.null(names(means[[attr]]))) {
+        # Named vector case
+        all_levels <- attrs[[attr]]$levels
+        coef_levels <- names(means[[attr]])
+        ref_level <- setdiff(all_levels, coef_levels)[1]
+        levels_order <- c(ref_level, coef_levels)
+      } else {
+        # Unnamed vector case
+        levels_order <- attrs[[attr]]$levels
+      }
 
-            # Convert to factor with specified level order
-            model_data[[attr]] <- factor(
-                profiles[[attr]],
-                levels = levels_order
-            )
-        }
+      # Convert to factor with specified level order
+      model_data[[attr]] <- factor(
+        profiles[[attr]],
+        levels = levels_order
+      )
     }
+  }
 
-    return(model_data)
+  return(model_data)
 }
 
 # Modified from {logitr}
 get_parSetup <- function(parNames, randPars) {
-    parSetup <- rep("f", length(parNames))
-    for (i in seq_len(length(parNames))) {
-        name <- parNames[i]
-        if (name %in% names(randPars)) {
-            parSetup[i] <- randPars[name]
-        }
+  parSetup <- rep("f", length(parNames))
+  for (i in seq_len(length(parNames))) {
+    name <- parNames[i]
+    if (name %in% names(randPars)) {
+      parSetup[i] <- randPars[name]
     }
-    names(parSetup) <- parNames
-    return(parSetup)
+  }
+  names(parSetup) <- parNames
+  return(parSetup)
 }
 
 # Modified from {logitr}
 get_parIDs <- function(parSetup) {
-    return(list(
-        f  = which(parSetup == "f"),
-        r  = which(parSetup != "f"),
-        n  = which(parSetup == "n"),
-        ln = which(parSetup == "ln"),
-        cn = which(parSetup == "cn")
-    ))
+  return(list(
+    f  = which(parSetup == "f"),
+    r  = which(parSetup != "f"),
+    n  = which(parSetup == "n"),
+    ln = which(parSetup == "ln"),
+    cn = which(parSetup == "cn")
+  ))
 }
 
 # Returns shifted normal draws for each parameter
 makeBetaDraws <- function(
-  pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat
+    pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat
 ) {
 
   # First scale the draws according to the covariance matrix
@@ -629,16 +700,16 @@ makeBetaDraws <- function(
 }
 
 getStandardDraws <- function(parIDs, numDraws, draw_type) {
-    numBetas <- length(parIDs$f) + length(parIDs$r)
-    if (draw_type == 'sobol') {
-        draws <- as.matrix(randtoolbox::sobol(
-          numDraws, numBetas, normal = TRUE
-        ))
-    } else {
-        draws <- as.matrix(randtoolbox::halton(
-          numDraws, numBetas, normal = TRUE
-        ))
-    }
-    draws[, parIDs$f] <- 0 * draws[, parIDs$f]
-    return(draws)
+  numBetas <- length(parIDs$f) + length(parIDs$r)
+  if (draw_type == 'sobol') {
+    draws <- as.matrix(randtoolbox::sobol(
+      numDraws, numBetas, normal = TRUE
+    ))
+  } else {
+    draws <- as.matrix(randtoolbox::halton(
+      numDraws, numBetas, normal = TRUE
+    ))
+  }
+  draws[, parIDs$f] <- 0 * draws[, parIDs$f]
+  return(draws)
 }
