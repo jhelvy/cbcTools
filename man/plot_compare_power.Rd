@@ -29,38 +29,38 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# Make designs to compare: full factorial vs bayesian d-efficient
+# Make designs to compare: random vs sequential
 design_random <- cbc_design(
   profiles = profiles,
-  n_resp = 100, n_alts = 3, n_q = 6
+  n_alts = 3, n_q = 6, method = "random"
 )
-# Same priors will be used in bayesian design and simulated choices
-priors <- list(
+
+# Same priors will be used in sequential design and simulated choices
+priors <- cbc_priors(
+  profiles = profiles,
   price     = -0.1,
   type      = c(0.1, 0.2),
   freshness = c(0.1, 0.2)
 )
-design_bayesian <- cbc_design(
+
+design_sequential <- cbc_design(
   profiles  = profiles,
-  n_resp = 100, n_alts = 3, n_q = 6, n_start = 1, method = "CEA",
-  priors = priors, parallel = FALSE
+  priors = priors,
+  n_alts = 3, n_q = 6, method = "sequential"
 )
 
-# Obtain power for each design by simulating choices
-power_random <- design_random |>
-cbc_choices(obsID = "obsID", priors = priors) |>
-  cbc_power(
-    pars = c("price", "type", "freshness"),
-    outcome = "choice", obsID = "obsID", nbreaks = 5, n_q = 6, n_cores = 2
-  )
-power_bayesian <- design_bayesian |>
-  cbc_choices(obsID = "obsID", priors = priors) |>
-  cbc_power(
-    pars = c("price", "type", "freshness"),
-    outcome = "choice", obsID = "obsID", nbreaks = 5, n_q = 6, n_cores = 2
-  )
+# Create surveys and simulate choices
+survey_random <- cbc_survey(design_random, n_resp = 100)
+choices_random <- cbc_choices(survey_random, priors = priors)
+
+survey_sequential <- cbc_survey(design_sequential, n_resp = 100)
+choices_sequential <- cbc_choices(survey_sequential, priors = priors)
+
+# Obtain power for each design
+power_random <- cbc_power(choices_random, nbreaks = 5, n_cores = 2)
+power_sequential <- cbc_power(choices_sequential, nbreaks = 5, n_cores = 2)
 
 # Compare power of each design
-plot_compare_power(power_bayesian, power_random)
+plot_compare_power(power_random, power_sequential)
 }
 }
