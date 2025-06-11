@@ -3,10 +3,7 @@
 #' This function takes a conjoint design and replicates it across a specified
 #' number of respondents to create a complete survey design.
 #'
-#' @param design A `cbc_design` object created by `cbc_design()`. If the
-#'   `"random"` method was used to create the design, then the design will
-#'   be ignored and a fully randomized survey will be generated where each
-#'   respondent sees a unique, random design.
+#' @param design A `cbc_design` object created by `cbc_design()`.
 #' @param n_resp Number of survey respondents
 #' @param randomize_questions Logical. Whether to randomize question order for each respondent
 #' @param randomize_alts Logical. Whether to randomize alternative order within questions
@@ -26,10 +23,7 @@
 #' )
 #'
 #' # Create survey for 100 respondents
-#' survey <- cbc_survey(
-#'   design = design,
-#'   n_resp = 100
-#' )
+#' survey <- cbc_survey(design, n_resp = 100)
 cbc_survey <- function(
     design,
     n_resp,
@@ -59,22 +53,11 @@ cbc_survey <- function(
     ))
   }
 
-  # Create the survey
-  if (method == 'random') {
-    # For random designs, create fresh random survey for each respondent
-    survey <- make_random_survey(
-      profiles, n_blocks, n_resp, n_alts, n_q, label
-    )
-    if (no_choice) {
-      survey <- add_no_choice(survey, n_alts)
-    }
-  } else {
-    # For other designs, replicate the design across respondents
-    survey <- repeat_sets(
-      design_df, n_resp, n_alts, n_q, n_blocks,
-      randomize_questions, randomize_alts
-    )
-  }
+  # Replicate the design across respondents
+  survey <- repeat_sets(
+    design_df, n_resp, n_alts, n_q, n_blocks,
+    randomize_questions, randomize_alts
+  )
 
   # Calculate survey statistics
   survey_stats <- calculate_survey_stats(survey, design, n_resp)
@@ -101,13 +84,125 @@ cbc_survey <- function(
   return(survey)
 }
 
+#' Create a random survey directly from profiles
+#'
+#' This function creates a random survey by sampling directly from profiles,
+#' bypassing the structured design step. Each respondent sees a unique random
+#' set of choice questions.
+#'
+#' @param profiles A `cbc_profiles` object created by `cbc_profiles()`.
+#' @param n_resp Number of survey respondents
+#' @param n_alts Number of alternatives per choice question
+#' @param n_q Number of questions per respondent
+#' @param no_choice Include a "no choice" option in the choice sets? Defaults to `FALSE`.
+#' @param label The name of the variable to use in a "labeled" design (also
+#'   called an "alternative-specific" design) such that each set of alternatives
+#'   contains one of each of the levels in the `label` attribute. Defaults to `NULL`.
+#' @return A data frame with class `cbc_survey` containing the complete random survey design
+#' @export
+#' @examples
+#' # Create profiles
+#' profiles <- cbc_profiles(
+#'   price = c(1, 2, 3),
+#'   type = c("A", "B", "C")
+#' )
+#'
+#' # Create random survey directly from profiles
+#' survey_random <- cbc_survey_random(
+#'   profiles = profiles,
+#'   n_resp = 100,
+#'   n_alts = 2,
+#'   n_q = 4
+#' )
+cbc_survey_random <- function(
+    profiles,
+    n_resp,
+    n_alts,
+    n_q,
+    no_choice = FALSE,
+    label = NULL
+) {
+  # Validate inputs
+  if (!inherits(profiles, "cbc_profiles")) {
+    stop("profiles must be a cbc_profiles object created by cbc_profiles()")
+  }
+
+  # Create random survey directly from profiles
+  survey <- make_random_survey(profiles, n_blocks = 1, n_resp, n_alts, n_q, label)
+
+  if (no_choice) {
+    survey <- add_no_choice(survey, n_alts)
+  }
+
+  # Calculate survey statistics (create minimal design info for stats)
+  minimal_design_info <- list(
+    profiles = profiles,
+    design_info = list(efficiency = NULL)
+  )
+  survey_stats <- calculate_survey_stats(survey, minimal_design_info, n_resp)
+
+  # Create survey metadata
+  survey_info <- list(
+    n_resp = n_resp,
+    created_at = Sys.time(),
+    total_questions = n_resp * n_q,
+    total_observations = n_resp * n_q,
+    total_alternatives = nrow(survey),
+    randomize_questions = TRUE,  # Always true for random surveys
+    randomize_alts = TRUE,       # Always true for random surveys
+    design_method = "random",
+    blocks_per_respondent = 1,
+    stats = survey_stats
+  )
+
+  # Calculate D-error for the random survey
+  d_error_computed <- cbc_d_error(survey, priors = NULL)
+
+  # Store minimal design reference for profiles
+  design_ref <- list(
+    profiles = profiles,
+    method = "random",
+    n_q = n_q,
+    n_alts = n_alts,
+    n_blocks = 1,  # Add missing n_blocks
+    no_choice = no_choice,
+    label = label,
+    priors = NULL,
+    d_error = d_error_computed  # Use computed D-error
+  )
+
+  # Store references to original objects
+  attr(survey, "design_ref") <- design_ref
+  attr(survey, "survey_info") <- survey_info
+
+  class(survey) <- c("cbc_survey", "data.frame")
+  return(survey)
+}
+
+#' Check if object is a cbc_survey object
+#' @param x Object to check
+#' @return Logical indicating if x is a cbc_survey object
+#' @export
+is.cbc_survey <- function(x) {
+  inherits(x, "cbc_survey")
+}
+
 # Helper functions
 
 calculate_survey_stats <- function(survey, design, n_resp) {
   # Profile usage statistics
   profile_usage <- table(survey$profileID)
   unique_profiles_used <- length(unique(survey$profileID))
-  total_profiles_available <- nrow(design$profiles)
+
+  # Handle both design objects and minimal design info
+  if (inherits(design, "cbc_design")) {
+    total_profiles_available <- nrow(design$profiles)
+    efficiency <- design$design_info$efficiency
+  } else {
+    # For minimal design info (from random surveys)
+    total_profiles_available <- nrow(design$profiles)
+    efficiency <- design$design_info$efficiency
+  }
 
   stats <- list(
     unique_profiles_used = unique_profiles_used,
@@ -119,10 +214,9 @@ calculate_survey_stats <- function(survey, design, n_resp) {
   )
 
   # Add efficiency metrics if available from design
-  if (!is.null(design$design_info$efficiency)) {
-    eff <- design$design_info$efficiency
-    stats$balance_score <- eff$balance_score
-    stats$overlap_score <- eff$overlap_score
+  if (!is.null(efficiency)) {
+    stats$balance_score <- efficiency$balance_score
+    stats$overlap_score <- efficiency$overlap_score
   }
 
   return(stats)
@@ -388,3 +482,10 @@ reorder_cols <- function(design) {
   return(design)
 }
 
+get_id_names <- function() {
+  return(c("profileID", "blockID", "respID", "qID", "altID", "obsID"))
+}
+
+get_var_names <- function(design) {
+  return(setdiff(names(design), get_id_names()))
+}

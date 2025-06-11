@@ -43,6 +43,31 @@ cbc_d_error <- function(x, ...) {
 
 #' @rdname cbc_d_error
 #' @export
+cbc_d_error.cbc_survey <- function(x, priors = NULL, exclude = NULL, ...) {
+  # Get design reference from survey
+  design_ref <- attr(x, "design_ref")
+
+  # Use priors from design object if not specified
+  if (is.null(priors)) {
+    if (!is.null(design_ref)) {
+      priors <- design_ref$priors
+    }
+  } else {
+    # Validate provided priors against survey's profiles
+    if (!inherits(priors, "cbc_priors")) {
+      stop("priors must be a cbc_priors object created by cbc_priors()")
+    }
+    if (!is.null(design_ref)) {
+      validate_priors_profiles(priors, design_ref$profiles)
+    }
+  }
+
+  # Call the data frame method
+  cbc_d_error.data.frame(x, priors, exclude, ...)
+}
+
+#' @rdname cbc_d_error
+#' @export
 cbc_d_error.cbc_design <- function(x, priors = NULL, exclude = NULL, ...) {
   # Use priors from design object if not specified
   if (is.null(priors)) {
@@ -149,6 +174,36 @@ cbc_db_error <- function(x, ...) {
 
 #' @rdname cbc_db_error
 #' @export
+cbc_db_error.cbc_survey <- function(x, priors = NULL, exclude = NULL, ...) {
+  # Get design reference from survey
+  design_ref <- attr(x, "design_ref")
+
+  # Use priors from design object if not specified
+  if (is.null(priors)) {
+    if (!is.null(design_ref)) {
+      priors <- design_ref$priors
+    }
+  } else {
+    # Validate provided priors against survey's profiles
+    if (!inherits(priors, "cbc_priors")) {
+      stop("priors must be a cbc_priors object created by cbc_priors()")
+    }
+    if (!is.null(design_ref)) {
+      validate_priors_profiles(priors, design_ref$profiles)
+    }
+  }
+
+  # Check that priors include random parameters
+  if (is.null(priors) || is.null(priors$par_draws)) {
+    stop("DB-error requires priors with random parameters. Use cbc_d_error() for fixed priors.")
+  }
+
+  # Call the data frame method
+  cbc_db_error.data.frame(x, priors, exclude, ...)
+}
+
+#' @rdname cbc_db_error
+#' @export
 cbc_db_error.cbc_design <- function(x, priors = NULL, exclude = NULL, ...) {
   # Use priors from design object if not specified
   if (is.null(priors)) {
@@ -185,10 +240,10 @@ cbc_db_error.data.frame <- function(x, priors = NULL, exclude = NULL, ...) {
 
 #' Compare D-errors across multiple designs
 #'
-#' @param ... Multiple `cbc_design` objects to compare, or named arguments where
-#'   each argument is a `cbc_design` object
-#' @param priors Optional `cbc_priors` object to use for all designs. If not
-#'   specified, each design's own priors will be used.
+#' @param ... Multiple `cbc_design` or `cbc_survey` objects to compare, or named
+#'   arguments where each argument is a design or survey object
+#' @param priors Optional `cbc_priors` object to use for all designs/surveys. If not
+#'   specified, each object's own priors will be used.
 #' @param exclude Character vector of attribute names to exclude from D-error
 #'   calculations
 #' @return A data frame with design names and their corresponding D-errors,
@@ -202,7 +257,7 @@ cbc_db_error.data.frame <- function(x, priors = NULL, exclude = NULL, ...) {
 #' )
 #'
 #' # Create different designs
-#' design_random <- cbc_design(profiles, n_alts = 2, n_q = 4, method = "random")
+#' design_sequential <- cbc_design(profiles, method = "sequential", n_alts = 2, n_q = 4)
 #'
 #' priors <- cbc_priors(
 #'   profiles = profiles,
@@ -210,41 +265,41 @@ cbc_db_error.data.frame <- function(x, priors = NULL, exclude = NULL, ...) {
 #'   type = c(0.2, 0.3)
 #' )
 #'
-#' design_sequential <- cbc_design(
-#'   profiles, priors = priors, n_alts = 2, n_q = 4, method = "sequential"
-#' )
+#' # Create surveys
+#' survey_sequential <- cbc_survey(design_sequential, n_resp = 100)
+#' survey_random <- cbc_survey(profiles, n_resp = 100)  # Random survey from profiles
 #'
-#' # Compare designs
+#' # Compare surveys
 #' compare_d_errors(
-#'   Random = design_random,
-#'   Sequential = design_sequential,
+#'   Sequential = survey_sequential,
+#'   Random = survey_random,
 #'   priors = priors
 #' )
 compare_d_errors <- function(..., priors = NULL, exclude = NULL) {
-  designs <- list(...)
+  objects <- list(...)
 
-  # Get design names
-  design_names <- names(designs)
-  if (is.null(design_names)) {
-    design_names <- paste0("Design_", seq_along(designs))
+  # Get object names
+  object_names <- names(objects)
+  if (is.null(object_names)) {
+    object_names <- paste0("Object_", seq_along(objects))
   }
 
-  # Validate all inputs are cbc_design objects
-  for (i in seq_along(designs)) {
-    if (!inherits(designs[[i]], "cbc_design")) {
-      stop(sprintf("Argument %d (%s) must be a cbc_design object",
-                   i, design_names[i]))
+  # Validate all inputs are cbc_design or cbc_survey objects
+  for (i in seq_along(objects)) {
+    if (!inherits(objects[[i]], c("cbc_design", "cbc_survey"))) {
+      stop(sprintf("Argument %d (%s) must be a cbc_design or cbc_survey object",
+                   i, object_names[i]))
     }
   }
 
   # Compute D-errors
-  d_errors <- sapply(designs, function(design) {
-    cbc_d_error(design, priors = priors, exclude = exclude)
+  d_errors <- sapply(objects, function(obj) {
+    cbc_d_error(obj, priors = priors, exclude = exclude)
   })
 
   # Create result data frame
   result <- data.frame(
-    design = design_names,
+    design = object_names,
     d_error = d_errors,
     stringsAsFactors = FALSE
   )
@@ -266,6 +321,36 @@ compare_d_errors <- function(..., priors = NULL, exclude = NULL) {
 
   class(result) <- c("cbc_d_error_comparison", "data.frame")
   return(result)
+}
+
+#' Print method for D-error comparisons
+#' @param x A cbc_d_error_comparison object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_d_error_comparison <- function(x, ...) {
+  cat("D-Error Comparison\n")
+  cat("==================\n")
+  cat("(Lower D-error is better)\n\n")
+
+  # Format the output nicely and remove custom class
+  print_df <- x
+  print_df$d_error <- sprintf("%.6f", print_df$d_error)
+  print_df$relative_efficiency <- sprintf("%.2f", print_df$relative_efficiency)
+
+  # Remove custom class to avoid infinite recursion
+  class(print_df) <- "data.frame"
+  print(print_df, row.names = FALSE)
+
+  cat(sprintf("\nBest design: %s (D-error = %.6f)\n",
+              x$design[1], x$d_error[1]))
+
+  if (nrow(x) > 1) {
+    worst_idx <- nrow(x)
+    improvement <- (x$d_error[worst_idx] - x$d_error[1]) / x$d_error[worst_idx] * 100
+    cat(sprintf("Improvement over worst: %.1f%%\n", improvement))
+  }
+
+  invisible(x)
 }
 
 # Helper functions (unchanged from original implementation)

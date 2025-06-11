@@ -2,11 +2,14 @@
 % Please edit documentation in R/derror.R
 \name{cbc_db_error}
 \alias{cbc_db_error}
+\alias{cbc_db_error.cbc_survey}
 \alias{cbc_db_error.cbc_design}
 \alias{cbc_db_error.data.frame}
 \title{Compute DB-error for a choice experiment design with random parameters}
 \usage{
 cbc_db_error(x, ...)
+
+\method{cbc_db_error}{cbc_survey}(x, priors = NULL, exclude = NULL, ...)
 
 \method{cbc_db_error}{cbc_design}(x, priors = NULL, exclude = NULL, ...)
 

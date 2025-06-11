@@ -7,11 +7,11 @@
 compare_d_errors(..., priors = NULL, exclude = NULL)
 }
 \arguments{
-\item{...}{Multiple \code{cbc_design} objects to compare, or named arguments where
-each argument is a \code{cbc_design} object}
+\item{...}{Multiple \code{cbc_design} or \code{cbc_survey} objects to compare, or named
+arguments where each argument is a design or survey object}
 
-\item{priors}{Optional \code{cbc_priors} object to use for all designs. If not
-specified, each design's own priors will be used.}
+\item{priors}{Optional \code{cbc_priors} object to use for all designs/surveys. If not
+specified, each object's own priors will be used.}
 
 \item{exclude}{Character vector of attribute names to exclude from D-error
 calculations}
@@ -31,7 +31,7 @@ profiles <- cbc_profiles(
 )
 
 # Create different designs
-design_random <- cbc_design(profiles, n_alts = 2, n_q = 4, method = "random")
+design_sequential <- cbc_design(profiles, method = "sequential", n_alts = 2, n_q = 4)
 
 priors <- cbc_priors(
   profiles = profiles,
@@ -39,14 +39,14 @@ priors <- cbc_priors(
   type = c(0.2, 0.3)
 )
 
-design_sequential <- cbc_design(
-  profiles, priors = priors, n_alts = 2, n_q = 4, method = "sequential"
-)
+# Create surveys
+survey_sequential <- cbc_survey(design_sequential, n_resp = 100)
+survey_random <- cbc_survey(profiles, n_resp = 100)  # Random survey from profiles
 
-# Compare designs
+# Compare surveys
 compare_d_errors(
-  Random = design_random,
-  Sequential = design_sequential,
+  Sequential = survey_sequential,
+  Random = survey_random,
   priors = priors
 )
 }

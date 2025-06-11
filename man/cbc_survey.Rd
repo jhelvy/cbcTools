@@ -7,10 +7,7 @@
 cbc_survey(design, n_resp, randomize_questions = TRUE, randomize_alts = TRUE)
 }
 \arguments{
-\item{design}{A \code{cbc_design} object created by \code{cbc_design()}. If the
-\code{"random"} method was used to create the design, then the design will
-be ignored and a fully randomized survey will be generated where each
-respondent sees a unique, random design.}
+\item{design}{A \code{cbc_design} object created by \code{cbc_design()}.}
 
 \item{n_resp}{Number of survey respondents}
 
@@ -39,8 +36,5 @@ design <- cbc_design(
 )
 
 # Create survey for 100 respondents
-survey <- cbc_survey(
-  design = design,
-  n_resp = 100
-)
+survey <- cbc_survey(design, n_resp = 100)
 }

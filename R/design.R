@@ -130,8 +130,6 @@ cbc_design <- function(
     no_choice = FALSE,
     label = NULL,
     method = "random",
-    randomize_questions = TRUE,
-    randomize_alts = TRUE,
     prior_no_choice = NULL,
     max_iter = 50,
     parallel = FALSE
@@ -165,8 +163,6 @@ cbc_design <- function(
     no_choice,
     label,
     method,
-    randomize_questions,
-    randomize_alts,
     priors,
     prior_no_choice,
     max_iter,

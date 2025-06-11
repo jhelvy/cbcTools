@@ -2,11 +2,14 @@
 % Please edit documentation in R/derror.R
 \name{cbc_d_error}
 \alias{cbc_d_error}
+\alias{cbc_d_error.cbc_survey}
 \alias{cbc_d_error.cbc_design}
 \alias{cbc_d_error.data.frame}
 \title{Compute D-error for a choice experiment design}
 \usage{
 cbc_d_error(x, ...)
+
+\method{cbc_d_error}{cbc_survey}(x, priors = NULL, exclude = NULL, ...)
 
 \method{cbc_d_error}{cbc_design}(x, priors = NULL, exclude = NULL, ...)
 

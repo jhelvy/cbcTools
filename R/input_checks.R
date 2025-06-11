@@ -35,8 +35,6 @@ check_inputs_design <- function(
     no_choice,
     label,
     method,
-    randomize_questions,
-    randomize_alts,
     priors,
     prior_no_choice,
     max_iter,
@@ -53,15 +51,6 @@ check_inputs_design <- function(
 
   if (!method %in% c('random', 'sequential')) {
     stop('The "method" argument must be set to "random" or "sequential"')
-  }
-
-  # Check that randomize parameters are logical
-
-  if (!is.logical(randomize_questions)) {
-      stop("randomize_questions must be TRUE or FALSE")
-  }
-  if (!is.logical(randomize_alts)) {
-      stop("randomize_alts must be TRUE or FALSE")
   }
 
   # Check that priors are appropriate if specified
