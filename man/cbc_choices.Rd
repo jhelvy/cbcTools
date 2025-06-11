@@ -2,22 +2,31 @@
 % Please edit documentation in R/choices.R
 \name{cbc_choices}
 \alias{cbc_choices}
+\alias{cbc_choices.cbc_survey}
+\alias{cbc_choices.data.frame}
 \title{Simulate choices for a survey design}
 \usage{
-cbc_choices(design, priors = NULL, n_draws = 100)
+cbc_choices(x, ...)
+
+\method{cbc_choices}{cbc_survey}(x, priors = NULL, n_draws = 100, ...)
+
+\method{cbc_choices}{data.frame}(x, priors = NULL, n_draws = 100, ...)
 }
 \arguments{
-\item{design}{A data frame of a survey design.}
+\item{x}{Either a \code{cbc_survey} object created by \code{cbc_survey()} or a data frame
+containing a survey design}
 
-\item{priors}{A list of one or more prior parameters that define a prior
-(assumed) utility model used to simulate choices for the \code{survey} data frame.
-If \code{NULL} (the default), choices will be randomly assigned.}
+\item{...}{Additional arguments passed to methods}
+
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
+random choices. If \code{x} is a \code{cbc_survey} object, the priors from that
+object will be used by default.}
 
 \item{n_draws}{The number of Halton draws to use for simulated choices
 for mixed logit models. Defaults to \code{100}.}
 }
 \value{
-Returns the \code{design} data frame with an additional \code{choice} column
+Returns the input data with an additional \code{choice} column
 identifying the simulated choices.
 }
 \description{
@@ -39,53 +48,35 @@ profiles <- cbc_profiles(
 )
 
 # Make a survey design from all possible profiles
-# (This is the default setting where method = 'full' for "full factorial")
 design <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
   n_alts   = 3,   # Number of alternatives per question
   n_q      = 6    # Number of questions per respondent
 )
 
-# Simulate random choices
-data <- cbc_choices(
-  design = design,
-  obsID  = "obsID"
-)
+# Create survey and simulate choices
+survey <- cbc_survey(design, n_resp = 100)
+data_with_choices <- cbc_choices(survey)
 
 # Simulate choices according to a prior utility model
-data <- cbc_choices(
-  design = design,
-  obsID = "obsID",
-  priors = list(
-    price     = 0.1,
-    type      = c(0.1, 0.2),
-    freshness = c(0.1, 0.2)
-  )
+priors <- cbc_priors(
+  profiles = profiles,
+  price     = -0.1,
+  type      = c(0.1, 0.2),
+  freshness = c(0.1, 0.2)
 )
 
-# Simulate choices according to a prior model with interactions
-data <- cbc_choices(
-  design = design,
-  obsID = "obsID",
-  priors = list(
-    price     = 0.1,
-    type      = c(0.1, 0.2),
-    freshness = c(0.1, 0.2),
-    `price*type` = c(0.1, 0.5)
-  )
-)
+data <- cbc_choices(survey, priors = priors)
 
 # Simulate choices according to a prior utility model with random parameters
-data <- cbc_choices(
-  design = design,
-  obsID = "obsID",
-  priors = list(
-    price = 0.1,
-    type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
-    freshness = c(0.1, 0.2)
-  )
+priors_random <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = rand_spec(mean = c(0.1, 0.2), sd = c(0.5, 0.8)),
+  freshness = c(0.1, 0.2)
 )
+
+data <- cbc_choices(survey, priors = priors_random)
 }
 \references{
 Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,

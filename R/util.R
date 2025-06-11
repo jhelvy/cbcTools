@@ -54,3 +54,27 @@ is.cbc_profiles <- function(x) {
 is.cbc_design <- function(x) {
   inherits(x, "cbc_design")
 }
+
+#' Check if object is a cbc_survey object
+#' @param x Object to check
+#' @return Logical indicating if x is a cbc_survey object
+#' @export
+is.cbc_survey <- function(x) {
+  inherits(x, "cbc_survey")
+}
+
+#' Check if object is a cbc_choices object
+#' @param x Object to check
+#' @return Logical indicating if x is a cbc_choices object
+#' @export
+is.cbc_choices <- function(x) {
+  inherits(x, "cbc_choices")
+}
+
+get_id_names <- function() {
+  return(c("profileID", "blockID", "respID", "qID", "altID", "obsID"))
+}
+
+get_var_names <- function(design) {
+  return(setdiff(names(design), get_id_names()))
+}

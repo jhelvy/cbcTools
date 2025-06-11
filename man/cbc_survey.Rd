@@ -7,7 +7,7 @@
 cbc_survey(design, n_resp, randomize_questions = TRUE, randomize_alts = TRUE)
 }
 \arguments{
-\item{design}{A cbc_design object created by \code{cbc_design()}. If the
+\item{design}{A \code{cbc_design} object created by \code{cbc_design()}. If the
 \code{"random"} method was used to create the design, then the design will
 be ignored and a fully randomized survey will be generated where each
 respondent sees a unique, random design.}
@@ -19,9 +19,28 @@ respondent sees a unique, random design.}
 \item{randomize_alts}{Logical. Whether to randomize alternative order within questions}
 }
 \value{
-A data frame with class cbc_survey containing the complete survey design
+A data frame with class \code{cbc_survey} containing the complete survey design
 }
 \description{
 This function takes a conjoint design and replicates it across a specified
 number of respondents to create a complete survey design.
+}
+\examples{
+# Create profiles and design
+profiles <- cbc_profiles(
+  price = c(1, 2, 3),
+  type = c("A", "B", "C")
+)
+
+design <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 4
+)
+
+# Create survey for 100 respondents
+survey <- cbc_survey(
+  design = design,
+  n_resp = 100
+)
 }

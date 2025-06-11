@@ -2,10 +2,15 @@
 % Please edit documentation in R/methods.R
 \name{print.cbc_survey}
 \alias{print.cbc_survey}
-\title{Print method for cbc_survey objects}
+\title{Enhanced print method for cbc_survey objects}
 \usage{
 \method{print}{cbc_survey}(x, ...)
 }
+\arguments{
+\item{x}{A cbc_survey object}
+
+\item{...}{Additional arguments passed to print}
+}
 \description{
-Print method for cbc_survey objects
+Enhanced print method for cbc_survey objects
 }

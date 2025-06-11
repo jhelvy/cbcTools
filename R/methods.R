@@ -231,16 +231,147 @@ print.cbc_d_error_comparison <- function(x, ...) {
   invisible(x)
 }
 
-#' Print method for cbc_survey objects
+#' Enhanced print method for cbc_survey objects
+#' @param x A cbc_survey object
+#' @param ... Additional arguments passed to print
 #' @export
 print.cbc_survey <- function(x, ...) {
   cat("Choice-Based Conjoint Survey\n")
   cat("============================\n")
-  cat(sprintf("Number of respondents: %d\n", max(x$respID)))
+
+  # Get survey info
+  info <- attr(x, "survey_info")
+  design_ref <- attr(x, "design_ref")
+
+  # Basic survey structure
+  cat(sprintf("Respondents: %d\n", info$n_resp))
   cat(sprintf("Questions per respondent: %d\n", max(x$qID)))
   cat(sprintf("Alternatives per question: %d\n", max(x$altID)))
-  cat("\nFirst few rows of survey:\n")
-  print(utils::head(x))
+
+  # Design information
+  if (!is.null(design_ref)) {
+    cat(sprintf("Design method: %s\n", info$design_method))
+    if (!is.null(design_ref$d_error)) {
+      cat(sprintf("Design D-error: %.6f\n", design_ref$d_error))
+    }
+    if (design_ref$n_blocks > 1) {
+      cat(sprintf("Blocks: %d (%.1f respondents per block on average)\n",
+                  design_ref$n_blocks, info$n_resp / design_ref$n_blocks))
+    }
+    if (!is.null(design_ref$label)) {
+      cat(sprintf("Labeled design using: %s\n", design_ref$label))
+    }
+    if (design_ref$no_choice) {
+      cat("No-choice option: Yes\n")
+    }
+  }
+
+  # Randomization settings
+  if (info$randomize_questions || info$randomize_alts) {
+    cat("Randomization: ")
+    randomizations <- c()
+    if (info$randomize_questions) randomizations <- c(randomizations, "questions")
+    if (info$randomize_alts) randomizations <- c(randomizations, "alternatives")
+    cat(paste(randomizations, collapse = " and "), "\n")
+  }
+
+  # Survey statistics
+  if (!is.null(info$stats)) {
+    stats <- info$stats
+    cat("\nSurvey Statistics:\n")
+    cat(sprintf("  Profile usage: %d/%d unique profiles (%.1f%%)\n",
+                stats$unique_profiles_used, stats$total_profiles_available,
+                stats$profile_usage_rate * 100))
+    cat(sprintf("  Profile repetitions: %.1f times on average\n", stats$avg_profile_repetitions))
+    if (!is.null(stats$balance_score)) {
+      cat(sprintf("  Attribute balance: %.3f\n", stats$balance_score))
+    }
+    if (!is.null(stats$overlap_score)) {
+      cat(sprintf("  Attribute overlap: %.3f\n", stats$overlap_score))
+    }
+  }
+
+  cat(sprintf("\nSurvey created: %s\n", format(info$created_at, "%Y-%m-%d %H:%M:%S")))
+  cat("\nFirst few rows:\n")
+
+  # Remove class temporarily to avoid infinite recursion
+  survey_df <- x
+  class(survey_df) <- "data.frame"
+  print(utils::head(survey_df))
+  if (nrow(survey_df) > 6) {
+    cat(sprintf("... and %d more rows\n", nrow(survey_df) - 6))
+  }
+
+  invisible(x)
+}
+
+#' Print method for cbc_choices objects
+#' @param x A cbc_choices object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_choices <- function(x, ...) {
+  cat("CBC Choice Data\n")
+  cat("===============\n")
+
+  # Get choice info
+  choice_info <- attr(x, "choice_info")
+
+  # Basic structure
+  n_obs <- max(x$obsID, na.rm = TRUE)
+  n_alts <- sum(x$obsID == 1, na.rm = TRUE)
+  n_resp <- if ("respID" %in% names(x)) max(x$respID, na.rm = TRUE) else 1
+  n_choices <- sum(x$choice, na.rm = TRUE)
+
+  cat(sprintf("Observations: %d choice tasks\n", n_obs))
+  cat(sprintf("Alternatives per task: %d\n", n_alts))
+  if (n_resp > 1) {
+    cat(sprintf("Respondents: %d\n", n_resp))
+    cat(sprintf("Questions per respondent: %d\n", n_obs / n_resp))
+  }
+  cat(sprintf("Total choices made: %d\n", n_choices))
+
+  # Choice simulation info
+  if (!is.null(choice_info)) {
+    cat(sprintf("\nSimulation method: %s\n", choice_info$simulation_method))
+    if (!is.na(choice_info$d_error)) {
+      cat(sprintf("Original design D-error: %.6f\n", choice_info$d_error))
+    }
+    if (choice_info$priors_used) {
+      cat("Priors: Used for utility-based simulation\n")
+    } else {
+      cat("Priors: None (random choices)\n")
+    }
+    cat(sprintf("Simulated at: %s\n", format(choice_info$simulated_at, "%Y-%m-%d %H:%M:%S")))
+  }
+
+  # Choice distribution by alternative
+  if ("altID" %in% names(x)) {
+    choice_by_alt <- tapply(x$choice, x$altID, sum, na.rm = TRUE)
+    choice_rates <- choice_by_alt / n_obs
+    cat("\nChoice rates by alternative:\n")
+    for (i in seq_along(choice_rates)) {
+      cat(sprintf("  Alt %d: %.1f%% (%d choices)\n",
+                  i, choice_rates[i] * 100, choice_by_alt[i]))
+    }
+  }
+
+  # No-choice option if present
+  if ("no_choice" %in% names(x)) {
+    no_choice_rate <- mean(x$choice[x$no_choice == 1], na.rm = TRUE)
+    cat(sprintf("\nNo-choice rate: %.1f%%\n", no_choice_rate * 100))
+  }
+
+  cat("\nFirst few rows:\n")
+
+  # Remove class temporarily to avoid infinite recursion
+  choices_df <- x
+  class(choices_df) <- "data.frame"
+  print(utils::head(choices_df))
+  if (nrow(choices_df) > 6) {
+    cat(sprintf("... and %d more rows\n", nrow(choices_df) - 6))
+  }
+
+  invisible(x)
 }
 
 #' Methods for cbc_models objects
