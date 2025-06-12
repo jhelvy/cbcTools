@@ -414,3 +414,258 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
   d_error <- mean(d_errors)
   return(d_error)
 }
+
+#' Compute comprehensive design error metrics for a choice experiment design
+#'
+#' This function computes multiple optimality criteria including D-, A-, G-, and
+#' E-error as well as condition numbers to provide a comprehensive evaluation
+#' of design efficiency.
+#'
+#' @param x Either a `cbc_design` object created by `cbc_design()`, a `cbc_survey`
+#'   object, or a data frame containing a choice experiment design
+#' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
+#'   null priors. If `x` is a `cbc_design` object, the priors from that object
+#'   will be used by default.
+#' @param exclude Character vector of attribute names to exclude from error
+#'   calculations
+#' @return A list containing:
+#'   \itemize{
+#'     \item d_error: D-optimality criterion (lower is better)
+#'     \item a_error: A-optimality criterion (lower is better)
+#'     \item g_error: G-optimality criterion (lower is better)
+#'     \item e_error: E-optimality criterion (higher is better)
+#'     \item condition_number: Condition number of information matrix (lower is better)
+#'     \item det_information: Determinant of information matrix
+#'     \item trace_information: Trace of information matrix
+#'     \item eigenvalues: Eigenvalues of information matrix
+#'   }
+#' @details
+#' The different error criteria measure different aspects of design efficiency:
+#' \itemize{
+#'   \item D-error: Minimizes generalized variance (determinant of covariance matrix)
+#'   \item A-error: Minimizes average variance (trace of covariance matrix)
+#'   \item G-error: Minimizes maximum prediction variance
+#'   \item E-error: Maximizes minimum eigenvalue (related to worst-estimated parameter)
+#'   \item Condition number: Ratio of largest to smallest eigenvalue (numerical stability)
+#' }
+#' @export
+#' @examples
+#' # Create profiles and design
+#' profiles <- cbc_profiles(
+#'   price = c(1, 2, 3),
+#'   type = c("A", "B", "C")
+#' )
+#'
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_alts = 2,
+#'   n_q = 4
+#' )
+#'
+#' # Compute comprehensive design error metrics
+#' errors <- cbc_error(design)
+#' print(errors)
+cbc_error <- function(x, priors = NULL, exclude = NULL) {
+  UseMethod("cbc_error")
+}
+
+#' @rdname cbc_error
+#' @export
+cbc_error.cbc_survey <- function(x, priors = NULL, exclude = NULL) {
+  # Get design reference from survey
+  design_ref <- attr(x, "design_ref")
+
+  # Use priors from design object if not specified
+  if (is.null(priors)) {
+    if (!is.null(design_ref)) {
+      priors <- design_ref$priors
+    }
+  } else {
+    # Validate provided priors against survey's profiles
+    if (!inherits(priors, "cbc_priors")) {
+      stop("priors must be a cbc_priors object created by cbc_priors()")
+    }
+    if (!is.null(design_ref)) {
+      validate_priors_profiles(priors, design_ref$profiles)
+    }
+  }
+
+  # Call the data frame method
+  cbc_error.data.frame(x, priors, exclude)
+}
+
+#' @rdname cbc_error
+#' @export
+cbc_error.cbc_design <- function(x, priors = NULL, exclude = NULL) {
+  # Use priors from design object if not specified
+  if (is.null(priors)) {
+    priors <- x$priors
+  } else {
+    # Validate provided priors against design's profiles
+    if (!inherits(priors, "cbc_priors")) {
+      stop("priors must be a cbc_priors object created by cbc_priors()")
+    }
+    validate_priors_profiles(priors, x$profiles)
+  }
+
+  # Call the data frame method
+  cbc_error.data.frame(x$design, priors, exclude)
+}
+
+#' @rdname cbc_error
+#' @export
+cbc_error.data.frame <- function(x, priors = NULL, exclude = NULL) {
+  # Validate that input is a proper design data frame
+  if (!all(get_id_names() %in% names(x))) {
+    stop("Design must be created by cbc_design() or contain the required ID columns: ",
+         paste(get_id_names(), collapse = ", "))
+  }
+
+  # Validate priors object and set up objects for random pars
+  validate_priors(priors)
+  randPars <- get_rand_pars(priors)
+  par_draws <- if (!is.null(priors)) priors$par_draws else NULL
+
+  # Get attribute columns (excluding metadata columns)
+  atts <- get_var_names(x)
+
+  # Remove excluded attributes
+  if (!is.null(exclude)) {
+    atts <- setdiff(atts, exclude)
+  }
+  if (length(atts) == 0) {
+    stop("No attribute columns found in design after exclusions")
+  }
+
+  # Encode design matrix and split into list by obsID
+  obsID <- x$obsID
+  reps <- table(obsID)
+  codedData <- logitr::recodeData(x, atts, randPars)
+  X <- codedData$X
+  X_list <- split(as.data.frame(X), obsID)
+  X_list <- lapply(X_list, as.matrix)
+
+  # Compute all efficiency metrics
+  if (is.null(par_draws)) {
+    # Get predicted probabilities, then compute metrics
+    probs <- compute_probs(obsID, reps, atts, priors, X)
+    metrics <- compute_all_efficiency_metrics(X_list, probs, obsID)
+  } else {
+    # Use Bayesian approach with parameter draws
+    metrics <- compute_bayesian_efficiency_metrics(par_draws, X, X_list, obsID, reps)
+  }
+
+  # Add class for printing
+  class(metrics) <- c("cbc_errors", "list")
+  return(metrics)
+}
+
+# Helper function to compute all efficiency metrics from information matrix
+compute_all_efficiency_metrics <- function(X_list, probs, obsID) {
+  # Convert probabilities into list of vectors
+  P_list <- split(probs, obsID)
+
+  # Initialize information matrix
+  K <- ncol(X_list[[1]])
+
+  # Compute information matrix components for all observations at once
+  M <- Reduce(`+`, Map(function(x, p) {
+    p_mat <- diag(p) - tcrossprod(p)
+    crossprod(x, p_mat %*% x)
+  }, X_list, P_list))
+
+  # Check if matrix is invertible
+  if (det(M) <= .Machine$double.eps) {
+    warning("Information matrix is singular or near-singular. Results may be unreliable.")
+    # Use pseudoinverse for singular matrices
+    Minv <- MASS::ginv(M)
+    det_M <- 0
+  } else {
+    Minv <- solve(M)
+    det_M <- det(M)
+  }
+
+  # Compute eigenvalues for various criteria
+  eigenvals <- eigen(M, only.values = TRUE)$values
+  eigenvals_cov <- eigen(Minv, only.values = TRUE)$values
+
+  # Remove negative eigenvalues (numerical precision issues)
+  eigenvals <- eigenvals[eigenvals > .Machine$double.eps]
+  eigenvals_cov <- eigenvals_cov[eigenvals_cov > .Machine$double.eps]
+
+  # D-optimality: minimize det(Cov) = maximize det(Info)
+  d_error <- if (det_M > 0) det_M^(-1/K) else Inf
+
+  # A-optimality: minimize trace(Cov)
+  a_error <- sum(eigenvals_cov)
+
+  # E-optimality: maximize min eigenvalue of Info matrix
+  e_error <- min(eigenvals)
+
+  # Condition number: max eigenvalue / min eigenvalue
+  condition_number <- if (length(eigenvals) > 0 && min(eigenvals) > 0) {
+    max(eigenvals) / min(eigenvals)
+  } else {
+    Inf
+  }
+
+  # G-optimality: requires design matrix computation (approximation)
+  # G-optimality minimizes max prediction variance across design points
+  g_error <- compute_g_error_approx(X_list, Minv, P_list)
+
+  return(list(
+    d_error = d_error,
+    a_error = a_error,
+    g_error = g_error,
+    e_error = e_error,
+    condition_number = condition_number,
+    det_information = det_M,
+    trace_information = sum(eigenvals),
+    eigenvalues = eigenvals,
+    information_matrix = M
+  ))
+}
+
+# Helper function for G-optimality approximation
+compute_g_error_approx <- function(X_list, Minv, P_list) {
+  # G-optimality: max prediction variance over design region
+  # For choice experiments, compute max variance over observed design points
+  max_var <- 0
+
+  for (i in seq_along(X_list)) {
+    X_obs <- X_list[[i]]
+    # Prediction variance for each alternative in this choice set
+    for (j in seq_len(nrow(X_obs))) {
+      x_vec <- X_obs[j, , drop = FALSE]
+      pred_var <- x_vec %*% Minv %*% t(x_vec)
+      max_var <- max(max_var, pred_var)
+    }
+  }
+
+  return(as.numeric(max_var))
+}
+
+# Bayesian version for random parameters
+compute_bayesian_efficiency_metrics <- function(par_draws, X, X_list, obsID, reps) {
+  P_draws <- logit_draws(par_draws, X, obsID, reps)
+  n_draws <- ncol(P_draws)
+
+  # Compute metrics for each draw
+  metrics_draws <- apply(P_draws, 2, function(p) {
+    compute_all_efficiency_metrics(X_list, p, obsID)
+  })
+
+  # Average across draws
+  avg_metrics <- list(
+    d_error = mean(sapply(metrics_draws, function(x) x$d_error)),
+    a_error = mean(sapply(metrics_draws, function(x) x$a_error)),
+    g_error = mean(sapply(metrics_draws, function(x) x$g_error)),
+    e_error = mean(sapply(metrics_draws, function(x) x$e_error)),
+    condition_number = mean(sapply(metrics_draws, function(x) x$condition_number)),
+    det_information = mean(sapply(metrics_draws, function(x) x$det_information)),
+    trace_information = mean(sapply(metrics_draws, function(x) x$trace_information)),
+    eigenvalues = apply(sapply(metrics_draws, function(x) x$eigenvalues), 1, mean)
+  )
+
+  return(avg_metrics)
+}

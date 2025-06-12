@@ -175,28 +175,48 @@ cbc_power.cbc_choices <- function(
 #' @rdname cbc_power
 #' @export
 cbc_power.data.frame <- function(
-  data,
-  outcome,
-  obsID,
-  pars,
-  randPars  = NULL,
-  nbreaks = 10,
-  n_q = 1,
-  return_models = FALSE,
-  panelID   = NULL,
-  clusterID = NULL,
-  robust    = FALSE,
-  predict   = FALSE,
-  n_cores   = NULL,
-  ...
+    data,
+    outcome,
+    obsID,
+    pars,
+    randPars  = NULL,
+    nbreaks = 10,
+    n_q = 1,
+    return_models = FALSE,
+    panelID   = NULL,
+    clusterID = NULL,
+    robust    = FALSE,
+    predict   = FALSE,
+    n_cores   = NULL,
+    ...
 ) {
-    n_cores <- set_num_cores(n_cores)
-    dataList <- make_data_list(data, obsID, nbreaks, n_q)
+  n_cores <- set_num_cores(n_cores)
+  dataList <- make_data_list(data, obsID, nbreaks, n_q)
 
-    if (n_cores == 1) {
-      message("Estimating models...")
+  if (n_cores == 1) {
+    message("Estimating models...")
+    suppressMessages(suppressWarnings(
+      models <- lapply(
+        dataList,
+        logitr::logitr,
+        outcome   = outcome,
+        obsID     = obsID,
+        pars      = pars,
+        randPars  = randPars,
+        panelID   = panelID,
+        clusterID = clusterID,
+        robust    = robust,
+        predict   = predict,
+        ... = ...
+      )
+    ))
+  } else {
+    message("Estimating models using ", n_cores, " cores...")
+    if (Sys.info()[['sysname']] == 'Windows') {
+      cl <- parallel::makeCluster(n_cores, "PSOCK")
       suppressMessages(suppressWarnings(
-        models <- lapply(
+        models <- parallel::parLapply(
+          cl = cl,
           dataList,
           logitr::logitr,
           outcome   = outcome,
@@ -210,62 +230,43 @@ cbc_power.data.frame <- function(
           ... = ...
         )
       ))
+      parallel::stopCluster(cl)
     } else {
-      message("Estimating models using ", n_cores, " cores...")
-      if (Sys.info()[['sysname']] == 'Windows') {
-        cl <- parallel::makeCluster(n_cores, "PSOCK")
-        suppressMessages(suppressWarnings(
-          models <- parallel::parLapply(
-            cl = cl,
-            dataList,
-            logitr::logitr,
-            outcome   = outcome,
-            obsID     = obsID,
-            pars      = pars,
-            randPars  = randPars,
-            panelID   = panelID,
-            clusterID = clusterID,
-            robust    = robust,
-            predict   = predict,
-            ... = ...
-          )
-        ))
-        parallel::stopCluster(cl)
-      } else {
-        suppressMessages(suppressWarnings(
-          models <- parallel::mclapply(
-            dataList,
-            logitr::logitr,
-            outcome   = outcome,
-            obsID     = obsID,
-            pars      = pars,
-            randPars  = randPars,
-            panelID   = panelID,
-            clusterID = clusterID,
-            robust    = robust,
-            predict   = predict,
-            ... = ...,
-            mc.cores = n_cores
-          )
-        ))
-      }
+      suppressMessages(suppressWarnings(
+        models <- parallel::mclapply(
+          dataList,
+          logitr::logitr,
+          outcome   = outcome,
+          obsID     = obsID,
+          pars      = pars,
+          randPars  = randPars,
+          panelID   = panelID,
+          clusterID = clusterID,
+          robust    = robust,
+          predict   = predict,
+          ... = ...,
+          mc.cores = n_cores
+        )
+      ))
     }
-    message("done!")
+  }
+  message("done!")
 
-    # Add sample size to each model
-    sizes <- names(models)
-    for (i in seq_len(length(models))) {
-      models[[i]]$sampleSize <- as.numeric(sizes[i])
-    }
+  # Add sample size to each model
+  sizes <- names(models)
+  for (i in seq_len(length(models))) {
+    models[[i]]$sampleSize <- as.numeric(sizes[i])
+  }
 
-    if (return_models) {
-      class(models) <- c("cbc_models", "list")
-      return(models)
-    }
+  if (return_models) {
+    class(models) <- c("cbc_models", "list")
+    return(models)
+  }
 
-    errors <- extract_errors(models)
-    class(errors) <- c("cbc_errors", "data.frame")
-    return(errors)
+  errors <- extract_errors(models)
+  # Change class name to avoid conflict with cbc_error()
+  class(errors) <- c("cbc_power_errors", "data.frame")
+  return(errors)
 }
 
 #' Enhanced print method for cbc_errors objects

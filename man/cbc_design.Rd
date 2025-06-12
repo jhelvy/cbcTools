@@ -16,7 +16,11 @@ cbc_design(
   method = "random",
   prior_no_choice = NULL,
   max_iter = 50,
-  parallel = FALSE
+  parallel = FALSE,
+  remove_dominant = FALSE,
+  dominance_types = c("total", "partial"),
+  dominance_threshold = 0.8,
+  max_dominance_replacements = 10
 )
 }
 \arguments{
@@ -62,6 +66,21 @@ The default is 50.}
 
 \item{parallel}{Logical value indicating whether to use parallel processing.
 Defaults to \code{FALSE}.}
+
+\item{remove_dominant}{Logical. If \code{TRUE}, removes choice sets where one
+alternative dominates others based on the provided priors. Only works when
+\code{priors} are provided. Defaults to \code{FALSE}.}
+
+\item{dominance_types}{Character vector specifying which types of dominance
+to check for. Options are \code{"total"} (high choice probability) and/or
+\code{"partial"} (best on all attributes). Defaults to \code{c("total", "partial")}.}
+
+\item{dominance_threshold}{Numeric. Threshold for total dominance detection.
+If one alternative has a choice probability above this threshold, the choice
+set is considered dominant. Defaults to \code{0.8}.}
+
+\item{max_dominance_replacements}{Integer. Maximum number of replacement
+attempts when removing dominant choice sets. Defaults to \code{10}.}
 
 \item{randomize}{Logical. If \code{TRUE}, both the choice question order and the
 order of the alternatives within a given choice question will be
@@ -161,6 +180,16 @@ design <- cbc_design(
   n_alts = 3,
   n_q = 6,
   method = "sequential"
+)
+
+# Make a design with dominance checking
+design_no_dominant <- cbc_design(
+  profiles = profiles,
+  priors = priors,
+  n_alts = 3,
+  n_q = 6,
+  remove_dominant = TRUE,
+  dominance_types = c("total", "partial")
 )
 }
 \keyword{DoE.base}

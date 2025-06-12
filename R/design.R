@@ -42,6 +42,17 @@
 #'   The default is 50.
 #' @param parallel Logical value indicating whether to use parallel processing.
 #'   Defaults to `FALSE`.
+#' @param remove_dominant Logical. If `TRUE`, removes choice sets where one
+#'   alternative dominates others based on the provided priors. Only works when
+#'   `priors` are provided. Defaults to `FALSE`.
+#' @param dominance_types Character vector specifying which types of dominance
+#'   to check for. Options are `"total"` (high choice probability) and/or
+#'   `"partial"` (best on all attributes). Defaults to `c("total", "partial")`.
+#' @param dominance_threshold Numeric. Threshold for total dominance detection.
+#'   If one alternative has a choice probability above this threshold, the choice
+#'   set is considered dominant. Defaults to `0.8`.
+#' @param max_dominance_replacements Integer. Maximum number of replacement
+#'   attempts when removing dominant choice sets. Defaults to `10`.
 #'
 #' @details The `method` argument determines the design method used. Options
 #'   are:
@@ -120,6 +131,16 @@
 #'   n_q = 6,
 #'   method = "sequential"
 #' )
+#'
+#' # Make a design with dominance checking
+#' design_no_dominant <- cbc_design(
+#'   profiles = profiles,
+#'   priors = priors,
+#'   n_alts = 3,
+#'   n_q = 6,
+#'   remove_dominant = TRUE,
+#'   dominance_types = c("total", "partial")
+#' )
 cbc_design <- function(
     profiles,
     priors = NULL,
@@ -132,7 +153,12 @@ cbc_design <- function(
     method = "random",
     prior_no_choice = NULL,
     max_iter = 50,
-    parallel = FALSE
+    parallel = FALSE,
+    # New dominance parameters
+    remove_dominant = FALSE,
+    dominance_types = c("total", "partial"),
+    dominance_threshold = 0.8,
+    max_dominance_replacements = 10
 ) {
   # Validate input classes
   if (!inherits(profiles, "cbc_profiles")) {
@@ -150,6 +176,30 @@ cbc_design <- function(
   # Check if priors are required for the chosen method
   if (method == "sequential" && is.null(priors)) {
     message("The 'sequential' method works better with priors, consider creating priors with cbc_priors().")
+  }
+
+  # Validate dominance parameters
+  if (remove_dominant) {
+    if (is.null(priors)) {
+      warning("remove_dominant requires priors. Setting remove_dominant = FALSE.")
+      remove_dominant <- FALSE
+    } else {
+      # Validate dominance_types
+      valid_types <- c("total", "partial")
+      if (!all(dominance_types %in% valid_types)) {
+        stop("dominance_types must be one or more of: ", paste(valid_types, collapse = ", "))
+      }
+
+      # Validate threshold
+      if (dominance_threshold <= 0 || dominance_threshold >= 1) {
+        stop("dominance_threshold must be between 0 and 1")
+      }
+
+      # Validate max replacements
+      if (max_dominance_replacements < 1) {
+        stop("max_dominance_replacements must be at least 1")
+      }
+    }
   }
 
   profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
@@ -217,6 +267,25 @@ cbc_design <- function(
     design <- add_no_choice(design, n_alts)
   }
 
+  # Post-generation dominance checking and replacement
+  if (remove_dominant && !is.null(priors)) {
+    message("Checking for dominant choice sets...")
+    design <- remove_dominant_choice_sets(
+      design = design,
+      profiles = profiles_df,
+      priors = priors,
+      dominance_types = dominance_types,
+      dominance_threshold = dominance_threshold,
+      max_replacements = max_dominance_replacements,
+      n_alts = n_alts,
+      label = label
+    )
+
+    # Recalculate D-error after dominance removal
+    d_error <- cbc_d_error(design, priors)
+    message("Dominance checking complete. Final D-error: ", round(d_error, 6))
+  }
+
   # Calculate efficiency metrics
   efficiency_info <- calculate_efficiency_metrics(design, profiles, priors)
 
@@ -230,6 +299,8 @@ cbc_design <- function(
     total_alternatives = nrow(design),
     restrictions_applied = !is.null(attr(profiles, "restrictions_applied")),
     n_restrictions = length(attr(profiles, "restrictions_applied") %||% character(0)),
+    dominance_removed = remove_dominant,
+    dominance_types = if (remove_dominant) dominance_types else NULL,
     efficiency = efficiency_info
   )
 
@@ -251,6 +322,145 @@ cbc_design <- function(
   # Set class and return
   class(result) <- c("cbc_design", "list")
   return(result)
+}
+
+#' Remove dominant choice sets from a design
+#'
+#' Core function for removing choice sets where one alternative dominates others
+#' based on utility calculations from provided priors.
+#'
+#' @param design A data frame containing the design
+#' @param profiles A data frame of profiles to sample replacements from
+#' @param priors A cbc_priors object for dominance checking
+#' @param dominance_types Character vector of dominance types to check
+#' @param dominance_threshold Numeric threshold for total dominance
+#' @param max_replacements Maximum number of replacement attempts
+#' @param n_alts Number of alternatives per question
+#' @param label Label variable for labeled designs
+#' @return Updated design with dominant choice sets replaced
+#' @keywords internal
+remove_dominant_choice_sets <- function(
+    design,
+    profiles,
+    priors,
+    dominance_types = c("total", "partial"),
+    dominance_threshold = 0.8,
+    max_replacements = 10,
+    n_alts,
+    label = NULL
+) {
+
+  replacements_made <- 0
+
+  while (replacements_made < max_replacements) {
+    # Set profiles attribute for validation
+    attr(design, "profiles") <- profiles
+
+    # Check for dominance using the S3 method
+    flagged <- cbc_inspect_dominance(
+      design,
+      priors = priors,
+      total_threshold = dominance_threshold,
+      exclude = NULL
+    )
+
+    # Determine which choice sets to replace based on dominance_types
+    replace_mask <- rep(FALSE, nrow(flagged))
+
+    if ("total" %in% dominance_types) {
+      replace_mask <- replace_mask | flagged$dominant_total
+    }
+    if ("partial" %in% dominance_types) {
+      replace_mask <- replace_mask | flagged$dominant_partial
+    }
+
+    # Get unique question IDs that need replacement
+    questions_to_replace <- unique(flagged$qID[replace_mask])
+
+    if (length(questions_to_replace) == 0) {
+      # No more dominant choice sets
+      message("No dominant choice sets found.")
+      break
+    }
+
+    # Replace each dominant choice set
+    for (qID in questions_to_replace) {
+      design <- replace_single_choice_set(
+        design = design,
+        qID = qID,
+        profiles = profiles,
+        n_alts = n_alts,
+        label = label
+      )
+    }
+
+    replacements_made <- replacements_made + 1
+
+    # Print progress
+    message(sprintf("Dominance replacement %d: Replaced %d choice sets",
+                    replacements_made, length(questions_to_replace)))
+  }
+
+  if (replacements_made >= max_replacements) {
+    warning(sprintf(
+      "Reached maximum dominance replacements (%d). Some dominant choice sets may remain.",
+      max_replacements
+    ))
+  }
+
+  # Clean up the temporary profiles attribute
+  attr(design, "profiles") <- NULL
+
+  return(design)
+}
+
+#' Replace a single choice set with new random draws
+#'
+#' @param design The design data frame
+#' @param qID The question ID to replace
+#' @param profiles The profiles to sample from
+#' @param n_alts Number of alternatives per question
+#' @param label Label variable for labeled designs
+#' @return Updated design with the specified choice set replaced
+#' @keywords internal
+replace_single_choice_set <- function(design, qID, profiles, n_alts, label = NULL) {
+  # Get rows for this question
+  question_rows <- which(design$qID == qID)
+
+  # Generate new profiles for this choice set
+  max_attempts <- 100
+  attempts <- 0
+
+  while (attempts < max_attempts) {
+    if (is.null(label)) {
+      # Random sampling without label constraints
+      new_profiles <- sample_profiles(profiles, size = n_alts)
+    } else {
+      # Labeled design sampling
+      n_alts_adjusted <- override_label_alts(profiles, label, n_alts)
+      labels <- split(profiles, profiles[[label]])
+      new_profiles <- sample_profiles_by_group(labels, size = 1)
+    }
+
+    # Check that we don't have duplicate profiles within this choice set
+    if (length(unique(new_profiles$profileID)) == nrow(new_profiles)) {
+      break
+    }
+    attempts <- attempts + 1
+  }
+
+  if (attempts >= max_attempts) {
+    warning("Could not find non-duplicate profiles for choice set replacement. Using current attempt.")
+  }
+
+  # Replace the profiles while preserving metadata columns
+  metadata_cols <- c("profileID", "blockID", "respID", "qID", "altID", "obsID")
+  attr_cols <- setdiff(names(design), metadata_cols)
+
+  # Update the design with new profiles
+  design[question_rows, c("profileID", attr_cols)] <- new_profiles[, c("profileID", attr_cols)]
+
+  return(design)
 }
 
 # Helper function to calculate efficiency metrics
@@ -323,6 +533,136 @@ get_overlap_metrics <- function(design) {
     score = overall_score,
     details = overlap_scores
   ))
+}
+
+#' Display attribute levels and dummy coding for a CBC design
+#'
+#' Shows how categorical variables will be dummy coded and what each coefficient
+#' represents in the utility function.
+#'
+#' @param design A `cbc_design` object created by `cbc_design()`, or a data frame
+#'   containing a choice experiment design
+#' @param exclude Optional character vector of attribute names to exclude
+#' @return Invisibly returns a list containing the coding information, but primarily
+#'   prints formatted information to the console
+#' @export
+#' @examples
+#' # Create profiles
+#' profiles <- cbc_profiles(
+#'   price     = seq(1, 5, 0.5),
+#'   type      = c('Fuji', 'Gala', 'Honeycrisp'),
+#'   freshness = c('Poor', 'Average', 'Excellent')
+#' )
+#'
+#' # Generate design
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_alts = 3,
+#'   n_q = 6
+#' )
+#'
+#' # View attribute levels and coding
+#' cbc_levels(design)
+cbc_levels <- function(design, exclude = NULL) {
+  # Handle both cbc_design objects and data frames
+  if (inherits(design, "cbc_design")) {
+    design_df <- design$design
+    profiles <- design$profiles
+    priors <- design$priors
+
+    cat("CBC Design Attribute Information\n")
+    cat("================================\n")
+    cat(sprintf("Design method: %s\n", design$method))
+    if (!is.null(design$d_error)) {
+      cat(sprintf("D-error: %.6f\n", design$d_error))
+    }
+    cat("\n")
+  } else {
+    design_df <- design
+    profiles <- NULL
+    priors <- NULL
+
+    cat("CBC Design Attribute Information\n")
+    cat("================================\n\n")
+  }
+
+  # Get attribute columns (excluding metadata)
+  attr_cols <- get_var_names(design_df)
+
+  if (!is.null(exclude)) {
+    attr_cols <- setdiff(attr_cols, exclude)
+  }
+
+  # Process each attribute
+  attr_info <- list()
+
+  for (attr in attr_cols) {
+    values <- design_df[[attr]]
+    if (is.numeric(values)) {
+      # Continuous variable
+      cat(sprintf("%-12s: Continuous variable\n", attr))
+      cat(sprintf("              Range: %.2f to %.2f\n",
+                  min(values), max(values)))
+      cat("              Coefficient represents effect of one-unit change\n\n")
+
+      attr_info[[attr]] <- list(
+        type = "continuous",
+        range = range(values)
+      )
+
+    } else {
+      # Categorical variable
+      levels <- unique(sort(as.character(values)))
+      n_levels <- length(levels)
+      base_level <- levels[1]
+      coded_levels <- levels[-1]
+
+      cat(sprintf("%-12s: Categorical variable (%d levels)\n", attr, n_levels))
+      cat("              Base level:", base_level, "\n")
+      for (i in seq_along(coded_levels)) {
+        cat(sprintf("              β%-2d: %s\n",
+                    i, coded_levels[i]))
+      }
+      cat("\n")
+
+      attr_info[[attr]] <- list(
+        type = "categorical",
+        base_level = base_level,
+        coded_levels = coded_levels
+      )
+    }
+  }
+
+  # Show priors if available
+  if (!is.null(priors)) {
+    cat("Priors used in this design:\n")
+    cat("--------------------------\n")
+    print(priors)
+    cat("\n")
+  }
+
+  # Example prior specification
+  cat("Example prior specification:\n")
+  cat("----------------------------\n")
+  cat("priors <- cbc_priors(\n")
+  cat("    profiles = profiles,\n")
+
+  for (attr in attr_cols) {
+    if (attr_info[[attr]]$type == "continuous") {
+      cat(sprintf("    %-12s = 0,  # Effect of one-unit change\n", attr))
+    } else {
+      coefs <- rep("0", length(attr_info[[attr]]$coded_levels))
+      cat(sprintf("    %-12s = c(%s),  # vs %s\n",
+                  attr,
+                  paste(coefs, collapse = ", "),
+                  attr_info[[attr]]$base_level))
+    }
+  }
+
+  cat("    # Add sd = list(...) for random parameters\n")
+  cat(")\n")
+
+  invisible(attr_info)
 }
 
 # General helpers ----
@@ -694,136 +1034,6 @@ make_design_sequential <- function(
   return(results[[best_index]])
 }
 
-#' Display attribute levels and dummy coding for a CBC design
-#'
-#' Shows how categorical variables will be dummy coded and what each coefficient
-#' represents in the utility function.
-#'
-#' @param design A `cbc_design` object created by `cbc_design()`, or a data frame
-#'   containing a choice experiment design
-#' @param exclude Optional character vector of attribute names to exclude
-#' @return Invisibly returns a list containing the coding information, but primarily
-#'   prints formatted information to the console
-#' @export
-#' @examples
-#' # Create profiles
-#' profiles <- cbc_profiles(
-#'   price     = seq(1, 5, 0.5),
-#'   type      = c('Fuji', 'Gala', 'Honeycrisp'),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Generate design
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts = 3,
-#'   n_q = 6
-#' )
-#'
-#' # View attribute levels and coding
-#' cbc_levels(design)
-cbc_levels <- function(design, exclude = NULL) {
-  # Handle both cbc_design objects and data frames
-  if (inherits(design, "cbc_design")) {
-    design_df <- design$design
-    profiles <- design$profiles
-    priors <- design$priors
-
-    cat("CBC Design Attribute Information\n")
-    cat("================================\n")
-    cat(sprintf("Design method: %s\n", design$method))
-    if (!is.null(design$d_error)) {
-      cat(sprintf("D-error: %.6f\n", design$d_error))
-    }
-    cat("\n")
-  } else {
-    design_df <- design
-    profiles <- NULL
-    priors <- NULL
-
-    cat("CBC Design Attribute Information\n")
-    cat("================================\n\n")
-  }
-
-  # Get attribute columns (excluding metadata)
-  attr_cols <- get_var_names(design_df)
-
-  if (!is.null(exclude)) {
-    attr_cols <- setdiff(attr_cols, exclude)
-  }
-
-  # Process each attribute
-  attr_info <- list()
-
-  for (attr in attr_cols) {
-    values <- design_df[[attr]]
-    if (is.numeric(values)) {
-      # Continuous variable
-      cat(sprintf("%-12s: Continuous variable\n", attr))
-      cat(sprintf("              Range: %.2f to %.2f\n",
-                  min(values), max(values)))
-      cat("              Coefficient represents effect of one-unit change\n\n")
-
-      attr_info[[attr]] <- list(
-        type = "continuous",
-        range = range(values)
-      )
-
-    } else {
-      # Categorical variable
-      levels <- unique(sort(as.character(values)))
-      n_levels <- length(levels)
-      base_level <- levels[1]
-      coded_levels <- levels[-1]
-
-      cat(sprintf("%-12s: Categorical variable (%d levels)\n", attr, n_levels))
-      cat("              Base level:", base_level, "\n")
-      for (i in seq_along(coded_levels)) {
-        cat(sprintf("              β%-2d: %s\n",
-                    i, coded_levels[i]))
-      }
-      cat("\n")
-
-      attr_info[[attr]] <- list(
-        type = "categorical",
-        base_level = base_level,
-        coded_levels = coded_levels
-      )
-    }
-  }
-
-  # Show priors if available
-  if (!is.null(priors)) {
-    cat("Priors used in this design:\n")
-    cat("--------------------------\n")
-    print(priors)
-    cat("\n")
-  }
-
-  # Example prior specification
-  cat("Example prior specification:\n")
-  cat("----------------------------\n")
-  cat("priors <- cbc_priors(\n")
-  cat("    profiles = profiles,\n")
-
-  for (attr in attr_cols) {
-    if (attr_info[[attr]]$type == "continuous") {
-      cat(sprintf("    %-12s = 0,  # Effect of one-unit change\n", attr))
-    } else {
-      coefs <- rep("0", length(attr_info[[attr]]$coded_levels))
-      cat(sprintf("    %-12s = c(%s),  # vs %s\n",
-                  attr,
-                  paste(coefs, collapse = ", "),
-                  attr_info[[attr]]$base_level))
-    }
-  }
-
-  cat("    # Add sd = list(...) for random parameters\n")
-  cat(")\n")
-
-  invisible(attr_info)
-}
-
 set_block_ids <- function(design, n_blocks) {
   if (n_blocks > 1) {
     design$blockID <- rep(seq(n_blocks), each = nrow(design) / n_blocks)
@@ -831,4 +1041,32 @@ set_block_ids <- function(design, n_blocks) {
     design$blockID <- 1
   }
   return(design)
+}
+
+set_num_cores <- function(n_cores) {
+  cores_available <- parallel::detectCores()
+  max_cores <- cores_available - 1
+  # CRAN checks limits you to 2 cores, see this SO issue:
+  # https://stackoverflow.com/questions/50571325/r-cran-check-fail-when-using-parallel-functions
+  chk <- tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))
+  if (nzchar(chk) && (chk != "false")) {
+    # use 2 cores in CRAN/Travis/AppVeyor
+    return(2L)
+  }
+  if (is.null(n_cores)) {
+    return(max_cores)
+  } else if (!is.numeric(n_cores)) {
+    warning(
+      "Non-numeric value provided for n_cores...setting n_cores to ",
+      max_cores
+    )
+    return(max_cores)
+  } else if (n_cores > cores_available) {
+    warning(
+      "Cannot use ", n_cores, " cores because your machine only has ",
+      cores_available, " available...setting n_cores to ", max_cores
+    )
+    return(max_cores)
+  }
+  return(n_cores)
 }
