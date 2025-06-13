@@ -20,19 +20,19 @@ cbc_error(x, errors = "d", priors = NULL, exclude = NULL)
 object, or a data frame containing a choice experiment design}
 
 \item{errors}{Character vector specifying which error metrics to compute.
-Options: "d" (D-error), "db" (Bayesian D-error), "a" (A-error),
-"g" (G-error), "e" (E-error), "all" (comprehensive metrics).
-Defaults to "d".}
+Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error),
+"all" (comprehensive metrics). Defaults to "d". When priors contain
+random parameters, Bayesian versions are automatically computed.}
 
 \item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
 null priors. If \code{x} is a \code{cbc_design} object, the priors from that object
-will be used by default. Required for "db" error type.}
+will be used by default.}
 
 \item{exclude}{Character vector of attribute names to exclude from error
 calculations}
 }
 \value{
-For single error types ("d", "db"), returns the numeric error value.
+For single error types ("d"), returns the numeric error value.
 For multiple error types or "all", returns a list containing requested metrics:
 \itemize{
 \item d_error: D-optimality criterion (lower is better)
@@ -54,6 +54,12 @@ The different error criteria measure different aspects of design efficiency:
 \item G-error: Minimizes maximum prediction variance
 \item E-error: Maximizes minimum eigenvalue (related to worst-estimated parameter)
 }
+
+\strong{Computational Approach}: The function automatically detects whether priors
+contain random parameters (created with \code{rand_spec()}). If random parameters
+are present, all error metrics are computed using a Bayesian approach that
+averages results across parameter draws. If priors contain only fixed parameters,
+standard (non-Bayesian) calculations are used.
 }
 \examples{
 # Create profiles and design
@@ -77,4 +83,14 @@ print(errors)
 
 # Compute specific error types
 multiple_errors <- cbc_error(design, errors = c("d", "a", "g"))
+
+# With random priors, Bayesian approach is automatically used
+priors_random <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.5, sd = 0.2),
+  type = c(0.2, 0.3)
+)
+
+# This will show message about Bayesian approach
+bayesian_errors <- cbc_error(design, errors = c("d", "a"), priors = priors_random)
 }

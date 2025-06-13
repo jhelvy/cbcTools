@@ -1,6 +1,4 @@
-
-
-# Helper functions (unchanged from original implementation)
+# Helper functions
 
 compute_probs <- function(obsID, reps, atts, priors, X) {
   if (is.null(priors)) {
@@ -65,21 +63,21 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
 #' Compute design error metrics for a choice experiment design
 #'
 #' This function computes design efficiency metrics for choice experiments.
-#' By default, it returns only D-error, but can compute multiple optimality 
+#' By default, it returns only D-error, but can compute multiple optimality
 #' criteria including D-, A-, G-, and E-error as well as condition numbers.
 #'
 #' @param x Either a `cbc_design` object created by `cbc_design()`, a `cbc_survey`
 #'   object, or a data frame containing a choice experiment design
 #' @param errors Character vector specifying which error metrics to compute.
-#'   Options: "d" (D-error), "db" (Bayesian D-error), "a" (A-error), 
-#'   "g" (G-error), "e" (E-error), "all" (comprehensive metrics). 
-#'   Defaults to "d".
+#'   Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error),
+#'   "all" (comprehensive metrics). Defaults to "d". When priors contain
+#'   random parameters, Bayesian versions are automatically computed.
 #' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
 #'   null priors. If `x` is a `cbc_design` object, the priors from that object
-#'   will be used by default. Required for "db" error type.
+#'   will be used by default.
 #' @param exclude Character vector of attribute names to exclude from error
 #'   calculations
-#' @return For single error types ("d", "db"), returns the numeric error value.
+#' @return For single error types ("d"), returns the numeric error value.
 #'   For multiple error types or "all", returns a list containing requested metrics:
 #'   \itemize{
 #'     \item d_error: D-optimality criterion (lower is better)
@@ -95,6 +93,12 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
 #'   \item G-error: Minimizes maximum prediction variance
 #'   \item E-error: Maximizes minimum eigenvalue (related to worst-estimated parameter)
 #' }
+#'
+#' **Computational Approach**: The function automatically detects whether priors
+#' contain random parameters (created with \code{rand_spec()}). If random parameters
+#' are present, all error metrics are computed using a Bayesian approach that
+#' averages results across parameter draws. If priors contain only fixed parameters,
+#' standard (non-Bayesian) calculations are used.
 #' @export
 #' @examples
 #' # Create profiles and design
@@ -111,13 +115,23 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
 #'
 #' # Compute D-error only (default)
 #' d_error <- cbc_error(design)
-#' 
+#'
 #' # Compute comprehensive design error metrics
 #' errors <- cbc_error(design, errors = "all")
 #' print(errors)
-#' 
+#'
 #' # Compute specific error types
 #' multiple_errors <- cbc_error(design, errors = c("d", "a", "g"))
+#'
+#' # With random priors, Bayesian approach is automatically used
+#' priors_random <- cbc_priors(
+#'   profiles = profiles,
+#'   price = rand_spec(dist = "n", mean = -0.5, sd = 0.2),
+#'   type = c(0.2, 0.3)
+#' )
+#'
+#' # This will show message about Bayesian approach
+#' bayesian_errors <- cbc_error(design, errors = c("d", "a"), priors = priors_random)
 cbc_error <- function(x, errors = "d", priors = NULL, exclude = NULL) {
   UseMethod("cbc_error")
 }
@@ -199,25 +213,27 @@ cbc_error.data.frame <- function(x, errors = "d", priors = NULL, exclude = NULL)
   X_list <- lapply(X_list, as.matrix)
 
   # Validate errors argument
-  valid_errors <- c("d", "db", "a", "g", "e", "all")
+  valid_errors <- c("d", "a", "g", "e", "all")
   if (!all(errors %in% valid_errors)) {
     invalid <- setdiff(errors, valid_errors)
-    stop("Invalid error types: ", paste(invalid, collapse = ", "), 
+    stop("Invalid error types: ", paste(invalid, collapse = ", "),
          ". Valid options are: ", paste(valid_errors, collapse = ", "))
   }
-  
-  # Handle "db" error type validation
-  if ("db" %in% errors) {
-    if (is.null(priors) || is.null(priors$par_draws)) {
-      stop("DB-error requires priors with random parameters. Use errors = 'd' for fixed priors.")
-    }
+
+  # Inform user about Bayesian approach when random parameters are present
+  if (!is.null(par_draws)) {
+    message(
+      "Using Bayesian approach: Averaging error metrics across ",
+      nrow(par_draws), " draws from each of ",
+      ncol(par_draws), " random parameters"
+    )
   }
 
   # Compute metrics based on requested error types
   if (is.null(par_draws)) {
     # Get predicted probabilities, then compute metrics
     probs <- compute_probs(obsID, reps, atts, priors, X)
-    
+
     if ("all" %in% errors) {
       # Return comprehensive metrics
       metrics <- compute_all_efficiency_metrics(X_list, probs, obsID)
@@ -234,16 +250,16 @@ cbc_error.data.frame <- function(x, errors = "d", priors = NULL, exclude = NULL)
       class(metrics) <- c("cbc_errors", "list")
       return(metrics)
     } else {
-      metrics <- compute_selected_bayesian_efficiency_metrics(par_draws, X, X_list, obsID, reps, errors)
+      # Compute Bayesian versions of requested metrics
+      metrics <- compute_bayesian_selected_metrics(par_draws, X, X_list, obsID, reps, errors)
     }
   }
 
   # For single error types, return just the value
-  if (length(errors) == 1 && errors[1] %in% c("d", "db")) {
-    # Both "d" and "db" return d_error value
+  if (length(errors) == 1 && errors[1] == "d") {
     return(metrics[["d_error"]])
   }
-  
+
   # For multiple error types, return list with class
   class(metrics) <- c("cbc_errors", "list")
   return(metrics)
@@ -253,26 +269,26 @@ cbc_error.data.frame <- function(x, errors = "d", priors = NULL, exclude = NULL)
 compute_selected_efficiency_metrics <- function(X_list, probs, obsID, errors) {
   # Convert probabilities into list of vectors
   P_list <- split(probs, obsID)
-  
+
   # Initialize information matrix
   K <- ncol(X_list[[1]])
-  
+
   # Compute information matrix components for all observations at once
   M <- Reduce(`+`, Map(function(x, p) {
     p_mat <- diag(p) - tcrossprod(p)
     crossprod(x, p_mat %*% x)
   }, X_list, P_list))
-  
+
   # Initialize results list
   selected <- list()
-  
+
   # Compute only requested metrics
   for (error_type in errors) {
     if (error_type == "d") {
       # D-optimality: minimize det(Cov) = maximize det(Info)
       det_M <- det(M)
       selected$d_error <- if (det_M > 0) det_M^(-1/K) else Inf
-      
+
     } else if (error_type == "a") {
       # A-optimality: minimize trace(Cov) - need eigenvalues of inverse
       if (det(M) <= .Machine$double.eps) {
@@ -283,13 +299,13 @@ compute_selected_efficiency_metrics <- function(X_list, probs, obsID, errors) {
       eigenvals_cov <- eigen(Minv, only.values = TRUE)$values
       eigenvals_cov <- eigenvals_cov[eigenvals_cov > .Machine$double.eps]
       selected$a_error <- sum(eigenvals_cov)
-      
+
     } else if (error_type == "e") {
       # E-optimality: maximize min eigenvalue of Info matrix
       eigenvals <- eigen(M, only.values = TRUE)$values
       eigenvals <- eigenvals[eigenvals > .Machine$double.eps]
       selected$e_error <- min(eigenvals)
-      
+
     } else if (error_type == "g") {
       # G-optimality: requires computing prediction variances
       if (det(M) <= .Machine$double.eps) {
@@ -300,28 +316,24 @@ compute_selected_efficiency_metrics <- function(X_list, probs, obsID, errors) {
       selected$g_error <- compute_g_error_approx(X_list, Minv, P_list)
     }
   }
-  
+
   return(selected)
 }
 
 # Helper function for Bayesian selected metrics
-compute_selected_bayesian_efficiency_metrics <- function(par_draws, X, X_list, obsID, reps, errors) {
+compute_bayesian_selected_metrics <- function(par_draws, X, X_list, obsID, reps, errors) {
   P_draws <- logit_draws(par_draws, X, obsID, reps)
   n_draws <- ncol(P_draws)
-  
-  # Compute specific metrics for each draw and average
+
+  # Compute Bayesian versions of requested metrics by averaging across draws
   selected <- list()
-  
+
   for (error_type in errors) {
-    if (error_type == "d" || error_type == "db") {
-      # Compute D-error for each draw
-      d_errors <- apply(P_draws, 2, function(p) {
-        compute_d_error(X_list, p, obsID)
-      })
-      selected$d_error <- mean(d_errors)
-      
+    if (error_type == "d") {
+      # Use the dedicated DB-error function for D-error (most efficient)
+      selected$d_error <- compute_db_error(par_draws, X, X_list, obsID, reps)
     } else {
-      # For other metrics, compute them for each draw
+      # For other metrics, compute them for each draw and average
       metric_values <- apply(P_draws, 2, function(p) {
         result <- compute_selected_efficiency_metrics(X_list, p, obsID, error_type)
         result[[paste0(error_type, "_error")]]
@@ -329,7 +341,7 @@ compute_selected_bayesian_efficiency_metrics <- function(par_draws, X, X_list, o
       selected[[paste0(error_type, "_error")]] <- mean(metric_values)
     }
   }
-  
+
   return(selected)
 }
 

@@ -246,6 +246,17 @@ cbc_design <- function(
       )
       priors <- NULL
     }
+  } else {
+    if (!is.null(priors)) {
+      par_draws <- priors$par_draws
+      if (!is.null(par_draws)) {
+        message(
+          "Using Bayesian approach: Averaging error metrics across ",
+          nrow(par_draws), " draws from each of ",
+          ncol(par_draws), " random parameters"
+        )
+      }
+    }
   }
 
   # Create design ----
@@ -260,7 +271,9 @@ cbc_design <- function(
     design <- make_random_survey(
       profiles_df, n_blocks, n_resp = n_blocks, n_alts, n_q, label
     )
-    d_error <- cbc_error(design, errors = "d", priors = priors)
+    d_error <- suppressMessages(
+      cbc_error(design, errors = "d", priors = priors)
+    )
   }
 
   if (no_choice) {
@@ -282,7 +295,7 @@ cbc_design <- function(
     )
 
     # Recalculate D-error after dominance removal
-    d_error <- cbc_error(design, errors = 'd', priors)
+    d_error <- suppressMessages(cbc_error(design, errors = 'd', priors))
     message("Dominance checking complete. Final D-error: ", round(d_error, 6))
   }
 

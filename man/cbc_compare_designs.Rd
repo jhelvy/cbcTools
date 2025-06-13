@@ -17,16 +17,16 @@ cbc_compare_designs(
 arguments where each argument is a design or survey object}
 
 \item{errors}{Character vector specifying which error metrics to compute.
-Options: "d" (D-error), "db" (Bayesian D-error), "a" (A-error),
-"g" (G-error), "e" (E-error), "all" (comprehensive metrics).
-Defaults to "d".}
+Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error),
+"all" (comprehensive metrics). Defaults to "d". When priors contain
+random parameters, Bayesian versions are automatically computed.}
 
 \item{include_metrics}{Logical. Include balance, overlap, and profile usage
 metrics in addition to error metrics? Defaults to TRUE for comprehensive
 comparison. Set to FALSE for error-only comparison.}
 
 \item{priors}{Optional \code{cbc_priors} object to use for all designs/surveys. If not
-specified, each object's own priors will be used. Required for "db" error type.}
+specified, each object's own priors will be used.}
 
 \item{exclude}{Character vector of attribute names to exclude from error
 calculations}

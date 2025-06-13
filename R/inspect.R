@@ -319,14 +319,14 @@ cbc_inspect_overlap.data.frame <- function(x, ...) {
 #' @param ... Multiple `cbc_design` or `cbc_survey` objects to compare, or named 
 #'   arguments where each argument is a design or survey object
 #' @param errors Character vector specifying which error metrics to compute.
-#'   Options: "d" (D-error), "db" (Bayesian D-error), "a" (A-error), 
-#'   "g" (G-error), "e" (E-error), "all" (comprehensive metrics). 
-#'   Defaults to "d".
+#'   Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error), 
+#'   "all" (comprehensive metrics). Defaults to "d". When priors contain 
+#'   random parameters, Bayesian versions are automatically computed.
 #' @param include_metrics Logical. Include balance, overlap, and profile usage 
 #'   metrics in addition to error metrics? Defaults to TRUE for comprehensive
 #'   comparison. Set to FALSE for error-only comparison.
 #' @param priors Optional `cbc_priors` object to use for all designs/surveys. If not
-#'   specified, each object's own priors will be used. Required for "db" error type.
+#'   specified, each object's own priors will be used.
 #' @param exclude Character vector of attribute names to exclude from error
 #'   calculations
 #' @return A data frame comparing metrics across designs, sorted by primary
@@ -395,7 +395,7 @@ cbc_compare_designs <- function(..., errors = "d", include_metrics = TRUE,
 
   # Compute error metrics for each design
   error_metrics <- lapply(designs, function(design) {
-    if (length(errors) == 1 && errors[1] %in% c("d", "db")) {
+    if (length(errors) == 1 && errors[1] == "d") {
       # Single error type returns scalar
       error_val <- cbc_error(design, errors = errors, priors = priors, exclude = exclude)
       result <- list()
