@@ -269,60 +269,6 @@ cbc_power.data.frame <- function(
   return(errors)
 }
 
-#' Enhanced print method for cbc_errors objects
-#' @param x A cbc_errors object
-#' @param ... Additional arguments passed to print
-#' @export
-print.cbc_errors <- function(x, ...) {
-  cat("CBC Power Analysis Results\n")
-  cat("==========================\n")
-
-  # Get choice info if available
-  choice_info <- attr(x, "choice_info")
-  if (!is.null(choice_info)) {
-    cat(sprintf("Simulation method: %s\n", choice_info$simulation_method))
-    if (!is.na(choice_info$d_error)) {
-      cat(sprintf("Design D-error: %.6f\n", choice_info$d_error))
-    }
-    if (!is.null(choice_info$n_respondents)) {
-      cat(sprintf("Data from: %d respondents\n", choice_info$n_respondents))
-    }
-    cat("\n")
-  }
-
-  # Basic statistics
-  n_breaks <- length(unique(x$sampleSize))
-  sample_range <- range(x$sampleSize)
-  n_pars <- length(unique(x$coef))
-
-  cat(sprintf("Sample sizes: %d to %d (%d breaks)\n",
-              sample_range[1], sample_range[2], n_breaks))
-  cat(sprintf("Parameters: %d (%s)\n",
-              n_pars, paste(unique(x$coef), collapse = ", ")))
-  cat("\n")
-
-  # Summary of results at different sample sizes
-  cat("Standard errors by sample size:\n")
-  cat("(Showing every few sample sizes)\n\n")
-
-  # Show results for a few sample sizes
-  sample_sizes <- unique(x$sampleSize)
-  show_sizes <- sample_sizes[seq(1, length(sample_sizes), length.out = min(5, length(sample_sizes)))]
-
-  for (size in show_sizes) {
-    subset_data <- x[x$sampleSize == size, ]
-    cat(sprintf("n = %d:\n", size))
-    for (i in seq_len(nrow(subset_data))) {
-      cat(sprintf("  %-12s: SE = %.4f\n",
-                  subset_data$coef[i], subset_data$se[i]))
-    }
-    cat("\n")
-  }
-
-  cat("Use plot() to visualize power curves.\n")
-
-  invisible(x)
-}
 
 set_num_cores <- function(n_cores) {
   cores_available <- parallel::detectCores()
