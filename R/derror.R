@@ -240,7 +240,8 @@ cbc_error.data.frame <- function(x, errors = "d", priors = NULL, exclude = NULL)
 
   # For single error types, return just the value
   if (length(errors) == 1 && errors[1] %in% c("d", "db")) {
-    return(metrics[[paste0(errors[1], "_error")]])
+    # Both "d" and "db" return d_error value
+    return(metrics[["d_error"]])
   }
   
   # For multiple error types, return list with class
