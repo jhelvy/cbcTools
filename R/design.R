@@ -28,8 +28,8 @@
 #'   contains one of each of the levels in the `label` attribute. If used, the
 #'   `n_alts` argument will be ignored as its value is defined by the unique
 #'   number of levels in the `label` attribute Defaults to `NULL`.
-#' @param method Choose the design method to use. Options include `"random"`
-#'   and `"sequential"`. Defaults to `"random"`. See details below for complete
+#' @param method Choose the design method to use. Currently only `"sequential"`
+#'   is supported. Defaults to `"sequential"`. See details below for complete
 #'   description of each method.
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
@@ -53,8 +53,7 @@
 #' @details The `method` argument determines the design method used. Options
 #'   are:
 #'
-#' - `"random"`: Creates a design by randomly sampling from profiles
-#' - `"sequential"`: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the `priors` argument that include a covariance matrix.
+#' - `"sequential"`: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the `priors` argument that include a covariance matrix. When `remove_dominant = TRUE`, dominance checking is integrated into the optimization process.
 #'
 #'   All methods ensure that the two following criteria are met:
 #'
@@ -63,17 +62,16 @@
 #'
 #'   The table below summarizes method compatibility with other design options:
 #'
-#'   Method        | No choice? | Labeled designs? | Restricted profiles? | Blocking?
-#'   --------------|------------|------------------|----------------------|----------
-#'   `"random"`    | Yes        | Yes              | Yes                  | No
-#'   `"sequential"` | No         | Yes              | Yes                  | Yes
+#'   Method        | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Dominance checking?
+#'   --------------|------------|------------------|----------------------|-----------|-------------------
+#'   `"sequential"` | No         | Yes              | Yes                  | Yes       | Yes
 #'
 #' The `"sequential"` method creates a design by sequentially improving D-efficiency:
 #' 1. Start with a random design
 #' 2. Compute initial D-error
 #' 3. For each question, alternative, and attribute:
 #'    - Try all possible level changes to the attribute.
-#'    - Keep changes that improve the D-error.
+#'    - Keep changes that improve the D-error AND do not create dominance (if `remove_dominant = TRUE`).
 #' 4. Repeat until no further improvements or max iterations are reached
 #'
 #' @return The returned `design` object contains a choice-based conjoint
@@ -146,7 +144,7 @@ cbc_design <- function(
     n_start = 5,
     no_choice = FALSE,
     label = NULL,
-    method = "random",
+    method = "sequential",
     prior_no_choice = NULL,
     max_iter = 50,
     parallel = FALSE,
@@ -169,6 +167,12 @@ cbc_design <- function(
     validate_priors_profiles(priors, profiles)
   }
 
+  # Validate method
+  valid_methods <- c("sequential")
+  if (!method %in% valid_methods) {
+    stop("method must be one of: ", paste(valid_methods, collapse = ", "))
+  }
+  
   # Check if priors are required for the chosen method
   if (method == "sequential" && is.null(priors)) {
     message("The 'sequential' method works better with priors, consider creating priors with cbc_priors().")
@@ -217,34 +221,17 @@ cbc_design <- function(
 
   profiles_df <- as.data.frame(profiles)
 
-  # Overrides ----
-
-  # Override n_start for "random" method
-  if ((method == "random") & (n_start > 1)) {
-    n_start <- 1
-  }
-
-  # Note: Alternative randomization is handled in cbc_survey(), not here
-
-  # Override n_blocks and priors for "random" method
-  if (method == "random") {
-    if (!is.null(priors)) {
+  # Method-specific setup ----
+  
+  # Inform user about Bayesian approach if using random parameters
+  if (!is.null(priors)) {
+    par_draws <- priors$par_draws
+    if (!is.null(par_draws)) {
       message(
-        'priors are ignored for designs using the "random" method.\n',
-        "Setting prior <- NULL\n"
+        "Using Bayesian approach: Averaging error metrics across ",
+        nrow(par_draws), " draws from each of ",
+        ncol(par_draws), " random parameters"
       )
-      priors <- NULL
-    }
-  } else {
-    if (!is.null(priors)) {
-      par_draws <- priors$par_draws
-      if (!is.null(par_draws)) {
-        message(
-          "Using Bayesian approach: Averaging error metrics across ",
-          nrow(par_draws), " draws from each of ",
-          ncol(par_draws), " random parameters"
-        )
-      }
     }
   }
 
@@ -252,41 +239,19 @@ cbc_design <- function(
   if (method == 'sequential') {
     result <- make_design_sequential(
       profiles_df, n_blocks, n_alts, n_q, n_blocks,
-      priors, max_iter, label, n_start
+      priors, max_iter, label, n_start,
+      remove_dominant, dominance_types, dominance_threshold
     )
     design <- result$design
     d_error <- result$d_error
-  } else {
-    design <- make_random_survey(
-      profiles_df, n_blocks, n_resp = n_blocks, n_alts, n_q, label
-    )
-    d_error <- suppressMessages(
-      cbc_error(design, errors = "d", priors = priors)
-    )
   }
+  # Future methods can be added here with additional else if blocks
 
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
   }
 
-  # Post-generation dominance checking and replacement
-  if (remove_dominant && !is.null(priors)) {
-    message("Checking for dominant choice sets...")
-    design <- remove_dominant_choice_sets(
-      design = design,
-      profiles = profiles_df,
-      priors = priors,
-      dominance_types = dominance_types,
-      dominance_threshold = dominance_threshold,
-      max_replacements = max_dominance_replacements,
-      n_alts = n_alts,
-      label = label
-    )
-
-    # Recalculate D-error after dominance removal
-    d_error <- suppressMessages(cbc_error(design, errors = 'd', priors))
-    message("Dominance checking complete. Final D-error: ", round(d_error, 6))
-  }
+  # Note: Dominance checking is now integrated into the optimization process
 
   # Store essential information as attributes
   attr(design, "profiles") <- profiles
@@ -948,7 +913,10 @@ make_design_sequential <- function(
     priors,
     max_iter,
     label,
-    n_start = 1
+    n_start = 1,
+    remove_dominant = FALSE,
+    dominance_types = c("total", "partial"),
+    dominance_threshold = 0.8
 ) {
   # Set up parallel processing
   n_cores <- set_num_cores(NULL)
@@ -973,7 +941,8 @@ make_design_sequential <- function(
     # Export necessary functions to cluster
     parallel::clusterExport(cl, c(
       "optimize_design", "compute_info_matrix", "get_X_matrix",
-      "logit", "logit_draws", "get_eligible_profiles"
+      "logit", "logit_draws", "get_eligible_profiles",
+      "check_choice_set_dominance", "check_partial_dominance"
     ), envir = environment())
 
     results <- suppressMessages(suppressWarnings(
@@ -983,7 +952,8 @@ make_design_sequential <- function(
         function(i) {
           result <- optimize_design(
             start_designs[[i]], profiles, priors, varNames,
-            n_questions, n_alts, max_iter, n_blocks, label
+            n_questions, n_alts, max_iter, n_blocks, label,
+            remove_dominant, dominance_types, dominance_threshold
           )
           result$start_number <- i
           return(result)

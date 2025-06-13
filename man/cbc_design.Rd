@@ -13,7 +13,7 @@ cbc_design(
   n_start = 5,
   no_choice = FALSE,
   label = NULL,
-  method = "random",
+  method = "sequential",
   prior_no_choice = NULL,
   max_iter = 50,
   parallel = FALSE,
@@ -53,8 +53,8 @@ contains one of each of the levels in the \code{label} attribute. If used, the
 \code{n_alts} argument will be ignored as its value is defined by the unique
 number of levels in the \code{label} attribute Defaults to \code{NULL}.}
 
-\item{method}{Choose the design method to use. Options include \code{"random"}
-and \code{"sequential"}. Defaults to \code{"random"}. See details below for complete
+\item{method}{Choose the design method to use. Currently only \code{"sequential"}
+is supported. Defaults to \code{"sequential"}. See details below for complete
 description of each method.}
 
 \item{prior_no_choice}{Prior utility value for the "no choice" alternative.
@@ -114,8 +114,7 @@ and "labeled" designs (also known as "alternative specific" designs).
 The \code{method} argument determines the design method used. Options
 are:
 \itemize{
-\item \code{"random"}: Creates a design by randomly sampling from profiles
-\item \code{"sequential"}: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the \code{priors} argument that include a covariance matrix.
+\item \code{"sequential"}: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the \code{priors} argument that include a covariance matrix. When \code{remove_dominant = TRUE}, dominance checking is integrated into the optimization process.
 
 All methods ensure that the two following criteria are met:
 \enumerate{
@@ -123,10 +122,9 @@ All methods ensure that the two following criteria are met:
 \item No two choice sets are the same within any one respondent.
 }
 
-The table below summarizes method compatibility with other design options:\tabular{lllll}{
-   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \cr
-   \code{"random"} \tab Yes \tab Yes \tab Yes \tab No \cr
-   \code{"sequential"} \tab No \tab Yes \tab Yes \tab Yes \cr
+The table below summarizes method compatibility with other design options:\tabular{llllll}{
+   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Dominance checking? \cr
+   \code{"sequential"} \tab No \tab Yes \tab Yes \tab Yes \tab Yes \cr
 }
 
 }
@@ -138,7 +136,7 @@ The \code{"sequential"} method creates a design by sequentially improving D-effi
 \item For each question, alternative, and attribute:
 \itemize{
 \item Try all possible level changes to the attribute.
-\item Keep changes that improve the D-error.
+\item Keep changes that improve the D-error AND do not create dominance (if \code{remove_dominant = TRUE}).
 }
 \item Repeat until no further improvements or max iterations are reached
 }
