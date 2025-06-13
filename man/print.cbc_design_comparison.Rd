@@ -2,12 +2,15 @@
 % Please edit documentation in R/inspect.R
 \name{print.cbc_design_comparison}
 \alias{print.cbc_design_comparison}
+\alias{print.cbc_error_comparison}
 \title{Print method for design comparisons}
 \usage{
 \method{print}{cbc_design_comparison}(x, ...)
+
+\method{print}{cbc_error_comparison}(x, ...)
 }
 \arguments{
-\item{x}{A cbc_design_comparison object}
+\item{x}{A cbc_design_comparison or cbc_error_comparison object}
 
 \item{...}{Additional arguments passed to print}
 }

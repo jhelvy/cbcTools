@@ -156,7 +156,7 @@ cbc_survey_random <- function(
   )
 
   # Calculate D-error for the random survey
-  d_error_computed <- cbc_d_error(survey, priors = NULL)
+  d_error_computed <- cbc_error(survey, errors = 'd', priors = NULL)
 
   # Store minimal design reference for profiles
   design_ref <- list(

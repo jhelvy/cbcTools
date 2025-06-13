@@ -477,37 +477,20 @@ plot.cbc_power_errors <- function (x, ...) {
 #' @param ... Additional arguments passed to print
 #' @export
 print.cbc_errors <- function(x, ...) {
-  cat("Comprehensive Design Error Metrics\n")
-  cat("==================================\n\n")
+  cat("Design Error Metrics\n")
+  cat("====================\n\n")
 
-  cat("Primary Optimality Criteria:\n")
-  cat(sprintf("  D-error (lower is better): %8.6f\n", x$d_error))
-  cat(sprintf("  A-error (lower is better): %8.6f\n", x$a_error))
-  cat(sprintf("  G-error (lower is better): %8.6f\n", x$g_error))
-  cat(sprintf("  E-error (higher is better): %8.6f\n", x$e_error))
-  cat("\n")
-
-  cat("Matrix Properties:\n")
-  cat(sprintf("  Condition number:          %8.2f\n", x$condition_number))
-  cat(sprintf("  Determinant (info matrix): %8.6e\n", x$det_information))
-  cat(sprintf("  Trace (info matrix):       %8.6f\n", x$trace_information))
-  cat("\n")
-
-  if (length(x$eigenvalues) > 0) {
-    cat("Eigenvalues (information matrix):\n")
-    cat(sprintf("  Min: %8.6f, Max: %8.6f\n",
-                min(x$eigenvalues), max(x$eigenvalues)))
-    cat(sprintf("  Range: %s\n",
-                paste(sprintf("%.4f", x$eigenvalues), collapse = ", ")))
+  if (!is.null(x$d_error)) {
+    cat(sprintf("D-error (lower is better): %.6f\n", x$d_error))
   }
-
-  cat("\nInterpretation:\n")
-  if (x$condition_number < 100) {
-    cat("  - Information matrix is well-conditioned\n")
-  } else if (x$condition_number < 1000) {
-    cat("  - Information matrix has moderate conditioning\n")
-  } else {
-    cat("  - Information matrix is poorly conditioned (numerical issues possible)\n")
+  if (!is.null(x$a_error)) {
+    cat(sprintf("A-error (lower is better): %.6f\n", x$a_error))
+  }
+  if (!is.null(x$g_error)) {
+    cat(sprintf("G-error (lower is better): %.6f\n", x$g_error))
+  }
+  if (!is.null(x$e_error)) {
+    cat(sprintf("E-error (higher is better): %.6f\n", x$e_error))
   }
 
   invisible(x)

@@ -36,7 +36,7 @@ random coefficients
 }
 \description{
 Creates a standardized prior specification object for use in CBC analysis
-functions like \code{cbc_choices()} and \code{cbc_d_error()}. Supports both fixed and random
+functions like \code{cbc_choices()} and \code{cbc_design()}. Supports both fixed and random
 parameters, with flexible specification of categorical variable levels.
 }
 \examples{

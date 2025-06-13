@@ -260,7 +260,7 @@ cbc_design <- function(
     design <- make_random_survey(
       profiles_df, n_blocks, n_resp = n_blocks, n_alts, n_q, label
     )
-    d_error <- cbc_d_error(design, priors)
+    d_error <- cbc_error(design, errors = "d", priors = priors)
   }
 
   if (no_choice) {
@@ -282,7 +282,7 @@ cbc_design <- function(
     )
 
     # Recalculate D-error after dominance removal
-    d_error <- cbc_d_error(design, priors)
+    d_error <- cbc_error(design, errors = 'd', priors)
     message("Dominance checking complete. Final D-error: ", round(d_error, 6))
   }
 

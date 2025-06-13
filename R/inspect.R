@@ -310,11 +310,27 @@ cbc_inspect_overlap.data.frame <- function(x, ...) {
   invisible(result)
 }
 
-#' Compare balance and overlap across multiple designs
+#' Compare designs across multiple metrics
 #'
-#' @param ... Multiple `cbc_design` objects to compare, or named arguments where
-#'   each argument is a `cbc_design` object
-#' @return A data frame comparing balance and overlap metrics across designs
+#' This function compares multiple designs across various efficiency metrics
+#' including error criteria, balance, overlap, and profile usage. Provides
+#' flexible error type selection and comprehensive or simplified output.
+#'
+#' @param ... Multiple `cbc_design` or `cbc_survey` objects to compare, or named 
+#'   arguments where each argument is a design or survey object
+#' @param errors Character vector specifying which error metrics to compute.
+#'   Options: "d" (D-error), "db" (Bayesian D-error), "a" (A-error), 
+#'   "g" (G-error), "e" (E-error), "all" (comprehensive metrics). 
+#'   Defaults to "d".
+#' @param include_metrics Logical. Include balance, overlap, and profile usage 
+#'   metrics in addition to error metrics? Defaults to TRUE for comprehensive
+#'   comparison. Set to FALSE for error-only comparison.
+#' @param priors Optional `cbc_priors` object to use for all designs/surveys. If not
+#'   specified, each object's own priors will be used. Required for "db" error type.
+#' @param exclude Character vector of attribute names to exclude from error
+#'   calculations
+#' @return A data frame comparing metrics across designs, sorted by primary
+#'   error metric (D-error by default)
 #' @export
 #' @examples
 #' # Create profiles
@@ -336,12 +352,28 @@ cbc_inspect_overlap.data.frame <- function(x, ...) {
 #'   profiles, priors = priors, n_alts = 2, n_q = 4, method = "sequential"
 #' )
 #'
-#' # Compare designs
-#' compare_designs(
+#' # Comprehensive comparison (default)
+#' cbc_compare_designs(
 #'   Random = design_random,
 #'   Sequential = design_sequential
 #' )
-compare_designs <- function(...) {
+#' 
+#' # Multiple error types with full metrics
+#' cbc_compare_designs(
+#'   Random = design_random,
+#'   Sequential = design_sequential,
+#'   errors = c("d", "a", "g")
+#' )
+#' 
+#' # Error-only comparison
+#' cbc_compare_designs(
+#'   Random = design_random,
+#'   Sequential = design_sequential,
+#'   errors = c("d", "a"),
+#'   include_metrics = FALSE
+#' )
+cbc_compare_designs <- function(..., errors = "d", include_metrics = TRUE, 
+                                priors = NULL, exclude = NULL) {
   designs <- list(...)
 
   # Get design names
@@ -350,139 +382,278 @@ compare_designs <- function(...) {
     design_names <- paste0("Design_", seq_along(designs))
   }
 
-  # Validate all inputs are cbc_design objects
+  # Validate all inputs are cbc_design or cbc_survey objects
   for (i in seq_along(designs)) {
-    if (!inherits(designs[[i]], "cbc_design")) {
+    if (!inherits(designs[[i]], c("cbc_design", "cbc_survey"))) {
       stop(sprintf(
-        "Argument %d (%s) must be a cbc_design object",
+        "Argument %d (%s) must be a cbc_design or cbc_survey object",
         i,
         design_names[i]
       ))
     }
   }
 
-  # Extract metrics from each design
-  metrics <- lapply(designs, function(design) {
-    info <- design$design_info
-    list(
-      method = design$method,
-      d_error = design$d_error,
-      balance_score = info$efficiency$balance_score %||% NA,
-      overlap_score = info$efficiency$overlap_score %||% NA,
-      profile_usage_rate = info$profile_usage_rate,
-      n_profiles_used = info$n_profiles_used,
-      n_profiles_available = info$n_profiles_available
-    )
+  # Compute error metrics for each design
+  error_metrics <- lapply(designs, function(design) {
+    if (length(errors) == 1 && errors[1] %in% c("d", "db")) {
+      # Single error type returns scalar
+      error_val <- cbc_error(design, errors = errors, priors = priors, exclude = exclude)
+      result <- list()
+      result[[paste0(errors[1], "_error")]] <- error_val
+      return(result)
+    } else {
+      # Multiple error types or "all" returns list
+      return(cbc_error(design, errors = errors, priors = priors, exclude = exclude))
+    }
   })
 
-  # Create comparison data frame
-  result <- data.frame(
-    design = design_names,
-    method = sapply(metrics, function(x) x$method),
-    d_error = sapply(metrics, function(x) x$d_error),
-    balance_score = sapply(metrics, function(x) x$balance_score),
-    overlap_score = sapply(metrics, function(x) x$overlap_score),
-    profile_usage_rate = sapply(metrics, function(x) x$profile_usage_rate),
-    profiles_used = sapply(metrics, function(x) x$n_profiles_used),
-    profiles_available = sapply(metrics, function(x) x$n_profiles_available),
-    stringsAsFactors = FALSE
-  )
+  # Extract design metrics if needed
+  design_metrics <- if (include_metrics) {
+    lapply(designs, function(design) {
+      if (inherits(design, "cbc_design")) {
+        info <- design$design_info
+        list(
+          method = design$method,
+          balance_score = info$efficiency$balance_score %||% NA,
+          overlap_score = info$efficiency$overlap_score %||% NA,
+          profile_usage_rate = info$profile_usage_rate,
+          n_profiles_used = info$n_profiles_used,
+          n_profiles_available = info$n_profiles_available
+        )
+      } else {
+        # For cbc_survey objects, extract what we can
+        design_ref <- attr(design, "design_ref")
+        if (!is.null(design_ref)) {
+          info <- design_ref$design_info
+          list(
+            method = design_ref$method,
+            balance_score = info$efficiency$balance_score %||% NA,
+            overlap_score = info$efficiency$overlap_score %||% NA,
+            profile_usage_rate = info$profile_usage_rate %||% NA,
+            n_profiles_used = info$n_profiles_used %||% NA,
+            n_profiles_available = info$n_profiles_available %||% NA
+          )
+        } else {
+          list(
+            method = "unknown",
+            balance_score = NA,
+            overlap_score = NA,
+            profile_usage_rate = NA,
+            n_profiles_used = NA,
+            n_profiles_available = NA
+          )
+        }
+      }
+    })
+  } else {
+    NULL
+  }
 
-  # Add rankings
-  result$d_error_rank <- rank(result$d_error, na.last = TRUE)
-  result$balance_rank <- rank(-result$balance_score, na.last = TRUE) # Higher is better
-  result$overlap_rank <- rank(result$overlap_score, na.last = TRUE) # Lower is better
+  # Build result data frame
+  result <- data.frame(design = design_names, stringsAsFactors = FALSE)
 
-  class(result) <- c("cbc_design_comparison", "data.frame")
+  # Add method column if including metrics
+  if (include_metrics) {
+    result$method <- sapply(design_metrics, function(x) x$method)
+  }
+
+  # Add error columns
+  error_names <- if ("all" %in% errors) {
+    c("d_error", "a_error", "g_error", "e_error")
+  } else {
+    paste0(errors, "_error")
+  }
+
+  for (error_name in error_names) {
+    result[[error_name]] <- sapply(error_metrics, function(x) {
+      x[[error_name]] %||% NA
+    })
+  }
+
+  # Add design metrics if requested
+  if (include_metrics) {
+    result$balance_score <- sapply(design_metrics, function(x) x$balance_score)
+    result$overlap_score <- sapply(design_metrics, function(x) x$overlap_score)
+    result$profile_usage_rate <- sapply(design_metrics, function(x) x$profile_usage_rate)
+    result$profiles_used <- sapply(design_metrics, function(x) x$n_profiles_used)
+    result$profiles_available <- sapply(design_metrics, function(x) x$n_profiles_available)
+  }
+
+  # Sort by primary error metric (first one specified, or d_error)
+  primary_error <- if (errors[1] == "all") "d_error" else paste0(errors[1], "_error")
+  result <- result[order(result[[primary_error]], na.last = TRUE), ]
+  rownames(result) <- NULL
+
+  # Add rankings for error metrics
+  for (error_name in error_names) {
+    if (error_name %in% names(result)) {
+      rank_name <- gsub("_error", "_rank", error_name)
+      if (error_name == "e_error") {
+        result[[rank_name]] <- rank(-result[[error_name]], na.last = TRUE) # Higher is better for E-error
+      } else {
+        result[[rank_name]] <- rank(result[[error_name]], na.last = TRUE) # Lower is better for others
+      }
+    }
+  }
+
+  # Add rankings for design metrics if included
+  if (include_metrics) {
+    result$balance_rank <- rank(-result$balance_score, na.last = TRUE) # Higher is better
+    result$overlap_rank <- rank(result$overlap_score, na.last = TRUE) # Lower is better
+  }
+
+  # Set appropriate class
+  if (include_metrics) {
+    class(result) <- c("cbc_design_comparison", "data.frame")
+  } else {
+    class(result) <- c("cbc_error_comparison", "data.frame")
+  }
+
   return(result)
 }
 
 #' Print method for design comparisons
-#' @param x A cbc_design_comparison object
+#' @param x A cbc_design_comparison or cbc_error_comparison object
 #' @param ... Additional arguments passed to print
 #' @export
 print.cbc_design_comparison <- function(x, ...) {
-  cat("Design Comparison\n")
-  cat("=================\n\n")
+  is_error_only <- inherits(x, "cbc_error_comparison")
+  
+  if (is_error_only) {
+    cat("Design Error Comparison\n")
+    cat("=======================\n\n")
+  } else {
+    cat("Design Comparison\n")
+    cat("=================\n\n")
+  }
 
+  # Determine which columns to show
+  base_cols <- "design"
+  error_cols <- names(x)[grepl("_error$", names(x))]
+  
+  if (is_error_only) {
+    display_cols <- c(base_cols, error_cols)
+  } else {
+    # Include method and design metrics
+    design_cols <- c("method", "balance_score", "overlap_score", "profile_usage_rate")
+    display_cols <- c(base_cols, intersect(design_cols, names(x)), error_cols)
+  }
+  
   # Create formatted version for printing
-  print_df <- x[, c(
-    "design",
-    "method",
-    "d_error",
-    "balance_score",
-    "overlap_score",
-    "profile_usage_rate"
-  )]
+  print_df <- x[, display_cols, drop = FALSE]
 
-  # Format numeric columns
-  print_df$d_error <- sprintf("%.6f", print_df$d_error)
-  print_df$balance_score <- ifelse(
-    is.na(x$balance_score),
-    "NA",
-    sprintf("%.3f", print_df$balance_score)
-  )
-  print_df$overlap_score <- ifelse(
-    is.na(x$overlap_score),
-    "NA",
-    sprintf("%.3f", print_df$overlap_score)
-  )
-  print_df$profile_usage_rate <- sprintf(
-    "%.1f%%",
-    print_df$profile_usage_rate * 100
-  )
+  # Format error columns
+  for (col in error_cols) {
+    if (col %in% names(print_df)) {
+      print_df[[col]] <- sprintf("%.6f", print_df[[col]])
+    }
+  }
+  
+  # Format other numeric columns if present
+  if ("balance_score" %in% names(print_df)) {
+    print_df$balance_score <- ifelse(
+      is.na(x$balance_score),
+      "NA",
+      sprintf("%.3f", print_df$balance_score)
+    )
+  }
+  
+  if ("overlap_score" %in% names(print_df)) {
+    print_df$overlap_score <- ifelse(
+      is.na(x$overlap_score),
+      "NA",
+      sprintf("%.3f", print_df$overlap_score)
+    )
+  }
+  
+  if ("profile_usage_rate" %in% names(print_df)) {
+    print_df$profile_usage_rate <- sprintf(
+      "%.1f%%",
+      print_df$profile_usage_rate * 100
+    )
+  }
 
   # Rename columns for display
-  names(print_df) <- c(
-    "Design",
-    "Method",
-    "D-Error",
-    "Balance",
-    "Overlap",
-    "Profile Usage"
-  )
+  display_names <- names(print_df)
+  display_names[display_names == "design"] <- "Design"
+  display_names[display_names == "method"] <- "Method"
+  display_names[display_names == "d_error"] <- "D-Error"
+  display_names[display_names == "a_error"] <- "A-Error"
+  display_names[display_names == "g_error"] <- "G-Error"
+  display_names[display_names == "e_error"] <- "E-Error"
+  display_names[display_names == "balance_score"] <- "Balance"
+  display_names[display_names == "overlap_score"] <- "Overlap"
+  display_names[display_names == "profile_usage_rate"] <- "Profile Usage"
+  names(print_df) <- display_names
 
   # Remove class to avoid recursion
   class(print_df) <- "data.frame"
   print(print_df, row.names = FALSE)
 
+  # Add interpretation
   cat("\nInterpretation:\n")
-  cat("- D-Error: Lower is better (design efficiency)\n")
-  cat("- Balance: Higher is better (level distribution)\n")
-  cat("- Overlap: Lower is better (attribute variation)\n")
-  cat("- Profile Usage: Higher means more profiles used\n")
+  if ("D-Error" %in% names(print_df)) cat("- D-Error: Lower is better (design efficiency)\n")
+  if ("A-Error" %in% names(print_df)) cat("- A-Error: Lower is better (average variance)\n")
+  if ("G-Error" %in% names(print_df)) cat("- G-Error: Lower is better (max prediction variance)\n")
+  if ("E-Error" %in% names(print_df)) cat("- E-Error: Higher is better (min eigenvalue)\n")
+  if ("Balance" %in% names(print_df)) cat("- Balance: Higher is better (level distribution)\n")
+  if ("Overlap" %in% names(print_df)) cat("- Overlap: Lower is better (attribute variation)\n")
+  if ("Profile Usage" %in% names(print_df)) cat("- Profile Usage: Higher means more profiles used\n")
 
   # Highlight best performing design for each metric
   if (nrow(x) > 1) {
     cat("\nBest performers:\n")
 
-    best_d_error <- x$design[which.min(x$d_error)]
-    cat(sprintf(
-      "- D-Error: %s (%.6f)\n",
-      best_d_error,
-      min(x$d_error, na.rm = TRUE)
-    ))
-
-    if (!all(is.na(x$balance_score))) {
-      best_balance <- x$design[which.max(x$balance_score)]
-      cat(sprintf(
-        "- Balance: %s (%.3f)\n",
-        best_balance,
-        max(x$balance_score, na.rm = TRUE)
-      ))
+    for (error_col in error_cols) {
+      if (error_col %in% names(x) && !all(is.na(x[[error_col]]))) {
+        if (error_col == "e_error") {
+          best_idx <- which.max(x[[error_col]])
+          best_val <- max(x[[error_col]], na.rm = TRUE)
+        } else {
+          best_idx <- which.min(x[[error_col]])
+          best_val <- min(x[[error_col]], na.rm = TRUE)
+        }
+        
+        error_name <- gsub("_error", "", error_col)
+        error_name <- paste0(toupper(substring(error_name, 1, 1)), substring(error_name, 2))
+        
+        cat(sprintf(
+          "- %s-Error: %s (%.6f)\n",
+          error_name,
+          x$design[best_idx],
+          best_val
+        ))
+      }
     }
 
-    if (!all(is.na(x$overlap_score))) {
-      best_overlap <- x$design[which.min(x$overlap_score)]
-      cat(sprintf(
-        "- Overlap: %s (%.3f)\n",
-        best_overlap,
-        min(x$overlap_score, na.rm = TRUE)
-      ))
+    if (!is_error_only) {
+      if ("balance_score" %in% names(x) && !all(is.na(x$balance_score))) {
+        best_balance <- x$design[which.max(x$balance_score)]
+        cat(sprintf(
+          "- Balance: %s (%.3f)\n",
+          best_balance,
+          max(x$balance_score, na.rm = TRUE)
+        ))
+      }
+
+      if ("overlap_score" %in% names(x) && !all(is.na(x$overlap_score))) {
+        best_overlap <- x$design[which.min(x$overlap_score)]
+        cat(sprintf(
+          "- Overlap: %s (%.3f)\n",
+          best_overlap,
+          min(x$overlap_score, na.rm = TRUE)
+        ))
+      }
     }
   }
 
   invisible(x)
+}
+
+#' @rdname print.cbc_design_comparison  
+#' @export
+print.cbc_error_comparison <- function(x, ...) {
+  print.cbc_design_comparison(x, ...)
 }
 
 # Helper functions

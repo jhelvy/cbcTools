@@ -5,44 +5,46 @@
 \alias{cbc_error.cbc_survey}
 \alias{cbc_error.cbc_design}
 \alias{cbc_error.data.frame}
-\title{Compute comprehensive design error metrics for a choice experiment design}
+\title{Compute design error metrics for a choice experiment design}
 \usage{
-cbc_error(x, priors = NULL, exclude = NULL)
+cbc_error(x, errors = "d", priors = NULL, exclude = NULL)
 
-\method{cbc_error}{cbc_survey}(x, priors = NULL, exclude = NULL)
+\method{cbc_error}{cbc_survey}(x, errors = "d", priors = NULL, exclude = NULL)
 
-\method{cbc_error}{cbc_design}(x, priors = NULL, exclude = NULL)
+\method{cbc_error}{cbc_design}(x, errors = "d", priors = NULL, exclude = NULL)
 
-\method{cbc_error}{data.frame}(x, priors = NULL, exclude = NULL)
+\method{cbc_error}{data.frame}(x, errors = "d", priors = NULL, exclude = NULL)
 }
 \arguments{
 \item{x}{Either a \code{cbc_design} object created by \code{cbc_design()}, a \code{cbc_survey}
 object, or a data frame containing a choice experiment design}
 
+\item{errors}{Character vector specifying which error metrics to compute.
+Options: "d" (D-error), "db" (Bayesian D-error), "a" (A-error),
+"g" (G-error), "e" (E-error), "all" (comprehensive metrics).
+Defaults to "d".}
+
 \item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
 null priors. If \code{x} is a \code{cbc_design} object, the priors from that object
-will be used by default.}
+will be used by default. Required for "db" error type.}
 
 \item{exclude}{Character vector of attribute names to exclude from error
 calculations}
 }
 \value{
-A list containing:
+For single error types ("d", "db"), returns the numeric error value.
+For multiple error types or "all", returns a list containing requested metrics:
 \itemize{
 \item d_error: D-optimality criterion (lower is better)
 \item a_error: A-optimality criterion (lower is better)
 \item g_error: G-optimality criterion (lower is better)
 \item e_error: E-optimality criterion (higher is better)
-\item condition_number: Condition number of information matrix (lower is better)
-\item det_information: Determinant of information matrix
-\item trace_information: Trace of information matrix
-\item eigenvalues: Eigenvalues of information matrix
 }
 }
 \description{
-This function computes multiple optimality criteria including D-, A-, G-, and
-E-error as well as condition numbers to provide a comprehensive evaluation
-of design efficiency.
+This function computes design efficiency metrics for choice experiments.
+By default, it returns only D-error, but can compute multiple optimality
+criteria including D-, A-, G-, and E-error as well as condition numbers.
 }
 \details{
 The different error criteria measure different aspects of design efficiency:
@@ -51,7 +53,6 @@ The different error criteria measure different aspects of design efficiency:
 \item A-error: Minimizes average variance (trace of covariance matrix)
 \item G-error: Minimizes maximum prediction variance
 \item E-error: Maximizes minimum eigenvalue (related to worst-estimated parameter)
-\item Condition number: Ratio of largest to smallest eigenvalue (numerical stability)
 }
 }
 \examples{
@@ -67,7 +68,13 @@ design <- cbc_design(
   n_q = 4
 )
 
+# Compute D-error only (default)
+d_error <- cbc_error(design)
+
 # Compute comprehensive design error metrics
-errors <- cbc_error(design)
+errors <- cbc_error(design, errors = "all")
 print(errors)
+
+# Compute specific error types
+multiple_errors <- cbc_error(design, errors = c("d", "a", "g"))
 }

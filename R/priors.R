@@ -1,7 +1,7 @@
 #' Create prior specifications for CBC models
 #'
 #' Creates a standardized prior specification object for use in CBC analysis
-#' functions like `cbc_choices()` and `cbc_d_error()`. Supports both fixed and random
+#' functions like `cbc_choices()` and `cbc_design()`. Supports both fixed and random
 #' parameters, with flexible specification of categorical variable levels.
 #'
 #' @param profiles A data frame of profiles created by `cbc_profiles()`
