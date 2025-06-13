@@ -10,7 +10,12 @@ cbc_survey_random(
   n_alts,
   n_q,
   no_choice = FALSE,
-  label = NULL
+  label = NULL,
+  priors = NULL,
+  remove_dominant = FALSE,
+  dominance_types = c("total", "partial"),
+  dominance_threshold = 0.8,
+  max_dominance_attempts = 100
 )
 }
 \arguments{
@@ -27,6 +32,23 @@ cbc_survey_random(
 \item{label}{The name of the variable to use in a "labeled" design (also
 called an "alternative-specific" design) such that each set of alternatives
 contains one of each of the levels in the \code{label} attribute. Defaults to \code{NULL}.}
+
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
+null priors. Required if \code{remove_dominant = TRUE}.}
+
+\item{remove_dominant}{Logical. If \code{TRUE}, removes choice sets where one
+alternative dominates others based on the provided priors. Defaults to \code{FALSE}.}
+
+\item{dominance_types}{Character vector specifying which types of dominance
+to check for. Options are \code{"total"} (high choice probability) and/or
+\code{"partial"} (best on all attributes). Defaults to \code{c("total", "partial")}.}
+
+\item{dominance_threshold}{Numeric. Threshold for total dominance detection.
+If one alternative has a choice probability above this threshold, the choice
+set is considered dominant. Defaults to \code{0.8}.}
+
+\item{max_dominance_attempts}{Integer. Maximum number of attempts to eliminate
+dominant choice sets before giving up. Defaults to \code{100}.}
 }
 \value{
 A data frame with class \code{cbc_survey} containing the complete random survey design

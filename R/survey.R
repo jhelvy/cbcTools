@@ -100,6 +100,18 @@ cbc_survey <- function(
 #' @param label The name of the variable to use in a "labeled" design (also
 #'   called an "alternative-specific" design) such that each set of alternatives
 #'   contains one of each of the levels in the `label` attribute. Defaults to `NULL`.
+#' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
+#'   null priors. Required if `remove_dominant = TRUE`.
+#' @param remove_dominant Logical. If `TRUE`, removes choice sets where one
+#'   alternative dominates others based on the provided priors. Defaults to `FALSE`.
+#' @param dominance_types Character vector specifying which types of dominance
+#'   to check for. Options are `"total"` (high choice probability) and/or
+#'   `"partial"` (best on all attributes). Defaults to `c("total", "partial")`.
+#' @param dominance_threshold Numeric. Threshold for total dominance detection.
+#'   If one alternative has a choice probability above this threshold, the choice
+#'   set is considered dominant. Defaults to `0.8`.
+#' @param max_dominance_attempts Integer. Maximum number of attempts to eliminate
+#'   dominant choice sets before giving up. Defaults to `100`.
 #' @return A data frame with class `cbc_survey` containing the complete random survey design
 #' @export
 #' @examples
@@ -122,15 +134,44 @@ cbc_survey_random <- function(
     n_alts,
     n_q,
     no_choice = FALSE,
-    label = NULL
+    label = NULL,
+    priors = NULL,
+    remove_dominant = FALSE,
+    dominance_types = c("total", "partial"),
+    dominance_threshold = 0.8,
+    max_dominance_attempts = 100
 ) {
   # Validate inputs
   if (!inherits(profiles, "cbc_profiles")) {
     stop("profiles must be a cbc_profiles object created by cbc_profiles()")
   }
+  
+  # Validate dominance parameters
+  if (remove_dominant) {
+    if (is.null(priors)) {
+      warning("remove_dominant requires priors. Setting remove_dominant = FALSE.")
+      remove_dominant <- FALSE
+    } else {
+      if (!inherits(priors, "cbc_priors")) {
+        stop("priors must be a cbc_priors object created by cbc_priors()")
+      }
+      # Validate dominance_types
+      valid_types <- c("total", "partial")
+      if (!all(dominance_types %in% valid_types)) {
+        stop("dominance_types must be one or more of: ", paste(valid_types, collapse = ", "))
+      }
+      # Validate threshold
+      if (dominance_threshold <= 0 || dominance_threshold >= 1) {
+        stop("dominance_threshold must be between 0 and 1")
+      }
+    }
+  }
 
   # Create random survey directly from profiles
-  survey <- make_random_survey(profiles, n_blocks = 1, n_resp, n_alts, n_q, label)
+  survey <- make_random_survey(
+    profiles, n_blocks = 1, n_resp, n_alts, n_q, label,
+    priors, remove_dominant, dominance_types, dominance_threshold, max_dominance_attempts
+  )
 
   if (no_choice) {
     survey <- add_no_choice(survey, n_alts)
@@ -351,12 +392,20 @@ get_col_types <- function(data) {
 }
 
 make_random_survey <- function(
-    profiles, n_blocks, n_resp, n_alts, n_q, label
+    profiles, n_blocks, n_resp, n_alts, n_q, label,
+    priors = NULL, remove_dominant = FALSE, dominance_types = c("total", "partial"), 
+    dominance_threshold = 0.8, max_dominance_attempts = 100
 ) {
   if (is.null(label)) {
-    survey <- survey_rand_sample(profiles, n_resp, n_alts, n_q)
+    survey <- survey_rand_sample(
+      profiles, n_resp, n_alts, n_q, priors, remove_dominant, 
+      dominance_types, dominance_threshold, max_dominance_attempts
+    )
   } else {
-    survey <- survey_rand_sample_label(profiles, n_resp, n_alts, n_q, label)
+    survey <- survey_rand_sample_label(
+      profiles, n_resp, n_alts, n_q, label, priors, remove_dominant, 
+      dominance_types, dominance_threshold, max_dominance_attempts
+    )
   }
   survey <- set_block_ids(survey, n_blocks)
   survey <- reorder_cols(survey)
@@ -364,42 +413,80 @@ make_random_survey <- function(
   return(survey)
 }
 
-survey_rand_sample <- function(profiles, n_resp, n_alts, n_q) {
+survey_rand_sample <- function(
+    profiles, n_resp, n_alts, n_q, priors = NULL, remove_dominant = FALSE, 
+    dominance_types = c("total", "partial"), dominance_threshold = 0.8, max_dominance_attempts = 100
+) {
   survey <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
   survey <- add_metadata(survey, n_resp, n_alts, n_q)
-  # Replace rows with duplicated profiles in each obsID or
-  # duplicated choice sets in each respID
-  dup_rows_obs <- get_dup_obs(survey, n_alts)
-  dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
-  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
-    new_rows <- sample_profiles(profiles, size = length(dup_rows))
-    survey[dup_rows, 1:ncol(new_rows)] <- new_rows
-    # Recalculate duplicates
+  
+  # Replace rows with duplicated profiles, duplicated choice sets, or dominant choice sets
+  attempts <- 0
+  repeat {
     dup_rows_obs <- get_dup_obs(survey, n_alts)
     dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
+    dom_rows <- if (remove_dominant) get_dominant_obs(survey, priors, dominance_types, dominance_threshold) else c()
+    
+    problematic_rows <- unique(c(dup_rows_obs, dup_rows_resp, dom_rows))
+    
+    if (length(problematic_rows) == 0) {
+      break  # No more problems
+    }
+    
+    # Replace problematic rows
+    new_rows <- sample_profiles(profiles, size = length(problematic_rows))
+    survey[problematic_rows, 1:ncol(new_rows)] <- new_rows
+    
+    # Prevent infinite loops
+    attempts <- attempts + 1
+    if (attempts > max_dominance_attempts) {
+      if (remove_dominant && length(dom_rows) > 0) {
+        warning("Could not eliminate all dominant choice sets after ", max_dominance_attempts, " attempts. Some may remain.")
+      }
+      break
+    }
   }
+  
   return(survey)
 }
 
-survey_rand_sample_label <- function(profiles, n_resp, n_alts, n_q, label) {
+survey_rand_sample_label <- function(
+    profiles, n_resp, n_alts, n_q, label, priors = NULL, remove_dominant = FALSE, 
+    dominance_types = c("total", "partial"), dominance_threshold = 0.8, max_dominance_attempts = 100
+) {
   n_alts <- override_label_alts(profiles, label, n_alts)
   # Randomize rows by label
   labels <- split(profiles, profiles[label])
   survey <- sample_profiles_by_group(labels, size = n_resp * n_q)
-  # Replace rows with duplicated profiles in each obsID or
-  # duplicated choice sets in each respID
   survey <- add_metadata(survey, n_resp, n_alts, n_q)
-  dup_rows_obs <- get_dup_obs(survey, n_alts)
-  dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
-  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
-    new_rows <- sample_profiles_by_group(labels, size = length(dup_rows) / n_alts)
-    survey[dup_rows, 1:ncol(new_rows)] <- new_rows
-    # Recalculate duplicates
+  
+  # Replace rows with duplicated profiles, duplicated choice sets, or dominant choice sets
+  attempts <- 0
+  repeat {
     dup_rows_obs <- get_dup_obs(survey, n_alts)
     dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
+    dom_rows <- if (remove_dominant) get_dominant_obs(survey, priors, dominance_types, dominance_threshold) else c()
+    
+    problematic_rows <- unique(c(dup_rows_obs, dup_rows_resp, dom_rows))
+    
+    if (length(problematic_rows) == 0) {
+      break  # No more problems
+    }
+    
+    # Replace problematic rows (for labeled designs, need to sample by groups)
+    new_rows <- sample_profiles_by_group(labels, size = length(problematic_rows) / n_alts)
+    survey[problematic_rows, 1:ncol(new_rows)] <- new_rows
+    
+    # Prevent infinite loops
+    attempts <- attempts + 1
+    if (attempts > max_dominance_attempts) {
+      if (remove_dominant && length(dom_rows) > 0) {
+        warning("Could not eliminate all dominant choice sets after ", max_dominance_attempts, " attempts. Some may remain.")
+      }
+      break
+    }
   }
+  
   return(survey)
 }
 
@@ -492,4 +579,31 @@ get_id_names <- function() {
 
 get_var_names <- function(design) {
   return(setdiff(names(design), get_id_names()))
+}
+
+# Helper function to get rows from dominant choice sets
+get_dominant_obs <- function(survey, priors, dominance_types, dominance_threshold) {
+  if (is.null(priors)) {
+    return(c())
+  }
+  
+  # Get unique choice sets (obsIDs)
+  unique_obs <- unique(survey$obsID)
+  dominant_obs <- c()
+  
+  for (obs_id in unique_obs) {
+    choice_set_rows <- survey[survey$obsID == obs_id, ]
+    
+    # Use the same dominance checking logic as in optdesign.R
+    is_dominant <- check_choice_set_dominance(
+      choice_set_rows, priors, NULL, dominance_types, dominance_threshold
+    )
+    
+    if (is_dominant) {
+      dominant_obs <- c(dominant_obs, obs_id)
+    }
+  }
+  
+  # Return row indices for dominant choice sets
+  return(which(survey$obsID %in% dominant_obs))
 }

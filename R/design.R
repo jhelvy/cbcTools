@@ -302,129 +302,6 @@ cbc_design <- function(
 #' @param label Label variable for labeled designs
 #' @return Updated design with dominant choice sets replaced
 #' @keywords internal
-remove_dominant_choice_sets <- function(
-    design,
-    profiles,
-    priors,
-    dominance_types = c("total", "partial"),
-    dominance_threshold = 0.8,
-    max_replacements = 10,
-    n_alts,
-    label = NULL
-) {
-
-  replacements_made <- 0
-
-  while (replacements_made < max_replacements) {
-    # Set profiles attribute for validation
-    attr(design, "profiles") <- profiles
-
-    # Check for dominance using the S3 method
-    flagged <- cbc_inspect_dominance(
-      design,
-      priors = priors,
-      total_threshold = dominance_threshold,
-      exclude = NULL
-    )
-
-    # Determine which choice sets to replace based on dominance_types
-    replace_mask <- rep(FALSE, nrow(flagged))
-
-    if ("total" %in% dominance_types) {
-      replace_mask <- replace_mask | flagged$dominant_total
-    }
-    if ("partial" %in% dominance_types) {
-      replace_mask <- replace_mask | flagged$dominant_partial
-    }
-
-    # Get unique question IDs that need replacement
-    questions_to_replace <- unique(flagged$qID[replace_mask])
-
-    if (length(questions_to_replace) == 0) {
-      # No more dominant choice sets
-      message("No dominant choice sets found.")
-      break
-    }
-
-    # Replace each dominant choice set
-    for (qID in questions_to_replace) {
-      design <- replace_single_choice_set(
-        design = design,
-        qID = qID,
-        profiles = profiles,
-        n_alts = n_alts,
-        label = label
-      )
-    }
-
-    replacements_made <- replacements_made + 1
-
-    # Print progress
-    message(sprintf("Dominance replacement %d: Replaced %d choice sets",
-                    replacements_made, length(questions_to_replace)))
-  }
-
-  if (replacements_made >= max_replacements) {
-    warning(sprintf(
-      "Reached maximum dominance replacements (%d). Some dominant choice sets may remain.",
-      max_replacements
-    ))
-  }
-
-  # Clean up the temporary profiles attribute
-  attr(design, "profiles") <- NULL
-
-  return(design)
-}
-
-#' Replace a single choice set with new random draws
-#'
-#' @param design The design data frame
-#' @param qID The question ID to replace
-#' @param profiles The profiles to sample from
-#' @param n_alts Number of alternatives per question
-#' @param label Label variable for labeled designs
-#' @return Updated design with the specified choice set replaced
-#' @keywords internal
-replace_single_choice_set <- function(design, qID, profiles, n_alts, label = NULL) {
-  # Get rows for this question
-  question_rows <- which(design$qID == qID)
-
-  # Generate new profiles for this choice set
-  max_attempts <- 100
-  attempts <- 0
-
-  while (attempts < max_attempts) {
-    if (is.null(label)) {
-      # Random sampling without label constraints
-      new_profiles <- sample_profiles(profiles, size = n_alts)
-    } else {
-      # Labeled design sampling
-      n_alts_adjusted <- override_label_alts(profiles, label, n_alts)
-      labels <- split(profiles, profiles[[label]])
-      new_profiles <- sample_profiles_by_group(labels, size = 1)
-    }
-
-    # Check that we don't have duplicate profiles within this choice set
-    if (length(unique(new_profiles$profileID)) == nrow(new_profiles)) {
-      break
-    }
-    attempts <- attempts + 1
-  }
-
-  if (attempts >= max_attempts) {
-    warning("Could not find non-duplicate profiles for choice set replacement. Using current attempt.")
-  }
-
-  # Replace the profiles while preserving metadata columns
-  metadata_cols <- c("profileID", "blockID", "respID", "qID", "altID", "obsID")
-  attr_cols <- setdiff(names(design), metadata_cols)
-
-  # Update the design with new profiles
-  design[question_rows, c("profileID", attr_cols)] <- new_profiles[, c("profileID", attr_cols)]
-
-  return(design)
-}
 
 # Helper function to calculate efficiency metrics
 calculate_efficiency_metrics <- function(design, profiles, priors) {
@@ -925,7 +802,8 @@ make_design_sequential <- function(
   # Create list of different random starting designs
   start_designs <- lapply(1:n_start, function(i) {
     design <- make_random_survey(
-      profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label
+      profiles, n_blocks, n_resp = n_blocks, n_alts, n_q, label,
+      priors = NULL, remove_dominant = FALSE
     )
     design$qID <- design$obsID
     return(design)
