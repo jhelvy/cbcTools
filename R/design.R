@@ -31,10 +31,6 @@
 #' @param method Choose the design method to use. Options include `"random"`
 #'   and `"sequential"`. Defaults to `"random"`. See details below for complete
 #'   description of each method.
-#' @param randomize Logical. If `TRUE`, both the choice question order and the
-#'   order of the alternatives within a given choice question will be
-#'   randomized across each respondent. Does not apply to design created using
-#'   the `"random"` method. Defaults to `TRUE`.
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
 #'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
 #' @param max_iter A numeric value indicating the maximum number allowed
@@ -228,14 +224,7 @@ cbc_design <- function(
     n_start <- 1
   }
 
-  # Override randomize_alts for labeled designs
-  if (!is.null(label) & randomize_alts & method != 'random') {
-    message(
-      "Alternative order randomization is disabled for labeled designs.\n",
-      "Setting randomize_alts <- FALSE\n"
-    )
-    randomize_alts <- FALSE
-  }
+  # Note: Alternative randomization is handled in cbc_survey(), not here
 
   # Override n_blocks and priors for "random" method
   if (method == "random") {
@@ -299,29 +288,10 @@ cbc_design <- function(
     message("Dominance checking complete. Final D-error: ", round(d_error, 6))
   }
 
-  # Calculate efficiency metrics
-  efficiency_info <- calculate_efficiency_metrics(design, profiles, priors)
-
-  # Create design metadata
-  design_info <- list(
-    created_at = Sys.time(),
-    n_profiles_available = nrow(profiles),
-    n_profiles_used = length(unique(design$profileID)),
-    profile_usage_rate = length(unique(design$profileID)) / nrow(profiles),
-    n_choice_sets = n_blocks * n_q,
-    total_alternatives = nrow(design),
-    restrictions_applied = !is.null(attr(profiles, "restrictions_applied")),
-    n_restrictions = length(attr(profiles, "restrictions_applied") %||% character(0)),
-    dominance_removed = remove_dominant,
-    dominance_types = if (remove_dominant) dominance_types else NULL,
-    efficiency = efficiency_info
-  )
-
-  # Create return object
-  result <- list(
-    design = design,
-    profiles = profiles,
-    priors = priors,
+  # Store essential information as attributes
+  attr(design, "profiles") <- profiles
+  attr(design, "priors") <- priors
+  attr(design, "design_params") <- list(
     method = method,
     n_q = n_q,
     n_alts = n_alts,
@@ -329,12 +299,27 @@ cbc_design <- function(
     no_choice = no_choice,
     label = label,
     d_error = d_error,
-    design_info = design_info
+    created_at = Sys.time(),
+    remove_dominant = remove_dominant,
+    dominance_types = if (remove_dominant) dominance_types else NULL
   )
 
-  # Set class and return
-  class(result) <- c("cbc_design", "list")
-  return(result)
+  # Store computed metrics for printing (computed on-demand elsewhere)
+  efficiency_info <- calculate_efficiency_metrics(design, profiles, priors)
+  attr(design, "design_summary") <- list(
+    n_profiles_available = nrow(profiles),
+    n_profiles_used = length(unique(design$profileID)),
+    profile_usage_rate = length(unique(design$profileID)) / nrow(profiles),
+    n_choice_sets = n_blocks * n_q,
+    total_alternatives = nrow(design),
+    restrictions_applied = !is.null(attr(profiles, "restrictions_applied")),
+    n_restrictions = length(attr(profiles, "restrictions_applied") %||% character(0)),
+    efficiency = efficiency_info
+  )
+
+  # Set class and return data frame directly
+  class(design) <- c("cbc_design", "data.frame")
+  return(design)
 }
 
 #' Remove dominant choice sets from a design
@@ -579,15 +564,16 @@ get_overlap_metrics <- function(design) {
 cbc_levels <- function(design, exclude = NULL) {
   # Handle both cbc_design objects and data frames
   if (inherits(design, "cbc_design")) {
-    design_df <- design$design
-    profiles <- design$profiles
-    priors <- design$priors
+    design_df <- design  # design is now the data frame directly
+    params <- attr(design, "design_params")
+    profiles <- attr(design, "profiles")
+    priors <- attr(design, "priors")
 
     cat("CBC Design Attribute Information\n")
     cat("================================\n")
-    cat(sprintf("Design method: %s\n", design$method))
-    if (!is.null(design$d_error)) {
-      cat(sprintf("D-error: %.6f\n", design$d_error))
+    cat(sprintf("Design method: %s\n", params$method))
+    if (!is.null(params$d_error)) {
+      cat(sprintf("D-error: %.6f\n", params$d_error))
     }
     cat("\n")
   } else {

@@ -81,11 +81,6 @@ set is considered dominant. Defaults to \code{0.8}.}
 
 \item{max_dominance_replacements}{Integer. Maximum number of replacement
 attempts when removing dominant choice sets. Defaults to \code{10}.}
-
-\item{randomize}{Logical. If \code{TRUE}, both the choice question order and the
-order of the alternatives within a given choice question will be
-randomized across each respondent. Does not apply to design created using
-the \code{"random"} method. Defaults to \code{TRUE}.}
 }
 \value{
 The returned \code{design} object contains a choice-based conjoint

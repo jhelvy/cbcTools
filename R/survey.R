@@ -35,15 +35,17 @@ cbc_survey <- function(
     stop("design must be a cbc_design object created by cbc_design()")
   }
 
-  # Extract the design components
-  design_df <- design$design
-  n_blocks <- design$n_blocks
-  n_q <- design$n_q
-  n_alts <- design$n_alts
-  no_choice <- design$no_choice
-  label <- design$label
-  method <- design$method
-  profiles <- design$profiles
+  # Extract the design components from attributes
+  design_df <- design  # design is now the data frame directly
+  params <- attr(design, "design_params")
+  profiles <- attr(design, "profiles")
+  
+  n_blocks <- params$n_blocks
+  n_q <- params$n_q
+  n_alts <- params$n_alts
+  no_choice <- params$no_choice
+  label <- params$label
+  method <- params$method
 
   # Check if we have enough blocks for the requested respondents
   if (n_blocks > 1 && n_resp < n_blocks) {
@@ -196,8 +198,10 @@ calculate_survey_stats <- function(survey, design, n_resp) {
 
   # Handle both design objects and minimal design info
   if (inherits(design, "cbc_design")) {
-    total_profiles_available <- nrow(design$profiles)
-    efficiency <- design$design_info$efficiency
+    profiles <- attr(design, "profiles")
+    summary_info <- attr(design, "design_summary")
+    total_profiles_available <- nrow(profiles)
+    efficiency <- summary_info$efficiency
   } else {
     # For minimal design info (from random surveys)
     total_profiles_available <- nrow(design$profiles)

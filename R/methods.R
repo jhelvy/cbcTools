@@ -130,39 +130,43 @@ print.cbc_priors <- function(x, ...) {
 #' @param ... Additional arguments passed to print
 #' @export
 print.cbc_design <- function(x, ...) {
+  # Extract information from attributes
+  params <- attr(x, "design_params")
+  summary_info <- attr(x, "design_summary")
+  priors <- attr(x, "priors")
+  
   cat("Choice-Based Conjoint Design\n")
   cat("============================\n")
-  cat(sprintf("Method: %s\n", x$method))
-  cat(sprintf("Questions per block: %d\n", x$n_q))
-  cat(sprintf("Alternatives per question: %d\n", x$n_alts))
-  cat(sprintf("Number of blocks: %d\n", x$n_blocks))
+  cat(sprintf("Method: %s\n", params$method))
+  cat(sprintf("Questions per block: %d\n", params$n_q))
+  cat(sprintf("Alternatives per question: %d\n", params$n_alts))
+  cat(sprintf("Number of blocks: %d\n", params$n_blocks))
 
-  if (x$no_choice) {
+  if (params$no_choice) {
     cat("No-choice option: Yes\n")
   }
-  if (!is.null(x$label)) {
-    cat(sprintf("Labeled design using: %s\n", x$label))
+  if (!is.null(params$label)) {
+    cat(sprintf("Labeled design using: %s\n", params$label))
   }
 
   # Design efficiency
-  if (!is.null(x$d_error)) {
-    cat(sprintf("D-error: %.6f\n", x$d_error))
+  if (!is.null(params$d_error)) {
+    cat(sprintf("D-error: %.6f\n", params$d_error))
   }
 
   # Profile usage
-  info <- x$design_info
   cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",
-              info$n_profiles_used, info$n_profiles_available,
-              info$profile_usage_rate * 100))
+              summary_info$n_profiles_used, summary_info$n_profiles_available,
+              summary_info$profile_usage_rate * 100))
 
   # Restrictions info
-  if (info$restrictions_applied) {
-    cat(sprintf("Profile restrictions: %d applied\n", info$n_restrictions))
+  if (summary_info$restrictions_applied) {
+    cat(sprintf("Profile restrictions: %d applied\n", summary_info$n_restrictions))
   }
 
   # Efficiency metrics
-  if (!is.null(info$efficiency)) {
-    eff <- info$efficiency
+  if (!is.null(summary_info$efficiency)) {
+    eff <- summary_info$efficiency
     if (!is.null(eff$balance_score)) {
       cat(sprintf("Attribute balance: %.2f (higher is better)\n", eff$balance_score))
     }
@@ -172,22 +176,22 @@ print.cbc_design <- function(x, ...) {
   }
 
   # Priors information
-  if (!is.null(x$priors)) {
+  if (!is.null(priors)) {
     cat("\nPriors summary:\n")
-    n_fixed <- sum(!sapply(x$priors$attrs, function(a) a$random))
-    n_random <- sum(sapply(x$priors$attrs, function(a) a$random))
+    n_fixed <- sum(!sapply(priors$attrs, function(a) a$random))
+    n_random <- sum(sapply(priors$attrs, function(a) a$random))
     cat(sprintf("  Fixed parameters: %d\n", n_fixed))
     cat(sprintf("  Random parameters: %d\n", n_random))
-    if (!is.null(x$priors$correlation)) {
+    if (!is.null(priors$correlation)) {
       cat("  Parameter correlations: Yes\n")
     }
   }
 
-  cat(sprintf("\nDesign created: %s\n", format(info$created_at, "%Y-%m-%d %H:%M:%S")))
+  cat(sprintf("\nDesign created: %s\n", format(params$created_at, "%Y-%m-%d %H:%M:%S")))
   cat("\nFirst few rows of design:\n")
 
   # Remove class temporarily to avoid infinite recursion
-  design_df <- x$design
+  design_df <- x
   class(design_df) <- "data.frame"
   print(utils::head(design_df))
   if (nrow(design_df) > 6) {

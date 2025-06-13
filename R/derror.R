@@ -166,17 +166,17 @@ cbc_error.cbc_survey <- function(x, errors = "d", priors = NULL, exclude = NULL)
 cbc_error.cbc_design <- function(x, errors = "d", priors = NULL, exclude = NULL) {
   # Use priors from design object if not specified
   if (is.null(priors)) {
-    priors <- x$priors
+    priors <- attr(x, "priors")
   } else {
     # Validate provided priors against design's profiles
     if (!inherits(priors, "cbc_priors")) {
       stop("priors must be a cbc_priors object created by cbc_priors()")
     }
-    validate_priors_profiles(priors, x$profiles)
+    validate_priors_profiles(priors, attr(x, "profiles"))
   }
 
-  # Call the data frame method
-  cbc_error.data.frame(x$design, errors, priors, exclude)
+  # Call the data frame method (x is now the data frame directly)
+  cbc_error.data.frame(x, errors, priors, exclude)
 }
 
 #' @rdname cbc_error

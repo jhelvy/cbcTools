@@ -38,42 +38,45 @@ cbc_inspect_balance <- function(x, ...) {
 #' @rdname cbc_inspect_balance
 #' @export
 cbc_inspect_balance.cbc_design <- function(x, ...) {
+  # Extract information from attributes
+  params <- attr(x, "design_params")
+  summary_info <- attr(x, "design_summary")
+  
   cat("Design Balance Report\n")
   cat("=====================\n")
-  cat(sprintf("Design method: %s\n", x$method))
-  if (!is.null(x$d_error)) {
-    cat(sprintf("D-error: %.6f\n", x$d_error))
+  cat(sprintf("Design method: %s\n", params$method))
+  if (!is.null(params$d_error)) {
+    cat(sprintf("D-error: %.6f\n", params$d_error))
   }
 
   # Profile usage info
-  info <- x$design_info
   cat(sprintf(
     "Profiles used: %d/%d (%.1f%%)\n",
-    info$n_profiles_used,
-    info$n_profiles_available,
-    info$profile_usage_rate * 100
+    summary_info$n_profiles_used,
+    summary_info$n_profiles_available,
+    summary_info$profile_usage_rate * 100
   ))
 
   # Show balance score if available
-  if (!is.null(info$efficiency$balance_score)) {
+  if (!is.null(summary_info$efficiency$balance_score)) {
     cat(sprintf(
       "Overall balance score: %.3f (higher is better)\n",
-      info$efficiency$balance_score
+      summary_info$efficiency$balance_score
     ))
   }
 
   cat("\n")
 
-  # Call the data frame method for detailed balance
-  result <- cbc_inspect_balance.data.frame(x$design, ...)
+  # Call the data frame method for detailed balance (x is now the data frame)
+  result <- cbc_inspect_balance.data.frame(x, ...)
 
   # Add design-specific information to result
   result$design_info <- list(
-    method = x$method,
-    d_error = x$d_error,
-    balance_score = info$efficiency$balance_score,
-    profiles_used = info$n_profiles_used,
-    profiles_available = info$n_profiles_available
+    method = params$method,
+    d_error = params$d_error,
+    balance_score = summary_info$efficiency$balance_score,
+    profiles_used = summary_info$n_profiles_used,
+    profiles_available = summary_info$n_profiles_available
   )
 
   invisible(result)
@@ -196,33 +199,36 @@ cbc_inspect_overlap <- function(x, ...) {
 #' @rdname cbc_inspect_overlap
 #' @export
 cbc_inspect_overlap.cbc_design <- function(x, ...) {
+  # Extract information from attributes
+  params <- attr(x, "design_params")
+  summary_info <- attr(x, "design_summary")
+  
   cat("Design Overlap Report\n")
   cat("=====================\n")
-  cat(sprintf("Design method: %s\n", x$method))
-  if (!is.null(x$d_error)) {
-    cat(sprintf("D-error: %.6f\n", x$d_error))
+  cat(sprintf("Design method: %s\n", params$method))
+  if (!is.null(params$d_error)) {
+    cat(sprintf("D-error: %.6f\n", params$d_error))
   }
 
   # Show overlap score if available
-  info <- x$design_info
-  if (!is.null(info$efficiency$overlap_score)) {
+  if (!is.null(summary_info$efficiency$overlap_score)) {
     cat(sprintf(
       "Overall overlap score: %.3f (lower is better)\n",
-      info$efficiency$overlap_score
+      summary_info$efficiency$overlap_score
     ))
   }
 
   cat("\n")
 
-  # Call the data frame method for detailed overlap
-  result <- cbc_inspect_overlap.data.frame(x$design, ...)
+  # Call the data frame method for detailed overlap (x is now the data frame)
+  result <- cbc_inspect_overlap.data.frame(x, ...)
 
   # Add design-specific information to result
   result$design_info <- list(
-    method = x$method,
-    d_error = x$d_error,
-    overlap_score = info$efficiency$overlap_score,
-    n_choice_sets = info$n_choice_sets
+    method = params$method,
+    d_error = params$d_error,
+    overlap_score = summary_info$efficiency$overlap_score,
+    n_choice_sets = summary_info$n_choice_sets
   )
 
   invisible(result)
@@ -411,28 +417,46 @@ cbc_compare_designs <- function(..., errors = "d", include_metrics = TRUE,
   design_metrics <- if (include_metrics) {
     lapply(designs, function(design) {
       if (inherits(design, "cbc_design")) {
-        info <- design$design_info
+        # Extract from attributes
+        params <- attr(design, "design_params")
+        summary_info <- attr(design, "design_summary")
         list(
-          method = design$method,
-          balance_score = info$efficiency$balance_score %||% NA,
-          overlap_score = info$efficiency$overlap_score %||% NA,
-          profile_usage_rate = info$profile_usage_rate,
-          n_profiles_used = info$n_profiles_used,
-          n_profiles_available = info$n_profiles_available
+          method = params$method,
+          balance_score = summary_info$efficiency$balance_score %||% NA,
+          overlap_score = summary_info$efficiency$overlap_score %||% NA,
+          profile_usage_rate = summary_info$profile_usage_rate,
+          n_profiles_used = summary_info$n_profiles_used,
+          n_profiles_available = summary_info$n_profiles_available
         )
       } else {
         # For cbc_survey objects, extract what we can
         design_ref <- attr(design, "design_ref")
         if (!is.null(design_ref)) {
-          info <- design_ref$design_info
-          list(
-            method = design_ref$method,
-            balance_score = info$efficiency$balance_score %||% NA,
-            overlap_score = info$efficiency$overlap_score %||% NA,
-            profile_usage_rate = info$profile_usage_rate %||% NA,
-            n_profiles_used = info$n_profiles_used %||% NA,
-            n_profiles_available = info$n_profiles_available %||% NA
-          )
+          # design_ref might be in old or new format, handle both
+          if (inherits(design_ref, "list") && !is.null(design_ref$design_info)) {
+            # Old format
+            info <- design_ref$design_info
+            list(
+              method = design_ref$method,
+              balance_score = info$efficiency$balance_score %||% NA,
+              overlap_score = info$efficiency$overlap_score %||% NA,
+              profile_usage_rate = info$profile_usage_rate %||% NA,
+              n_profiles_used = info$n_profiles_used %||% NA,
+              n_profiles_available = info$n_profiles_available %||% NA
+            )
+          } else {
+            # New format
+            params <- attr(design_ref, "design_params")
+            summary_info <- attr(design_ref, "design_summary")
+            list(
+              method = params$method %||% "unknown",
+              balance_score = summary_info$efficiency$balance_score %||% NA,
+              overlap_score = summary_info$efficiency$overlap_score %||% NA,
+              profile_usage_rate = summary_info$profile_usage_rate %||% NA,
+              n_profiles_used = summary_info$n_profiles_used %||% NA,
+              n_profiles_available = summary_info$n_profiles_available %||% NA
+            )
+          }
         } else {
           list(
             method = "unknown",
@@ -844,20 +868,21 @@ cbc_inspect_dominance.cbc_design <- function(
   total_threshold = 0.8,
   exclude = NULL
 ) {
-  # Set profiles attribute on the design data frame for validation
-  design_data <- x$design
-  attr(design_data, "profiles") <- x$profiles
-
+  # x is now the data frame directly, profiles are already an attribute
   result <- cbc_inspect_dominance.data.frame(
-    design_data,
+    x,
     priors,
     total_threshold,
     exclude
   )
 
-  # Update the design object with flagged data
-  x$design <- result
-  return(x)
+  # Copy over the design attributes to the result
+  attr(result, "profiles") <- attr(x, "profiles")
+  attr(result, "priors") <- attr(x, "priors")
+  attr(result, "design_params") <- attr(x, "design_params")
+  attr(result, "design_summary") <- attr(x, "design_summary")
+
+  return(result)
 }
 
 #' @rdname cbc_inspect_dominance
@@ -1156,13 +1181,24 @@ cbc_remove_dominant.cbc_design <- function(
   remove_total = TRUE,
   remove_partial = TRUE
 ) {
-  # For cbc_design objects, work with the design data frame
-  x$design <- cbc_remove_dominant(x$design, remove_total, remove_partial)
+  # Remove dominant choice sets from the data frame
+  result <- cbc_remove_dominant(x, remove_total, remove_partial)
 
-  # Update n_q in the design object
-  x$n_q <- length(unique(x$design$qID))
+  # Update n_q in the design parameters
+  params <- attr(result, "design_params")
+  if (!is.null(params)) {
+    params$n_q <- length(unique(result$qID))
+    attr(result, "design_params") <- params
+  }
 
-  return(x)
+  # Copy over other attributes if they're not already there
+  if (is.null(attr(result, "profiles"))) {
+    attr(result, "profiles") <- attr(x, "profiles")
+    attr(result, "priors") <- attr(x, "priors")
+    attr(result, "design_summary") <- attr(x, "design_summary")
+  }
+
+  return(result)
 }
 
 #' Print method for flagged designs
