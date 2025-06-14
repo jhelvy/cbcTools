@@ -1,45 +1,193 @@
-#' Create a survey from a conjoint design
+#' Create a survey from profiles or design
 #'
-#' This function takes a conjoint design and replicates it across a specified
-#' number of respondents to create a complete survey design.
+#' This function creates a complete survey design either by:
+#' 1. Taking profiles and creating both the experimental design and survey, or
+#' 2. Taking an existing design and replicating it across respondents
 #'
-#' @param design A `cbc_design` object created by `cbc_design()`.
+#' @param x Either a `cbc_profiles` object created by `cbc_profiles()`, or a
+#'   `cbc_design` object created by `cbc_design()`.
 #' @param n_resp Number of survey respondents
-#' @param randomize_questions Logical. Whether to randomize question order for each respondent
-#' @param randomize_alts Logical. Whether to randomize alternative order within questions
-#' @return A data frame with class `cbc_survey` containing the complete survey design
+#' @param method Choose the design method (only when `x` is profiles).
+#'   Options: `"sequential"` for D-efficient designs, or `"random"` for random surveys.
+#' @param n_alts Number of alternatives per choice question (only when `x` is profiles).
+#' @param n_q Number of questions per respondent (only when `x` is profiles).
+#' @param priors A `cbc_priors` object (only when `x` is profiles for non-random methods).
+#' @param randomize_questions Randomize question order for each respondent? Defaults to `TRUE`.
+#' @param randomize_alts Randomize alternative order within questions? Defaults to `TRUE`.
+#' @param ... Additional arguments:
+#'   - When `x` is profiles: passed to `cbc_design()` for design creation
+#'   - When `x` is design: currently unused
+#'
+#' @details
+#' **Two workflows supported:**
+#'
+#' **Workflow 1: Profiles → Survey (integrated)**
+#' ```r
+#' survey <- cbc_survey(
+#'   profiles,
+#'   n_resp = 100,
+#'   method = "sequential",
+#'   n_alts = 3,
+#'   n_q = 6,
+#'   priors = priors
+#' )
+#' ```
+#'
+#' **Workflow 2: Design → Survey (two-step)**
+#' ```r
+#' design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+#' survey <- cbc_survey(design, n_resp = 100)
+#' ```
+#'
+#' **When to use each workflow:**
+#' - **Integrated (Workflow 1)**: Most common use case, simplest for new users
+#' - **Two-step (Workflow 2)**: When you want to inspect/modify the design before creating the survey,
+#'   or when using the design in external platforms
+#'
+#' @return A data frame with class `cbc_survey` containing the complete survey design.
+#'   The underlying experimental design is stored as an attribute and can be
+#'   extracted using `cbc_extract_design()`.
+#'
 #' @export
 #' @examples
-#' # Create profiles and design
+#' # Create profiles
 #' profiles <- cbc_profiles(
 #'   price = c(1, 2, 3),
 #'   type = c("A", "B", "C")
 #' )
 #'
-#' design <- cbc_design(
+#' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   n_alts = 2,
-#'   n_q = 4
+#'   price = -0.5,
+#'   type = c(0.2, 0.3)
 #' )
 #'
-#' # Create survey for 100 respondents
-#' survey <- cbc_survey(design, n_resp = 100)
-cbc_survey <- function(
-    design,
+#' # Workflow 1: Integrated (profiles → survey)
+#' survey1 <- cbc_survey(
+#'   profiles,
+#'   n_resp = 100,
+#'   method = "sequential",
+#'   n_alts = 2,
+#'   n_q = 4,
+#'   priors = priors
+#' )
+#'
+#' # Workflow 2: Two-step (design → survey)
+#' design <- cbc_design(
+#'   profiles,
+#'   method = "sequential",
+#'   n_alts = 2,
+#'   n_q = 4,
+#'   priors = priors
+#' )
+#' # Inspect design if needed: cbc_inspect_balance(design)
+#' survey2 <- cbc_survey(design, n_resp = 100)
+#'
+#' # Both surveys have extractable designs
+#' design1 <- cbc_extract_design(survey1)
+#' design2 <- cbc_extract_design(survey2)
+cbc_survey <- function(x, n_resp, ...) {
+  UseMethod("cbc_survey")
+}
+
+#' @rdname cbc_survey
+#' @export
+cbc_survey.cbc_profiles <- function(
+    x,
     n_resp,
+    method = "sequential",
+    n_alts,
+    n_q,
+    priors = NULL,
     randomize_questions = TRUE,
-    randomize_alts = TRUE
+    randomize_alts = TRUE,
+    ...
 ) {
-  # Validate input class
-  if (!inherits(design, "cbc_design")) {
-    stop("design must be a cbc_design object created by cbc_design()")
+
+  # Validate inputs
+  if (!inherits(x, "cbc_profiles")) {
+    stop("x must be a cbc_profiles object created by cbc_profiles()")
   }
 
-  # Extract the design components from attributes
-  design_df <- design  # design is now the data frame directly
-  params <- attr(design, "design_params")
-  profiles <- attr(design, "profiles")
-  
+  profiles <- x
+
+  # Check required arguments for design creation
+  if (missing(n_alts) || missing(n_q)) {
+    stop("n_alts and n_q are required when creating survey from profiles")
+  }
+
+  # Validate method
+  valid_methods <- c("sequential", "random")
+  if (!method %in% valid_methods) {
+    stop("method must be one of: ", paste(valid_methods, collapse = ", "))
+  }
+
+  if (method == "random") {
+    # Create random survey directly (no underlying design)
+    survey <- create_random_survey_direct(
+      profiles = profiles,
+      n_resp = n_resp,
+      n_alts = n_alts,
+      n_q = n_q,
+      randomize_questions = randomize_questions,
+      randomize_alts = randomize_alts,
+      priors = priors,
+      ...
+    )
+
+    # No underlying design for random surveys
+    attr(survey, "base_design") <- NULL
+
+  } else {
+    # Step 1: Create design using cbc_design
+    message("Creating experimental design...")
+    design <- cbc_design(
+      profiles = profiles,
+      method = method,
+      n_alts = n_alts,
+      n_q = n_q,
+      priors = priors,
+      ...
+    )
+
+    # Step 2: Create survey from design
+    message("Replicating design across ", n_resp, " respondents...")
+    survey <- cbc_survey.cbc_design(
+      x = design,
+      n_resp = n_resp,
+      randomize_questions = randomize_questions,
+      randomize_alts = randomize_alts
+    )
+  }
+
+  return(survey)
+}
+
+#' @rdname cbc_survey
+#' @export
+cbc_survey.cbc_design <- function(
+    x,
+    n_resp,
+    randomize_questions = TRUE,
+    randomize_alts = TRUE,
+    ...
+) {
+
+  # Validate inputs
+  if (!inherits(x, "cbc_design")) {
+    stop("x must be a cbc_design object created by cbc_design()")
+  }
+
+  base_design <- x
+
+  # Extract design parameters
+  params <- attr(base_design, "design_params")
+  profiles <- attr(base_design, "profiles")
+
+  if (is.null(params)) {
+    stop("Invalid cbc_design object: missing design parameters")
+  }
+
   n_blocks <- params$n_blocks
   n_q <- params$n_q
   n_alts <- params$n_alts
@@ -57,12 +205,12 @@ cbc_survey <- function(
 
   # Replicate the design across respondents
   survey <- repeat_sets(
-    design_df, n_resp, n_alts, n_q, n_blocks,
+    base_design, n_resp, n_alts, n_q, n_blocks,
     randomize_questions, randomize_alts
   )
 
   # Calculate survey statistics
-  survey_stats <- calculate_survey_stats(survey, design, n_resp)
+  survey_stats <- calculate_survey_stats(survey, base_design, n_resp)
 
   # Create survey metadata
   survey_info <- list(
@@ -75,99 +223,43 @@ cbc_survey <- function(
     randomize_alts = randomize_alts,
     design_method = method,
     blocks_per_respondent = if (n_blocks > 1) ceiling(n_resp / n_blocks) else 1,
-    stats = survey_stats
+    stats = survey_stats,
+    workflow = "two_step"  # Indicate this came from design → survey
   )
 
   # Store references to original objects
-  attr(survey, "design_ref") <- design
+  attr(survey, "base_design") <- base_design
   attr(survey, "survey_info") <- survey_info
 
   class(survey) <- c("cbc_survey", "data.frame")
   return(survey)
 }
 
-#' Create a random survey directly from profiles
-#'
-#' This function creates a random survey by sampling directly from profiles,
-#' bypassing the structured design step. Each respondent sees a unique random
-#' set of choice questions.
-#'
-#' @param profiles A `cbc_profiles` object created by `cbc_profiles()`.
-#' @param n_resp Number of survey respondents
-#' @param n_alts Number of alternatives per choice question
-#' @param n_q Number of questions per respondent
-#' @param no_choice Include a "no choice" option in the choice sets? Defaults to `FALSE`.
-#' @param label The name of the variable to use in a "labeled" design (also
-#'   called an "alternative-specific" design) such that each set of alternatives
-#'   contains one of each of the levels in the `label` attribute. Defaults to `NULL`.
-#' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
-#'   null priors. Required if `remove_dominant = TRUE`.
-#' @param remove_dominant Logical. If `TRUE`, removes choice sets where one
-#'   alternative dominates others based on the provided priors. Defaults to `FALSE`.
-#' @param dominance_types Character vector specifying which types of dominance
-#'   to check for. Options are `"total"` (high choice probability) and/or
-#'   `"partial"` (best on all attributes). Defaults to `c("total", "partial")`.
-#' @param dominance_threshold Numeric. Threshold for total dominance detection.
-#'   If one alternative has a choice probability above this threshold, the choice
-#'   set is considered dominant. Defaults to `0.8`.
-#' @param max_dominance_attempts Integer. Maximum number of attempts to eliminate
-#'   dominant choice sets before giving up. Defaults to `100`.
-#' @return A data frame with class `cbc_survey` containing the complete random survey design
-#' @export
-#' @examples
-#' # Create profiles
-#' profiles <- cbc_profiles(
-#'   price = c(1, 2, 3),
-#'   type = c("A", "B", "C")
-#' )
-#'
-#' # Create random survey directly from profiles
-#' survey_random <- cbc_survey_random(
-#'   profiles = profiles,
-#'   n_resp = 100,
-#'   n_alts = 2,
-#'   n_q = 4
-#' )
-cbc_survey_random <- function(
+# Helper function for random surveys (when created directly from profiles)
+create_random_survey_direct <- function(
     profiles,
     n_resp,
     n_alts,
     n_q,
+    randomize_questions,
+    randomize_alts,
+    priors = NULL,
     no_choice = FALSE,
     label = NULL,
-    priors = NULL,
     remove_dominant = FALSE,
     dominance_types = c("total", "partial"),
     dominance_threshold = 0.8,
-    max_dominance_attempts = 100
+    max_dominance_attempts = 100,
+    ...
 ) {
-  # Validate inputs
-  if (!inherits(profiles, "cbc_profiles")) {
-    stop("profiles must be a cbc_profiles object created by cbc_profiles()")
-  }
-  
+
   # Validate dominance parameters
-  if (remove_dominant) {
-    if (is.null(priors)) {
-      warning("remove_dominant requires priors. Setting remove_dominant = FALSE.")
-      remove_dominant <- FALSE
-    } else {
-      if (!inherits(priors, "cbc_priors")) {
-        stop("priors must be a cbc_priors object created by cbc_priors()")
-      }
-      # Validate dominance_types
-      valid_types <- c("total", "partial")
-      if (!all(dominance_types %in% valid_types)) {
-        stop("dominance_types must be one or more of: ", paste(valid_types, collapse = ", "))
-      }
-      # Validate threshold
-      if (dominance_threshold <= 0 || dominance_threshold >= 1) {
-        stop("dominance_threshold must be between 0 and 1")
-      }
-    }
+  if (remove_dominant && is.null(priors)) {
+    warning("remove_dominant requires priors. Setting remove_dominant = FALSE.")
+    remove_dominant <- FALSE
   }
 
-  # Create random survey directly from profiles
+  # Use existing random survey creation logic
   survey <- make_random_survey(
     profiles, n_blocks = 1, n_resp, n_alts, n_q, label,
     priors, remove_dominant, dominance_types, dominance_threshold, max_dominance_attempts
@@ -177,7 +269,15 @@ cbc_survey_random <- function(
     survey <- add_no_choice(survey, n_alts)
   }
 
-  # Calculate survey statistics (create minimal design info for stats)
+  # Apply randomization if needed (random surveys are already randomized, but this allows control)
+  if (randomize_questions || randomize_alts) {
+    survey <- randomize_design(
+      survey, n_resp, n_alts, n_q, n_blocks = 1,
+      randomize_questions, randomize_alts
+    )
+  }
+
+  # Calculate survey statistics
   minimal_design_info <- list(
     profiles = profiles,
     design_info = list(efficiency = NULL)
@@ -191,31 +291,15 @@ cbc_survey_random <- function(
     total_questions = n_resp * n_q,
     total_observations = n_resp * n_q,
     total_alternatives = nrow(survey),
-    randomize_questions = TRUE,  # Always true for random surveys
-    randomize_alts = TRUE,       # Always true for random surveys
+    randomize_questions = randomize_questions,
+    randomize_alts = randomize_alts,
     design_method = "random",
     blocks_per_respondent = 1,
-    stats = survey_stats
+    stats = survey_stats,
+    workflow = "integrated"  # Indicate this came from profiles → survey directly
   )
 
-  # Calculate D-error for the random survey
-  d_error_computed <- cbc_error(survey, errors = 'd', priors = NULL)
-
-  # Store minimal design reference for profiles
-  design_ref <- list(
-    profiles = profiles,
-    method = "random",
-    n_q = n_q,
-    n_alts = n_alts,
-    n_blocks = 1,  # Add missing n_blocks
-    no_choice = no_choice,
-    label = label,
-    priors = NULL,
-    d_error = d_error_computed  # Use computed D-error
-  )
-
-  # Store references to original objects
-  attr(survey, "design_ref") <- design_ref
+  # Store survey metadata
   attr(survey, "survey_info") <- survey_info
 
   class(survey) <- c("cbc_survey", "data.frame")
@@ -393,17 +477,17 @@ get_col_types <- function(data) {
 
 make_random_survey <- function(
     profiles, n_blocks, n_resp, n_alts, n_q, label,
-    priors = NULL, remove_dominant = FALSE, dominance_types = c("total", "partial"), 
+    priors = NULL, remove_dominant = FALSE, dominance_types = c("total", "partial"),
     dominance_threshold = 0.8, max_dominance_attempts = 100
 ) {
   if (is.null(label)) {
     survey <- survey_rand_sample(
-      profiles, n_resp, n_alts, n_q, priors, remove_dominant, 
+      profiles, n_resp, n_alts, n_q, priors, remove_dominant,
       dominance_types, dominance_threshold, max_dominance_attempts
     )
   } else {
     survey <- survey_rand_sample_label(
-      profiles, n_resp, n_alts, n_q, label, priors, remove_dominant, 
+      profiles, n_resp, n_alts, n_q, label, priors, remove_dominant,
       dominance_types, dominance_threshold, max_dominance_attempts
     )
   }
@@ -414,29 +498,29 @@ make_random_survey <- function(
 }
 
 survey_rand_sample <- function(
-    profiles, n_resp, n_alts, n_q, priors = NULL, remove_dominant = FALSE, 
+    profiles, n_resp, n_alts, n_q, priors = NULL, remove_dominant = FALSE,
     dominance_types = c("total", "partial"), dominance_threshold = 0.8, max_dominance_attempts = 100
 ) {
   survey <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
   survey <- add_metadata(survey, n_resp, n_alts, n_q)
-  
+
   # Replace rows with duplicated profiles, duplicated choice sets, or dominant choice sets
   attempts <- 0
   repeat {
     dup_rows_obs <- get_dup_obs(survey, n_alts)
     dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
     dom_rows <- if (remove_dominant) get_dominant_obs(survey, priors, dominance_types, dominance_threshold) else c()
-    
+
     problematic_rows <- unique(c(dup_rows_obs, dup_rows_resp, dom_rows))
-    
+
     if (length(problematic_rows) == 0) {
       break  # No more problems
     }
-    
+
     # Replace problematic rows
     new_rows <- sample_profiles(profiles, size = length(problematic_rows))
     survey[problematic_rows, 1:ncol(new_rows)] <- new_rows
-    
+
     # Prevent infinite loops
     attempts <- attempts + 1
     if (attempts > max_dominance_attempts) {
@@ -446,12 +530,12 @@ survey_rand_sample <- function(
       break
     }
   }
-  
+
   return(survey)
 }
 
 survey_rand_sample_label <- function(
-    profiles, n_resp, n_alts, n_q, label, priors = NULL, remove_dominant = FALSE, 
+    profiles, n_resp, n_alts, n_q, label, priors = NULL, remove_dominant = FALSE,
     dominance_types = c("total", "partial"), dominance_threshold = 0.8, max_dominance_attempts = 100
 ) {
   n_alts <- override_label_alts(profiles, label, n_alts)
@@ -459,24 +543,24 @@ survey_rand_sample_label <- function(
   labels <- split(profiles, profiles[label])
   survey <- sample_profiles_by_group(labels, size = n_resp * n_q)
   survey <- add_metadata(survey, n_resp, n_alts, n_q)
-  
+
   # Replace rows with duplicated profiles, duplicated choice sets, or dominant choice sets
   attempts <- 0
   repeat {
     dup_rows_obs <- get_dup_obs(survey, n_alts)
     dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
     dom_rows <- if (remove_dominant) get_dominant_obs(survey, priors, dominance_types, dominance_threshold) else c()
-    
+
     problematic_rows <- unique(c(dup_rows_obs, dup_rows_resp, dom_rows))
-    
+
     if (length(problematic_rows) == 0) {
       break  # No more problems
     }
-    
+
     # Replace problematic rows (for labeled designs, need to sample by groups)
     new_rows <- sample_profiles_by_group(labels, size = length(problematic_rows) / n_alts)
     survey[problematic_rows, 1:ncol(new_rows)] <- new_rows
-    
+
     # Prevent infinite loops
     attempts <- attempts + 1
     if (attempts > max_dominance_attempts) {
@@ -486,7 +570,7 @@ survey_rand_sample_label <- function(
       break
     }
   }
-  
+
   return(survey)
 }
 
@@ -586,24 +670,24 @@ get_dominant_obs <- function(survey, priors, dominance_types, dominance_threshol
   if (is.null(priors)) {
     return(c())
   }
-  
+
   # Get unique choice sets (obsIDs)
   unique_obs <- unique(survey$obsID)
   dominant_obs <- c()
-  
+
   for (obs_id in unique_obs) {
     choice_set_rows <- survey[survey$obsID == obs_id, ]
-    
+
     # Use the same dominance checking logic as in optdesign.R
     is_dominant <- check_choice_set_dominance(
       choice_set_rows, priors, NULL, dominance_types, dominance_threshold
     )
-    
+
     if (is_dominant) {
       dominant_obs <- c(dominant_obs, obs_id)
     }
   }
-  
+
   # Return row indices for dominant choice sets
   return(which(survey$obsID %in% dominant_obs))
 }

@@ -1,112 +1,94 @@
-#' Make a choice-based conjoint survey design
+#' Generate experimental designs for choice experiments
 #'
-#' This function creates a data frame containing a choice-based conjoint survey
-#' design where each row is an alternative. Generate a variety of survey
-#' designs, including random design, D-efficient designs, and Bayesian
-#' D-efficient designs as well as designs with "no choice" options, blocking,
-#' and "labeled" designs (also known as "alternative specific" designs).
+#' This function creates experimental designs (DOE) for choice-based conjoint experiments.
+#' The design represents the choice questions that will be shown to a single respondent
+#' (or single block). To create a complete survey with multiple respondents, pass the
+#' result to `cbc_survey()` or use `cbc_survey()` directly with profiles.
 #'
-#' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
 #' @param profiles A data frame of class `cbc_profiles` created using the
 #'   `cbc_profiles()` function.
 #' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
 #'   random designs. Required for D-efficient designs.
 #' @param n_alts Number of alternatives per choice question.
-#' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used D-efficient or Bayesian D-efficient
-#'   designs. Max allowable is one block per respondent. Defaults to `1`,
-#'   meaning every respondent sees the same choice set.
+#' @param n_q Number of questions per respondent (or per block).
+#' @param n_blocks Number of blocks in the design. Each block contains `n_q` questions.
+#'   Defaults to `1`. When `n_blocks > 1`, the design will contain multiple versions
+#'   that can be distributed across respondents.
 #' @param n_start A numeric value indicating the number of random start designs
-#'   to use in obtaining a D-efficient or Bayesian D-efficient design.
-#'   The default is `1`. Increasing `n_start` can result in a more efficient
-#'   design at the expense of increased computational time.
+#'   to use in obtaining a D-efficient design. Defaults to `5`.
 #' @param no_choice Include a "no choice" option in the choice sets? Defaults to
 #'   `FALSE`. If `TRUE`, the total number of alternatives per question will be
 #'   one more than the provided `n_alts` argument.
 #' @param label The name of the variable to use in a "labeled" design (also
-#'   called an "alternative-specific" design) such that each set of alternatives
-#'   contains one of each of the levels in the `label` attribute. If used, the
-#'   `n_alts` argument will be ignored as its value is defined by the unique
-#'   number of levels in the `label` attribute Defaults to `NULL`.
-#' @param method Choose the design method to use. Currently only `"sequential"`
-#'   is supported. Defaults to `"sequential"`. See details below for complete
-#'   description of each method.
+#'   called an "alternative-specific" design). If used, the `n_alts` argument
+#'   will be ignored. Defaults to `NULL`.
+#' @param method Choose the design method to use. Currently supports `"sequential"`
+#'   for D-efficient designs and `"random"` for random designs. Defaults to `"sequential"`.
 #' @param prior_no_choice Prior utility value for the "no choice" alternative.
-#'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
-#' @param max_iter A numeric value indicating the maximum number allowed
-#'   iterations when searching for a D-efficient or Bayesian D-efficient design.
-#'   The default is 50.
+#'   Only required if `no_choice = TRUE` and using D-efficient methods. Defaults to `NULL`.
+#' @param max_iter Maximum number of iterations for D-efficient optimization.
+#'   Defaults to `50`.
 #' @param parallel Logical value indicating whether to use parallel processing.
 #'   Defaults to `FALSE`.
 #' @param remove_dominant Logical. If `TRUE`, removes choice sets where one
 #'   alternative dominates others based on the provided priors. Only works when
 #'   `priors` are provided. Defaults to `FALSE`.
 #' @param dominance_types Character vector specifying which types of dominance
-#'   to check for. Options are `"total"` (high choice probability) and/or
-#'   `"partial"` (best on all attributes). Defaults to `c("total", "partial")`.
+#'   to check for. Options are `"total"` and/or `"partial"`. Defaults to `c("total", "partial")`.
 #' @param dominance_threshold Numeric. Threshold for total dominance detection.
-#'   If one alternative has a choice probability above this threshold, the choice
-#'   set is considered dominant. Defaults to `0.8`.
+#'   Defaults to `0.8`.
 #' @param max_dominance_replacements Integer. Maximum number of replacement
 #'   attempts when removing dominant choice sets. Defaults to `10`.
+#' @param ... Additional arguments (currently unused).
 #'
-#' @details The `method` argument determines the design method used. Options
-#'   are:
+#' @details
+#' **Purpose:** Generate experimental designs for choice experiments
 #'
-#' - `"sequential"`: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the `priors` argument that include a covariance matrix. When `remove_dominant = TRUE`, dominance checking is integrated into the optimization process.
+#' **When to use `cbc_design()`:**
+#' - You need just the experimental design for use in external survey platforms (Qualtrics, etc.)
+#' - You want to inspect or modify the design before creating the full survey
+#' - You're conducting pure experimental design research
+#' - You need to optimize computational performance (no survey replication overhead)
 #'
-#'   All methods ensure that the two following criteria are met:
+#' **When to use `cbc_survey()` instead:**
+#' - You want to create a complete survey for choice analysis within R
+#' - You're conducting choice simulation or power analysis
+#' - You want the simplest workflow (profiles → complete survey)
 #'
-#'   1. No two profiles are the same within any one choice set.
-#'   2. No two choice sets are the same within any one respondent.
+#' **Design methods:**
+#' - `"sequential"`: Creates D-efficient designs using sequential optimization
+#' - `"random"`: Creates random designs by sampling from profiles
 #'
-#'   The table below summarizes method compatibility with other design options:
+#' **Typical workflows:**
+#' ```r
+#' # DOE for external use
+#' design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+#' # → Export to Qualtrics, save as CSV, etc.
 #'
-#'   Method        | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Dominance checking?
-#'   --------------|------------|------------------|----------------------|-----------|-------------------
-#'   `"sequential"` | No         | Yes              | Yes                  | Yes       | Yes
+#' # DOE → Survey (two-step)
+#' design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+#' survey <- cbc_survey(design, n_resp = 100)
 #'
-#' The `"sequential"` method creates a design by sequentially improving D-efficiency:
-#' 1. Start with a random design
-#' 2. Compute initial D-error
-#' 3. For each question, alternative, and attribute:
-#'    - Try all possible level changes to the attribute.
-#'    - Keep changes that improve the D-error AND do not create dominance (if `remove_dominant = TRUE`).
-#' 4. Repeat until no further improvements or max iterations are reached
+#' # Profiles → Survey (integrated, often easier)
+#' survey <- cbc_survey(profiles, n_resp = 100, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+#' ```
 #'
-#' @return The returned `design` object contains a choice-based conjoint
-#' survey design with class `cbc_design`. It includes the following components:
-#'
-#' - `design`: Data frame where each row is an alternative, including:
-#'   - `profileID`: Identifies the profile in `profiles`.
-#'   - `blockID`: If blocking is used, identifies each unique block.
-#'   - `respID`: Identifies each survey respondent.
-#'   - `qID`: Identifies the choice question answered by the respondent.
-#'   - `altID`: Identifies the alternative in any one choice observation.
-#'   - `obsID`: Identifies each unique choice observation across all respondents.
-#' - `profiles`: The original profiles used to create the design
-#' - `priors`: The priors used (if any)
-#' - `method`: Design method used
-#' - `n_q`, `n_alts`, `n_blocks`: Design parameters
-#' - `d_error`: D-error of the design
-#' - `design_info`: Additional metadata about the design
+#' @return A `cbc_design` object containing the experimental design with these components:
+#' - **Design data**: Each row is an alternative, with columns for `profileID`, `blockID`,
+#'   `respID`, `qID`, `altID`, `obsID`, and attribute values
+#' - **Metadata**: Stored as attributes including design parameters, efficiency metrics,
+#'   and the original profiles
+#' - **D-error**: Design efficiency measure (lower is better)
 #'
 #' @export
 #' @examples
 #' library(cbcTools)
 #'
-#' # Generate all possible profiles
+#' # Create profiles
 #' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make a random survey design (default)
-#' design_random <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
+#'   price = c(1, 2, 3, 4),
+#'   type = c("A", "B", "C"),
+#'   quality = c("Low", "High")
 #' )
 #'
 #' # Create priors
@@ -114,26 +96,32 @@
 #'   profiles = profiles,
 #'   price = -0.5,
 #'   type = c(0.2, 0.3),
-#'   freshness = c(0.4, 0.8)
+#'   quality = 0.4
 #' )
 #'
-#' # Make a D-efficient design with priors using the "sequential" method
+#' # Generate D-efficient design
 #' design <- cbc_design(
 #'   profiles = profiles,
-#'   priors = priors,
 #'   n_alts = 3,
 #'   n_q = 6,
+#'   priors = priors,
 #'   method = "sequential"
 #' )
 #'
-#' # Make a design with dominance checking
-#' design_no_dominant <- cbc_design(
-#'   profiles = profiles,
-#'   priors = priors,
-#'   n_alts = 3,
-#'   n_q = 6,
-#'   remove_dominant = TRUE,
-#'   dominance_types = c("total", "partial")
+#' # Inspect the design
+#' print(design)
+#' cbc_inspect_balance(design)
+#'
+#' # Check D-error
+#' d_error <- cbc_error(design, priors = priors)
+#'
+#' # Convert to survey for analysis
+#' survey <- cbc_survey(design, n_resp = 100)
+#'
+#' # Or create survey directly (alternative approach)
+#' survey2 <- cbc_survey(
+#'   profiles, n_resp = 100, method = "sequential",
+#'   n_alts = 3, n_q = 6, priors = priors
 #' )
 cbc_design <- function(
     profiles,
@@ -148,12 +136,13 @@ cbc_design <- function(
     prior_no_choice = NULL,
     max_iter = 50,
     parallel = FALSE,
-    # New dominance parameters
     remove_dominant = FALSE,
     dominance_types = c("total", "partial"),
     dominance_threshold = 0.8,
-    max_dominance_replacements = 10
+    max_dominance_replacements = 10,
+    ...
 ) {
+
   # Validate input classes
   if (!inherits(profiles, "cbc_profiles")) {
     stop("profiles must be a cbc_profiles object created by cbc_profiles()")
@@ -168,14 +157,14 @@ cbc_design <- function(
   }
 
   # Validate method
-  valid_methods <- c("sequential")
+  valid_methods <- c("sequential", "random")
   if (!method %in% valid_methods) {
     stop("method must be one of: ", paste(valid_methods, collapse = ", "))
   }
-  
-  # Check if priors are required for the chosen method
+
+  # Check if priors are recommended for the chosen method
   if (method == "sequential" && is.null(priors)) {
-    message("The 'sequential' method works better with priors, consider creating priors with cbc_priors().")
+    message("The 'sequential' method works better with priors. Consider creating priors with cbc_priors().")
   }
 
   # Validate dominance parameters
@@ -202,41 +191,29 @@ cbc_design <- function(
     }
   }
 
-  profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
-
+  # Check design feasibility
   check_inputs_design(
-    profiles,
-    n_alts,
-    n_q,
-    n_blocks,
-    n_start,
-    no_choice,
-    label,
-    method,
-    priors,
-    prior_no_choice,
-    max_iter,
-    parallel
+    profiles, n_alts, n_q, n_blocks, n_start, no_choice, label, method,
+    priors, prior_no_choice, max_iter, parallel
   )
 
   profiles_df <- as.data.frame(profiles)
 
-  # Method-specific setup ----
-  
-  # Inform user about Bayesian approach if using random parameters
-  if (!is.null(priors)) {
-    par_draws <- priors$par_draws
-    if (!is.null(par_draws)) {
-      message(
-        "Using Bayesian approach: Averaging error metrics across ",
-        nrow(par_draws), " draws from each of ",
-        ncol(par_draws), " random parameters"
-      )
-    }
-  }
-
-  # Create design ----
+  # Method-specific design creation
   if (method == 'sequential') {
+
+    # Inform user about Bayesian approach if using random parameters
+    if (!is.null(priors)) {
+      par_draws <- priors$par_draws
+      if (!is.null(par_draws)) {
+        message(
+          "Using Bayesian approach: Averaging error metrics across ",
+          nrow(par_draws), " draws from each of ",
+          ncol(par_draws), " random parameters"
+        )
+      }
+    }
+
     result <- make_design_sequential(
       profiles_df, n_blocks, n_alts, n_q, n_blocks,
       priors, max_iter, label, n_start,
@@ -244,14 +221,25 @@ cbc_design <- function(
     )
     design <- result$design
     d_error <- result$d_error
+
+  } else if (method == 'random') {
+
+    # For random designs, create a single respondent survey then convert to design
+    temp_survey <- make_random_survey(
+      profiles, n_blocks = n_blocks, n_resp = n_blocks, n_alts, n_q, label,
+      priors, remove_dominant, dominance_types, dominance_threshold, max_dominance_replacements
+    )
+    design <- temp_survey
+
+    # Compute D-error for random design (useful for comparison with other methods)
+    d_error <- cbc_error(design, errors = "d", priors = priors)
+
   }
-  # Future methods can be added here with additional else if blocks
+  # Future methods can be added here
 
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
   }
-
-  # Note: Dominance checking is now integrated into the optimization process
 
   # Store essential information as attributes
   attr(design, "profiles") <- profiles
@@ -266,10 +254,11 @@ cbc_design <- function(
     d_error = d_error,
     created_at = Sys.time(),
     remove_dominant = remove_dominant,
-    dominance_types = if (remove_dominant) dominance_types else NULL
+    dominance_types = if (remove_dominant) dominance_types else NULL,
+    purpose = "experimental_design"  # Indicate this is a pure DOE
   )
 
-  # Store computed metrics for printing (computed on-demand elsewhere)
+  # Store computed metrics for printing
   efficiency_info <- calculate_efficiency_metrics(design, profiles, priors)
   attr(design, "design_summary") <- list(
     n_profiles_available = nrow(profiles),

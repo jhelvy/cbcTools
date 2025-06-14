@@ -1,0 +1,385 @@
+---
+title: "cbcTools Workflows: Design and Survey Creation"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{cbcTools Workflows: Design and Survey Creation}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+bibliography: "`r here::here('vignettes', 'library.bib')`"
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.retina = 3,
+  comment = "#>"
+)
+
+# Suppress migration messages for cleaner vignette output
+options(cbcTools.suppress_migration_message = TRUE)
+```
+
+The cbcTools package offers flexible workflows for creating choice-based conjoint experiments. This vignette demonstrates the different approaches available and helps you choose the best workflow for your specific needs.
+
+# Overview of cbcTools Workflows
+
+cbcTools provides two main functions for creating choice experiments:
+
+- **`cbc_survey()`**: Creates complete surveys ready for choice analysis
+- **`cbc_design()`**: Creates experimental designs (DOE) for external use or inspection
+
+These functions support three distinct workflows:
+
+1. **Integrated Workflow**: `cbc_survey(profiles, ...)` - One step from profiles to complete survey
+2. **Two-Step Workflow**: `cbc_design()` → `cbc_survey(design, ...)` - Design first, then survey
+3. **DOE-Only Workflow**: `cbc_design()` only - For external survey platforms
+
+# Setup: Profiles and Priors
+
+Let's start by creating profiles and priors that we'll use throughout this vignette:
+
+```{r setup-data}
+library(cbcTools)
+
+# Create smartphone choice experiment profiles
+profiles <- cbc_profiles(
+  price = c(400, 600, 800, 1000),
+  brand = c("Apple", "Samsung", "Google"),
+  storage = c("64GB", "128GB", "256GB"),
+  camera = c("Standard", "Pro")
+)
+
+# Create utility priors reflecting realistic preferences
+priors <- cbc_priors(
+  profiles = profiles,
+  price = -0.002,                    # Negative: prefer lower prices (per dollar)
+  brand = c(0.5, 0.3),              # Samsung=0.5, Google=0.3 vs Apple (reference)
+  storage = c(0.2, 0.4),            # 128GB=0.2, 256GB=0.4 vs 64GB (reference)  
+  camera = 0.6                      # Pro=0.6 vs Standard (reference)
+)
+
+cat("Profiles created:", nrow(profiles), "unique smartphones\n")
+print(profiles)
+```
+
+# Workflow 1: Integrated (Profiles → Survey)
+
+**Best for:** Most users, complete analysis workflows, simplicity
+
+The integrated workflow creates both the experimental design and complete survey in a single function call. This is the recommended approach for most users.
+
+## Sequential (D-efficient) Survey
+
+```{r integrated-sequential}
+# Create a D-efficient survey in one step
+survey_integrated <- cbc_survey(
+  profiles,
+  n_resp = 100,
+  method = "sequential",
+  n_alts = 3,
+  n_q = 8,
+  priors = priors,
+  remove_dominant = TRUE
+)
+
+cat("Survey created with", nrow(survey_integrated), "total alternatives\n")
+cat("Respondents:", max(survey_integrated$respID), "\n")
+cat("Questions per respondent:", max(survey_integrated$qID), "\n")
+```
+
+The underlying experimental design is automatically created and stored:
+
+```{r integrated-extract}
+# Extract the underlying design if needed
+design_from_integrated <- cbc_extract_design(survey_integrated)
+cat("Underlying design extracted:", nrow(design_from_integrated), "alternatives\n")
+
+# Check design efficiency
+d_error <- cbc_error(design_from_integrated, priors = priors)
+cat("Design D-error:", round(d_error, 6), "\n")
+```
+
+## Random Survey
+
+Creating a random survey is just as simple—change the method:
+
+```{r integrated-random}
+# Create a random survey
+survey_random <- cbc_survey(
+  profiles,
+  n_resp = 100,
+  method = "random",  # Only difference!
+  n_alts = 3,
+  n_q = 8
+)
+
+cat("Random survey created with", nrow(survey_random), "alternatives\n")
+cat("Has extractable design:", has_extractable_design(survey_random), "\n")
+```
+
+Random surveys don't have an underlying experimental design since they're generated directly from profiles.
+
+# Workflow 2: Two-Step (Design → Survey)
+
+**Best for:** Design inspection, external platforms, advanced control
+
+The two-step workflow separates experimental design creation from survey replication, giving you full control over the process.
+
+## Create and Inspect Design
+
+```{r twostep-design}
+# Step 1: Create the experimental design
+design_explicit <- cbc_design(
+  profiles = profiles,
+  method = "sequential",
+  n_alts = 3,
+  n_q = 8,
+  priors = priors,
+  remove_dominant = TRUE
+)
+
+cat("Design created with", nrow(design_explicit), "alternatives\n")
+cat("Design D-error:", round(cbc_error(design_explicit, priors = priors), 6), "\n")
+```
+
+Now you can inspect the design before creating the survey:
+
+```{r twostep-inspect}
+# Inspect design balance
+balance_result <- cbc_inspect_balance(design_explicit)
+cat("Overall balance score:", round(balance_result$overall_balance, 3), "\n")
+
+# Inspect design overlap  
+overlap_result <- cbc_inspect_overlap(design_explicit)
+cat("Overall overlap score:", round(overlap_result$overall_overlap, 3), "\n")
+```
+
+## Create Survey from Design
+
+```{r twostep-survey}
+# Step 2: Create survey from the design
+survey_twostep <- cbc_survey(
+  design_explicit,          # Pass the design object
+  n_resp = 100,
+  randomize_questions = TRUE,
+  randomize_alts = TRUE
+)
+
+cat("Survey created from design:", nrow(survey_twostep), "total alternatives\n")
+cat("Respondents:", max(survey_twostep$respID), "\n")
+```
+
+Both surveys have the same analytical capabilities:
+
+```{r twostep-compare}
+# Both surveys have extractable designs
+design1 <- cbc_extract_design(survey_integrated)
+design2 <- cbc_extract_design(survey_twostep)
+
+cat("Integrated workflow design D-error:", round(cbc_error(design1, priors = priors), 6), "\n")
+cat("Two-step workflow design D-error:", round(cbc_error(design2, priors = priors), 6), "\n")
+```
+
+# Workflow 3: DOE-Only (External Platforms)
+
+**Best for:** Qualtrics integration, Sawtooth, other survey platforms
+
+Sometimes you only need the experimental design for use in external survey platforms:
+
+```{r doe-only}
+# Create design for export to external survey platform
+design_export <- cbc_design(
+  profiles = profiles,
+  method = "sequential",
+  n_alts = 3,
+  n_q = 12,        # More questions for external survey
+  n_blocks = 3,    # Multiple versions for blocking
+  priors = priors
+)
+
+cat("Export-ready design created\n")
+cat("Blocks:", max(design_export$blockID), "\n")
+cat("Questions per block:", max(design_export$qID), "\n")
+cat("Total choice sets:", max(design_export$obsID), "\n")
+cat("Design D-error:", round(cbc_error(design_export, priors = priors), 6), "\n")
+
+# Design is ready for export
+head(design_export)
+```
+
+You can export this design to CSV for use in external platforms:
+
+```{r export-demo, eval=FALSE}
+# Export to CSV for external survey platform
+write.csv(design_export, "smartphone_choice_design.csv", row.names = FALSE)
+```
+
+# Choice Analysis: All Workflows Lead Here
+
+Regardless of which workflow you use, the analysis capabilities are identical:
+
+## Choice Simulation
+
+```{r choice-simulation}
+# Simulate choices for both survey types
+choices_integrated <- cbc_choices(survey_integrated, priors = priors)
+choices_twostep <- cbc_choices(survey_twostep, priors = priors)
+
+cat("Choice simulation completed\n")
+cat("Integrated workflow choice rate:", round(mean(choices_integrated$choice), 3), "\n")
+cat("Two-step workflow choice rate:", round(mean(choices_twostep$choice), 3), "\n")
+```
+
+## Power Analysis
+
+```{r power-analysis}
+# Conduct power analysis
+power_integrated <- cbc_power(
+  choices_integrated, 
+  nbreaks = 8, 
+  n_cores = 1  # Use 1 core for vignette
+)
+
+cat("Power analysis completed\n")
+cat("Sample sizes tested:", paste(unique(power_integrated$sampleSize), collapse = ", "), "\n")
+
+# Plot power curves
+plot(power_integrated)
+```
+
+## Design Comparison
+
+Let's compare the efficiency of our sequential design against a random design:
+
+```{r design-comparison}
+# Create a random design for comparison
+design_random_comparison <- cbc_design(
+  profiles = profiles,
+  method = "random",
+  n_alts = 3,
+  n_q = 8,
+  priors = priors  # Use same priors for fair comparison
+)
+
+# Compare D-errors
+comparison <- cbc_compare_designs(
+  Sequential = design_explicit,
+  Random = design_random_comparison,
+  errors = c("d", "a"),
+  include_metrics = TRUE
+)
+
+print(comparison)
+```
+
+# Enhanced Inspection Capabilities
+
+The new workflow provides enhanced inspection capabilities for both surveys and designs:
+
+## Survey-Level Inspection
+
+```{r survey-inspection}
+# Inspect the full survey
+cat("=== Survey-Level Balance ===\n")
+cbc_inspect_balance(survey_integrated)
+```
+
+## Design-Level Inspection  
+
+```{r design-inspection}
+# Inspect just the underlying design
+cat("=== Design-Level Balance ===\n") 
+cbc_inspect_balance(survey_integrated, inspect_design = TRUE)
+```
+
+## Comprehensive Design Analysis
+
+```{r comprehensive-inspection}
+# Get comprehensive design metrics
+if (has_extractable_design(survey_integrated)) {
+  comprehensive <- cbc_inspect_design_comprehensive(
+    survey_integrated, 
+    errors = c("d", "a"),
+    priors = priors
+  )
+  
+  cat("Comprehensive design inspection completed\n")
+  cat("Components:", paste(names(comprehensive), collapse = ", "), "\n")
+}
+```
+
+# Workflow Comparison
+
+Here's a summary to help you choose the right workflow:
+
+```{r workflow-comparison, echo=FALSE}
+comparison_table <- data.frame(
+  Workflow = c("Integrated", "Two-Step", "DOE-Only"),
+  Function_Call = c("cbc_survey(profiles, ...)", "cbc_design() → cbc_survey()", "cbc_design() only"),
+  Best_For = c(
+    "Most users, complete R analysis",
+    "Design inspection, advanced control", 
+    "External platforms, pure DOE research"
+  ),
+  Lines_of_Code = c("~3-4", "~5-6", "~2-3"),
+  Design_Access = c("Via extraction", "Direct", "Direct"),
+  Survey_Creation = c("Automatic", "Manual", "Not applicable"),
+  stringsAsFactors = FALSE
+)
+
+knitr::kable(comparison_table, caption = "Workflow Comparison")
+```
+
+# Recommendations
+
+## Choose **Integrated Workflow** when:
+- ✅ You want the simplest possible workflow
+- ✅ You're new to choice experiments
+- ✅ You're conducting complete analysis in R (simulation, power analysis)
+- ✅ You don't need to inspect/modify the design beforehand
+
+## Choose **Two-Step Workflow** when:
+- ✅ You want to inspect the design before creating the survey
+- ✅ You're conducting design methodology research  
+- ✅ You want maximum control over the process
+- ✅ You're comparing multiple experimental designs
+
+## Choose **DOE-Only Workflow** when:
+- ✅ You're integrating with Qualtrics, Sawtooth, or other platforms
+- ✅ You only need the experimental design structure
+- ✅ You want to minimize computational overhead
+- ✅ You're exporting designs for external implementation
+
+# Migration from Older Versions
+
+If you're migrating from older versions of cbcTools, here's how the workflows have changed:
+
+## Old Approach
+```{r old-approach, eval=FALSE}
+# Old workflow (still works)
+design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+survey <- cbc_survey(design, n_resp = 100)
+choices <- cbc_choices(survey, priors = priors)
+
+# Random surveys required separate function
+survey_random <- cbc_survey_random(profiles, n_resp = 100, n_alts = 3, n_q = 6)
+```
+
+## New Approach  
+```{r new-approach, eval=FALSE}
+# New streamlined workflow (recommended)
+survey <- cbc_survey(profiles, n_resp = 100, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+choices <- cbc_choices(survey, priors = priors)
+design <- cbc_extract_design(survey)  # if needed
+
+# Random surveys unified
+survey_random <- cbc_survey(profiles, n_resp = 100, method = "random", n_alts = 3, n_q = 6)
+```
+
+The new approach provides the same analytical capabilities with a cleaner, more intuitive API. All existing code continues to work, but new projects benefit from the streamlined workflow.
+
+# Summary
+
+cbcTools now offers three flexible workflows that support different use cases while maintaining a consistent and intuitive API. Whether you're a new user seeking simplicity or an advanced researcher needing full control, there's a workflow that fits your needs. The key insight is that **all workflows lead to the same powerful analysis capabilities**—the difference is in how you get there and what level of control you need along the way.
