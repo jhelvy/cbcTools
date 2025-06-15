@@ -239,13 +239,14 @@ print.cbc_d_error_comparison <- function(x, ...) {
 #' @param x A cbc_survey object
 #' @param ... Additional arguments passed to print
 #' @export
+# Updated print method for surveys to show efficiency metrics
 print.cbc_survey <- function(x, ...) {
   cat("Choice-Based Conjoint Survey\n")
   cat("============================\n")
 
   # Get survey info
   info <- attr(x, "survey_info")
-  design_ref <- attr(x, "design_ref")
+  base_design <- attr(x, "base_design")
 
   # Basic survey structure
   cat(sprintf("Respondents: %d\n", info$n_resp))
@@ -253,21 +254,24 @@ print.cbc_survey <- function(x, ...) {
   cat(sprintf("Alternatives per question: %d\n", max(x$altID)))
 
   # Design information
-  if (!is.null(design_ref)) {
+  if (!is.null(base_design)) {
+    design_params <- attr(base_design, "design_params")
     cat(sprintf("Design method: %s\n", info$design_method))
-    if (!is.null(design_ref$d_error)) {
-      cat(sprintf("Design D-error: %.6f\n", design_ref$d_error))
+    if (!is.null(design_params$d_error)) {
+      cat(sprintf("Original design D-error: %.6f\n", design_params$d_error))
     }
-    if (design_ref$n_blocks > 1) {
+    if (design_params$n_blocks > 1) {
       cat(sprintf("Blocks: %d (%.1f respondents per block on average)\n",
-                  design_ref$n_blocks, info$n_resp / design_ref$n_blocks))
+                  design_params$n_blocks, info$n_resp / design_params$n_blocks))
     }
-    if (!is.null(design_ref$label)) {
-      cat(sprintf("Labeled design using: %s\n", design_ref$label))
+    if (!is.null(design_params$label)) {
+      cat(sprintf("Labeled design using: %s\n", design_params$label))
     }
-    if (design_ref$no_choice) {
+    if (design_params$no_choice) {
       cat("No-choice option: Yes\n")
     }
+  } else {
+    cat(sprintf("Design method: %s\n", info$design_method))
   }
 
   # Randomization settings
@@ -279,7 +283,7 @@ print.cbc_survey <- function(x, ...) {
     cat(paste(randomizations, collapse = " and "), "\n")
   }
 
-  # Survey statistics
+  # Survey statistics and efficiency metrics
   if (!is.null(info$stats)) {
     stats <- info$stats
     cat("\nSurvey Statistics:\n")
@@ -287,11 +291,16 @@ print.cbc_survey <- function(x, ...) {
                 stats$unique_profiles_used, stats$total_profiles_available,
                 stats$profile_usage_rate * 100))
     cat(sprintf("  Profile repetitions: %.1f times on average\n", stats$avg_profile_repetitions))
-    if (!is.null(stats$balance_score)) {
-      cat(sprintf("  Attribute balance: %.3f\n", stats$balance_score))
-    }
-    if (!is.null(stats$overlap_score)) {
-      cat(sprintf("  Attribute overlap: %.3f\n", stats$overlap_score))
+
+    # Show efficiency metrics if available
+    if (!is.null(stats$efficiency)) {
+      eff <- stats$efficiency
+      if (!is.null(eff$balance_score)) {
+        cat(sprintf("  Attribute balance: %.3f (higher is better)\n", eff$balance_score))
+      }
+      if (!is.null(eff$overlap_score)) {
+        cat(sprintf("  Attribute overlap: %.3f (lower is better)\n", eff$overlap_score))
+      }
     }
   }
 

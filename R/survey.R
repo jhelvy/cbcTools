@@ -324,38 +324,72 @@ is.cbc_survey <- function(x) {
 # Helper functions
 
 calculate_survey_stats <- function(survey, design, n_resp) {
-  # Profile usage statistics
-  profile_usage <- table(survey$profileID)
-  unique_profiles_used <- length(unique(survey$profileID))
+    # Profile usage statistics
+    profile_usage <- table(survey$profileID)
+    unique_profiles_used <- length(unique(survey$profileID))
 
-  # Handle both design objects and minimal design info
-  if (inherits(design, "cbc_design")) {
-    profiles <- attr(design, "profiles")
-    summary_info <- attr(design, "design_summary")
-    total_profiles_available <- nrow(profiles)
-    efficiency <- summary_info$efficiency
-  } else {
-    # For minimal design info (from random surveys)
-    total_profiles_available <- nrow(design$profiles)
-    efficiency <- design$design_info$efficiency
-  }
+    # Handle both design objects and minimal design info
+    if (inherits(design, "cbc_design")) {
+        profiles <- attr(design, "profiles")
+        summary_info <- attr(design, "design_summary")
+        total_profiles_available <- nrow(profiles)
+        # Don't inherit design efficiency - calculate fresh for survey
+    } else {
+        # For minimal design info (from random surveys)
+        total_profiles_available <- nrow(design$profiles)
+    }
 
-  stats <- list(
-    unique_profiles_used = unique_profiles_used,
-    total_profiles_available = total_profiles_available,
-    profile_usage_rate = unique_profiles_used / total_profiles_available,
-    avg_profile_repetitions = mean(profile_usage),
-    min_profile_repetitions = min(profile_usage),
-    max_profile_repetitions = max(profile_usage)
-  )
+    # Calculate efficiency metrics directly from survey data
+    efficiency_info <- calculate_survey_efficiency_metrics(survey, total_profiles_available)
 
-  # Add efficiency metrics if available from design
-  if (!is.null(efficiency)) {
-    stats$balance_score <- efficiency$balance_score
-    stats$overlap_score <- efficiency$overlap_score
-  }
+    stats <- list(
+        unique_profiles_used = unique_profiles_used,
+        total_profiles_available = total_profiles_available,
+        profile_usage_rate = unique_profiles_used / total_profiles_available,
+        avg_profile_repetitions = mean(profile_usage),
+        min_profile_repetitions = min(profile_usage),
+        max_profile_repetitions = max(profile_usage),
+        # Add efficiency metrics to stats
+        efficiency = efficiency_info
+    )
 
-  return(stats)
+    return(stats)
+}
+
+calculate_survey_efficiency_metrics <- function(survey, total_profiles_available) {
+    efficiency <- list()
+
+    # Calculate attribute balance score using existing helper
+    tryCatch({
+        attr_cols <- get_var_names(survey)
+        counts <- lapply(attr_cols, function(attr) table(survey[[attr]]))
+        names(counts) <- attr_cols
+        balance_metrics <- calculate_balance_metrics(counts)
+        efficiency$balance_score <- mean(sapply(balance_metrics, function(x) x$balance_score))
+        efficiency$balance_details <- balance_metrics
+    }, error = function(e) {
+        efficiency$balance_score <- NA
+    })
+
+    # Calculate attribute overlap score using existing helper
+    tryCatch({
+        attr_cols <- get_var_names(survey)
+        overlap_counts <- lapply(attr_cols, function(attr) get_att_overlap_counts(attr, survey))
+        names(overlap_counts) <- attr_cols
+        overlap_metrics <- calculate_overlap_metrics(overlap_counts, survey)
+        efficiency$overlap_score <- mean(sapply(overlap_metrics, function(x) x$complete_overlap_rate))
+        efficiency$overlap_details <- overlap_metrics
+    }, error = function(e) {
+        efficiency$overlap_score <- NA
+    })
+
+    # Calculate profile usage metrics
+    unique_profiles_used <- length(unique(survey$profileID))
+    efficiency$profile_usage_rate <- unique_profiles_used / total_profiles_available
+    efficiency$profiles_used <- unique_profiles_used
+    efficiency$profiles_available <- total_profiles_available
+
+    return(efficiency)
 }
 
 repeat_sets <- function(
