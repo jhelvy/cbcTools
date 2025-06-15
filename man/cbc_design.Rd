@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Make a choice-based conjoint survey design}
+\title{Generate experimental designs for choice experiments}
 \usage{
 cbc_design(
   profiles,
@@ -20,7 +20,8 @@ cbc_design(
   remove_dominant = FALSE,
   dominance_types = c("total", "partial"),
   dominance_threshold = 0.8,
-  max_dominance_replacements = 10
+  max_dominance_replacements = 10,
+  ...
 )
 }
 \arguments{
@@ -32,37 +33,31 @@ random designs. Required for D-efficient designs.}
 
 \item{n_alts}{Number of alternatives per choice question.}
 
-\item{n_q}{Number of questions per respondent.}
+\item{n_q}{Number of questions per respondent (or per block).}
 
-\item{n_blocks}{Number of blocks used D-efficient or Bayesian D-efficient
-designs. Max allowable is one block per respondent. Defaults to \code{1},
-meaning every respondent sees the same choice set.}
+\item{n_blocks}{Number of blocks in the design. Each block contains \code{n_q} questions.
+Defaults to \code{1}. When \code{n_blocks > 1}, the design will contain multiple versions
+that can be distributed across respondents.}
 
 \item{n_start}{A numeric value indicating the number of random start designs
-to use in obtaining a D-efficient or Bayesian D-efficient design.
-The default is \code{1}. Increasing \code{n_start} can result in a more efficient
-design at the expense of increased computational time.}
+to use in obtaining a D-efficient design. Defaults to \code{5}.}
 
 \item{no_choice}{Include a "no choice" option in the choice sets? Defaults to
 \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
 one more than the provided \code{n_alts} argument.}
 
 \item{label}{The name of the variable to use in a "labeled" design (also
-called an "alternative-specific" design) such that each set of alternatives
-contains one of each of the levels in the \code{label} attribute. If used, the
-\code{n_alts} argument will be ignored as its value is defined by the unique
-number of levels in the \code{label} attribute Defaults to \code{NULL}.}
+called an "alternative-specific" design). If used, the \code{n_alts} argument
+will be ignored. Defaults to \code{NULL}.}
 
-\item{method}{Choose the design method to use. Currently only \code{"sequential"}
-is supported. Defaults to \code{"sequential"}. See details below for complete
-description of each method.}
+\item{method}{Choose the design method to use. Currently supports \code{"sequential"}
+for D-efficient designs and \code{"random"} for random designs. Defaults to \code{"sequential"}.}
 
 \item{prior_no_choice}{Prior utility value for the "no choice" alternative.
-Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
+Only required if \code{no_choice = TRUE} and using D-efficient methods. Defaults to \code{NULL}.}
 
-\item{max_iter}{A numeric value indicating the maximum number allowed
-iterations when searching for a D-efficient or Bayesian D-efficient design.
-The default is 50.}
+\item{max_iter}{Maximum number of iterations for D-efficient optimization.
+Defaults to \code{50}.}
 
 \item{parallel}{Logical value indicating whether to use parallel processing.
 Defaults to \code{FALSE}.}
@@ -72,90 +67,78 @@ alternative dominates others based on the provided priors. Only works when
 \code{priors} are provided. Defaults to \code{FALSE}.}
 
 \item{dominance_types}{Character vector specifying which types of dominance
-to check for. Options are \code{"total"} (high choice probability) and/or
-\code{"partial"} (best on all attributes). Defaults to \code{c("total", "partial")}.}
+to check for. Options are \code{"total"} and/or \code{"partial"}. Defaults to \code{c("total", "partial")}.}
 
 \item{dominance_threshold}{Numeric. Threshold for total dominance detection.
-If one alternative has a choice probability above this threshold, the choice
-set is considered dominant. Defaults to \code{0.8}.}
+Defaults to \code{0.8}.}
 
 \item{max_dominance_replacements}{Integer. Maximum number of replacement
 attempts when removing dominant choice sets. Defaults to \code{10}.}
+
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
-The returned \code{design} object contains a choice-based conjoint
-survey design with class \code{cbc_design}. It includes the following components:
+A \code{cbc_design} object containing the experimental design with these components:
 \itemize{
-\item \code{design}: Data frame where each row is an alternative, including:
-\itemize{
-\item \code{profileID}: Identifies the profile in \code{profiles}.
-\item \code{blockID}: If blocking is used, identifies each unique block.
-\item \code{respID}: Identifies each survey respondent.
-\item \code{qID}: Identifies the choice question answered by the respondent.
-\item \code{altID}: Identifies the alternative in any one choice observation.
-\item \code{obsID}: Identifies each unique choice observation across all respondents.
-}
-\item \code{profiles}: The original profiles used to create the design
-\item \code{priors}: The priors used (if any)
-\item \code{method}: Design method used
-\item \code{n_q}, \code{n_alts}, \code{n_blocks}: Design parameters
-\item \code{d_error}: D-error of the design
-\item \code{design_info}: Additional metadata about the design
+\item \strong{Design data}: Each row is an alternative, with columns for \code{profileID}, \code{blockID},
+\code{respID}, \code{qID}, \code{altID}, \code{obsID}, and attribute values
+\item \strong{Metadata}: Stored as attributes including design parameters, efficiency metrics,
+and the original profiles
+\item \strong{D-error}: Design efficiency measure (lower is better)
 }
 }
 \description{
-This function creates a data frame containing a choice-based conjoint survey
-design where each row is an alternative. Generate a variety of survey
-designs, including random design, D-efficient designs, and Bayesian
-D-efficient designs as well as designs with "no choice" options, blocking,
-and "labeled" designs (also known as "alternative specific" designs).
+This function creates experimental designs (DOE) for choice-based conjoint experiments.
+The design represents the choice questions that will be shown to a single respondent
+(or single block). To create a complete survey with multiple respondents, pass the
+result to \code{cbc_survey()} or use \code{cbc_survey()} directly with profiles.
 }
 \details{
-The \code{method} argument determines the design method used. Options
-are:
+\strong{Purpose:} Generate experimental designs for choice experiments
+
+\strong{When to use \code{cbc_design()}:}
 \itemize{
-\item \code{"sequential"}: Creates a D-efficient design using sequential improvement. Bayesian D-efficient designs can be obtained by specifying a prior model with the \code{priors} argument that include a covariance matrix. When \code{remove_dominant = TRUE}, dominance checking is integrated into the optimization process.
-
-All methods ensure that the two following criteria are met:
-\enumerate{
-\item No two profiles are the same within any one choice set.
-\item No two choice sets are the same within any one respondent.
+\item You need just the experimental design for use in external survey platforms (Qualtrics, etc.)
+\item You want to inspect or modify the design before creating the full survey
+\item You're conducting pure experimental design research
+\item You need to optimize computational performance (no survey replication overhead)
 }
 
-The table below summarizes method compatibility with other design options:\tabular{llllll}{
-   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Dominance checking? \cr
-   \code{"sequential"} \tab No \tab Yes \tab Yes \tab Yes \tab Yes \cr
-}
-
-}
-
-The \code{"sequential"} method creates a design by sequentially improving D-efficiency:
-\enumerate{
-\item Start with a random design
-\item Compute initial D-error
-\item For each question, alternative, and attribute:
+\strong{When to use \code{cbc_survey()} instead:}
 \itemize{
-\item Try all possible level changes to the attribute.
-\item Keep changes that improve the D-error AND do not create dominance (if \code{remove_dominant = TRUE}).
+\item You want to create a complete survey for choice analysis within R
+\item You're conducting choice simulation or power analysis
+\item You want the simplest workflow (profiles → complete survey)
 }
-\item Repeat until no further improvements or max iterations are reached
+
+\strong{Design methods:}
+\itemize{
+\item \code{"sequential"}: Creates D-efficient designs using sequential optimization
+\item \code{"random"}: Creates random designs by sampling from profiles
 }
+
+\strong{Typical workflows:}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# DOE for external use
+design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+# → Export to Qualtrics, save as CSV, etc.
+
+# DOE → Survey (two-step)
+design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+survey <- cbc_survey(design, n_resp = 100)
+
+# Profiles → Survey (integrated, often easier)
+survey <- cbc_survey(profiles, n_resp = 100, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+}\if{html}{\out{</div>}}
 }
 \examples{
 library(cbcTools)
 
-# Generate all possible profiles
+# Create profiles
 profiles <- cbc_profiles(
-  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  type      = c("Fuji", "Gala", "Honeycrisp"),
-  freshness = c('Poor', 'Average', 'Excellent')
-)
-
-# Make a random survey design (default)
-design_random <- cbc_design(
-  profiles = profiles,
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6    # Number of questions per respondent
+  price = c(1, 2, 3, 4),
+  type = c("A", "B", "C"),
+  quality = c("Low", "High")
 )
 
 # Create priors
@@ -163,34 +146,31 @@ priors <- cbc_priors(
   profiles = profiles,
   price = -0.5,
   type = c(0.2, 0.3),
-  freshness = c(0.4, 0.8)
+  quality = 0.4
 )
 
-# Make a D-efficient design with priors using the "sequential" method
+# Generate D-efficient design
 design <- cbc_design(
   profiles = profiles,
-  priors = priors,
   n_alts = 3,
   n_q = 6,
+  priors = priors,
   method = "sequential"
 )
 
-# Make a design with dominance checking
-design_no_dominant <- cbc_design(
-  profiles = profiles,
-  priors = priors,
-  n_alts = 3,
-  n_q = 6,
-  remove_dominant = TRUE,
-  dominance_types = c("total", "partial")
+# Inspect the design
+print(design)
+cbc_inspect_balance(design)
+
+# Check D-error
+d_error <- cbc_error(design, priors = priors)
+
+# Convert to survey for analysis
+survey <- cbc_survey(design, n_resp = 100)
+
+# Or create survey directly (alternative approach)
+survey2 <- cbc_survey(
+  profiles, n_resp = 100, method = "sequential",
+  n_alts = 3, n_q = 6, priors = priors
 )
 }
-\keyword{DoE.base}
-\keyword{design}
-\keyword{experiment}
-\keyword{idefix}
-\keyword{logit}
-\keyword{logitr}
-\keyword{mixed}
-\keyword{mnl}
-\keyword{mxl}

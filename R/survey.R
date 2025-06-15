@@ -9,6 +9,7 @@
 #' @param n_resp Number of survey respondents
 #' @param method Choose the design method (only when `x` is profiles).
 #'   Options: `"sequential"` for D-efficient designs, or `"random"` for random surveys.
+#'   Defaults to `"random"`.
 #' @param n_alts Number of alternatives per choice question (only when `x` is profiles).
 #' @param n_q Number of questions per respondent (only when `x` is profiles).
 #' @param priors A `cbc_priors` object (only when `x` is profiles for non-random methods).
@@ -35,7 +36,13 @@
 #'
 #' **Workflow 2: Design → Survey (two-step)**
 #' ```r
-#' design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
+#' design <- cbc_design(
+#'   profiles,
+#'   method = "sequential",
+#'   n_alts = 3,
+#'   n_q = 6,
+#'   priors = priors
+#' )
 #' survey <- cbc_survey(design, n_resp = 100)
 #' ```
 #'
@@ -95,7 +102,7 @@ cbc_survey <- function(x, n_resp, ...) {
 cbc_survey.cbc_profiles <- function(
     x,
     n_resp,
-    method = "sequential",
+    method = "random",
     n_alts,
     n_q,
     priors = NULL,
