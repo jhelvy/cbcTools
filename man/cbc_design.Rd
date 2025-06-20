@@ -2,31 +2,36 @@
 % Please edit documentation in R/design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Generate experimental designs for choice experiments}
+\title{Generate survey designs for choice experiments}
 \usage{
 cbc_design(
   profiles,
+  method = "random",
   priors = NULL,
   n_alts,
   n_q,
+  n_resp,
   n_blocks = 1,
   n_start = 5,
   no_choice = FALSE,
   label = NULL,
-  method = "sequential",
-  prior_no_choice = NULL,
+  randomize_questions = TRUE,
+  randomize_alts = TRUE,
   max_iter = 50,
   parallel = FALSE,
   remove_dominant = FALSE,
   dominance_types = c("total", "partial"),
   dominance_threshold = 0.8,
-  max_dominance_replacements = 10,
-  ...
+  max_dominance_attempts = 10
 )
 }
 \arguments{
 \item{profiles}{A data frame of class \code{cbc_profiles} created using the
 \code{cbc_profiles()} function.}
+
+\item{method}{Choose the design method to use. Currently supports \code{"sequential"}
+for D-efficient designs and \code{"random"} for random designs.
+Defaults to \code{"random"}.}
 
 \item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
 random designs. Required for D-efficient designs.}
@@ -34,6 +39,8 @@ random designs. Required for D-efficient designs.}
 \item{n_alts}{Number of alternatives per choice question.}
 
 \item{n_q}{Number of questions per respondent (or per block).}
+
+\item{n_resp}{Number of survey respondents.}
 
 \item{n_blocks}{Number of blocks in the design. Each block contains \code{n_q} questions.
 Defaults to \code{1}. When \code{n_blocks > 1}, the design will contain multiple versions
@@ -50,11 +57,9 @@ one more than the provided \code{n_alts} argument.}
 called an "alternative-specific" design). If used, the \code{n_alts} argument
 will be ignored. Defaults to \code{NULL}.}
 
-\item{method}{Choose the design method to use. Currently supports \code{"sequential"}
-for D-efficient designs and \code{"random"} for random designs. Defaults to \code{"sequential"}.}
+\item{randomize_questions}{Randomize question order for each respondent? Defaults to \code{TRUE}.}
 
-\item{prior_no_choice}{Prior utility value for the "no choice" alternative.
-Only required if \code{no_choice = TRUE} and using D-efficient methods. Defaults to \code{NULL}.}
+\item{randomize_alts}{Randomize alternative order within questions? Defaults to \code{TRUE}.}
 
 \item{max_iter}{Maximum number of iterations for D-efficient optimization.
 Defaults to \code{50}.}
@@ -72,10 +77,8 @@ to check for. Options are \code{"total"} and/or \code{"partial"}. Defaults to \c
 \item{dominance_threshold}{Numeric. Threshold for total dominance detection.
 Defaults to \code{0.8}.}
 
-\item{max_dominance_replacements}{Integer. Maximum number of replacement
+\item{max_dominance_attempts}{Integer. Maximum number of replacement
 attempts when removing dominant choice sets. Defaults to \code{10}.}
-
-\item{...}{Additional arguments (currently unused).}
 }
 \value{
 A \code{cbc_design} object containing the experimental design with these components:
@@ -92,44 +95,6 @@ This function creates experimental designs (DOE) for choice-based conjoint exper
 The design represents the choice questions that will be shown to a single respondent
 (or single block). To create a complete survey with multiple respondents, pass the
 result to \code{cbc_survey()} or use \code{cbc_survey()} directly with profiles.
-}
-\details{
-\strong{Purpose:} Generate experimental designs for choice experiments
-
-\strong{When to use \code{cbc_design()}:}
-\itemize{
-\item You need just the experimental design for use in external survey platforms (Qualtrics, etc.)
-\item You want to inspect or modify the design before creating the full survey
-\item You're conducting pure experimental design research
-\item You need to optimize computational performance (no survey replication overhead)
-}
-
-\strong{When to use \code{cbc_survey()} instead:}
-\itemize{
-\item You want to create a complete survey for choice analysis within R
-\item You're conducting choice simulation or power analysis
-\item You want the simplest workflow (profiles → complete survey)
-}
-
-\strong{Design methods:}
-\itemize{
-\item \code{"sequential"}: Creates D-efficient designs using sequential optimization
-\item \code{"random"}: Creates random designs by sampling from profiles
-}
-
-\strong{Typical workflows:}
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{# DOE for external use
-design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
-# → Export to Qualtrics, save as CSV, etc.
-
-# DOE → Survey (two-step)
-design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
-survey <- cbc_survey(design, n_resp = 100)
-
-# Profiles → Survey (integrated, often easier)
-survey <- cbc_survey(profiles, n_resp = 100, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
-}\if{html}{\out{</div>}}
 }
 \examples{
 library(cbcTools)
@@ -164,13 +129,4 @@ cbc_inspect_balance(design)
 
 # Check D-error
 d_error <- cbc_error(design, priors = priors)
-
-# Convert to survey for analysis
-survey <- cbc_survey(design, n_resp = 100)
-
-# Or create survey directly (alternative approach)
-survey2 <- cbc_survey(
-  profiles, n_resp = 100, method = "sequential",
-  n_alts = 3, n_q = 6, priors = priors
-)
 }

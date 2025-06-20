@@ -57,8 +57,6 @@ validate_priors <- function(priors, profiles) {
             )
         }
     }
-
-    invisible(TRUE)
 }
 
 # Helper function to create a simple hash of profiles structure
@@ -82,7 +80,7 @@ validate_method <- function(method) {
 }
 
 validate_dominance_inputs <- function(
-    dominance_types, dominance_threshold, max_dominance_replacements
+    dominance_types, dominance_threshold, max_dominance_attempts
 ) {
     # Validate dominance_types
     valid_types <- c("total", "partial")
@@ -95,8 +93,8 @@ validate_dominance_inputs <- function(
     }
 
     # Validate max replacements
-    if (max_dominance_replacements < 1) {
-        stop("max_dominance_replacements must be at least 1")
+    if (max_dominance_attempts < 1) {
+        stop("max_dominance_attempts must be at least 1")
     }
 }
 

@@ -1,4 +1,4 @@
-#' Generate experimental designs for choice experiments
+#' Generate survey designs for choice experiments
 #'
 #' This function creates experimental designs (DOE) for choice-based conjoint experiments.
 #' The design represents the choice questions that will be shown to a single respondent
@@ -39,41 +39,8 @@
 #'   to check for. Options are `"total"` and/or `"partial"`. Defaults to `c("total", "partial")`.
 #' @param dominance_threshold Numeric. Threshold for total dominance detection.
 #'   Defaults to `0.8`.
-#' @param max_dominance_replacements Integer. Maximum number of replacement
+#' @param max_dominance_attempts Integer. Maximum number of replacement
 #'   attempts when removing dominant choice sets. Defaults to `10`.
-#'
-#' @details
-#' **Purpose:** Generate experimental designs for choice experiments
-#'
-#' **When to use `cbc_design()`:**
-#' - You need just the experimental design for use in external survey platforms (Qualtrics, etc.)
-#' - You want to inspect or modify the design before creating the full survey
-#' - You're conducting pure experimental design research
-#' - You need to optimize computational performance (no survey replication overhead)
-#'
-#' **When to use `cbc_survey()` instead:**
-#' - You want to create a complete survey for choice analysis within R
-#' - You're conducting choice simulation or power analysis
-#' - You want the simplest workflow (profiles → complete survey)
-#'
-#' **Design methods:**
-#' - `"sequential"`: Creates D-efficient designs using sequential optimization
-#' - `"random"`: Creates random designs by sampling from profiles
-#'
-#' **Typical workflows:**
-#' ```r
-#' # DOE for external use
-#' design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
-#' # → Export to Qualtrics, save as CSV, etc.
-#'
-#' # DOE → Survey (two-step)
-#' design <- cbc_design(profiles, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
-#' survey <- cbc_survey(design, n_resp = 100)
-#'
-#' # Profiles → Survey (integrated, often easier)
-#' survey <- cbc_survey(profiles, n_resp = 100, method = "sequential", n_alts = 3, n_q = 6, priors = priors)
-#' ```
-#'
 #' @return A `cbc_design` object containing the experimental design with these components:
 #' - **Design data**: Each row is an alternative, with columns for `profileID`, `blockID`,
 #'   `respID`, `qID`, `altID`, `obsID`, and attribute values
@@ -133,7 +100,7 @@ cbc_design <- function(
     remove_dominant = FALSE,
     dominance_types = c("total", "partial"),
     dominance_threshold = 0.8,
-    max_dominance_replacements = 10
+    max_dominance_attempts = 10
 ) {
 
   # Validate inputs
@@ -150,7 +117,7 @@ cbc_design <- function(
       remove_dominant <- FALSE
     } else {
       validate_dominance_inputs(
-        dominance_types, dominance_threshold, max_dominance_replacements
+        dominance_types, dominance_threshold, max_dominance_attempts
       )
     }
   }
@@ -186,6 +153,17 @@ cbc_design <- function(
     design <- result$design
     d_error <- result$d_error
 
+    # Apply randomization if needed
+    design <- repeat_sets(
+        design,
+        n_resp,
+        n_alts,
+        n_q,
+        n_blocks,
+        randomize_questions,
+        randomize_alts
+    )
+
   } else if (method == 'random') {
 
     # Create random survey directly (no underlying design)
@@ -206,17 +184,6 @@ cbc_design <- function(
   if (no_choice) {
     design <- add_no_choice(design, n_alts)
   }
-
-  # Apply randomization if needed
-  design <- repeat_sets(
-      design,
-      n_resp,
-      n_alts,
-      n_q,
-      n_blocks,
-      randomize_questions,
-      randomize_alts
-  )
 
   # Store essential information as attributes
   attr(design, "profiles") <- profiles
