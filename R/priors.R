@@ -273,68 +273,6 @@ cor_spec <- function(with, value, level = NULL, with_level = NULL) {
   )
 }
 
-#' Validate that priors are compatible with profiles
-#'
-#' This function checks if priors were created for the same profiles structure
-#' @param priors A cbc_priors object
-#' @param profiles A cbc_profiles object
-#' @return Invisibly returns TRUE if compatible, throws error or warning if not
-#' @export
-validate_priors_profiles <- function(priors, profiles) {
-  if (!inherits(priors, "cbc_priors")) {
-    stop("priors must be a cbc_priors object created by cbc_priors()")
-  }
-  if (!inherits(profiles, "cbc_profiles")) {
-    stop("profiles must be a cbc_profiles object created by cbc_profiles()")
-  }
-
-  priors_meta <- priors$profiles_metadata
-  current_hash <- digest_profiles(profiles)
-
-  # Check if profiles structure has changed
-  if (priors_meta$profile_hash != current_hash) {
-    current_attr_info <- attr(profiles, "attribute_info")
-
-    # More detailed comparison
-    if (!identical(priors_meta$attribute_info, current_attr_info)) {
-      warning(
-        "Priors were created for different profile attributes or levels. ",
-        "Consider recreating priors with cbc_priors().",
-        call. = FALSE
-      )
-    } else if (priors_meta$n_profiles != nrow(profiles)) {
-      message(
-        "Priors were created for profiles with ", priors_meta$n_profiles,
-        " rows, but current profiles have ", nrow(profiles), " rows. ",
-        "This is typically fine if you've applied restrictions."
-      )
-    }
-  }
-
-  invisible(TRUE)
-}
-
-# Helper function to create a simple hash of profiles structure
-digest_profiles <- function(profiles) {
-  # Create a simple hash based on attribute info and structure
-  attr_info <- attr(profiles, "attribute_info")
-  structure_string <- paste(
-    names(attr_info),
-    sapply(attr_info, function(x) paste(x$type, x$n_levels, collapse = "_")),
-    collapse = "|"
-  )
-  # Use a simple hash - in production you might want digest::digest()
-  abs(sum(utf8ToInt(structure_string)))
-}
-
-#' Check if object is a cbc_priors object
-#' @param x Object to check
-#' @return Logical indicating if x is a cbc_priors object
-#' @export
-is.cbc_priors <- function(x) {
-  inherits(x, "cbc_priors")
-}
-
 # Helper function to build correlation matrix from random parameter specifications
 build_correlation_matrix <- function(attrs, random_params) {
   # Get list of all random parameters and their levels

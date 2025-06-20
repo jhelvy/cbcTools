@@ -36,7 +36,6 @@ check_inputs_design <- function(
     label,
     method,
     priors,
-    prior_no_choice,
     max_iter,
     parallel
 ) {
@@ -56,17 +55,6 @@ check_inputs_design <- function(
   # Check that priors are appropriate if specified
 
   if (!is.null(priors)) {
-
-    # If using a D-efficient design with a no choice option in the priors,
-    # user must specify a value for prior_no_choice
-
-    if (no_choice & is.null(prior_no_choice)) {
-      stop(
-        'If "no_choice = TRUE", you must ',
-        'specify the prior utility for the "no choice" option using ',
-        '"prior_no_choice"'
-      )
-    }
 
     # Check that prior names aren't missing
     prior_names <- names(priors$attrs)
