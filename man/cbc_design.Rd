@@ -6,13 +6,13 @@
 \usage{
 cbc_design(
   profiles,
-  method = "random",
-  priors = NULL,
   n_alts,
   n_q,
   n_resp,
   n_blocks = 1,
   n_start = 5,
+  method = "random",
+  priors = NULL,
   no_choice = FALSE,
   label = NULL,
   randomize_questions = TRUE,
@@ -29,13 +29,6 @@ cbc_design(
 \item{profiles}{A data frame of class \code{cbc_profiles} created using the
 \code{cbc_profiles()} function.}
 
-\item{method}{Choose the design method to use. Currently supports \code{"sequential"}
-for D-efficient designs and \code{"random"} for random designs.
-Defaults to \code{"random"}.}
-
-\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
-random designs. Required for D-efficient designs.}
-
 \item{n_alts}{Number of alternatives per choice question.}
 
 \item{n_q}{Number of questions per respondent (or per block).}
@@ -48,6 +41,13 @@ that can be distributed across respondents.}
 
 \item{n_start}{A numeric value indicating the number of random start designs
 to use in obtaining a D-efficient design. Defaults to \code{5}.}
+
+\item{method}{Choose the design method to use. Currently supports \code{"sequential"}
+for D-efficient designs and \code{"random"} for random designs.
+Defaults to \code{"random"}.}
+
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
+random designs. Required for D-efficient designs.}
 
 \item{no_choice}{Include a "no choice" option in the choice sets? Defaults to
 \code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be

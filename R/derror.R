@@ -66,8 +66,7 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
 #' By default, it returns only D-error, but can compute multiple optimality
 #' criteria including D-, A-, G-, and E-error as well as condition numbers.
 #'
-#' @param x Either a `cbc_design` object created by `cbc_design()`, a `cbc_survey`
-#'   object, or a data frame containing a choice experiment design
+#' @param design A `cbc_design` object created by `cbc_design()`.
 #' @param errors Character vector specifying which error metrics to compute.
 #'   Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error),
 #'   "all" (comprehensive metrics). Defaults to "d". When priors contain
@@ -75,16 +74,12 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
 #' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
 #'   null priors. If `x` is a `cbc_design` object, the priors from that object
 #'   will be used by default.
+#' @param profiles A data frame of class `cbc_profiles` created using the
+#'   `cbc_profiles()` function.
 #' @param exclude Character vector of attribute names to exclude from error
 #'   calculations
 #' @return For single error types ("d"), returns the numeric error value.
-#'   For multiple error types or "all", returns a list containing requested metrics:
-#'   \itemize{
-#'     \item d_error: D-optimality criterion (lower is better)
-#'     \item a_error: A-optimality criterion (lower is better)
-#'     \item g_error: G-optimality criterion (lower is better)
-#'     \item e_error: E-optimality criterion (higher is better)
-#'   }
+#'   For multiple error types or "all", returns a list containing requested metrics.
 #' @details
 #' The different error criteria measure different aspects of design efficiency:
 #' \itemize{
@@ -132,82 +127,49 @@ compute_db_error <- function(par_draws, X, X_list, obsID, reps) {
 #'
 #' # This will show message about Bayesian approach
 #' bayesian_errors <- cbc_error(design, errors = c("d", "a"), priors = priors_random)
-cbc_error <- function(x, errors = "d", priors = NULL, exclude = NULL) {
-  UseMethod("cbc_error")
-}
+cbc_error <- function(
+    design,
+    errors = "d",
+    priors = NULL,
+    profiles = NULL,
+    exclude = NULL
+) {
 
-#' @rdname cbc_error
-#' @export
-cbc_error.cbc_survey <- function(x, errors = "d", priors = NULL, exclude = NULL) {
-  # Get design reference from survey
-  design_ref <- attr(x, "design_ref")
-
+  # Use priors and profiles from design object if not specified
+  if (is.null(profiles)) {
+    profiles <- attr(design, "profiles")
+  }
   # Use priors from design object if not specified
   if (is.null(priors)) {
-    if (!is.null(design_ref)) {
-      priors <- design_ref$priors
-    }
-  } else {
-    # Validate provided priors against survey's profiles
-    if (!inherits(priors, "cbc_priors")) {
-      stop("priors must be a cbc_priors object created by cbc_priors()")
-    }
-    if (!is.null(design_ref)) {
-      validate_priors_profiles(priors, design_ref$profiles)
-    }
+    priors <- attr(design, "priors")
   }
 
-  # Call the data frame method
-  cbc_error.data.frame(x, errors, priors, exclude)
-}
-
-#' @rdname cbc_error
-#' @export
-cbc_error.cbc_design <- function(x, errors = "d", priors = NULL, exclude = NULL) {
-  # Use priors from design object if not specified
-  if (is.null(priors)) {
-    priors <- attr(x, "priors")
-  } else {
-    # Validate provided priors against design's profiles
-    if (!inherits(priors, "cbc_priors")) {
-      stop("priors must be a cbc_priors object created by cbc_priors()")
-    }
-    validate_priors_profiles(priors, attr(x, "profiles"))
+  # Set the no_choice arg
+  no_choice <- FALSE
+  if ("no_choice" %in% names(design)) {
+      no_choice <- TRUE
   }
 
   # Call the data frame method (x is now the data frame directly)
-  cbc_error.data.frame(x, errors, priors, exclude)
-}
-
-#' @rdname cbc_error
-#' @export
-cbc_error.data.frame <- function(x, errors = "d", priors = NULL, exclude = NULL) {
-  # Validate that input is a proper design data frame
-  if (!all(get_id_names() %in% names(x))) {
-    stop("Design must be created by cbc_design() or contain the required ID columns: ",
-         paste(get_id_names(), collapse = ", "))
-  }
-
-  # Validate priors object and set up objects for random pars
-  validate_priors(priors)
+  # Set up objects for random pars
   randPars <- get_rand_pars(priors)
   par_draws <- if (!is.null(priors)) priors$par_draws else NULL
 
   # Get attribute columns (excluding metadata columns)
-  atts <- get_var_names(x)
+  atts <- get_var_names(design)
 
   # Remove excluded attributes
   if (!is.null(exclude)) {
-    atts <- setdiff(atts, exclude)
+      atts <- setdiff(atts, exclude)
   }
   if (length(atts) == 0) {
-    stop("No attribute columns found in design after exclusions")
+      stop("No attribute columns found in design after exclusions")
   }
 
   # Encode design matrix and split into list by obsID
-  obsID <- x$obsID
+  obsID <- design$obsID
   reps <- table(obsID)
-  codedData <- logitr::recodeData(x, atts, randPars)
+  codedData <- logitr::recodeData(design, atts, randPars)
   X <- codedData$X
   X_list <- split(as.data.frame(X), obsID)
   X_list <- lapply(X_list, as.matrix)
@@ -215,49 +177,49 @@ cbc_error.data.frame <- function(x, errors = "d", priors = NULL, exclude = NULL)
   # Validate errors argument
   valid_errors <- c("d", "a", "g", "e", "all")
   if (!all(errors %in% valid_errors)) {
-    invalid <- setdiff(errors, valid_errors)
-    stop("Invalid error types: ", paste(invalid, collapse = ", "),
-         ". Valid options are: ", paste(valid_errors, collapse = ", "))
+      invalid <- setdiff(errors, valid_errors)
+      stop("Invalid error types: ", paste(invalid, collapse = ", "),
+           ". Valid options are: ", paste(valid_errors, collapse = ", "))
   }
 
   # Inform user about Bayesian approach when random parameters are present
   if (!is.null(par_draws)) {
-    message(
-      "Using Bayesian approach: Averaging error metrics across ",
-      nrow(par_draws), " draws from each of ",
-      ncol(par_draws), " random parameters"
-    )
+      message(
+          "Using Bayesian approach: Averaging error metrics across ",
+          nrow(par_draws), " draws from each of ",
+          ncol(par_draws), " random parameters"
+      )
   }
 
   # Compute metrics based on requested error types
   if (is.null(par_draws)) {
-    # Get predicted probabilities, then compute metrics
-    probs <- compute_probs(obsID, reps, atts, priors, X)
+      # Get predicted probabilities, then compute metrics
+      probs <- compute_probs(obsID, reps, atts, priors, X)
 
-    if ("all" %in% errors) {
-      # Return comprehensive metrics
-      metrics <- compute_all_efficiency_metrics(X_list, probs, obsID)
-      class(metrics) <- c("cbc_errors", "list")
-      return(metrics)
-    } else {
-      # Compute specific metrics
-      metrics <- compute_selected_efficiency_metrics(X_list, probs, obsID, errors)
-    }
+      if ("all" %in% errors) {
+          # Return comprehensive metrics
+          metrics <- compute_all_efficiency_metrics(X_list, probs, obsID)
+          class(metrics) <- c("cbc_errors", "list")
+          return(metrics)
+      } else {
+          # Compute specific metrics
+          metrics <- compute_selected_efficiency_metrics(X_list, probs, obsID, errors)
+      }
   } else {
-    # Use Bayesian approach with parameter draws
-    if ("all" %in% errors) {
-      metrics <- compute_bayesian_efficiency_metrics(par_draws, X, X_list, obsID, reps)
-      class(metrics) <- c("cbc_errors", "list")
-      return(metrics)
-    } else {
-      # Compute Bayesian versions of requested metrics
-      metrics <- compute_bayesian_selected_metrics(par_draws, X, X_list, obsID, reps, errors)
-    }
+      # Use Bayesian approach with parameter draws
+      if ("all" %in% errors) {
+          metrics <- compute_bayesian_efficiency_metrics(par_draws, X, X_list, obsID, reps)
+          class(metrics) <- c("cbc_errors", "list")
+          return(metrics)
+      } else {
+          # Compute Bayesian versions of requested metrics
+          metrics <- compute_bayesian_selected_metrics(par_draws, X, X_list, obsID, reps, errors)
+      }
   }
 
   # For single error types, return just the value
   if (length(errors) == 1 && errors[1] == "d") {
-    return(metrics[["d_error"]])
+      return(metrics[["d_error"]])
   }
 
   # For multiple error types, return list with class

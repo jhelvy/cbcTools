@@ -236,59 +236,6 @@ get_eligible_profiles <- function(profiles, current_profileIDs, label = NULL, cu
     return(setdiff(matching_profiles$profileID, current_profileIDs))
 }
 
-# Helper function to check dominance for a single choice set during optimization
-# Reuses existing dominance detection logic from inspect.R
-check_choice_set_dominance <- function(
-    choice_set_rows, 
-    priors, 
-    profiles,
-    dominance_types, 
-    dominance_threshold
-) {
-    # If priors are NULL, no dominance checking is possible
-    if (is.null(priors)) {
-        return(FALSE)
-    }
-    
-    # Get attribute columns
-    attr_cols <- get_var_names(choice_set_rows)
-    
-    # Get random parameters for encoding
-    randPars <- get_rand_pars(priors)
-    
-    # Encode the design matrix for this choice set
-    codedData <- logitr::recodeData(choice_set_rows, attr_cols, randPars)
-    X_q <- codedData$X
-    
-    # Compute total utilities
-    total_utilities <- X_q %*% priors$pars
-    
-    # Convert to probabilities using logit model
-    exp_utils <- exp(total_utilities)
-    choice_probs <- exp_utils / sum(exp_utils)
-    
-    # Check total utility dominance if requested
-    if ("total" %in% dominance_types) {
-        max_prob <- max(choice_probs)
-        if (max_prob > dominance_threshold) {
-            return(TRUE)  # Dominance detected
-        }
-    }
-    
-    # Check partial utility dominance if requested
-    if ("partial" %in% dominance_types) {
-        # Reuse existing function from inspect.R
-        has_partial_dominance <- check_partial_dominance(
-            choice_set_rows, X_q, priors, attr_cols
-        )
-        if (has_partial_dominance) {
-            return(TRUE)  # Dominance detected
-        }
-    }
-    
-    return(FALSE)  # No dominance detected
-}
-
 optimize_design <- function(
     design,
     profiles,
@@ -377,12 +324,12 @@ optimize_design <- function(
                                 accept_change <- TRUE
                                 if (remove_dominant) {
                                     dominance_detected <- check_choice_set_dominance(
-                                        temp_rows, priors, profiles, 
+                                        temp_rows, priors, profiles,
                                         dominance_types, dominance_threshold
                                     )
                                     accept_change <- !dominance_detected
                                 }
-                                
+
                                 # Only accept change if D-error improved AND no dominance
                                 if (accept_change) {
                                     best_d_error <- temp_d_error

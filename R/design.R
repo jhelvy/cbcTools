@@ -84,13 +84,13 @@
 #' d_error <- cbc_error(design, priors = priors)
 cbc_design <- function(
     profiles,
-    method = "random",
-    priors = NULL,
     n_alts,
     n_q,
     n_resp,
     n_blocks = 1,
     n_start = 5,
+    method = "random",
+    priors = NULL,
     no_choice = FALSE,
     label = NULL,
     randomize_questions = TRUE,
@@ -105,7 +105,7 @@ cbc_design <- function(
 
   # Validate inputs
   validate_profiles(profiles)
-  validate_priors(priors, profiles)
+  validate_priors(priors, profiles, no_choice)
   validate_method(method)
   if (remove_dominant) {
     if (is.null(priors)) {
@@ -128,8 +128,6 @@ cbc_design <- function(
     priors, max_iter, parallel
   )
 
-  profiles_df <- as.data.frame(profiles)
-
   # Method-specific design creation
   if (method == 'sequential') {
 
@@ -147,11 +145,10 @@ cbc_design <- function(
 
     result <- make_design_sequential(
       profiles_df, n_blocks, n_alts, n_q, n_blocks,
-      priors, max_iter, label, n_start,
+      priors, max_iter, label, n_start, no_choice,
       remove_dominant, dominance_types, dominance_threshold
     )
     design <- result$design
-    d_error <- result$d_error
 
     # Apply randomization if needed
     design <- repeat_sets(
@@ -169,405 +166,176 @@ cbc_design <- function(
     # Create random survey directly (no underlying design)
 
     # Use existing random survey creation logic
-    design <- make_random_survey(
+    design <- make_design_random(
       profiles, n_blocks = 1, n_resp, n_alts, n_q, label,
-      priors, remove_dominant, dominance_types, dominance_threshold,
-      max_dominance_attempts
+      priors, no_choice, remove_dominant, dominance_types,
+      dominance_threshold, max_dominance_attempts
     )
 
-    # Compute D-error for random design (useful for comparison with other methods)
-    d_error <- cbc_error(design, errors = "d", priors = priors)
-
   }
-  # Future methods can be added here
 
+  # Store metadata as attributes
+  n_profiles_available <- nrow(profiles)
+  n_profiles_used <- length(unique(design$profileID))
   if (no_choice) {
-    design <- add_no_choice(design, n_alts)
+      n_profiles_used <- n_profiles_used - 1
   }
 
-  # Store essential information as attributes
   attr(design, "profiles") <- profiles
   attr(design, "priors") <- priors
-  attr(design, "design_params") <- list(
-    method = method,
-    n_q = n_q,
-    n_alts = n_alts,
-    n_blocks = n_blocks,
-    no_choice = no_choice,
-    label = label,
-    d_error = d_error,
-    created_at = Sys.time(),
-    remove_dominant = remove_dominant,
-    dominance_types = if (remove_dominant) dominance_types else NULL,
-    purpose = "experimental_design"  # Indicate this is a pure DOE
-  )
-
-  # Store computed metrics for printing
-  efficiency_info <- calculate_efficiency_metrics(design, profiles, priors)
+  efficiency_info <- calculate_balance_overlap_metrics(design, profiles, priors)
   attr(design, "design_summary") <- list(
-    n_profiles_available = nrow(profiles),
-    n_profiles_used = length(unique(design$profileID)),
-    profile_usage_rate = length(unique(design$profileID)) / nrow(profiles),
+    n_profiles_available = n_profiles_available,
+    n_profiles_used = n_profiles_used,
+    profile_usage_rate = n_profiles_used / n_profiles_available,
     n_choice_sets = n_blocks * n_q,
-    total_alternatives = nrow(design),
     restrictions_applied = !is.null(attr(profiles, "restrictions_applied")),
     n_restrictions = length(attr(profiles, "restrictions_applied") %||% character(0)),
     efficiency = efficiency_info
   )
+  # Compute D-error
+  d_error <- cbc_error(
+      design,
+      errors = "d",
+      priors = priors,
+      profiles = profiles
+  )
+  attr(design, "design_params") <- list(
+      method = method,
+      n_q = n_q,
+      n_alts = n_alts,
+      n_blocks = n_blocks,
+      no_choice = no_choice,
+      label = label,
+      d_error = d_error,
+      created_at = Sys.time(),
+      remove_dominant = remove_dominant,
+      dominance_types = if (remove_dominant) dominance_types else NULL,
+      purpose = "experimental_design"  # Indicate this is a pure DOE
+  )
 
-  # Set class and return data frame directly
   class(design) <- c("cbc_design", "data.frame")
   return(design)
 }
 
-#' Remove dominant choice sets from a design
-#'
-#' Core function for removing choice sets where one alternative dominates others
-#' based on utility calculations from provided priors.
-#'
-#' @param design A data frame containing the design
-#' @param profiles A data frame of profiles to sample replacements from
-#' @param priors A cbc_priors object for dominance checking
-#' @param dominance_types Character vector of dominance types to check
-#' @param dominance_threshold Numeric threshold for total dominance
-#' @param max_replacements Maximum number of replacement attempts
-#' @param n_alts Number of alternatives per question
-#' @param label Label variable for labeled designs
-#' @return Updated design with dominant choice sets replaced
-#' @keywords internal
-
-# Helper function to calculate efficiency metrics
-calculate_efficiency_metrics <- function(design, profiles, priors) {
-  efficiency <- list()
-
-  # Calculate attribute balance score
-  tryCatch({
-    balance_info <- get_balance_metrics(design)
-    efficiency$balance_score <- balance_info$score
-    efficiency$balance_details <- balance_info$details
-  }, error = function(e) {
-    efficiency$balance_score <- NA
-  })
-
-  # Calculate attribute overlap score
-  tryCatch({
-    overlap_info <- get_overlap_metrics(design)
-    efficiency$overlap_score <- overlap_info$score
-    efficiency$overlap_details <- overlap_info$details
-  }, error = function(e) {
-    efficiency$overlap_score <- NA
-  })
-
-  return(efficiency)
-}
-
-# Helper function to compute balance metrics
-get_balance_metrics <- function(design) {
-  attr_cols <- get_var_names(design)
-
-  # For each attribute, calculate how balanced the levels are
-  balance_scores <- list()
-
-  for (attr in attr_cols) {
-    counts <- table(design[[attr]])
-    expected_count <- nrow(design) / length(counts)
-    # Calculate deviation from perfect balance (coefficient of variation)
-    cv <- sd(counts) / mean(counts)
-    balance_scores[[attr]] <- 1 / (1 + cv)  # Higher is better, max = 1
-  }
-
-  overall_score <- mean(unlist(balance_scores))
-
-  return(list(
-    score = overall_score,
-    details = balance_scores
-  ))
-}
-
-# Helper function to compute overlap metrics
-get_overlap_metrics <- function(design) {
-  attr_cols <- get_var_names(design)
-
-  overlap_scores <- list()
-
-  for (attr in attr_cols) {
-    # Count how many choice sets have all alternatives with the same level
-    overlap_counts <- tapply(
-      design[[attr]], design$obsID,
-      FUN = function(x) length(unique(x)) == 1
-    )
-    overlap_rate <- mean(overlap_counts)
-    overlap_scores[[attr]] <- overlap_rate
-  }
-
-  overall_score <- mean(unlist(overlap_scores))
-
-  return(list(
-    score = overall_score,
-    details = overlap_scores
-  ))
-}
-
-# General helpers ----
-
-get_profile_list <- function(profiles) {
-  profile_lvls <- profiles[, 2:ncol(profiles)]
-  varnames <- names(profile_lvls)
-  type_ids <- get_type_ids(profiles)
-  profile_list <- list()
-  for (i in seq_len(ncol(profile_lvls))) {
-    if (type_ids$discrete[i]) {
-      profile_list[[i]] <- levels(profile_lvls[,i])
-    } else {
-      profile_list[[i]] <- unique(profile_lvls[,i])
-    }
-  }
-  names(profile_list) <- varnames
-  return(profile_list)
-}
-
-get_type_ids <- function(profiles) {
-  types <- get_col_types(profiles[, 2:ncol(profiles)])
-  ids <- list()
-  ids$discrete <- types %in% c("factor", "character")
-  ids$continuous <- !ids$discrete
-  return(ids)
-}
-
-join_profiles <- function(design, profiles) {
-
-  # Preserve row order
-
-  design$row_order <- seq(nrow(design))
-
-  # Before joining profiles, ensure that all the data types are the same
-  # as in profiles, otherwise join won't work properly
-
-  type_ids <- get_type_ids(profiles)
-
-  # Convert numeric columns to actual numbers
-  for (id in which(type_ids$continuous)) {
-    design[,id] <- as.numeric(as.character(design[,id]))
-  }
-
-  # Convert character types to factors and set same levels as profiles
-  for (id in which(type_ids$discrete)) {
-    design[,id] <- factor(design[,id], levels = levels(profiles[,id+1]))
-  }
-
-  # Join on profileIDs, then reorder to retain design order
-  varnames <- names(profiles[, 2:ncol(profiles)])
-  design <- merge(design, profiles, by = varnames, all.x = TRUE, sort = FALSE)
-  design <- design[order(design$row_order),]
-  design$row_order <- NULL
-  if ('blockID' %in% names(design)) { varnames <- c(varnames, 'blockID') }
-  design <- design[c('profileID', varnames)]
-  return(design)
-}
-
-add_metadata <- function(design, n_resp, n_alts, n_q) {
-  design$respID <- rep(seq(n_resp), each = n_alts * n_q)
-  design$qID    <- rep(seq(n_q), each = n_alts)
-  design$altID  <- rep(seq(n_alts), n_resp * n_q)
-  design$obsID  <- rep(seq(n_resp * n_q), each = n_alts)
-  return(design)
-}
-
-get_dup_obs <- function(design, n_alts) {
-  # Identify duplicate profiles for each observation (each choice set)
-  counts <- tapply(
-    design$profileID, design$obsID,
-    FUN = function(x) length(unique(x))
-  )
-  dup_ids <- which(counts != n_alts)
-  dup_rows <- which(design$obsID %in% dup_ids)
-  return(dup_rows)
-}
-
-get_dup_resp <- function(design, n_resp, n_q) {
-  # Identify duplicate choice sets for each respondent
-  dup_ids <- unlist(lapply(
-    1:n_resp,
-    function(x) dup_obs_by_resp(design[which(design$respID == x),])
-  ))
-  dup_rows <- which(design$obsID %in% dup_ids)
-  return(dup_rows)
-}
-
-dup_obs_by_resp <- function(df) {
-  profiles_list <- tapply(
-    df$profileID, df$obsID,
-    FUN = function(x) sort(x)
-  )
-  # Convert vector list to a data frame to check for duplicates
-  dupe_df <- do.call(rbind, profiles_list)
-  dup_ids <- which(duplicated(dupe_df))
-  if (length(dup_ids) > 0) {
-    return(as.numeric(names(dup_ids)))
-  }
-  return(NULL)
-}
-
-add_no_choice <- function(design, n_alts) {
-  # Must dummy code categorical variables to include an outside good
-  design <- dummy_code(design)
-  # Create outside good rows
-  design_og <- design[which(design$altID == 1), ]
-  design_og[,!names(design_og) %in% c("respID", "qID", "altID", "obsID")] <- 0
-  design_og$altID <- n_alts + 1
-  design_og$no_choice <- 1
-  # Insert outside good rows into design
-  design$no_choice <- 0
-  design <- rbind(design, design_og)
-  design <- design[order(design$obsID), ]
-  return(design)
-}
-
-dummy_code <- function(design) {
-  types <- get_col_types(design)
-  nonnumeric <- names(types[!types %in% c("integer", "numeric")])
-  if (length(nonnumeric) > 0) {
-    design <- fastDummies::dummy_cols(design, nonnumeric)
-    design[, nonnumeric] <- NULL
-  }
-  return(design)
-}
-
-get_col_types <- function(data) {
-  types <- lapply(data, class)
-  test <- function(x) { x[1] }
-  return(unlist(lapply(types, test)))
-}
-
-reorder_cols <- function(design) {
-  design <- as.data.frame(design)[, c(get_id_names(), get_var_names(design))]
-  return(design)
-}
-
-# Choice sets ----
-
-make_random_sets <- function(profiles, n_alts) {
-  n_q <- nrow(profiles)
-  design <- sample_random_sets(profiles, n_alts, n_q)
-  # Replace rows with duplicated profiles in each obsID or
-  # duplicated choice sets in each respID
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp = 1, n_q)
-  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    design <- sample_random_sets(profiles, n_alts, n_q)
-    dup_rows_obs <- get_dup_obs(design, n_alts)
-    dup_rows_resp <- get_dup_resp(design, n_resp = 1, n_q)
-  }
-  return(design)
-}
-
-make_random_sets_by_block <- function(profiles, n_alts, n_blocks) {
-  # Make choice sets for each set of profileIDs
-  profiles <- split(profiles, profiles$blockID)
-  choice_sets <- list()
-  for (i in 1:n_blocks) {
-    choice_sets[[i]] <- make_random_sets(profiles[[i]], n_alts)
-  }
-  choice_sets <- do.call(rbind, choice_sets)
-  return(choice_sets)
-}
-
-sample_random_sets <- function(profiles, n_alts, n_q) {
-  # Make a randomized copy of the profiles for each alternative
-  sets <- lapply(seq(n_alts), function(x) profiles[order(stats::runif(n_q)),])
-  sets <- lapply(sets, function(x) {
-    x$order <- seq(nrow(x))
-    return(x)
-  })
-  sets <- do.call(rbind, sets)
-  sets <- sets[order(sets$order),]
-  sets <- add_metadata(sets, n_resp = 1, n_alts, n_q)
-  sets$order <- NULL
-  return(sets)
+encode_profiles <- function(profiles, priors) {
+    # Dummy code using logitr::recodeData
+    atts <- get_var_names(profiles)
+    codedData <- logitr::recodeData(profiles, atts, get_rand_pars(priors))
+    X <- codedData$X
+    profiles_encoded <- cbind(profileID = profiles$profileID, as.data.frame(X))
+    return(profiles_encoded)
 }
 
 # Random Design ----
 
 # Sample from profiles with replacement to create randomized choice sets
 
-make_random_survey <- function(
-    profiles, n_blocks, n_resp, n_alts, n_q, label,
-    priors, remove_dominant, dominance_types,
+make_design_random <- function(
+    profiles_encoded, n_blocks, n_resp, n_alts, n_q, label,
+    priors, no_choice, remove_dominant, dominance_types,
     dominance_threshold, max_dominance_attempts
 ) {
+
     if (is.null(label)) {
-        survey <- survey_rand_sample(
-            profiles, n_resp, n_alts, n_q, priors, remove_dominant,
-            dominance_types, dominance_threshold, max_dominance_attempts
+        design <- design_rand_sample(
+            profiles, n_resp, n_alts, n_q, priors, no_choice,
+            remove_dominant, dominance_types, dominance_threshold,
+            max_dominance_attempts
         )
     } else {
-        survey <- survey_rand_sample_label(
-            profiles, n_resp, n_alts, n_q, label, priors, remove_dominant,
-            dominance_types, dominance_threshold, max_dominance_attempts
+        design <- design_rand_sample_label(
+            profiles, n_resp, n_alts, n_q, priors, no_choice,
+            remove_dominant, dominance_types, dominance_threshold,
+            max_dominance_attempts, label
         )
     }
-    survey <- set_block_ids(survey, n_blocks)
-    survey <- reorder_cols(survey)
-    row.names(survey) <- NULL
-    return(survey)
+    design <- reorder_cols(design)
+    row.names(design) <- NULL
+    return(design)
 }
 
-
-survey_rand_sample <- function(
-    profiles, n_resp, n_alts, n_q, priors, remove_dominant,
+design_rand_sample <- function(
+    profiles_encoded, n_resp, n_alts, n_q, priors, no_choice, remove_dominant,
     dominance_types, dominance_threshold, max_dominance_attempts
 ) {
-    survey <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
-    survey <- add_metadata(survey, n_resp, n_alts, n_q)
+    # Encode profiles first
+    profiles_encoded <- encode_profiles(profiles, priors)
+
+    # Make random starting design
+    design <- sample_profiles(profiles_encoded, size = n_resp * n_alts * n_q)
+    design <- add_metadata(design, n_resp, n_alts, n_q)
+    design$blockID <- 1
+
+    if (no_choice) {
+        design <- add_no_choice(design, n_alts)
+        n_alts <- n_alts + 1
+    }
 
     # Replace rows with duplicated profiles, duplicated choice sets, or dominant choice sets
     attempts <- 0
     repeat {
-        dup_rows_obs <- get_dup_obs(survey, n_alts)
-        dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
-        dom_rows <- if (remove_dominant) get_dominant_obs(survey, priors, dominance_types, dominance_threshold) else c()
+        problematic_row_list <- get_problematic_rows(
+            design, n_alts, n_resp, n_q, priors, remove_dominant,
+            dominance_types, dominance_threshold
+        )
 
-        problematic_rows <- unique(c(dup_rows_obs, dup_rows_resp, dom_rows))
+        problematic_rows <- unique(unlist(problematic_row_list))
 
         if (length(problematic_rows) == 0) {
             break  # No more problems
         }
 
         # Replace problematic rows
-        new_rows <- sample_profiles(profiles, size = length(problematic_rows))
-        survey[problematic_rows, 1:ncol(new_rows)] <- new_rows
+        new_rows <- sample_profiles(profiles_encoded, size = length(problematic_rows))
+        design[problematic_rows, 1:ncol(new_rows)] <- new_rows
 
         # Prevent infinite loops
         attempts <- attempts + 1
         if (attempts > max_dominance_attempts) {
-            if (remove_dominant && length(dom_rows) > 0) {
-                warning("Could not eliminate all dominant choice sets after ", max_dominance_attempts, " attempts. Some may remain.")
+            if (remove_dominant && length(problematic_row_list$dup_rows_dominant) > 0) {
+                warning(
+                    "Could not eliminate all dominant choice sets after ",
+                    max_dominance_attempts,
+                    " attempts. Some may remain."
+                )
             }
             break
         }
     }
 
-    return(survey)
+    return(design)
 }
 
-survey_rand_sample_label <- function(
-    profiles, n_resp, n_alts, n_q, label, priors, remove_dominant,
-    dominance_types, dominance_threshold, max_dominance_attempts
+design_rand_sample_label <- function(
+    profiles, n_resp, n_alts, n_q, priors, no_choice, remove_dominant,
+    dominance_types, dominance_threshold, max_dominance_attempts,
+    label
 ) {
+    profiles_encoded <- encode_profiles(profiles, priors)
+
     n_alts <- override_label_alts(profiles, label, n_alts)
     # Randomize rows by label
     labels <- split(profiles, profiles[label])
-    survey <- sample_profiles_by_group(labels, size = n_resp * n_q)
-    survey <- add_metadata(survey, n_resp, n_alts, n_q)
+
+    design <- sample_profiles_by_group(labels, size = n_resp * n_q)
+    design <- add_metadata(design, n_resp, n_alts, n_q)
+    design$blockID <- 1
+
+    if (no_choice) {
+        design <- add_no_choice(design, n_alts)
+        n_alts <- n_alts + 1
+    }
 
     # Replace rows with duplicated profiles, duplicated choice sets, or dominant choice sets
     attempts <- 0
     repeat {
-        dup_rows_obs <- get_dup_obs(survey, n_alts)
-        dup_rows_resp <- get_dup_resp(survey, n_resp, n_q)
-        dom_rows <- if (remove_dominant) get_dominant_obs(survey, priors, dominance_types, dominance_threshold) else c()
+        problematic_row_list <- get_problematic_rows(
+            design, n_alts, n_resp, n_q, priors, remove_dominant,
+            dominance_types, dominance_threshold
+        )
 
-        problematic_rows <- unique(c(dup_rows_obs, dup_rows_resp, dom_rows))
+        problematic_rows <- unique(unlist(problematic_row_list))
 
         if (length(problematic_rows) == 0) {
             break  # No more problems
@@ -575,19 +343,57 @@ survey_rand_sample_label <- function(
 
         # Replace problematic rows (for labeled designs, need to sample by groups)
         new_rows <- sample_profiles_by_group(labels, size = length(problematic_rows) / n_alts)
-        survey[problematic_rows, 1:ncol(new_rows)] <- new_rows
+        design[problematic_rows, 1:ncol(new_rows)] <- new_rows
 
         # Prevent infinite loops
         attempts <- attempts + 1
         if (attempts > max_dominance_attempts) {
-            if (remove_dominant && length(dom_rows) > 0) {
-                warning("Could not eliminate all dominant choice sets after ", max_dominance_attempts, " attempts. Some may remain.")
+            if (remove_dominant && length(problematic_row_list$dup_rows_dominant) > 0) {
+                warning(
+                    "Could not eliminate all dominant choice sets after ",
+                    max_dominance_attempts,
+                    " attempts. Some may remain."
+                )
             }
             break
         }
     }
 
-    return(survey)
+    return(design)
+}
+
+add_no_choice <- function(design, n_alts) {
+    # Create outside good rows
+    design_og <- design[which(design$altID == 1), ]
+    design_og[,!names(design_og) %in% get_id_names()] <- 0
+    design_og$altID <- n_alts + 1
+    design_og$no_choice <- 1
+    design_og$profileID <- 0
+
+    # Insert outside good rows into design
+    design$no_choice <- 0
+    design <- rbind(design, design_og)
+    design <- design[order(design$obsID), ]
+    return(design)
+}
+
+get_problematic_rows <- function(
+    design, n_alts, n_resp, n_q, priors, remove_dominant,
+    dominance_types, dominance_threshold
+) {
+    dup_rows_obs <- get_dup_obs(design, n_alts)
+    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
+    dup_rows_dominant <- c()
+    if (remove_dominant) {
+        dup_rows_dominant <- get_dominant_obs(
+            design, priors, no_choice, dominance_types, dominance_threshold
+        )
+    }
+    return(list(
+        dup_rows_obs = dup_rows_obs,
+        dup_rows_resp = dup_rows_resp,
+        dup_rows_dominant = dup_rows_dominant
+    ))
 }
 
 sample_profiles <- function(profiles, size) {
@@ -636,6 +442,7 @@ make_design_sequential <- function(
     max_iter,
     label,
     n_start,
+    no_choice,
     remove_dominant,
     dominance_types,
     dominance_threshold
@@ -849,18 +656,70 @@ randomize_design <- function(
     return(design)
 }
 
+# General helpers ----
+
+add_metadata <- function(design, n_resp, n_alts, n_q) {
+    design$respID <- rep(seq(n_resp), each = n_alts * n_q)
+    design$qID    <- rep(seq(n_q), each = n_alts)
+    design$altID  <- rep(seq(n_alts), n_resp * n_q)
+    design$obsID  <- rep(seq(n_resp * n_q), each = n_alts)
+    return(design)
+}
+
+get_dup_obs <- function(design, n_alts) {
+    # Identify duplicate profiles for each observation (each choice set)
+    counts <- tapply(
+        design$profileID, design$obsID,
+        FUN = function(x) length(unique(x))
+    )
+    dup_ids <- which(counts != n_alts)
+    dup_rows <- which(design$obsID %in% dup_ids)
+    return(dup_rows)
+}
+
+get_dup_resp <- function(design, n_resp, n_q) {
+    # Identify duplicate choice sets for each respondent
+    dup_ids <- unlist(lapply(
+        1:n_resp,
+        function(x) dup_obs_by_resp(design[which(design$respID == x),])
+    ))
+    dup_rows <- which(design$obsID %in% dup_ids)
+    return(dup_rows)
+}
+
+dup_obs_by_resp <- function(df) {
+    profiles_list <- tapply(
+        df$profileID, df$obsID,
+        FUN = function(x) sort(x)
+    )
+    # Convert vector list to a data frame to check for duplicates
+    dupe_df <- do.call(rbind, profiles_list)
+    dup_ids <- which(duplicated(dupe_df))
+    if (length(dup_ids) > 0) {
+        return(as.numeric(names(dup_ids)))
+    }
+    return(NULL)
+}
+
+reorder_cols <- function(design) {
+    design <- as.data.frame(design)[, c(get_id_names(), get_var_names(design))]
+    return(design)
+}
+
 # Helper function to get rows from dominant choice sets
-get_dominant_obs <- function(survey, priors, dominance_types, dominance_threshold) {
+get_dominant_obs <- function(
+    design, priors, no_choice, dominance_types, dominance_threshold
+) {
     if (is.null(priors)) {
         return(c())
     }
 
     # Get unique choice sets (obsIDs)
-    unique_obs <- unique(survey$obsID)
+    unique_obs <- unique(design$obsID)
     dominant_obs <- c()
 
     for (obs_id in unique_obs) {
-        choice_set_rows <- survey[survey$obsID == obs_id, ]
+        choice_set_rows <- design[design$obsID == obs_id, ]
 
         # Use the same dominance checking logic as in optdesign.R
         is_dominant <- check_choice_set_dominance(
@@ -873,5 +732,77 @@ get_dominant_obs <- function(survey, priors, dominance_types, dominance_threshol
     }
 
     # Return row indices for dominant choice sets
-    return(which(survey$obsID %in% dominant_obs))
+    return(which(design$obsID %in% dominant_obs))
+}
+
+# Helper function to calculate efficiency metrics
+calculate_balance_overlap_metrics <- function(design, profiles, priors) {
+    efficiency <- list()
+
+    # Calculate attribute balance score
+    tryCatch({
+        balance_info <- get_balance_metrics(design)
+        efficiency$balance_score <- balance_info$score
+        efficiency$balance_details <- balance_info$details
+    }, error = function(e) {
+        efficiency$balance_score <- NA
+    })
+
+    # Calculate attribute overlap score
+    tryCatch({
+        overlap_info <- get_overlap_metrics(design)
+        efficiency$overlap_score <- overlap_info$score
+        efficiency$overlap_details <- overlap_info$details
+    }, error = function(e) {
+        efficiency$overlap_score <- NA
+    })
+
+    return(efficiency)
+}
+
+# Helper function to compute balance metrics
+get_balance_metrics <- function(design) {
+    attr_cols <- get_var_names(design)
+
+    # For each attribute, calculate how balanced the levels are
+    balance_scores <- list()
+
+    for (attr in attr_cols) {
+        counts <- table(design[[attr]])
+        expected_count <- nrow(design) / length(counts)
+        # Calculate deviation from perfect balance (coefficient of variation)
+        cv <- sd(counts) / mean(counts)
+        balance_scores[[attr]] <- 1 / (1 + cv)  # Higher is better, max = 1
+    }
+
+    overall_score <- mean(unlist(balance_scores))
+
+    return(list(
+        score = overall_score,
+        details = balance_scores
+    ))
+}
+
+# Helper function to compute overlap metrics
+get_overlap_metrics <- function(design) {
+    attr_cols <- get_var_names(design)
+
+    overlap_scores <- list()
+
+    for (attr in attr_cols) {
+        # Count how many choice sets have all alternatives with the same level
+        overlap_counts <- tapply(
+            design[[attr]], design$obsID,
+            FUN = function(x) length(unique(x)) == 1
+        )
+        overlap_rate <- mean(overlap_counts)
+        overlap_scores[[attr]] <- overlap_rate
+    }
+
+    overall_score <- mean(unlist(overlap_scores))
+
+    return(list(
+        score = overall_score,
+        details = overlap_scores
+    ))
 }

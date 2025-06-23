@@ -1026,66 +1026,6 @@ cbc_inspect_dominance.data.frame <- function(
   return(x)
 }
 
-# Helper function to check partial utility dominance
-check_partial_dominance <- function(q_data, X_q, priors, attr_cols) {
-  # Get alternatives in this choice question
-  alternatives <- split(q_data, q_data$altID)
-  alt_indices <- split(seq_len(nrow(q_data)), q_data$altID)
-
-  n_alts <- length(alternatives)
-  if (n_alts < 2) {
-    return(FALSE)
-  }
-
-  # For each alternative, compute partial utilities for each original attribute
-  # We need to map back from the encoded matrix to original attributes
-
-  # Get the parameter names and their mapping to original attributes
-  par_names <- names(priors$pars)
-
-  # Create a matrix to store partial utilities by alternative and attribute
-  partial_utils <- matrix(0, nrow = n_alts, ncol = length(attr_cols))
-  rownames(partial_utils) <- names(alternatives)
-  colnames(partial_utils) <- attr_cols
-
-  # For each original attribute, sum up the relevant parameter contributions
-  for (attr in attr_cols) {
-    # Find parameters that belong to this attribute
-    attr_pars <- par_names[grepl(paste0("^", attr), par_names)]
-
-    if (length(attr_pars) > 0) {
-      # Get the column indices in X_q for these parameters
-      attr_cols_X <- which(colnames(X_q) %in% attr_pars)
-
-      if (length(attr_cols_X) > 0) {
-        # Compute partial utility for each alternative
-        for (i in seq_along(alternatives)) {
-          alt_idx <- alt_indices[[i]][1] # Take first row for this alternative
-          X_alt <- X_q[alt_idx, attr_cols_X, drop = FALSE]
-          partial_utils[i, attr] <- sum(X_alt * priors$pars[attr_cols_X])
-        }
-      }
-    }
-  }
-
-  # Check if one alternative has the highest partial utility for ALL attributes
-  for (i in seq_len(n_alts)) {
-    is_best_for_all <- TRUE
-    for (j in seq_along(attr_cols)) {
-      if (partial_utils[i, j] < max(partial_utils[, j])) {
-        is_best_for_all <- FALSE
-        break
-      }
-    }
-    if (is_best_for_all) {
-      return(TRUE)
-    }
-  }
-
-  return(FALSE)
-}
-
-
 #' Print method for flagged designs
 #' @param x A cbc_design_flagged object
 #' @param ... Additional arguments passed to print

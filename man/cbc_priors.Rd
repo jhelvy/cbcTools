@@ -4,10 +4,23 @@
 \alias{cbc_priors}
 \title{Create prior specifications for CBC models}
 \usage{
-cbc_priors(profiles, n_draws = 100, draw_type = "halton", ...)
+cbc_priors(
+  profiles,
+  no_choice = NULL,
+  n_draws = 100,
+  draw_type = "halton",
+  ...
+)
 }
 \arguments{
 \item{profiles}{A data frame of profiles created by \code{cbc_profiles()}}
+
+\item{no_choice}{Prior specification for no-choice alternative. Can be:
+\itemize{
+\item A single numeric value for fixed no-choice utility
+\item A \code{rand_spec()} object for random no-choice utility
+\item \code{NULL} if no no-choice option (default)
+}}
 
 \item{n_draws}{Number of draws for DB-error calculation if using Bayesian
 priors. Defaults to \code{100}}
@@ -47,74 +60,45 @@ profiles <- cbc_profiles(
   freshness = c("Poor", "Average", "Excellent")
 )
 
-# Example 1: Simple fixed parameters with unnamed vectors
+# Example 1: Simple fixed parameters with no-choice option
 priors <- cbc_priors(
   profiles = profiles,
   price = -0.5,
   type = c(0.2, 0.3),      # Dummy-coded categorical (Honeycrisp reference)
-  freshness = c(0.4, 0.8)  # Dummy-coded categorical (Poor reference)
+  freshness = c(0.4, 0.8), # Dummy-coded categorical (Poor reference)
+  no_choice = -2.0         # Fixed no-choice utility
 )
 
-# Example 2: Using named vectors for categorical variables
+# Example 2: Random no-choice parameter
 priors <- cbc_priors(
   profiles = profiles,
   price = -0.5,
-  type = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp as reference
-  freshness = c("Poor" = -0.4, "Average" = 0.1)  # Excellent as reference
-)
-
-# Example 3: Mixed fixed and random parameters
-priors <- cbc_priors(
-  profiles = profiles,
-  price = -0.5,  # Fixed parameter
-  type = rand_spec(  # Random parameter - normal distribution
-    dist = "n",
-    mean = c("Fuji" = 0.2, "Gala" = 0.3),  # Honeycrisp reference
-    sd = c("Fuji" = 0.4, "Gala" = 0.4)
-  ),
-  freshness = c(0.4, 0.8)  # Fixed parameter
-)
-
-# Example 4: Log-normal distribution for price coefficient
-priors <- cbc_priors(
-  profiles = profiles,
-  price = rand_spec(
-    dist = "ln",    # Log-normal distribution for price
-    mean = -0.5,    # Single value for continuous variable
-    sd = 0.4
-  ),
   type = c(0.2, 0.3),
-  freshness = c(0.4, 0.8)
+  freshness = c(0.4, 0.8),
+  no_choice = rand_spec(    # Random no-choice utility
+    dist = "n",
+    mean = -2.0,
+    sd = 0.5
+  )
 )
 
-# Example 5: Random parameters with correlations
+# Example 3: No-choice with correlations
 priors <- cbc_priors(
   profiles = profiles,
   price = rand_spec(
     dist = "ln",
     mean = -0.5,
-    sd = 0.4,
-    correlations = list(
-      # Correlate with all type levels
-      cor_spec(with = "type", value = 0.3),
-      # Correlate with specific level
-      cor_spec(with = "type", level = "Fuji", value = 0.4)
-    )
+    sd = 0.4
   ),
-  type = rand_spec(
+  type = c(0.2, 0.3),
+  freshness = c(0.4, 0.8),
+  no_choice = rand_spec(
     dist = "n",
-    mean = c("Fuji" = 0.2, "Gala" = 0.3),
-    sd = c("Fuji" = 0.4, "Gala" = 0.4),
+    mean = -2.0,
+    sd = 0.5,
     correlations = list(
-      # Correlate between levels
-      cor_spec(
-        with = "type",
-        level = "Fuji",
-        with_level = "Gala",
-        value = 0.5
-      )
+      cor_spec(with = "price", value = 0.3)
     )
-  ),
-  freshness = c(0.4, 0.8)
+  )
 )
 }

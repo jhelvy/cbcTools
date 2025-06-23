@@ -1,3 +1,17 @@
+get_type_ids <- function(profiles) {
+  types <- get_col_types(profiles[, 2:ncol(profiles)])
+  ids <- list()
+  ids$discrete <- types %in% c("factor", "character")
+  ids$continuous <- !ids$discrete
+  return(ids)
+}
+
+get_col_types <- function(data) {
+  types <- lapply(data, class)
+  test <- function(x) { x[1] }
+  return(unlist(lapply(types, test)))
+}
+
 check_inputs_profiles <- function(levels) {
   for (i in 1:length(levels)) {
     check_vector <- !is.vector(levels[[i]])

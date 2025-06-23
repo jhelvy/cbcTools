@@ -2,22 +2,12 @@
 % Please edit documentation in R/derror.R
 \name{cbc_error}
 \alias{cbc_error}
-\alias{cbc_error.cbc_survey}
-\alias{cbc_error.cbc_design}
-\alias{cbc_error.data.frame}
 \title{Compute design error metrics for a choice experiment design}
 \usage{
-cbc_error(x, errors = "d", priors = NULL, exclude = NULL)
-
-\method{cbc_error}{cbc_survey}(x, errors = "d", priors = NULL, exclude = NULL)
-
-\method{cbc_error}{cbc_design}(x, errors = "d", priors = NULL, exclude = NULL)
-
-\method{cbc_error}{data.frame}(x, errors = "d", priors = NULL, exclude = NULL)
+cbc_error(design, errors = "d", priors = NULL, profiles = NULL, exclude = NULL)
 }
 \arguments{
-\item{x}{Either a \code{cbc_design} object created by \code{cbc_design()}, a \code{cbc_survey}
-object, or a data frame containing a choice experiment design}
+\item{design}{A \code{cbc_design} object created by \code{cbc_design()}.}
 
 \item{errors}{Character vector specifying which error metrics to compute.
 Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error),
@@ -28,18 +18,15 @@ random parameters, Bayesian versions are automatically computed.}
 null priors. If \code{x} is a \code{cbc_design} object, the priors from that object
 will be used by default.}
 
+\item{profiles}{A data frame of class \code{cbc_profiles} created using the
+\code{cbc_profiles()} function.}
+
 \item{exclude}{Character vector of attribute names to exclude from error
 calculations}
 }
 \value{
 For single error types ("d"), returns the numeric error value.
-For multiple error types or "all", returns a list containing requested metrics:
-\itemize{
-\item d_error: D-optimality criterion (lower is better)
-\item a_error: A-optimality criterion (lower is better)
-\item g_error: G-optimality criterion (lower is better)
-\item e_error: E-optimality criterion (higher is better)
-}
+For multiple error types or "all", returns a list containing requested metrics.
 }
 \description{
 This function computes design efficiency metrics for choice experiments.

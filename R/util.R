@@ -25,9 +25,23 @@ validate_profiles <- function(profiles) {
     }
 }
 
+validate_design <- function(design) {
+    if (!inherits(profiles, "cbc_design")) {
+        stop("profiles must be a cbc_design object created by cbc_design()")
+    }
+}
+
 #' Validate that priors are compatible with profiles
-validate_priors <- function(priors, profiles) {
+validate_priors <- function(priors, profiles, no_choice) {
     if (is.null(priors)) { return(TRUE) }
+    if (no_choice) {
+        if (! "no_choice" %in% names(priors$pars)) {
+            stop(
+                "Since 'no_choice = TRUE', you must provide a 'no_choice' ",
+                "value with cbc_priors()"
+            )
+        }
+    }
     if (!inherits(priors, "cbc_priors")) {
         stop("priors must be a cbc_priors object created by cbc_priors()")
     }

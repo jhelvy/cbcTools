@@ -4,7 +4,7 @@
 \alias{validate_priors}
 \title{Validate that priors are compatible with profiles}
 \usage{
-validate_priors(priors, profiles)
+validate_priors(priors, profiles, no_choice)
 }
 \description{
 Validate that priors are compatible with profiles
