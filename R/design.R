@@ -50,7 +50,7 @@ cbc_design <- function(
 
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
-        profiles, priors, no_choice, label, remove_dominant,
+        profiles, n_alts, priors, no_choice, label, remove_dominant,
         dominance_types, dominance_threshold
     )
 
@@ -88,72 +88,90 @@ cbc_design <- function(
         design_result$repeated_across_respondents <- TRUE
     }
 
+    # Move no_choice to the end
+    if (no_choice) {
+        # Reorder columns to put no_choice at the end
+        other_cols <- setdiff(names(final_design), "no_choice")
+        final_design <- final_design[, c(other_cols, "no_choice")]
+    }
+
     # Add metadata and return
     finalize_design_object(final_design, opt_env, design_result, method,
                            n_alts, n_q, n_resp, n_blocks, no_choice, label,
                            randomize_questions, randomize_alts)
 }
 
-#' Set up the optimization environment with pre-computed utilities
-#'
-#' @param profiles A cbc_profiles object
-#' @param priors A cbc_priors object or NULL
-#' @param no_choice Logical, include no-choice option
-#' @param label Character, label variable name or NULL
-#' @param remove_dominant Logical, remove dominant choice sets
-#' @param dominance_types Character vector of dominance types
-#' @param dominance_threshold Numeric threshold for dominance
-#' @return A list containing the optimization environment
+# Set up the optimization environment with pre-computed utilities and proper factor alignment
 setup_optimization_environment <- function(
-    profiles, priors, no_choice, label, remove_dominant,
-    dominance_types, dominance_threshold
+        profiles, n_alts, priors, no_choice, label, remove_dominant,
+        dominance_types, dominance_threshold
 ) {
 
     # Get attribute names (excluding profileID)
     attr_names <- setdiff(names(profiles), "profileID")
 
+    # Align factor levels with priors BEFORE encoding
+    profiles_aligned <- align_profiles_with_priors(profiles, priors, attr_names)
+
     # Get random parameters for encoding
     randPars <- get_rand_pars(priors)
 
-    # Encode the profiles
-    coded_data <- logitr::recodeData(profiles, attr_names, randPars)
+    # Encode the profiles using aligned profiles
+    coded_data <- logitr::recodeData(profiles_aligned, attr_names, randPars)
     X_matrix <- coded_data$X
 
-    # Defaults for no choice
+    # Defaults for no choice utilities
     exp_no_choice <- NULL
     exp_no_choice_draws <- NULL
 
-    # Encode profiles using logitr if we have priors
+    # Compute utilities if we have priors
     if (!is.null(priors)) {
 
+        # Handle no_choice parameter extraction
         if (no_choice) {
-            prior_no_choice <- priors$pars["no_choice"]
             no_choice_index <- which(names(priors$pars) == "no_choice")
-            priors$pars <- priors$pars[-no_choice_index]
+            prior_no_choice <- priors$pars[no_choice_index]
+            profile_pars <- priors$pars[-no_choice_index]
+        } else {
+            profile_pars <- priors$pars
+            prior_no_choice <- if (no_choice) 0 else NULL  # Default no-choice utility
         }
 
         # Compute utilities for each profile
         if (!is.null(priors$par_draws)) {
-
+            # Handle no_choice draws
             if (no_choice) {
                 prior_no_choice_draws <- priors$par_draws[, no_choice_index]
-                priors$par_draws <- priors$par_draws[, -no_choice_index]
+                profile_par_draws <- priors$par_draws[, -no_choice_index]
+            } else {
+                profile_par_draws <- priors$par_draws
+                prior_no_choice_draws <- if (no_choice) rep(0, nrow(priors$par_draws)) else NULL
             }
 
             # Bayesian case with parameter draws
-            n_draws <- nrow(priors$par_draws)
+            n_draws <- nrow(profile_par_draws)
             exp_utilities_draws <- array(dim = c(nrow(profiles), n_draws))
 
             for (i in 1:n_draws) {
-                utilities_i <- X_matrix %*% priors$par_draws[i, ]
+                utilities_i <- X_matrix %*% profile_par_draws[i, ]
                 exp_utilities_draws[, i] <- exp(utilities_i)
             }
             exp_utilities <- NULL
+
+            # Handle no-choice draws
+            if (no_choice) {
+                exp_no_choice_draws <- exp(prior_no_choice_draws)
+            }
         } else {
             # Fixed parameters case
-            utilities <- X_matrix %*% priors$pars
+            utilities <- X_matrix %*% profile_pars
             exp_utilities <- exp(utilities)
             exp_utilities_draws <- NULL
+
+            # Handle no-choice
+            if (no_choice) {
+                exp_no_choice <- exp(prior_no_choice)
+            }
         }
 
         # Pre-compute partial utilities for dominance checking if needed
@@ -167,25 +185,10 @@ setup_optimization_environment <- function(
         exp_utilities <- rep(1, nrow(profiles))
         exp_utilities_draws <- NULL
         partial_utilities <- NULL
-    }
 
-    # Handle no-choice option
-    exp_no_choice <- NULL
-    exp_no_choice_draws <- NULL
-    if (no_choice) {
-        if (!is.null(priors)) {
-            exp_no_choice <- exp(prior_no_choice)
-        } else {
+        # Handle no-choice with no priors
+        if (no_choice) {
             exp_no_choice <- 1  # Default no-choice utility of 0 (exp(0) = 1)
-        }
-
-        if (!is.null(exp_utilities_draws)) {
-            # Add no-choice utilities for each draw
-            if (!is.null(priors)) {
-                exp_no_choice_draws <- exp(prior_no_choice_draws)
-            } else {
-                exp_no_choice_draws <- rep(1, ncol(exp_utilities_draws))
-            }
         }
     }
 
@@ -196,7 +199,7 @@ setup_optimization_environment <- function(
     }
 
     return(list(
-        profiles = profiles,
+        profiles = profiles_aligned,  # Use aligned profiles
         priors = priors,
         attr_names = attr_names,
         exp_no_choice = exp_no_choice,
@@ -204,7 +207,7 @@ setup_optimization_environment <- function(
         exp_utilities = exp_utilities,
         exp_utilities_draws = exp_utilities_draws,
         partial_utilities = partial_utilities,
-        X_matrix = X_matrix,
+        X_matrix = X_matrix,  # This is the properly encoded matrix we can reuse
         no_choice = no_choice,
         label = label,
         label_constraints = label_constraints,
@@ -213,6 +216,77 @@ setup_optimization_environment <- function(
         dominance_threshold = dominance_threshold,
         available_profile_ids = profiles$profileID
     ))
+}
+
+#' Align profile factor levels with priors before encoding
+#'
+#' This ensures that logitr::recodeData creates dummy variables that match
+#' the prior specifications exactly.
+#'
+#' @param profiles Original profiles data frame
+#' @param priors cbc_priors object or NULL
+#' @param attr_names Attribute names to process
+#' @return profiles data frame with properly aligned factor levels
+align_profiles_with_priors <- function(profiles, priors, attr_names) {
+    if (is.null(priors)) {
+        return(profiles)  # No alignment needed
+    }
+
+    profiles_aligned <- profiles
+
+    for (attr in attr_names) {
+        if (attr %in% names(profiles) && attr %in% names(priors$attrs)) {
+            attr_info <- priors$attrs[[attr]]
+
+            # Only process categorical variables
+            if (!attr_info$continuous) {
+                values <- profiles[[attr]]
+
+                # Determine the intended level order from priors
+                if (!is.null(names(attr_info$mean))) {
+                    # Named priors: use the names to determine order
+                    coef_levels <- names(attr_info$mean)
+                    all_unique_values <- unique(values)
+
+                    # Reference level is the one not in the coefficient names
+                    ref_level <- setdiff(all_unique_values, coef_levels)
+                    if (length(ref_level) != 1) {
+                        stop(sprintf(
+                            "Cannot determine reference level for attribute '%s'. ",
+                            "Named priors should specify all levels except one.",
+                            attr
+                        ))
+                    }
+
+                    # Order: reference level first, then coefficient levels
+                    level_order <- c(ref_level, coef_levels)
+                } else {
+                    # Unnamed priors: use natural order, first level is reference
+                    if (is.factor(values)) {
+                        level_order <- levels(values)
+                    } else {
+                        level_order <- unique(values)
+                    }
+
+                    # Validate that we have the right number of priors
+                    expected_coefs <- length(level_order) - 1
+                    actual_coefs <- length(attr_info$mean)
+                    if (expected_coefs != actual_coefs) {
+                        stop(sprintf(
+                            "Attribute '%s' has %d levels but %d prior values provided. ",
+                            "Expected %d values (one less than number of levels).",
+                            attr, length(level_order), actual_coefs, expected_coefs
+                        ))
+                    }
+                }
+
+                # Set as factor with proper level order
+                profiles_aligned[[attr]] <- factor(values, levels = level_order)
+            }
+        }
+    }
+
+    return(profiles_aligned)
 }
 
 #' Generate a random design using profileID sampling with matrix operations
@@ -665,14 +739,14 @@ compute_info_matrix <- function(X_list, P_list) {
     ))
 }
 
-#' Convert profileID design matrix to full design data frame
+#' Convert profileID design matrix to full design data frame using existing encoded matrix
 #'
 #' @param design_matrix Matrix of profileIDs
-#' @param opt_env Optimization environment
+#' @param opt_env Optimization environment (contains X_matrix with encoded profiles)
 #' @param n_alts Number of alternatives per question
 #' @param n_q Number of questions per block
 #' @param n_blocks Number of blocks
-#' @return Data frame with full design
+#' @return Data frame with full design (always dummy-coded for categorical variables)
 construct_final_design <- function(design_matrix, opt_env, n_alts, n_q, n_resp, n_blocks) {
 
     if (opt_env$no_choice) {
@@ -683,7 +757,7 @@ construct_final_design <- function(design_matrix, opt_env, n_alts, n_q, n_resp, 
     actual_n_alts <- ncol(design_matrix)  # May be n_alts + 1 if no-choice added
     total_rows <- total_questions * actual_n_alts
 
-    # Initialize design data frame
+    # Initialize design data frame with ID columns
     design <- data.frame(
         profileID = as.vector(t(design_matrix)),
         blockID = rep(rep(1:n_blocks, each = n_q), n_resp * actual_n_alts),
@@ -693,39 +767,81 @@ construct_final_design <- function(design_matrix, opt_env, n_alts, n_q, n_resp, 
         obsID = rep(1:total_questions, each = actual_n_alts)
     )
 
-    # Add attribute values by joining with profiles
+    # Create lookup table from X_matrix (which is already encoded)
+    # X_matrix rows correspond to profiles$profileID order
+    X_df <- as.data.frame(opt_env$X_matrix)
+    X_df$profileID <- opt_env$profiles$profileID
+
+    # Handle no-choice option if present
     if (opt_env$no_choice) {
-        # Handle no-choice rows
-        no_choice_rows <- design$profileID == 0
+        # Add no-choice row (all parameters = 0)
+        no_choice_row <- as.data.frame(matrix(0, nrow = 1, ncol = ncol(opt_env$X_matrix)))
+        names(no_choice_row) <- names(X_df)[1:ncol(opt_env$X_matrix)]
+        no_choice_row$profileID <- 0
+        no_choice_row$no_choice <- 1  # Add no_choice indicator
 
-        # Create no-choice profile
-        no_choice_profile <- opt_env$profiles[1, ]  # Copy structure
-        no_choice_profile$profileID <- 0
-        no_choice_profile[opt_env$attr_names] <- 0  # Set all attributes to 0
-        no_choice_profile$no_choice <- 1  # Add no_choice indicator
+        # Add no_choice column to regular profiles (set to 0)
+        X_df$no_choice <- 0
 
-        # Join regular profiles
-        regular_profiles <- opt_env$profiles
-        regular_profiles$no_choice <- 0
-
-        # Combine profiles
-        all_profiles <- rbind(no_choice_profile, regular_profiles)
-
-    } else {
-        all_profiles <- opt_env$profiles
+        # Combine
+        X_df <- rbind(X_df, no_choice_row)
     }
 
-    # Join with profiles to get attribute values
-    design <- merge(design, all_profiles, by = "profileID", sort = FALSE)
+    # Join design with encoded attributes
+    design <- merge(design, X_df, by = "profileID", sort = FALSE)
 
     # Reorder columns and rows
     id_cols <- c("profileID", "blockID", "qID", "altID", "obsID")
+    if (opt_env$no_choice) {
+        id_cols <- c(id_cols, "no_choice")
+    }
     attr_cols <- setdiff(names(design), id_cols)
     design <- design[, c(id_cols, attr_cols)]
     design <- design[order(design$obsID, design$altID), ]
     row.names(design) <- NULL
 
+    # Store categorical structure for potential decoding
+    categorical_structure <- get_categorical_structure_from_profiles(opt_env$profiles, opt_env$attr_names)
+    attr(design, "categorical_structure") <- categorical_structure
+    attr(design, "is_dummy_coded") <- TRUE
+
     return(design)
+}
+
+#' Get categorical structure information from original profiles
+#'
+#' @param profiles Original profiles data frame
+#' @param attr_names Attribute names
+#' @return List containing information about categorical variables
+get_categorical_structure_from_profiles <- function(profiles, attr_names) {
+    categorical_info <- list()
+
+    for (attr in attr_names) {
+        if (attr %in% names(profiles)) {
+            values <- profiles[[attr]]
+            if (!is.numeric(values)) {
+                # This is a categorical variable
+                if (is.factor(values)) {
+                    levels_order <- levels(values)
+                } else {
+                    levels_order <- unique(values)
+                }
+
+                categorical_info[[attr]] <- list(
+                    is_categorical = TRUE,
+                    levels = levels_order,
+                    reference_level = levels_order[1]  # First level is reference
+                )
+            } else {
+                # Numeric variable
+                categorical_info[[attr]] <- list(
+                    is_categorical = FALSE
+                )
+            }
+        }
+    }
+
+    return(categorical_info)
 }
 
 #' Finalize the design object with metadata and class
@@ -1405,4 +1521,157 @@ randomize_alternative_order <- function(resp_design, n_q, n_alts) {
     }
 
     return(resp_design)
+}
+
+#' Convert dummy-coded design back to categorical format
+#'
+#' This function converts a dummy-coded CBC design back to its original
+#' categorical format. This is useful for displaying choice questions to
+#' respondents or for analysis that requires categorical variables. Only
+#' works for designs without no-choice options, as no-choice designs cannot
+#' be meaningfully converted back to categorical format.
+#'
+#' @param design A `cbc_design` object with dummy-coded categorical variables
+#' @return A `cbc_design` object with categorical variables restored to their original format
+#' @export
+#' @examples
+#' library(cbcTools)
+#'
+#' # Create profiles with categorical variables
+#' profiles <- cbc_profiles(
+#'   price = c(10, 20, 30),
+#'   quality = c("Low", "Medium", "High"),
+#'   brand = c("A", "B")
+#' )
+#'
+#' # Create design (will be dummy-coded by default)
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_alts = 2,
+#'   n_q = 4
+#' )
+#'
+#' # View dummy-coded design
+#' head(design)
+#'
+#' # Convert back to categorical format
+#' design_categorical <- cbc_decode_design(design)
+#' head(design_categorical)
+cbc_decode_design <- function(design) {
+    # Check input class
+    if (!inherits(design, "cbc_design")) {
+        stop("Input must be a cbc_design object created by cbc_design()")
+    }
+
+    # Check if design has no-choice option
+    design_params <- attr(design, "design_params")
+    if (!is.null(design_params) && design_params$no_choice) {
+        stop(
+            "Cannot convert designs with no-choice option back to categorical format.\n",
+            "No-choice designs must remain dummy-coded to maintain consistency."
+        )
+    }
+
+    # Check if design is dummy-coded
+    if (!is_dummy_coded(design)) {
+        message("Design is already in categorical format.")
+        return(design)
+    }
+
+    # Get categorical structure information
+    categorical_structure <- attr(design, "categorical_structure")
+    if (is.null(categorical_structure)) {
+        warning("No categorical structure information found. Design may already be decoded or created with an older version.")
+        return(design)
+    }
+
+    # Apply decoding
+    decoded_design <- decode_categorical_variables(design, categorical_structure)
+
+    # Update attributes
+    attr(decoded_design, "is_dummy_coded") <- FALSE
+
+    # Copy over all other design attributes
+    design_attrs <- names(attributes(design))
+    design_attrs <- setdiff(design_attrs, c("names", "class", "row.names", "is_dummy_coded"))
+
+    for (attr_name in design_attrs) {
+        attr(decoded_design, attr_name) <- attr(design, attr_name)
+    }
+
+    class(decoded_design) <- class(design)
+    return(decoded_design)
+}
+
+# Helper functions needed for cbc_decode_design
+
+#' Check if design is dummy-coded
+#' @param design Design object to check
+#' @return Logical indicating if design is dummy-coded
+is_dummy_coded <- function(design) {
+    is_coded <- attr(design, "is_dummy_coded")
+    if (is.null(is_coded)) {
+        # If no attribute, try to infer from column names
+        # Look for column names that suggest dummy coding (e.g., "qualityHigh", "brandB")
+        categorical_structure <- attr(design, "categorical_structure")
+        if (!is.null(categorical_structure)) {
+            categorical_attrs <- names(categorical_structure)[
+                sapply(categorical_structure, function(x) x$is_categorical)
+            ]
+
+            # Check if any original categorical column names are missing
+            missing_categoricals <- setdiff(categorical_attrs, names(design))
+            if (length(missing_categoricals) > 0) {
+                return(TRUE)  # Likely dummy-coded if original categorical columns are missing
+            }
+        }
+        return(FALSE)
+    }
+    return(is_coded)
+}
+
+#' Decode categorical variables from dummy coding
+#' @param design Design data frame with dummy-coded variables
+#' @param categorical_structure Information about original categorical structure
+#' @return Design data frame with categorical variables restored
+decode_categorical_variables <- function(design, categorical_structure) {
+
+    decoded_design <- design
+
+    # Get categorical attributes
+    categorical_attrs <- names(categorical_structure)[
+        sapply(categorical_structure, function(x) x$is_categorical)
+    ]
+
+    for (attr in categorical_attrs) {
+        levels_info <- categorical_structure[[attr]]
+        levels_order <- levels_info$levels
+        reference_level <- levels_info$reference_level
+        non_ref_levels <- setdiff(levels_order, reference_level)
+
+        # Find dummy columns for this attribute
+        dummy_cols <- paste0(attr, non_ref_levels)
+        existing_dummy_cols <- intersect(dummy_cols, names(design))
+
+        if (length(existing_dummy_cols) > 0) {
+            # Reconstruct categorical variable
+            n_rows <- nrow(design)
+            categorical_values <- rep(reference_level, n_rows)
+
+            # Set non-reference levels based on dummy variables
+            for (dummy_col in existing_dummy_cols) {
+                level_name <- gsub(paste0("^", attr), "", dummy_col)
+                is_this_level <- design[[dummy_col]] == 1
+                categorical_values[is_this_level] <- level_name
+            }
+
+            # Add reconstructed categorical variable
+            decoded_design[[attr]] <- factor(categorical_values, levels = levels_order)
+
+            # Remove dummy columns
+            decoded_design[existing_dummy_cols] <- NULL
+        }
+    }
+
+    return(decoded_design)
 }

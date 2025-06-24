@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{setup_optimization_environment}
 \alias{setup_optimization_environment}
-\title{Set up the optimization environment with pre-computed utilities}
+\title{Set up the optimization environment with pre-computed utilities and proper factor alignment}
 \usage{
 setup_optimization_environment(
   profiles,
@@ -33,5 +33,5 @@ setup_optimization_environment(
 A list containing the optimization environment
 }
 \description{
-Set up the optimization environment with pre-computed utilities
+Set up the optimization environment with pre-computed utilities and proper factor alignment
 }

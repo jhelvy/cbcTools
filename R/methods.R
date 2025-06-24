@@ -125,7 +125,7 @@ print.cbc_priors <- function(x, ...) {
   invisible(x)
 }
 
-#' Enhanced print method for cbc_design objects
+#' Enhanced print method for cbc_design objects (Updated for dummy coding)
 #' @param x A cbc_design object
 #' @param ... Additional arguments passed to print
 #' @export
@@ -134,6 +134,7 @@ print.cbc_design <- function(x, ...) {
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
     priors <- attr(x, "priors")
+    categorical_structure <- attr(x, "categorical_structure")
 
     cat("Choice-Based Conjoint Design\n")
     cat("============================\n")
@@ -141,7 +142,10 @@ print.cbc_design <- function(x, ...) {
     cat(sprintf("Respondents: %d\n", params$n_resp))
     cat(sprintf("Alternatives per question: %d\n", params$n_alts))
     cat(sprintf("Questions per respondent: %d\n", params$n_q))
-    cat(sprintf("Total questions generated: %d\n", summary_info$method_specific$total_questions_generated))
+
+    if (!is.null(summary_info$method_specific$total_questions_generated)) {
+        cat(sprintf("Total questions generated: %d\n", summary_info$method_specific$total_questions_generated))
+    }
     cat(sprintf("Number of blocks: %d\n", params$n_blocks))
 
     if (params$no_choice) {
@@ -170,6 +174,30 @@ print.cbc_design <- function(x, ...) {
     cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",
                 summary_info$n_profiles_used, summary_info$n_profiles_available,
                 summary_info$profile_usage_rate * 100))
+
+    # Dummy coding information
+    is_dummy_coded <- attr(x, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
+    if (is_dummy_coded) {
+        cat("Variable encoding: Dummy-coded")
+
+        # Show which variables are categorical
+        if (!is.null(categorical_structure)) {
+            categorical_vars <- names(categorical_structure)[
+                sapply(categorical_structure, function(info) info$is_categorical)
+            ]
+            if (length(categorical_vars) > 0) {
+                cat(sprintf(" (%s)", paste(categorical_vars, collapse = ", ")))
+            }
+        }
+        cat("\n")
+
+        # Show decode option if no no-choice
+        if (!params$no_choice) {
+            cat("  Use cbc_decode() to convert back to categorical format\n")
+        }
+    } else {
+        cat("Variable encoding: Categorical format\n")
+    }
 
     # Method-specific details
     if (!is.null(summary_info$method_specific)) {

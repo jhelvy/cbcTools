@@ -2,14 +2,14 @@
 % Please edit documentation in R/design.R
 \name{construct_final_design}
 \alias{construct_final_design}
-\title{Convert profileID design matrix to full design data frame}
+\title{Convert profileID design matrix to full design data frame using existing encoded matrix}
 \usage{
 construct_final_design(design_matrix, opt_env, n_alts, n_q, n_resp, n_blocks)
 }
 \arguments{
 \item{design_matrix}{Matrix of profileIDs}
 
-\item{opt_env}{Optimization environment}
+\item{opt_env}{Optimization environment (contains X_matrix with encoded profiles)}
 
 \item{n_alts}{Number of alternatives per question}
 
@@ -18,8 +18,8 @@ construct_final_design(design_matrix, opt_env, n_alts, n_q, n_resp, n_blocks)
 \item{n_blocks}{Number of blocks}
 }
 \value{
-Data frame with full design
+Data frame with full design (always dummy-coded for categorical variables)
 }
 \description{
-Convert profileID design matrix to full design data frame
+Convert profileID design matrix to full design data frame using existing encoded matrix
 }
