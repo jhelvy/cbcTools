@@ -21,13 +21,3 @@ A correlation specification list
 \description{
 Create a correlation specification for random parameters
 }
-\examples{
-# Correlate with entire attribute
-cor_spec(with = "price", value = 0.3)
-
-# Correlate with specific level
-cor_spec(with = "type", level = "Fuji", value = 0.3)
-
-# Correlate between levels
-cor_spec(with = "type", level = "Fuji", with_level = "Gala", value = 0.5)
-}

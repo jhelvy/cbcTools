@@ -22,18 +22,3 @@ A random parameter specification list
 \description{
 Create a random parameter specification
 }
-\examples{
-# For a continuous parameter
-rand_spec(dist = "ln", mean = -0.5, sd = 0.4)
-
-# For a categorical parameter with correlations
-rand_spec(
-  dist = "n",
-  mean = c("Fuji" = 0.2, "Gala" = 0.3),
-  sd = c("Fuji" = 0.4, "Gala" = 0.4),
-  correlations = list(
-    cor_spec(with = "price", value = 0.3),
-    cor_spec(with = "type", level = "Fuji", with_level = "Gala", value = 0.5)
-  )
-)
-}

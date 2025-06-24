@@ -24,55 +24,6 @@
 #' @return A structured prior specification object including parameter draws for
 #'   random coefficients
 #' @export
-#' @examples
-#' # Create profiles for an example conjoint about apples
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c("Poor", "Average", "Excellent")
-#' )
-#'
-#' # Example 1: Simple fixed parameters with no-choice option
-#' priors <- cbc_priors(
-#'   profiles = profiles,
-#'   price = -0.5,
-#'   type = c(0.2, 0.3),      # Dummy-coded categorical (Honeycrisp reference)
-#'   freshness = c(0.4, 0.8), # Dummy-coded categorical (Poor reference)
-#'   no_choice = -2.0         # Fixed no-choice utility
-#' )
-#'
-#' # Example 2: Random no-choice parameter
-#' priors <- cbc_priors(
-#'   profiles = profiles,
-#'   price = -0.5,
-#'   type = c(0.2, 0.3),
-#'   freshness = c(0.4, 0.8),
-#'   no_choice = rand_spec(    # Random no-choice utility
-#'     dist = "n",
-#'     mean = -2.0,
-#'     sd = 0.5
-#'   )
-#' )
-#'
-#' # Example 3: No-choice with correlations
-#' priors <- cbc_priors(
-#'   profiles = profiles,
-#'   price = rand_spec(
-#'     dist = "ln",
-#'     mean = -0.5,
-#'     sd = 0.4
-#'   ),
-#'   type = c(0.2, 0.3),
-#'   freshness = c(0.4, 0.8),
-#'   no_choice = rand_spec(
-#'     dist = "n",
-#'     mean = -2.0,
-#'     sd = 0.5,
-#'     correlations = list(
-#'       cor_spec(with = "price", value = 0.3)
-#'     )
-#'   )
-#' )
 cbc_priors <- function(
         profiles,
         no_choice = NULL,
@@ -87,203 +38,35 @@ cbc_priors <- function(
 
     # Get attribute information and combine with parameter specifications
     params <- list(...)
-
-    # Add no_choice to params if specified
-    if (!is.null(no_choice)) {
-        params$no_choice <- no_choice
-    }
+    if (!is.null(no_choice)) params$no_choice <- no_choice
 
     attrs <- get_combined_attr_info(profiles, params, include_no_choice = !is.null(no_choice))
-
-    # Process parameters into standardized format
     processed_params <- process_parameters(attrs)
 
-    # Separate fixed and random parameters
-    fixed_params <- processed_params$fixed
-    random_params <- processed_params$random
-
-    # Set up random parameters specification for logitr
-    randPars <- lapply(random_params, function(x) x$dist)
-
-    # Create coded data structure (no_choice will be handled separately in design functions)
-    profile_params <- params[!names(params) %in% "no_choice"]
-    means <- c(fixed_params, lapply(random_params, function(x) x$mean))
-    profile_means <- means[!names(means) %in% "no_choice"]
-
-    model_data <- prepare_profiles_for_model(profiles, profile_means, attrs)
-
-    # Only pass profile attributes to recodeData (no_choice handled separately)
+    # Create coded data structure for parameter ordering
+    model_data <- prepare_profiles_for_model(profiles, processed_params$means, attrs)
     profile_attrs <- names(attrs)[names(attrs) != "no_choice"]
-    profile_randPars <- randPars[names(randPars) %in% profile_attrs]
+    profile_randPars <- get_random_pars_for_logitr(processed_params$random, attrs, profile_attrs)
 
     codedData <- logitr::recodeData(model_data, profile_attrs, profile_randPars)
-    codedParNames <- codedData$pars
+    codedParNames <- if (!is.null(no_choice)) c(codedData$pars, "no_choice") else codedData$pars
 
-    # Add no_choice parameter name if specified
-    if (!is.null(no_choice)) {
-        codedParNames <- c(codedParNames, "no_choice")
-    }
-
-    # Build pars_mean in the same order as codedParNames
-    pars_mean <- numeric(length(codedParNames))
-    names(pars_mean) <- codedParNames
-
-    # Fill in values for each coded parameter name
-    for (param_name in codedParNames) {
-        # Find which original attribute this coded parameter belongs to
-        original_attr <- NULL
-
-        # Check each attribute to see if this coded parameter belongs to it
-        for (attr in names(attrs)) {
-            if (attr == "no_choice") {
-                if (param_name == "no_choice") {
-                    original_attr <- attr
-                    break
-                }
-            } else if (attrs[[attr]]$continuous) {
-                # Continuous parameters keep their original name
-                if (param_name == attr) {
-                    original_attr <- attr
-                    break
-                }
-            } else {
-                # Categorical parameters: check if param_name starts with attr
-                if (startsWith(param_name, attr)) {
-                    original_attr <- attr
-                    break
-                }
-            }
-        }
-
-        # Get the value for this parameter
-        if (!is.null(original_attr)) {
-            if (original_attr %in% names(fixed_params)) {
-                # Fixed parameter
-                if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
-                    pars_mean[param_name] <- fixed_params[[original_attr]]
-                } else {
-                    # Extract level name from coded parameter name
-                    level_name <- gsub(paste0("^", original_attr), "", param_name)
-                    pars_mean[param_name] <- fixed_params[[original_attr]][level_name]
-                }
-            } else if (original_attr %in% names(random_params)) {
-                # Random parameter
-                if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
-                    pars_mean[param_name] <- random_params[[original_attr]]$mean
-                } else {
-                    # Extract level name from coded parameter name
-                    level_name <- gsub(paste0("^", original_attr), "", param_name)
-                    pars_mean[param_name] <- random_params[[original_attr]]$mean[level_name]
-                }
-            }
-        }
-    }
+    # Build parameter vectors in coded order
+    pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
 
     # Generate parameter draws if we have random parameters
-    if (length(random_params) > 0) {
-
-        # Build correlation matrix from specifications
-        cor_mat <- build_correlation_matrix(attrs, random_params)
-
-        # Set up parameter structure - map to coded names
-        all_randPars <- list()
-
-        # Map profile random parameters to their coded names
-        for (attr in names(profile_randPars)) {
-            if (attrs[[attr]]$continuous) {
-                # Continuous parameters keep their name
-                all_randPars[[attr]] <- profile_randPars[[attr]]
-            } else {
-                # Categorical parameters get expanded to individual level names
-                level_names <- names(attrs[[attr]]$mean)
-                for (level in level_names) {
-                    coded_name <- paste0(attr, level)
-                    all_randPars[[coded_name]] <- profile_randPars[[attr]]
-                }
-            }
-        }
-
-        # Add no_choice if it's random
-        if (!is.null(no_choice) && attrs$no_choice$random) {
-            all_randPars[["no_choice"]] <- attrs$no_choice$dist
-        }
-
-        parSetup <- get_parSetup(codedParNames, all_randPars)
-        parIDs <- get_parIDs(parSetup)
-
-        # Build pars_sd in the same order as random parameters in codedParNames
-        pars_sd <- c()
-        pars_sd_names <- c()
-
-        for (param_name in codedParNames) {
-            if (param_name %in% names(all_randPars)) {
-                # This is a random parameter
-                # Find which original attribute this belongs to
-                original_attr <- NULL
-                for (attr in names(random_params)) {
-                    if (attr == "no_choice") {
-                        if (param_name == "no_choice") {
-                            original_attr <- attr
-                            break
-                        }
-                    } else if (attrs[[attr]]$continuous) {
-                        if (param_name == attr) {
-                            original_attr <- attr
-                            break
-                        }
-                    } else {
-                        if (startsWith(param_name, attr)) {
-                            original_attr <- attr
-                            break
-                        }
-                    }
-                }
-
-                if (!is.null(original_attr)) {
-                    if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
-                        pars_sd <- c(pars_sd, random_params[[original_attr]]$sd)
-                        pars_sd_names <- c(pars_sd_names, param_name)
-                    } else {
-                        # Extract level name from coded parameter name
-                        level_name <- gsub(paste0("^", original_attr), "", param_name)
-                        pars_sd <- c(pars_sd, random_params[[original_attr]]$sd[level_name])
-                        pars_sd_names <- c(pars_sd_names, param_name)
-                    }
-                }
-            }
-        }
-
-        names(pars_sd) <- pars_sd_names
-
-        # Set up n list for makeBetaDraws
-        n <- list(
-            vars = length(parSetup),
-            parsFixed = length(which(parSetup == "f")),
-            parsRandom = length(which(parSetup != "f")),
-            draws = n_draws,
-            pars = length(pars_mean)
+    par_draws <- NULL
+    cor_mat <- NULL
+    if (length(processed_params$random) > 0) {
+        cor_mat <- build_correlation_matrix(attrs, processed_params$random)
+        par_draws <- generate_parameter_draws(
+            codedParNames, attrs, processed_params, cor_mat, n_draws, draw_type
         )
-
-        # Generate parameter draws
-        standardDraws <- getStandardDraws(parIDs, n$draws, draw_type)
-        par_draws <- makeBetaDraws(
-            pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat
-        )
-    } else {
-        par_draws <- NULL
-        cor_mat <- NULL
     }
 
-    # Store profiles reference and metadata for validation
-    profiles_metadata <- list(
-        attribute_info = attr(profiles, "attribute_info"),
-        n_profiles = nrow(profiles),
-        profile_hash = digest_profiles(profiles)
-    )
-
-    # Create return object
+    # Create return object with metadata
     result <- list(
-        profiles_metadata = profiles_metadata,  # For validation
+        profiles_metadata = create_profiles_metadata(profiles),
         attrs = attrs,
         pars = pars_mean,
         correlation = cor_mat,
@@ -305,41 +88,17 @@ cbc_priors <- function(
 #' @param correlations List of correlation specifications created by cor_spec()
 #' @return A random parameter specification list
 #' @export
-#' @examples
-#' # For a continuous parameter
-#' rand_spec(dist = "ln", mean = -0.5, sd = 0.4)
-#'
-#' # For a categorical parameter with correlations
-#' rand_spec(
-#'   dist = "n",
-#'   mean = c("Fuji" = 0.2, "Gala" = 0.3),
-#'   sd = c("Fuji" = 0.4, "Gala" = 0.4),
-#'   correlations = list(
-#'     cor_spec(with = "price", value = 0.3),
-#'     cor_spec(with = "type", level = "Fuji", with_level = "Gala", value = 0.5)
-#'   )
-#' )
 rand_spec <- function(dist = "n", mean, sd, correlations = NULL) {
     if (!dist %in% c("n", "ln", "cn")) {
         stop('dist must be one of "n" (normal), "ln" (log-normal), or "cn" (censored normal)')
     }
 
     if (!is.null(correlations)) {
-        if (!is.list(correlations)) {
-            stop("correlations must be a list of correlation specifications created by cor_spec()")
-        }
-        if (!all(sapply(correlations, inherits, "cbc_correlation"))) {
-            stop("all correlations must be created using cor_spec()")
-        }
+        validate_correlations(correlations)
     }
 
     structure(
-        list(
-            dist = dist,
-            mean = mean,
-            sd = sd,
-            correlations = correlations
-        ),
+        list(dist = dist, mean = mean, sd = sd, correlations = correlations),
         class = "cbc_random_par"
     )
 }
@@ -352,27 +111,13 @@ rand_spec <- function(dist = "n", mean, sd, correlations = NULL) {
 #' @param with_level Character. For categorical variables, specific level to correlate with
 #' @return A correlation specification list
 #' @export
-#' @examples
-#' # Correlate with entire attribute
-#' cor_spec(with = "price", value = 0.3)
-#'
-#' # Correlate with specific level
-#' cor_spec(with = "type", level = "Fuji", value = 0.3)
-#'
-#' # Correlate between levels
-#' cor_spec(with = "type", level = "Fuji", with_level = "Gala", value = 0.5)
 cor_spec <- function(with, value, level = NULL, with_level = NULL) {
     if (!is.numeric(value) || value < -1 || value > 1) {
         stop("Correlation value must be between -1 and 1")
     }
 
     structure(
-        list(
-            attr = with,
-            value = value,
-            level = level,
-            with_level = with_level
-        ),
+        list(attr = with, value = value, level = level, with_level = with_level),
         class = "cbc_correlation"
     )
 }
@@ -399,7 +144,6 @@ validate_priors_profiles <- function(priors, profiles) {
     if (priors_meta$profile_hash != current_hash) {
         current_attr_info <- attr(profiles, "attribute_info")
 
-        # More detailed comparison
         if (!identical(priors_meta$attribute_info, current_attr_info)) {
             warning(
                 "Priors were created for different profile attributes or levels. ",
@@ -418,43 +162,301 @@ validate_priors_profiles <- function(priors, profiles) {
     invisible(TRUE)
 }
 
-# Helper function to create a simple hash of profiles structure
+# Helper Functions ----
+
+# Validate correlations list
+validate_correlations <- function(correlations) {
+    if (!is.list(correlations)) {
+        stop("correlations must be a list of correlation specifications created by cor_spec()")
+    }
+    if (!all(sapply(correlations, inherits, "cbc_correlation"))) {
+        stop("all correlations must be created using cor_spec()")
+    }
+}
+
+# Create profiles metadata for validation
+create_profiles_metadata <- function(profiles) {
+    list(
+        attribute_info = attr(profiles, "attribute_info"),
+        n_profiles = nrow(profiles),
+        profile_hash = digest_profiles(profiles)
+    )
+}
+
+# Create a simple hash of profiles structure
 digest_profiles <- function(profiles) {
-    # Create a simple hash based on attribute info and structure
     attr_info <- attr(profiles, "attribute_info")
     structure_string <- paste(
         names(attr_info),
         sapply(attr_info, function(x) paste(x$type, x$n_levels, collapse = "_")),
         collapse = "|"
     )
-    # Use a simple hash - in production you might want digest::digest()
     abs(sum(utf8ToInt(structure_string)))
 }
 
-#' Check if object is a cbc_priors object
-#' @param x Object to check
-#' @return Logical indicating if x is a cbc_priors object
-#' @export
-is.cbc_priors <- function(x) {
-    inherits(x, "cbc_priors")
+# Get combined attribute information with parameter specifications
+get_combined_attr_info <- function(profiles, params, include_no_choice = FALSE) {
+    profile_attrs <- profiles[, -which(names(profiles) == "profileID")]
+
+    # Validate parameter specifications
+    validate_param_coverage(profile_attrs, params, include_no_choice)
+
+    # Process each profile attribute
+    attrs <- lapply(names(profile_attrs), function(attr) {
+        create_attr_info(profile_attrs[[attr]], params[[attr]], attr)
+    })
+    names(attrs) <- names(profile_attrs)
+
+    # Add no_choice attribute if specified
+    if (include_no_choice && "no_choice" %in% names(params)) {
+        attrs$no_choice <- create_no_choice_info(params$no_choice)
+    }
+
+    return(attrs)
 }
 
-# Helper function to build correlation matrix from random parameter specifications
-build_correlation_matrix <- function(attrs, random_params) {
-    # Get list of all random parameters and their levels
-    par_names <- c()
-    for (attr in names(random_params)) {
-        if (attrs[[attr]]$continuous) {
-            par_names <- c(par_names, attr)
+# Validate parameter coverage
+validate_param_coverage <- function(profile_attrs, params, include_no_choice) {
+    missing_attrs <- setdiff(names(profile_attrs), names(params))
+    if (length(missing_attrs) > 0) {
+        stop("Missing prior specifications for attributes: ",
+             paste(missing_attrs, collapse = ", "))
+    }
+
+    valid_params <- c(names(profile_attrs), if(include_no_choice) "no_choice" else NULL)
+    extra_attrs <- setdiff(names(params), valid_params)
+    if (length(extra_attrs) > 0) {
+        stop("Prior specifications provided for non-existent attributes: ",
+             paste(extra_attrs, collapse = ", "))
+    }
+}
+
+# Create attribute information structure
+create_attr_info <- function(values, param, attr_name) {
+    all_levels <- get_all_levels(values)
+    is_continuous <- is.numeric(values)
+    is_random <- inherits(param, "cbc_random_par")
+
+    info <- list(
+        continuous = is_continuous,
+        levels = all_levels,
+        random = is_random
+    )
+
+    if (is_continuous) {
+        info$range <- range(values)
+    }
+
+    # Process parameter values
+    if (is_random) {
+        info <- c(info, list(
+            dist = param$dist,
+            correlations = param$correlations
+        ))
+        info <- c(info, process_param_values(param$mean, param$sd, all_levels, is_continuous, attr_name, TRUE))
+    } else {
+        info <- c(info, process_param_values(param, NULL, all_levels, is_continuous, attr_name, FALSE))
+    }
+
+    return(info)
+}
+
+# Create no-choice attribute information
+create_no_choice_info <- function(no_choice_param) {
+    info <- list(
+        continuous = TRUE,
+        levels = NULL,
+        random = inherits(no_choice_param, "cbc_random_par")
+    )
+
+    if (info$random) {
+        info$dist <- no_choice_param$dist
+        info$mean <- no_choice_param$mean
+        info$sd <- no_choice_param$sd
+        info$correlations <- no_choice_param$correlations
+    } else {
+        info$mean <- no_choice_param
+    }
+
+    return(info)
+}
+
+# Get all levels for an attribute
+get_all_levels <- function(values) {
+    if (is.numeric(values)) {
+        sort(unique(values))
+    } else {
+        if (is.factor(values)) levels(values) else unique(values)
+    }
+}
+
+# Process parameter values (handles both fixed and random)
+process_param_values <- function(mean_param, sd_param, all_levels, is_continuous, attr_name, is_random) {
+    if (is_continuous) {
+        result <- list(mean = mean_param)
+        if (is_random) result$sd <- sd_param
+        return(result)
+    }
+
+    # Categorical variable processing
+    if (!is.null(names(mean_param))) {
+        # Named vector case
+        validate_categorical_levels(names(mean_param), all_levels, attr_name)
+        if (is_random && !identical(names(mean_param), names(sd_param))) {
+            stop(sprintf("Names for mean and sd must match for random parameter '%s'", attr_name))
+        }
+        result <- list(mean = mean_param)
+        if (is_random) result$sd <- sd_param
+        return(result)
+    } else {
+        # Unnamed vector case - assign names based on remaining levels
+        remaining_levels <- all_levels[-1]  # All but first level
+        if (length(mean_param) != length(remaining_levels)) {
+            stop(sprintf(
+                "Incorrect number of values for '%s'. Expected %d values (one less than the number of levels)",
+                attr_name, length(remaining_levels)
+            ))
+        }
+        names(mean_param) <- remaining_levels
+        result <- list(mean = mean_param)
+        if (is_random) {
+            names(sd_param) <- remaining_levels
+            result$sd <- sd_param
+        }
+        return(result)
+    }
+}
+
+# Validate categorical levels
+validate_categorical_levels <- function(provided_levels, all_levels, attr_name) {
+    invalid_levels <- setdiff(provided_levels, all_levels)
+    if (length(invalid_levels) > 0) {
+        stop(sprintf(
+            "Invalid level(s) provided for '%s': %s\nValid levels are: %s",
+            attr_name,
+            paste(invalid_levels, collapse = ", "),
+            paste(all_levels, collapse = ", ")
+        ))
+    }
+}
+
+# Process parameters into fixed and random components
+process_parameters <- function(attrs) {
+    fixed <- list()
+    random <- list()
+    means <- list()
+
+    for (attr in names(attrs)) {
+        info <- attrs[[attr]]
+        means[[attr]] <- info$mean
+
+        if (info$random) {
+            random[[attr]] <- list(
+                dist = info$dist,
+                mean = info$mean,
+                sd = info$sd,
+                correlations = info$correlations
+            )
         } else {
-            # For categorical variables, add a name for each coefficient
-            categorical_names <- names(attrs[[attr]]$mean)
-            par_names <- c(par_names, paste0(attr, ".", categorical_names))
+            fixed[[attr]] <- info$mean
         }
     }
 
-    # Initialize correlation matrix
+    return(list(fixed = fixed, random = random, means = means))
+}
+
+# Get random parameters formatted for logitr
+get_random_pars_for_logitr <- function(random_params, attrs, profile_attrs) {
+    randPars <- list()
+    for (attr in names(random_params)) {
+        if (attr %in% profile_attrs) {  # Only profile attributes, not no_choice
+            randPars[[attr]] <- random_params[[attr]]$dist
+        }
+    }
+    return(if (length(randPars) > 0) randPars else NULL)
+}
+
+# Build parameter vector in coded order
+build_parameter_vector <- function(codedParNames, attrs, means) {
+    pars_mean <- numeric(length(codedParNames))
+    names(pars_mean) <- codedParNames
+
+    for (param_name in codedParNames) {
+        original_attr <- find_original_attribute(param_name, attrs)
+        pars_mean[param_name] <- extract_parameter_value(param_name, original_attr, attrs, means)
+    }
+
+    return(pars_mean)
+}
+
+# Find which original attribute a coded parameter belongs to
+find_original_attribute <- function(param_name, attrs) {
+    for (attr in names(attrs)) {
+        if (attr == "no_choice" && param_name == "no_choice") {
+            return(attr)
+        } else if (attrs[[attr]]$continuous && param_name == attr) {
+            return(attr)
+        } else if (!attrs[[attr]]$continuous && startsWith(param_name, attr)) {
+            return(attr)
+        }
+    }
+    return(NULL)
+}
+
+# Extract parameter value for a specific coded parameter
+extract_parameter_value <- function(param_name, original_attr, attrs, means) {
+    if (is.null(original_attr) || !original_attr %in% names(means)) {
+        return(0)  # Default value
+    }
+
+    attr_mean <- means[[original_attr]]
+
+    if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
+        return(attr_mean)
+    } else {
+        # Extract level name from coded parameter name
+        level_name <- gsub(paste0("^", original_attr), "", param_name)
+        return(attr_mean[level_name])
+    }
+}
+
+# Prepare profiles for model creation
+prepare_profiles_for_model <- function(profiles, means, attrs) {
+    model_data <- profiles
+
+    for (attr in names(attrs)) {
+        if (attr != "no_choice" && !attrs[[attr]]$continuous) {
+            levels_order <- determine_level_order(attr, means, attrs)
+            model_data[[attr]] <- factor(profiles[[attr]], levels = levels_order)
+        }
+    }
+
+    return(model_data)
+}
+
+# Determine level order for categorical variables
+determine_level_order <- function(attr, means, attrs) {
+    attr_mean <- means[[attr]]
+    all_levels <- attrs[[attr]]$levels
+
+    if (!is.null(names(attr_mean))) {
+        # Named vector case
+        coef_levels <- names(attr_mean)
+        ref_level <- setdiff(all_levels, coef_levels)[1]
+        return(c(ref_level, coef_levels))
+    } else {
+        # Unnamed vector case
+        return(all_levels)
+    }
+}
+
+# Build correlation matrix from random parameter specifications
+build_correlation_matrix <- function(attrs, random_params) {
+    par_names <- get_parameter_names_for_correlation(attrs, random_params)
     n_pars <- length(par_names)
+
+    if (n_pars == 0) return(NULL)
+
     cor_mat <- diag(n_pars)
     rownames(cor_mat) <- colnames(cor_mat) <- par_names
 
@@ -462,107 +464,7 @@ build_correlation_matrix <- function(attrs, random_params) {
     for (attr1 in names(random_params)) {
         param <- random_params[[attr1]]
         if (!is.null(param$correlations)) {
-            for (cor in param$correlations) {
-                attr2 <- cor$attr
-
-                # Validate that correlated attribute exists and is random
-                if (!(attr2 %in% names(random_params))) {
-                    stop(sprintf(
-                        "Cannot correlate with '%s' - it must be a random parameter specified using rand_spec()",
-                        attr2
-                    ))
-                }
-
-                # Handle different correlation specifications
-                if (attrs[[attr1]]$continuous) {
-                    if (!is.null(cor$level)) {
-                        # Validate level exists
-                        if (!cor$level %in% names(attrs[[attr2]]$mean)) {
-                            stop(sprintf(
-                                "Invalid level '%s' for attribute '%s'",
-                                cor$level, attr2
-                            ))
-                        }
-                        # Continuous with specific level of categorical
-                        rows <- attr1
-                        cols <- paste0(attr2, ".", cor$level)
-                    } else {
-                        if (attrs[[attr2]]$continuous) {
-                            # Continuous with continuous
-                            rows <- attr1
-                            cols <- attr2
-                        } else {
-                            # Continuous with all levels of categorical
-                            rows <- attr1
-                            cols <- paste0(attr2, ".", names(attrs[[attr2]]$mean))
-                        }
-                    }
-                } else {
-                    if (!is.null(cor$with_level)) {
-                        # Validate levels exist
-                        if (!cor$level %in% names(attrs[[attr1]]$mean)) {
-                            stop(sprintf(
-                                "Invalid level '%s' for attribute '%s'",
-                                cor$level, attr1
-                            ))
-                        }
-                        if (!cor$with_level %in% names(attrs[[attr2]]$mean)) {
-                            stop(sprintf(
-                                "Invalid level '%s' for attribute '%s'",
-                                cor$with_level, attr2
-                            ))
-                        }
-                        # Between specific levels
-                        rows <- paste0(attr1, ".", cor$level)
-                        cols <- paste0(attr2, ".", cor$with_level)
-                    } else if (!is.null(cor$level)) {
-                        if (!cor$level %in% names(attrs[[attr1]]$mean)) {
-                            stop(sprintf(
-                                "Invalid level '%s' for attribute '%s'",
-                                cor$level, attr1
-                            ))
-                        }
-                        if (attrs[[attr2]]$continuous) {
-                            # Between level and continuous variable
-                            rows <- paste0(attr1, ".", cor$level)
-                            cols <- attr2
-                        } else {
-                            # Between level and all levels of other categorical
-                            rows <- paste0(attr1, ".", cor$level)
-                            cols <- paste0(attr2, ".", names(attrs[[attr2]]$mean))
-                        }
-                    } else {
-                        if (attrs[[attr2]]$continuous) {
-                            # Between all levels and continuous variable
-                            rows <- paste0(attr1, ".", names(attrs[[attr1]]$mean))
-                            cols <- attr2
-                        } else {
-                            # Between all levels of both categoricals
-                            rows <- paste0(attr1, ".", names(attrs[[attr1]]$mean))
-                            cols <- paste0(attr2, ".", names(attrs[[attr2]]$mean))
-                        }
-                    }
-                }
-
-                # Set correlations for all combinations
-                for (row in rows) {
-                    for (col in cols) {
-                        # Verify row and column exist in matrix
-                        if (!row %in% rownames(cor_mat)) {
-                            stop(sprintf("Parameter '%s' not found in correlation matrix", row))
-                        }
-                        if (!col %in% colnames(cor_mat)) {
-                            stop(sprintf("Parameter '%s' not found in correlation matrix", col))
-                        }
-
-                        # Don't set correlation with self
-                        if (row != col) {
-                            cor_mat[row, col] <- cor$value
-                            cor_mat[col, row] <- cor$value
-                        }
-                    }
-                }
-            }
+            process_parameter_correlations(attr1, param$correlations, attrs, random_params, cor_mat)
         }
     }
 
@@ -574,206 +476,150 @@ build_correlation_matrix <- function(attrs, random_params) {
     return(cor_mat)
 }
 
-# Helper function to combine attribute info with parameter specifications
-get_combined_attr_info <- function(profiles, params, include_no_choice = FALSE) {
-    # Remove profileID column
-    profile_attrs <- profiles[, -which(names(profiles) == "profileID")]
-
-    # Validate all profile attributes are specified
-    missing_attrs <- setdiff(names(profile_attrs), names(params))
-    if (length(missing_attrs) > 0) {
-        stop("Missing prior specifications for attributes: ",
-             paste(missing_attrs, collapse = ", "))
-    }
-
-    # Check for extra attributes (excluding no_choice)
-    valid_params <- c(names(profile_attrs), if(include_no_choice) "no_choice" else NULL)
-    extra_attrs <- setdiff(names(params), valid_params)
-    if (length(extra_attrs) > 0) {
-        stop("Prior specifications provided for non-existent attributes: ",
-             paste(extra_attrs, collapse = ", "))
-    }
-
-    # Create combined information for each attribute
-    attrs <- lapply(names(profile_attrs), function(attr) {
-        values <- profile_attrs[[attr]]
-        param <- params[[attr]]
-
-        # Get all levels from profiles
-        all_levels <- if (is.numeric(values)) {
-            sort(unique(values))
+# Get parameter names for correlation matrix
+get_parameter_names_for_correlation <- function(attrs, random_params) {
+    par_names <- c()
+    for (attr in names(random_params)) {
+        if (attrs[[attr]]$continuous) {
+            par_names <- c(par_names, attr)
         } else {
-            if (is.factor(values)) levels(values) else unique(values)
-        }
-
-        # Base structure
-        info <- list(
-            continuous = is.numeric(values),
-            levels = all_levels,
-            random = inherits(param, "cbc_random_par")
-        )
-
-        # Add range for continuous variables
-        if (info$continuous) {
-            info$range <- range(values)
-        }
-
-        # Validate and process parameters
-        if (info$random) {
-            info$dist <- param$dist
-            info$correlations <- param$correlations  # Preserve correlations
-            if (!info$continuous) {
-                if (!is.null(names(param$mean))) {
-                    # Validate named vector levels
-                    invalid_levels <- setdiff(names(param$mean), all_levels)
-                    if (length(invalid_levels) > 0) {
-                        stop(sprintf(
-                            "Invalid level(s) provided for '%s': %s\nValid levels are: %s",
-                            attr,
-                            paste(invalid_levels, collapse = ", "),
-                            paste(all_levels, collapse = ", ")
-                        ))
-                    }
-                    # Validate that sd has same names as mean
-                    if (!identical(names(param$mean), names(param$sd))) {
-                        stop(sprintf(
-                            "Names for mean and sd must match for random parameter '%s'",
-                            attr
-                        ))
-                    }
-                    info$mean <- param$mean
-                    info$sd <- param$sd
-                } else {
-                    # Unnamed vector case - assign names based on remaining levels
-                    remaining_levels <- all_levels[-1]  # All but first level
-                    if (length(param$mean) != length(remaining_levels)) {
-                        stop(sprintf(
-                            "Incorrect number of values for '%s'. Expected %d values (one less than the number of levels)",
-                            attr, length(remaining_levels)
-                        ))
-                    }
-                    names(param$mean) <- remaining_levels
-                    names(param$sd) <- remaining_levels
-                    info$mean <- param$mean
-                    info$sd <- param$sd
-                }
-            } else {
-                info$mean <- param$mean
-                info$sd <- param$sd
-            }
-        } else {
-            # Fixed parameters
-            if (!info$continuous) {
-                if (!is.null(names(param))) {
-                    # Validate named vector levels
-                    invalid_levels <- setdiff(names(param), all_levels)
-                    if (length(invalid_levels) > 0) {
-                        stop(sprintf(
-                            "Invalid level(s) provided for '%s': %s\nValid levels are: %s",
-                            attr,
-                            paste(invalid_levels, collapse = ", "),
-                            paste(all_levels, collapse = ", ")
-                        ))
-                    }
-                    info$mean <- param
-                } else {
-                    # Unnamed vector case - assign names based on remaining levels
-                    remaining_levels <- all_levels[-1]  # All but first level
-                    if (length(param) != length(remaining_levels)) {
-                        stop(sprintf(
-                            "Incorrect number of values for '%s'. Expected %d values (one less than the number of levels)",
-                            attr, length(remaining_levels)
-                        ))
-                    }
-                    names(param) <- remaining_levels
-                    info$mean <- param
-                }
-            } else {
-                info$mean <- param
-            }
-        }
-
-        return(info)
-    })
-    names(attrs) <- names(profile_attrs)
-
-    # Add no_choice attribute if specified
-    if (include_no_choice && "no_choice" %in% names(params)) {
-        no_choice_param <- params$no_choice
-
-        attrs$no_choice <- list(
-            continuous = TRUE,  # no_choice is always treated as continuous
-            levels = NULL,
-            random = inherits(no_choice_param, "cbc_random_par")
-        )
-
-        if (attrs$no_choice$random) {
-            attrs$no_choice$dist <- no_choice_param$dist
-            attrs$no_choice$mean <- no_choice_param$mean
-            attrs$no_choice$sd <- no_choice_param$sd
-            attrs$no_choice$correlations <- no_choice_param$correlations
-        } else {
-            attrs$no_choice$mean <- no_choice_param
+            categorical_names <- names(attrs[[attr]]$mean)
+            par_names <- c(par_names, paste0(attr, ".", categorical_names))
         }
     }
-
-    return(attrs)
+    return(par_names)
 }
 
-# Helper function to process parameters based on combined attribute info
-process_parameters <- function(attrs) {
-    fixed <- list()
-    random <- list()
+# Process correlations for a single parameter
+process_parameter_correlations <- function(attr1, correlations, attrs, random_params, cor_mat) {
+    for (cor in correlations) {
+        attr2 <- cor$attr
 
-    for (attr in names(attrs)) {
-        info <- attrs[[attr]]
-
-        if (info$random) {
-            random[[attr]] <- list(
-                dist = info$dist,
-                mean = info$mean,
-                sd = info$sd,
-                correlations = info$correlations  # Preserve correlations
-            )
-        } else {
-            fixed[[attr]] <- info$mean
+        # Validate that correlated attribute exists and is random
+        if (!(attr2 %in% names(random_params))) {
+            stop(sprintf(
+                "Cannot correlate with '%s' - it must be a random parameter specified using rand_spec()",
+                attr2
+            ))
         }
-    }
 
-    return(list(fixed = fixed, random = random))
+        # Determine correlation indices
+        cor_indices <- determine_correlation_indices(attr1, attr2, cor, attrs)
+
+        # Set correlations in matrix
+        set_correlation_values(cor_mat, cor_indices$rows, cor_indices$cols, cor$value)
+    }
 }
 
-# Helper function to prepare profiles for model creation
-prepare_profiles_for_model <- function(profiles, means, attrs) {
-    model_data <- profiles
+# Determine which matrix indices should be correlated
+determine_correlation_indices <- function(attr1, attr2, cor, attrs) {
+    rows <- get_correlation_parameter_names(attr1, cor$level, attrs)
+    cols <- get_correlation_parameter_names(attr2, cor$with_level, attrs)
+    return(list(rows = rows, cols = cols))
+}
 
-    # Process each attribute
-    for (attr in names(attrs)) {
-        if (!attrs[[attr]]$continuous) {
-            # Get reference level based on provided priors
-            if (!is.null(names(means[[attr]]))) {
-                # Named vector case
-                all_levels <- attrs[[attr]]$levels
-                coef_levels <- names(means[[attr]])
-                ref_level <- setdiff(all_levels, coef_levels)[1]
-                levels_order <- c(ref_level, coef_levels)
-            } else {
-                # Unnamed vector case
-                levels_order <- attrs[[attr]]$levels
+# Get parameter names for correlation (handles continuous vs categorical)
+get_correlation_parameter_names <- function(attr, level, attrs) {
+    if (attrs[[attr]]$continuous) {
+        if (!is.null(level)) {
+            stop(sprintf("Cannot specify level for continuous attribute '%s'", attr))
+        }
+        return(attr)
+    } else {
+        if (!is.null(level)) {
+            if (!level %in% names(attrs[[attr]]$mean)) {
+                stop(sprintf("Invalid level '%s' for attribute '%s'", level, attr))
             }
+            return(paste0(attr, ".", level))
+        } else {
+            return(paste0(attr, ".", names(attrs[[attr]]$mean)))
+        }
+    }
+}
 
-            # Convert to factor with specified level order
-            model_data[[attr]] <- factor(
-                profiles[[attr]],
-                levels = levels_order
-            )
+# Set correlation values in matrix
+set_correlation_values <- function(cor_mat, rows, cols, value) {
+    for (row in rows) {
+        for (col in cols) {
+            if (row != col) {  # Don't set correlation with self
+                cor_mat[row, col] <<- value
+                cor_mat[col, row] <<- value
+            }
+        }
+    }
+}
+
+# Generate parameter draws for Bayesian analysis
+generate_parameter_draws <- function(codedParNames, attrs, processed_params, cor_mat, n_draws, draw_type) {
+    # Build parameter setup for logitr functions
+    all_randPars <- get_all_random_pars(codedParNames, attrs, processed_params$random)
+    parSetup <- get_parSetup(codedParNames, all_randPars)
+    parIDs <- get_parIDs(parSetup)
+
+    # Build standard deviation vector
+    pars_sd <- build_sd_vector(codedParNames, attrs, processed_params$random)
+
+    # Set up n list for makeBetaDraws
+    n <- list(
+        vars = length(parSetup),
+        parsFixed = length(which(parSetup == "f")),
+        parsRandom = length(which(parSetup != "f")),
+        draws = n_draws,
+        pars = length(codedParNames)
+    )
+
+    # Generate parameter draws
+    standardDraws <- getStandardDraws(parIDs, n$draws, draw_type)
+    pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
+
+    return(makeBetaDraws(pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat))
+}
+
+# Get all random parameters mapped to coded names
+get_all_random_pars <- function(codedParNames, attrs, random_params) {
+    all_randPars <- list()
+
+    for (param_name in codedParNames) {
+        original_attr <- find_original_attribute(param_name, attrs)
+        if (!is.null(original_attr) && original_attr %in% names(random_params)) {
+            all_randPars[[param_name]] <- random_params[[original_attr]]$dist
         }
     }
 
-    return(model_data)
+    return(all_randPars)
 }
 
-# Modified from {logitr}
+# Build standard deviation vector
+build_sd_vector <- function(codedParNames, attrs, random_params) {
+    pars_sd <- c()
+    pars_sd_names <- c()
+
+    for (param_name in codedParNames) {
+        original_attr <- find_original_attribute(param_name, attrs)
+        if (!is.null(original_attr) && original_attr %in% names(random_params)) {
+            sd_value <- extract_sd_value(param_name, original_attr, attrs, random_params)
+            pars_sd <- c(pars_sd, sd_value)
+            pars_sd_names <- c(pars_sd_names, param_name)
+        }
+    }
+
+    names(pars_sd) <- pars_sd_names
+    return(pars_sd)
+}
+
+# Extract standard deviation value for a parameter
+extract_sd_value <- function(param_name, original_attr, attrs, random_params) {
+    random_param <- random_params[[original_attr]]
+
+    if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
+        return(random_param$sd)
+    } else {
+        level_name <- gsub(paste0("^", original_attr), "", param_name)
+        return(random_param$sd[level_name])
+    }
+}
+
+# Modified from {logitr} - these functions remain unchanged for compatibility
 get_parSetup <- function(parNames, randPars) {
     parSetup <- rep("f", length(parNames))
     for (i in seq_len(length(parNames))) {
@@ -786,7 +632,6 @@ get_parSetup <- function(parNames, randPars) {
     return(parSetup)
 }
 
-# Modified from {logitr}
 get_parIDs <- function(parSetup) {
     return(list(
         f  = which(parSetup == "f"),
@@ -797,11 +642,7 @@ get_parIDs <- function(parSetup) {
     ))
 }
 
-# Returns shifted normal draws for each parameter
-makeBetaDraws <- function(
-        pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat
-) {
-
+makeBetaDraws <- function(pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat) {
     # First scale the draws according to the covariance matrix
     lowerMat <- cor_mat^2
     diag(lowerMat) <- pars_sd
