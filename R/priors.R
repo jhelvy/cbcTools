@@ -105,9 +105,6 @@ cbc_priors <- function(
     # Set up random parameters specification for logitr
     randPars <- lapply(random_params, function(x) x$dist)
 
-    # Get parameter names
-    parNames <- c(names(fixed_params), names(random_params))
-
     # Create coded data structure (no_choice will be handled separately in design functions)
     profile_params <- params[!names(params) %in% "no_choice"]
     means <- c(fixed_params, lapply(random_params, function(x) x$mean))
@@ -127,11 +124,60 @@ cbc_priors <- function(
         codedParNames <- c(codedParNames, "no_choice")
     }
 
-    pars_mean <- c(
-        unlist(fixed_params),
-        unlist(lapply(random_params, function(x) x$mean))
-    )
+    # Build pars_mean in the same order as codedParNames
+    pars_mean <- numeric(length(codedParNames))
     names(pars_mean) <- codedParNames
+
+    # Fill in values for each coded parameter name
+    for (param_name in codedParNames) {
+        # Find which original attribute this coded parameter belongs to
+        original_attr <- NULL
+
+        # Check each attribute to see if this coded parameter belongs to it
+        for (attr in names(attrs)) {
+            if (attr == "no_choice") {
+                if (param_name == "no_choice") {
+                    original_attr <- attr
+                    break
+                }
+            } else if (attrs[[attr]]$continuous) {
+                # Continuous parameters keep their original name
+                if (param_name == attr) {
+                    original_attr <- attr
+                    break
+                }
+            } else {
+                # Categorical parameters: check if param_name starts with attr
+                if (startsWith(param_name, attr)) {
+                    original_attr <- attr
+                    break
+                }
+            }
+        }
+
+        # Get the value for this parameter
+        if (!is.null(original_attr)) {
+            if (original_attr %in% names(fixed_params)) {
+                # Fixed parameter
+                if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
+                    pars_mean[param_name] <- fixed_params[[original_attr]]
+                } else {
+                    # Extract level name from coded parameter name
+                    level_name <- gsub(paste0("^", original_attr), "", param_name)
+                    pars_mean[param_name] <- fixed_params[[original_attr]][level_name]
+                }
+            } else if (original_attr %in% names(random_params)) {
+                # Random parameter
+                if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
+                    pars_mean[param_name] <- random_params[[original_attr]]$mean
+                } else {
+                    # Extract level name from coded parameter name
+                    level_name <- gsub(paste0("^", original_attr), "", param_name)
+                    pars_mean[param_name] <- random_params[[original_attr]]$mean[level_name]
+                }
+            }
+        }
+    }
 
     # Generate parameter draws if we have random parameters
     if (length(random_params) > 0) {
@@ -139,19 +185,75 @@ cbc_priors <- function(
         # Build correlation matrix from specifications
         cor_mat <- build_correlation_matrix(attrs, random_params)
 
-        # Set up parameter structure including no_choice
-        parSetup <- get_parSetup(codedParNames, c(profile_randPars, if(!is.null(no_choice) && attrs$no_choice$random) list(no_choice = attrs$no_choice$dist) else NULL))
+        # Set up parameter structure - map to coded names
+        all_randPars <- list()
+
+        # Map profile random parameters to their coded names
+        for (attr in names(profile_randPars)) {
+            if (attrs[[attr]]$continuous) {
+                # Continuous parameters keep their name
+                all_randPars[[attr]] <- profile_randPars[[attr]]
+            } else {
+                # Categorical parameters get expanded to individual level names
+                level_names <- names(attrs[[attr]]$mean)
+                for (level in level_names) {
+                    coded_name <- paste0(attr, level)
+                    all_randPars[[coded_name]] <- profile_randPars[[attr]]
+                }
+            }
+        }
+
+        # Add no_choice if it's random
+        if (!is.null(no_choice) && attrs$no_choice$random) {
+            all_randPars[["no_choice"]] <- attrs$no_choice$dist
+        }
+
+        parSetup <- get_parSetup(codedParNames, all_randPars)
         parIDs <- get_parIDs(parSetup)
 
-        # Combine all parameters for draws
-        pars_sd <- unlist(lapply(random_params, function(x) x$sd))
+        # Build pars_sd in the same order as random parameters in codedParNames
+        pars_sd <- c()
+        pars_sd_names <- c()
 
-        # Create names for random parameters (including no_choice if random)
-        random_par_names <- c(
-            names(profile_randPars),
-            if (!is.null(no_choice) && attrs$no_choice$random) "no_choice" else NULL
-        )
-        names(pars_sd) <- random_par_names
+        for (param_name in codedParNames) {
+            if (param_name %in% names(all_randPars)) {
+                # This is a random parameter
+                # Find which original attribute this belongs to
+                original_attr <- NULL
+                for (attr in names(random_params)) {
+                    if (attr == "no_choice") {
+                        if (param_name == "no_choice") {
+                            original_attr <- attr
+                            break
+                        }
+                    } else if (attrs[[attr]]$continuous) {
+                        if (param_name == attr) {
+                            original_attr <- attr
+                            break
+                        }
+                    } else {
+                        if (startsWith(param_name, attr)) {
+                            original_attr <- attr
+                            break
+                        }
+                    }
+                }
+
+                if (!is.null(original_attr)) {
+                    if (attrs[[original_attr]]$continuous || original_attr == "no_choice") {
+                        pars_sd <- c(pars_sd, random_params[[original_attr]]$sd)
+                        pars_sd_names <- c(pars_sd_names, param_name)
+                    } else {
+                        # Extract level name from coded parameter name
+                        level_name <- gsub(paste0("^", original_attr), "", param_name)
+                        pars_sd <- c(pars_sd, random_params[[original_attr]]$sd[level_name])
+                        pars_sd_names <- c(pars_sd_names, param_name)
+                    }
+                }
+            }
+        }
+
+        names(pars_sd) <- pars_sd_names
 
         # Set up n list for makeBetaDraws
         n <- list(
@@ -159,7 +261,7 @@ cbc_priors <- function(
             parsFixed = length(which(parSetup == "f")),
             parsRandom = length(which(parSetup != "f")),
             draws = n_draws,
-            pars = length(pars_mean) + length(pars_sd)
+            pars = length(pars_mean)
         )
 
         # Generate parameter draws

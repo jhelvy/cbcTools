@@ -112,14 +112,15 @@ setup_optimization_environment <- function(
     # Get attribute names (excluding profileID)
     attr_names <- setdiff(names(profiles), "profileID")
 
+    # Get random parameters for encoding
+    randPars <- get_rand_pars(priors)
+
+    # Encode the profiles
+    coded_data <- logitr::recodeData(profiles, attr_names, randPars)
+    X_matrix <- coded_data$X
+
     # Encode profiles using logitr if we have priors
     if (!is.null(priors)) {
-        # Get random parameters for encoding
-        randPars <- get_rand_pars(priors)
-
-        # Encode the profiles
-        coded_data <- logitr::recodeData(profiles, attr_names, randPars)
-        X_matrix <- coded_data$X
 
         # Compute utilities for each profile
         if (!is.null(priors$par_draws)) {
@@ -150,7 +151,6 @@ setup_optimization_environment <- function(
         exp_utilities <- rep(1, nrow(profiles))
         exp_utilities_draws <- NULL
         partial_utilities <- NULL
-        X_matrix <- NULL
     }
 
     # Handle no-choice option
@@ -417,20 +417,16 @@ compute_question_probabilities <- function(question_profiles, opt_env) {
         prob_matrix <- matrix(0, nrow = length(question_profiles), ncol = n_draws)
 
         for (i in 1:n_draws) {
-            exp_utils <- opt_env$exp_utilities_draws[as.character(question_profiles), i]
+            exp_utils <- opt_env$exp_utilities_draws[question_profiles, i]
             prob_matrix[, i] <- exp_utils / sum(exp_utils)
         }
 
         return(rowMeans(prob_matrix))
 
-    } else if (!is.null(opt_env$exp_utilities)) {
-        # Fixed parameters case
-        exp_utils <- opt_env$exp_utilities[as.character(question_profiles)]
-        return(exp_utils / sum(exp_utils))
-
     } else {
-        # No priors case: equal probabilities
-        return(rep(1/length(question_profiles), length(question_profiles)))
+        # Fixed parameters case
+        exp_utils <- opt_env$exp_utilities[question_profiles]
+        return(exp_utils / sum(exp_utils))
     }
 }
 
@@ -449,21 +445,34 @@ compute_design_d_error <- function(design_matrix, opt_env) {
     # Reconstruct X matrix for entire design by slicing the encoded profiles
     design_profiles <- as.vector(t(design_matrix))
 
-    # Build X matrix for this design
-    total_rows <- length(design_profiles)
+    # Build X matrix for this design using the encoded profiles matrix
     n_params <- ncol(opt_env$X_matrix)
-    X_design <- matrix(0, nrow = total_rows, ncol = n_params)
+    X_design <- opt_env$X_matrix[design_profiles, ]
 
-    # Fill in regular profiles
-    if (length(regular_indices) > 0) {
-        regular_profile_ids <- design_profiles[regular_indices]
-        X_design[regular_indices, ] <- opt_env$X_matrix[regular_profile_ids, ]
-    }
-
-    # Fill in no-choice profiles (all zeros, which is already set)
-
-    # Create obsID for grouping (each question is an observation)
+    # Create obsID and altID for regular alternatives
     obsID <- rep(1:n_questions, each = n_alts)
+    altID <- rep(1:n_alts, n_questions)
+
+    # If no-choice is enabled, append no-choice rows
+    if (opt_env$no_choice) {
+        # Add no-choice rows (all zeros)
+        no_choice_rows <- matrix(0, nrow = n_questions, ncol = n_params)
+        X_design <- rbind(X_design, no_choice_rows)
+
+        # Add obsID and altID for no-choice alternatives
+        obsID <- c(obsID, 1:n_questions)  # Same obsID as questions
+        altID <- c(altID, rep(n_alts + 1, n_questions))  # altID = n_alts + 1
+
+        # Sort by obsID then altID to get proper interleaving
+        sort_order <- order(obsID, altID)
+        X_design <- X_design[sort_order, ]
+        obsID <- obsID[sort_order]
+        altID <- altID[sort_order]
+
+        n_alts_final <- n_alts + 1
+    } else {
+        n_alts_final <- n_alts
+    }
 
     # Compute probabilities for each question
     if (!is.null(opt_env$exp_utilities_draws)) {
@@ -472,18 +481,71 @@ compute_design_d_error <- function(design_matrix, opt_env) {
         d_errors <- numeric(n_draws)
 
         for (draw in 1:n_draws) {
-            # Get probabilities for this draw
-            probs <- compute_design_probabilities_draw(design_matrix, opt_env, draw)
+            probs <- compute_design_probabilities_with_nochoice(design_matrix, opt_env, draw)
             d_errors[draw] <- compute_d_error_from_probs(X_design, probs, obsID)
         }
 
         return(mean(d_errors))
 
     } else {
-        # Fixed parameters case
-        probs <- compute_design_probabilities_fixed(design_matrix, opt_env)
+        # Fixed parameters case or no priors case
+        probs <- compute_design_probabilities_with_nochoice(design_matrix, opt_env, NULL)
         return(compute_d_error_from_probs(X_design, probs, obsID))
     }
+}
+
+# Helper function to compute probabilities including no-choice
+compute_design_probabilities_with_nochoice <- function(design_matrix, opt_env, draw_index = NULL) {
+
+    n_questions <- nrow(design_matrix)
+    n_alts <- ncol(design_matrix)
+
+    if (opt_env$no_choice) {
+        # Compute probabilities for each question including no-choice
+        all_probs <- numeric(n_questions * (n_alts + 1))
+
+        for (q in 1:n_questions) {
+            question_profiles <- design_matrix[q, ]
+
+            # Get utilities for regular alternatives
+            if (!is.null(draw_index)) {
+                # Bayesian case
+                exp_utils_regular <- opt_env$exp_utilities_draws[question_profiles, draw_index]
+                exp_util_nochoice <- opt_env$exp_no_choice_draws[draw_index]
+            } else {
+                # Fixed case or no priors
+                if (!is.null(opt_env$exp_utilities)) {
+                    exp_utils_regular <- opt_env$exp_utilities[question_profiles]
+                } else {
+                    exp_utils_regular <- rep(1, n_alts)  # No priors case
+                }
+                exp_util_nochoice <- opt_env$exp_no_choice
+            }
+
+            # Combine utilities and compute probabilities
+            all_exp_utils <- c(exp_utils_regular, exp_util_nochoice)
+            question_probs <- all_exp_utils / sum(all_exp_utils)
+
+            # Store probabilities in correct positions (before sorting)
+            regular_indices <- (q - 1) * (n_alts + 1) + 1:n_alts
+            nochoice_index <- q * (n_alts + 1)
+
+            all_probs[regular_indices] <- question_probs[1:n_alts]
+            all_probs[nochoice_index] <- question_probs[n_alts + 1]
+        }
+
+        # Now sort probabilities to match the sorted X_design
+        obsID_prob <- rep(1:n_questions, each = n_alts + 1)
+        altID_prob <- rep(1:(n_alts + 1), n_questions)
+        sort_order <- order(obsID_prob, altID_prob)
+        all_probs <- all_probs[sort_order]
+
+    } else {
+        # No no-choice case - use existing function
+        all_probs <- compute_design_probabilities_fixed(design_matrix, opt_env)
+    }
+
+    return(all_probs)
 }
 
 #' Compute probabilities for entire design (fixed parameters)
@@ -595,18 +657,20 @@ compute_info_matrix <- function(X_list, P_list) {
 #' @param n_q Number of questions per block
 #' @param n_blocks Number of blocks
 #' @return Data frame with full design
-construct_final_design <- function(design_matrix, opt_env, n_alts, n_q, n_blocks) {
+construct_final_design <- function(design_matrix, opt_env, n_alts, n_q, n_resp, n_blocks) {
 
     total_questions <- nrow(design_matrix)
-    total_rows <- total_questions * n_alts
+    actual_n_alts <- ncol(design_matrix)  # May be n_alts + 1 if no-choice added
+    total_rows <- total_questions * actual_n_alts
 
     # Initialize design data frame
     design <- data.frame(
         profileID = as.vector(t(design_matrix)),
-        blockID = rep(rep(1:n_blocks, each = n_q), each = n_alts),
-        qID = rep(rep(1:n_q, n_blocks), each = n_alts),
-        altID = rep(1:n_alts, total_questions),
-        obsID = rep(1:total_questions, each = n_alts)
+        blockID = rep(rep(1:n_blocks, each = n_q), n_resp * actual_n_alts),
+        respID = rep(rep(1:n_resp, each = n_q * n_blocks), each = actual_n_alts),
+        qID = rep(rep(1:n_q, n_resp * n_blocks), each = actual_n_alts),
+        altID = rep(1:actual_n_alts, total_questions),
+        obsID = rep(1:total_questions, each = actual_n_alts)
     )
 
     # Add attribute values by joining with profiles
@@ -828,14 +892,13 @@ validate_design_inputs <- function(profiles, method, priors, n_alts, n_q, n_resp
         }
     }
 
-    # Check for sufficient combinations for random designs
+    # Check for sufficient combinations
     if (method == "random") {
         if (!is.null(label)) {
             # For labeled designs, check each label group has enough profiles
             label_counts <- table(profiles[[label]])
             min_label_count <- min(label_counts)
 
-            # Each respondent needs n_q unique questions, each from different label groups
             if (min_label_count < n_q) {
                 warning(sprintf(
                     "Label group with fewest profiles (%d) has fewer profiles than questions per respondent (%d). May have difficulty generating unique questions.",
@@ -843,25 +906,26 @@ validate_design_inputs <- function(profiles, method, priors, n_alts, n_q, n_resp
                 ))
             }
         } else {
-            # For regular random designs, check total combination feasibility
+            # For random designs, only check n_q (each respondent independent)
             max_possible_questions <- choose(nrow(profiles), n_alts)
-            total_questions_needed <- n_q * n_resp * n_blocks
 
-            if (total_questions_needed > max_possible_questions) {
+            if (n_q > max_possible_questions) {
                 stop(sprintf(
-                    "Requested %d total questions but only %d unique combinations possible with %d profiles and %d alternatives per question",
-                    total_questions_needed, max_possible_questions, nrow(profiles), n_alts
+                    "Requested %d questions per respondent but only %d unique combinations possible with %d profiles and %d alternatives per question",
+                    n_q, max_possible_questions, nrow(profiles), n_alts
                 ))
             }
+        }
+    } else if (method == "sequential") {
+        # For sequential designs, check n_q * n_blocks (base design size)
+        max_possible_questions <- choose(nrow(profiles), n_alts)
+        base_design_questions <- n_q * n_blocks
 
-            # Warn if using a high proportion for random design
-            usage_ratio <- total_questions_needed / max_possible_questions
-            if (usage_ratio > 0.3) {
-                warning(sprintf(
-                    "Random design will use %.1f%% of all possible combinations. Consider method = 'sequential' for better efficiency.",
-                    usage_ratio * 100
-                ))
-            }
+        if (base_design_questions > max_possible_questions) {
+            stop(sprintf(
+                "Requested %d questions in base design but only %d unique combinations possible with %d profiles and %d alternatives per question",
+                base_design_questions, max_possible_questions, nrow(profiles), n_alts
+            ))
         }
     }
 
@@ -998,10 +1062,202 @@ has_partial_dominance <- function(question_profiles, opt_env) {
     return(FALSE)
 }
 
-#' Placeholder for sequential design generation
 generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter, n_start, max_attempts) {
-    # Placeholder - would implement D-efficient optimization
-    stop("Sequential design not yet implemented in new system")
+
+    # Set up parallel processing
+    n_cores <- set_num_cores(NULL)
+    message("Running ", n_start, " design searches using ", n_cores, " cores...")
+
+    # Create list of different random starting designs (base designs only)
+    start_designs <- lapply(1:n_start, function(i) {
+        generate_initial_random_matrix(opt_env, n_alts, n_q * n_blocks)
+    })
+
+    # Run optimization in parallel
+    if (Sys.info()[['sysname']] == 'Windows') {
+        cl <- parallel::makeCluster(n_cores, "PSOCK")
+        # Export necessary functions to cluster
+        parallel::clusterExport(cl, c(
+            "optimize_design_profileid", "compute_design_d_error_with_nochoice",
+            "sample_question_profiles", "add_no_choice_to_design_temp"
+        ), envir = environment())
+
+        results <- suppressMessages(suppressWarnings(
+            parallel::parLapply(
+                cl = cl,
+                seq_along(start_designs),
+                function(i) {
+                    result <- optimize_design_profileid(
+                        start_designs[[i]], opt_env, n_alts, n_q, n_blocks, max_iter
+                    )
+                    result$start_number <- i
+                    return(result)
+                }
+            )
+        ))
+        parallel::stopCluster(cl)
+    } else {
+        results <- suppressMessages(suppressWarnings(
+            parallel::mclapply(
+                seq_along(start_designs),
+                function(i) {
+                    result <- optimize_design_profileid(
+                        start_designs[[i]], opt_env, n_alts, n_q, n_blocks, max_iter
+                    )
+                    result$start_number <- i
+                    return(result)
+                },
+                mc.cores = n_cores
+            )
+        ))
+    }
+
+    # Find best design based on D-error
+    d_errors <- sapply(results, function(x) x$d_error)
+    best_index <- which.min(d_errors)
+    best_result <- results[[best_index]]
+
+    # Print summary of all starts
+    message("\nD-error results from all starts:")
+    sorted_results <- sort(d_errors)
+    for (i in seq_along(sorted_results)) {
+        idx <- which(d_errors == sorted_results[i])[1]
+        message(sprintf(
+            "Start %d: %.6f %s",
+            results[[idx]]$start_number,
+            sorted_results[i],
+            if(idx == best_index) "  (Best)" else ""
+        ))
+    }
+
+    return(best_result)
+}
+
+optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blocks, max_iter) {
+
+    # Compute initial D-error (temporarily adding no-choice if needed)
+    current_d_error <- compute_design_d_error_with_nochoice(design_matrix, opt_env)
+
+    total_questions <- n_q * n_blocks
+
+    for (iter in 1:max_iter) {
+        message("Iteration ", iter, ": D-error = ", round(current_d_error, 6))
+        improved <- FALSE
+        start_d_error <- current_d_error
+
+        # Try improving each position in the design
+        for (q in 1:total_questions) {
+            for (alt in 1:n_alts) {
+
+                current_profile <- design_matrix[q, alt]
+                best_profile <- current_profile
+                best_d_error <- current_d_error
+
+                # Try multiple alternative profiles for this position
+                n_attempts <- 20  # Number of profiles to try
+                for (attempt in 1:n_attempts) {
+
+                    # Sample a new profile using the same constraints as random design
+                    if (!is.null(opt_env$label_constraints)) {
+                        # For labeled designs, we need to maintain the label structure
+                        # Get which label group this alternative position should be
+                        label_group_index <- alt
+                        if (label_group_index <= length(opt_env$label_constraints$groups)) {
+                            eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
+                            new_profile <- sample(eligible_profiles, 1)
+                        } else {
+                            next  # Skip if label group doesn't exist
+                        }
+                    } else {
+                        # Regular design: sample any profile
+                        new_profile <- sample(opt_env$available_profile_ids, 1)
+                    }
+
+                    if (new_profile == current_profile) next
+
+                    # Create test design
+                    test_design <- design_matrix
+                    test_design[q, alt] <- new_profile
+
+                    # Check basic constraints (no duplicates within question)
+                    question_profiles <- test_design[q, ]
+                    if (length(unique(question_profiles)) != length(question_profiles)) {
+                        next  # Skip if duplicates within question
+                    }
+
+                    # Check dominance if required
+                    if (opt_env$remove_dominant) {
+                        if (has_dominant_alternative(question_profiles, opt_env)) {
+                            next  # Skip if dominant alternatives
+                        }
+                    }
+
+                    # Compute D-error for test design (temporarily adding no-choice)
+                    test_d_error <- compute_design_d_error_with_nochoice(test_design, opt_env)
+
+                    # Accept if improvement
+                    if (test_d_error < best_d_error) {
+                        best_profile <- new_profile
+                        best_d_error <- test_d_error
+                    }
+                }
+
+                # Update design if we found an improvement
+                if (best_profile != current_profile) {
+                    design_matrix[q, alt] <- best_profile
+                    current_d_error <- best_d_error
+                    improved <- TRUE
+                }
+            }
+        }
+
+        if (!improved) {
+            message("No improvement found, stopping optimization")
+            break
+        }
+    }
+
+    return(list(
+        design_matrix = design_matrix,
+        d_error = current_d_error,
+        method = "sequential",
+        iterations = iter
+    ))
+}
+
+# Helper function to compute D-error with temporary no-choice insertion
+compute_design_d_error_with_nochoice <- function(design_matrix, opt_env) {
+
+    if (opt_env$no_choice) {
+        # Temporarily add no-choice to compute D-error
+        temp_design <- add_no_choice_to_design(design_matrix, ncol(design_matrix))
+        return(compute_design_d_error(temp_design, opt_env))
+    } else {
+        # No no-choice needed
+        return(compute_design_d_error(design_matrix, opt_env))
+    }
+}
+
+# Helper function from earlier (already defined)
+set_num_cores <- function(n_cores) {
+    cores_available <- parallel::detectCores()
+    max_cores <- cores_available - 1
+    # CRAN checks limits you to 2 cores
+    chk <- tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))
+    if (nzchar(chk) && (chk != "false")) {
+        return(2L)
+    }
+    if (is.null(n_cores)) {
+        return(max_cores)
+    } else if (!is.numeric(n_cores)) {
+        warning("Non-numeric value provided for n_cores...setting n_cores to ", max_cores)
+        return(max_cores)
+    } else if (n_cores > cores_available) {
+        warning("Cannot use ", n_cores, " cores because your machine only has ",
+                cores_available, " available...setting n_cores to ", max_cores)
+        return(max_cores)
+    }
+    return(n_cores)
 }
 
 #' Repeat base design across respondents with optional randomization
