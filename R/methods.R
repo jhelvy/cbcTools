@@ -139,8 +139,9 @@ print.cbc_design <- function(x, ...) {
     cat("============================\n")
     cat(sprintf("Method: %s\n", params$method))
     cat(sprintf("Respondents: %d\n", params$n_resp))
-    cat(sprintf("Questions per respondent: %d\n", params$n_q))
     cat(sprintf("Alternatives per question: %d\n", params$n_alts))
+    cat(sprintf("Questions per respondent: %d\n", params$n_q))
+    cat(sprintf("Total questions generated: %d\n", summary_info$method_specific$total_questions_generated))
     cat(sprintf("Number of blocks: %d\n", params$n_blocks))
 
     if (params$no_choice) {
@@ -173,7 +174,6 @@ print.cbc_design <- function(x, ...) {
     # Method-specific details
     if (!is.null(summary_info$method_specific)) {
         if (params$method == "random") {
-            cat(sprintf("Total questions generated: %d\n", summary_info$method_specific$total_questions_generated))
             cat(sprintf("Optimization attempts: %d\n", summary_info$method_specific$optimization_attempts))
         } else if (params$method == "sequential") {
             cat("Base design optimized: Yes\n")

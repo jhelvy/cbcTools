@@ -105,8 +105,8 @@ cbc_design <- function(
 #' @param dominance_threshold Numeric threshold for dominance
 #' @return A list containing the optimization environment
 setup_optimization_environment <- function(
-        profiles, priors, no_choice, label, remove_dominant,
-        dominance_types, dominance_threshold
+    profiles, priors, no_choice, label, remove_dominant,
+    dominance_types, dominance_threshold
 ) {
 
     # Get attribute names (excluding profileID)
@@ -119,11 +119,27 @@ setup_optimization_environment <- function(
     coded_data <- logitr::recodeData(profiles, attr_names, randPars)
     X_matrix <- coded_data$X
 
+    # Defaults for no choice
+    exp_no_choice <- NULL
+    exp_no_choice_draws <- NULL
+
     # Encode profiles using logitr if we have priors
     if (!is.null(priors)) {
 
+        if (no_choice) {
+            prior_no_choice <- priors$pars["no_choice"]
+            no_choice_index <- which(names(priors$pars) == "no_choice")
+            priors$pars <- priors$pars[-no_choice_index]
+        }
+
         # Compute utilities for each profile
         if (!is.null(priors$par_draws)) {
+
+            if (no_choice) {
+                prior_no_choice_draws <- priors$par_draws[, no_choice_index]
+                priors$par_draws <- priors$par_draws[, -no_choice_index]
+            }
+
             # Bayesian case with parameter draws
             n_draws <- nrow(priors$par_draws)
             exp_utilities_draws <- array(dim = c(nrow(profiles), n_draws))
@@ -157,16 +173,16 @@ setup_optimization_environment <- function(
     exp_no_choice <- NULL
     exp_no_choice_draws <- NULL
     if (no_choice) {
-        if (!is.null(priors) && priors$has_no_choice) {
-            exp_no_choice <- exp(priors$pars["no_choice"])
+        if (!is.null(priors)) {
+            exp_no_choice <- exp(prior_no_choice)
         } else {
             exp_no_choice <- 1  # Default no-choice utility of 0 (exp(0) = 1)
         }
 
         if (!is.null(exp_utilities_draws)) {
             # Add no-choice utilities for each draw
-            if (!is.null(priors) && priors$has_no_choice) {
-                exp_no_choice_draws <- exp(priors$par_draws[, "no_choice"])
+            if (!is.null(priors)) {
+                exp_no_choice_draws <- exp(prior_no_choice_draws)
             } else {
                 exp_no_choice_draws <- rep(1, ncol(exp_utilities_draws))
             }
@@ -659,6 +675,10 @@ compute_info_matrix <- function(X_list, P_list) {
 #' @return Data frame with full design
 construct_final_design <- function(design_matrix, opt_env, n_alts, n_q, n_resp, n_blocks) {
 
+    if (opt_env$no_choice) {
+        design_matrix <- add_no_choice_to_design(design_matrix, ncol(design_matrix))
+    }
+
     total_questions <- nrow(design_matrix)
     actual_n_alts <- ncol(design_matrix)  # May be n_alts + 1 if no-choice added
     total_rows <- total_questions * actual_n_alts
@@ -794,10 +814,12 @@ finalize_design_object <- function(design, opt_env, design_result, method,
 #' @param dominance_types Types of dominance to check
 #' @param dominance_threshold Threshold for dominance detection
 #' @param max_dominance_attempts Maximum attempts to avoid dominance
-validate_design_inputs <- function(profiles, method, priors, n_alts, n_q, n_resp, n_blocks,
-                                   no_choice, label, randomize_questions, randomize_alts,
-                                   remove_dominant, dominance_types, dominance_threshold,
-                                   max_dominance_attempts) {
+validate_design_inputs <- function(
+    profiles, method, priors, n_alts, n_q, n_resp, n_blocks,
+    no_choice, label, randomize_questions, randomize_alts,
+    remove_dominant, dominance_types, dominance_threshold,
+    max_dominance_attempts
+) {
 
     # Validate profiles
     if (!inherits(profiles, "cbc_profiles")) {
@@ -932,6 +954,11 @@ validate_design_inputs <- function(profiles, method, priors, n_alts, n_q, n_resp
     # Validate no-choice with priors
     if (no_choice && !is.null(priors) && !priors$has_no_choice) {
         stop("no_choice = TRUE requires priors to include a no_choice parameter. Use cbc_priors(..., no_choice = value)")
+    }
+    if (!is.null(priors) && priors$has_no_choice) {
+        if (!no_choice) {
+            stop("Since priors has a no_choice value, must set no_choice = TRUE in cbc_design()")
+        }
     }
 
     invisible(TRUE)
@@ -1236,6 +1263,29 @@ compute_design_d_error_with_nochoice <- function(design_matrix, opt_env) {
         # No no-choice needed
         return(compute_design_d_error(design_matrix, opt_env))
     }
+}
+
+#' Add no-choice option to design matrix
+#'
+#' Adds a no-choice alternative (profileID = 0) as the last alternative in each question
+#'
+#' @param design_matrix Matrix of profileIDs (questions x alternatives)
+#' @param n_alts Current number of alternatives per question
+#' @return Updated design matrix with no-choice alternatives added
+add_no_choice_to_design <- function(design_matrix, n_alts) {
+
+    n_questions <- nrow(design_matrix)
+
+    # Create new matrix with additional column for no-choice
+    new_design_matrix <- matrix(0, nrow = n_questions, ncol = n_alts + 1)
+
+    # Copy existing alternatives
+    new_design_matrix[, 1:n_alts] <- design_matrix
+
+    # Add no-choice (profileID = 0) as last alternative
+    new_design_matrix[, n_alts + 1] <- 0
+
+    return(new_design_matrix)
 }
 
 # Helper function from earlier (already defined)
