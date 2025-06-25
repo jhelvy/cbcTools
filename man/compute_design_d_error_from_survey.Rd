@@ -5,8 +5,6 @@
 \title{Compute D-error from a full survey design data frame}
 \usage{
 compute_design_d_error_from_survey(survey_design, opt_env)
-
-compute_design_d_error_from_survey(survey_design, opt_env)
 }
 \arguments{
 \item{survey_design}{Full survey design data frame with profileID, obsID, altID columns}
@@ -15,14 +13,8 @@ compute_design_d_error_from_survey(survey_design, opt_env)
 }
 \value{
 Numeric D-error value for the full survey
-
-Numeric D-error value for the full survey
 }
 \description{
-This is a wrapper function that converts a full survey design back to
-design matrix format and then computes the D-error. Useful for calculating
-D-error of the full survey after it's been constructed.
-
 This is a wrapper function that converts a full survey design back to
 design matrix format and then computes the D-error. Useful for calculating
 D-error of the full survey after it's been constructed.

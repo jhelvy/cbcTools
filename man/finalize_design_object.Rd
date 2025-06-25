@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{finalize_design_object}
 \alias{finalize_design_object}
-\title{Finalize the design object with metadata and class}
+\title{Finalize the design object with metadata including both D-errors}
 \usage{
 finalize_design_object(
   design,
@@ -20,7 +20,7 @@ finalize_design_object(
 )
 }
 \arguments{
-\item{design}{The design data frame}
+\item{design}{The design data frame (always dummy-coded)}
 
 \item{opt_env}{Optimization environment}
 
@@ -48,5 +48,5 @@ finalize_design_object(
 cbc_design object
 }
 \description{
-Finalize the design object with metadata and class
+Finalize the design object with metadata including both D-errors
 }

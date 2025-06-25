@@ -464,12 +464,17 @@ build_correlation_matrix <- function(attrs, random_params) {
     for (attr1 in names(random_params)) {
         param <- random_params[[attr1]]
         if (!is.null(param$correlations)) {
-            process_parameter_correlations(attr1, param$correlations, attrs, random_params, cor_mat)
+            tryCatch({
+                cor_mat <- process_parameter_correlations(attr1, param$correlations, attrs, random_params, cor_mat)
+            }, error = function(e) {
+                stop(sprintf("Error processing correlations for attribute '%s': %s", attr1, e$message))
+            })
         }
     }
 
     # Validate correlation matrix is positive definite
-    if (!all(eigen(cor_mat)$values > 0)) {
+    eigenvals <- eigen(cor_mat)$values
+    if (!all(eigenvals > 1e-10)) {
         stop("Specified correlations result in an invalid correlation matrix. Try specifying fewer or smaller correlations.")
     }
 
@@ -484,7 +489,8 @@ get_parameter_names_for_correlation <- function(attrs, random_params) {
             par_names <- c(par_names, attr)
         } else {
             categorical_names <- names(attrs[[attr]]$mean)
-            par_names <- c(par_names, paste0(attr, ".", categorical_names))
+            # No "." separator to match logitr parameter naming
+            par_names <- c(par_names, paste0(attr, categorical_names))
         }
     }
     return(par_names)
@@ -492,10 +498,22 @@ get_parameter_names_for_correlation <- function(attrs, random_params) {
 
 # Process correlations for a single parameter
 process_parameter_correlations <- function(attr1, correlations, attrs, random_params, cor_mat) {
+    # Group correlations by target attribute to handle general + specific overrides
+    corr_by_attr <- list()
+
     for (cor in correlations) {
         attr2 <- cor$attr
 
-        # Validate that correlated attribute exists and is random
+        if (!attr2 %in% names(corr_by_attr)) {
+            corr_by_attr[[attr2]] <- list()
+        }
+
+        corr_by_attr[[attr2]][[length(corr_by_attr[[attr2]]) + 1]] <- cor
+    }
+
+    # Process each target attribute
+    for (attr2 in names(corr_by_attr)) {
+        # Validate that target attribute exists and is random
         if (!(attr2 %in% names(random_params))) {
             stop(sprintf(
                 "Cannot correlate with '%s' - it must be a random parameter specified using rand_spec()",
@@ -503,11 +521,137 @@ process_parameter_correlations <- function(attr1, correlations, attrs, random_pa
             ))
         }
 
-        # Determine correlation indices
-        cor_indices <- determine_correlation_indices(attr1, attr2, cor, attrs)
+        attr_correlations <- corr_by_attr[[attr2]]
 
-        # Set correlations in matrix
-        set_correlation_values(cor_mat, cor_indices$rows, cor_indices$cols, cor$value)
+        # Find general correlation (no level specified) and specific correlations
+        general_cor <- NULL
+        specific_cors <- list()
+
+        for (cor in attr_correlations) {
+            if (is.null(cor$level) && is.null(cor$with_level)) {
+                if (!is.null(general_cor)) {
+                    warning(sprintf(
+                        "Multiple general correlations specified between '%s' and '%s'. Using the last one.",
+                        attr1, attr2
+                    ))
+                }
+                general_cor <- cor
+            } else {
+                specific_cors[[length(specific_cors) + 1]] <- cor
+            }
+        }
+
+        # Apply correlations - this modifies cor_mat in place and returns it
+        cor_mat <- apply_correlations_between_attributes(attr1, attr2, general_cor, specific_cors, attrs, cor_mat)
+    }
+
+    return(cor_mat)
+}
+
+# Apply correlations between two attributes
+apply_correlations_between_attributes <- function(attr1, attr2, general_cor, specific_cors, attrs, cor_mat) {
+
+    # Get parameter names for both attributes
+    attr1_params <- get_attribute_parameter_names(attr1, attrs)
+    attr2_params <- get_attribute_parameter_names(attr2, attrs)
+
+    # Apply general correlation first (if specified)
+    if (!is.null(general_cor)) {
+        for (param1 in attr1_params) {
+            for (param2 in attr2_params) {
+                # Check if parameters exist in matrix
+                if (!param1 %in% rownames(cor_mat) || !param2 %in% colnames(cor_mat)) {
+                    next
+                }
+
+                if (param1 != param2) {
+                    cor_mat[param1, param2] <- general_cor$value
+                    cor_mat[param2, param1] <- general_cor$value
+                }
+            }
+        }
+    }
+
+    # Apply specific correlations (these override general correlations)
+    for (cor in specific_cors) {
+        # Determine source parameters
+        if (!is.null(cor$level)) {
+            # Source level specified
+            if (attrs[[attr1]]$continuous) {
+                stop(sprintf("Cannot specify level '%s' for continuous attribute '%s'", cor$level, attr1))
+            }
+            source_params <- get_specific_parameter_names(attr1, cor$level, attrs)
+        } else {
+            source_params <- attr1_params
+        }
+
+        # Determine target parameters
+        if (!is.null(cor$with_level)) {
+            # Target level specified
+            if (attrs[[attr2]]$continuous) {
+                stop(sprintf("Cannot specify with_level '%s' for continuous attribute '%s'", cor$with_level, attr2))
+            }
+            target_params <- get_specific_parameter_names(attr2, cor$with_level, attrs)
+        } else {
+            target_params <- attr2_params
+        }
+
+        # Set correlations
+        for (param1 in source_params) {
+            for (param2 in target_params) {
+                # Check if parameters exist in matrix
+                if (!param1 %in% rownames(cor_mat) || !param2 %in% colnames(cor_mat)) {
+                    next
+                }
+
+                if (param1 != param2) {
+                    cor_mat[param1, param2] <- cor$value
+                    cor_mat[param2, param1] <- cor$value
+                }
+            }
+        }
+    }
+
+    return(cor_mat)
+}
+
+get_parameter_names_for_correlation <- function(attrs, random_params) {
+    par_names <- c()
+    for (attr in names(random_params)) {
+        if (attrs[[attr]]$continuous) {
+            par_names <- c(par_names, attr)
+        } else {
+            categorical_names <- names(attrs[[attr]]$mean)
+            # Fixed: remove the "." to match your correction
+            par_names <- c(par_names, paste0(attr, categorical_names))
+        }
+    }
+    return(par_names)
+}
+
+# Get parameter names for a specific level of an attribute
+get_specific_parameter_names <- function(attr, level, attrs) {
+    if (attrs[[attr]]$continuous) {
+        stop(sprintf("Cannot specify level for continuous attribute '%s'", attr))
+    }
+
+    # Validate level exists
+    if (!level %in% names(attrs[[attr]]$mean)) {
+        stop(sprintf("Invalid level '%s' for attribute '%s'", level, attr))
+    }
+
+    # No "." separator to match logitr parameter naming
+    return(paste0(attr, level))
+}
+
+get_attribute_parameter_names <- function(attr, attrs) {
+    if (attrs[[attr]]$continuous) {
+        return(attr)
+    } else {
+        # Categorical: return parameter names for all levels
+        level_names <- names(attrs[[attr]]$mean)
+        # No "." separator to match logitr parameter naming
+        return(paste0(attr, level_names))
     }
 }
 
