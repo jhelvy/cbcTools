@@ -166,7 +166,12 @@ print.cbc_design <- function(x, ...) {
     }
 
     # Design efficiency
-    if (!is.null(params$d_error)) {
+    if (!is.null(params$d_error_base) && !is.null(params$d_error_full)) {
+        # Sequential design with both D-errors
+        cat(sprintf("D-error (base design): %.6f\n", params$d_error_base))
+        cat(sprintf("D-error (full survey): %.6f\n", params$d_error_full))
+    } else if (!is.null(params$d_error)) {
+        # Regular design with single D-error
         cat(sprintf("D-error: %.6f\n", params$d_error))
     }
 

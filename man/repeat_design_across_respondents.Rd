@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{repeat_design_across_respondents}
 \alias{repeat_design_across_respondents}
-\title{Repeat base design across respondents with optional randomization}
+\title{Repeat base design across respondents with optional randomization (Fixed for no-choice)}
 \usage{
 repeat_design_across_respondents(
   base_design,
@@ -19,7 +19,7 @@ repeat_design_across_respondents(
 
 \item{n_resp}{Number of respondents}
 
-\item{n_alts}{Number of alternatives per question}
+\item{n_alts}{Number of regular alternatives per question (excluding no-choice)}
 
 \item{n_q}{Number of questions per respondent}
 

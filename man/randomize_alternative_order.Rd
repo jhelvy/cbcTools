@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{randomize_alternative_order}
 \alias{randomize_alternative_order}
-\title{Randomize alternative order within questions}
+\title{Randomize alternative order within questions (Fixed for no-choice)}
 \usage{
 randomize_alternative_order(resp_design, n_q, n_alts)
 }
@@ -11,11 +11,11 @@ randomize_alternative_order(resp_design, n_q, n_alts)
 
 \item{n_q}{Number of questions per respondent}
 
-\item{n_alts}{Number of alternatives per question}
+\item{n_alts}{Number of regular alternatives per question (excluding no-choice)}
 }
 \value{
 Design with randomized alternative order
 }
 \description{
-Randomize alternative order within questions
+Randomize alternative order within questions (Fixed for no-choice)
 }

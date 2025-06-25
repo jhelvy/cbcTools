@@ -48,6 +48,12 @@ cbc_design <- function(
                            remove_dominant, dominance_types, dominance_threshold,
                            max_dominance_attempts)
 
+    # Override randomize_alts for labeled designs
+    if (!is.null(label) && randomize_alts) {
+        message("Note: randomize_alts set to FALSE for labeled designs to preserve label structure")
+        randomize_alts <- FALSE
+    }
+
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
         profiles, n_alts, priors, no_choice, label, remove_dominant,
@@ -56,6 +62,12 @@ cbc_design <- function(
 
     # Generate design based on method
     if (method == "random") {
+        # Override any provided blocks - it's always 1 for random method
+        if (n_blocks != 1) {
+            message("For 'random' designs, n_blocks is ignored and set to 1")
+            n_blocks <- 1
+        }
+
         # Random designs: generate completely random design for all respondents
         design_result <- generate_random_design(
             opt_env, n_alts, n_q, n_resp, n_blocks, max_dominance_attempts
@@ -867,7 +879,8 @@ finalize_design_object <- function(design, opt_env, design_result, method,
     attr(design, "profiles") <- opt_env$profiles
     attr(design, "priors") <- opt_env$priors
 
-    attr(design, "design_params") <- list(
+    # Build design_params list
+    design_params <- list(
         method = method,
         n_q = n_q,
         n_alts = n_alts,
@@ -877,11 +890,23 @@ finalize_design_object <- function(design, opt_env, design_result, method,
         label = label,
         randomize_questions = if (method == "sequential") randomize_questions else NA,
         randomize_alts = if (method == "sequential") randomize_alts else NA,
-        d_error = design_result$d_error,
         created_at = Sys.time(),
         remove_dominant = opt_env$remove_dominant,
         dominance_types = if (opt_env$remove_dominant) opt_env$dominance_types else NULL
     )
+
+    # Add D-error information
+    if (method == "sequential" && design_result$repeated_across_respondents) {
+        # Calculate D-error for the full survey
+        full_survey_d_error <- compute_design_d_error_from_survey(design, opt_env)
+        design_params$d_error_base <- design_result$d_error
+        design_params$d_error_full <- full_survey_d_error
+        design_params$d_error <- full_survey_d_error  # Primary D-error
+    } else {
+        design_params$d_error <- design_result$d_error
+    }
+
+    attr(design, "design_params") <- design_params
 
     # Calculate summary statistics
     n_profiles_available <- nrow(opt_env$profiles)
@@ -907,6 +932,40 @@ finalize_design_object <- function(design, opt_env, design_result, method,
 
     class(design) <- c("cbc_design", "data.frame")
     return(design)
+}
+
+#' Compute D-error from a full survey design data frame
+#'
+#' This is a wrapper function that converts a full survey design back to
+#' design matrix format and then computes the D-error. Useful for calculating
+#' D-error of the full survey after it's been constructed.
+#'
+#' @param survey_design Full survey design data frame with profileID, obsID, altID columns
+#' @param opt_env Optimization environment containing X_matrix and other parameters
+#' @return Numeric D-error value for the full survey
+compute_design_d_error_from_survey <- function(survey_design, opt_env) {
+    # Get regular (non-no-choice) rows
+    if ("no_choice" %in% names(survey_design)) {
+        regular_rows <- survey_design[survey_design$profileID != 0, ]
+    } else {
+        regular_rows <- survey_design
+    }
+
+    # Get unique observation IDs and determine matrix dimensions
+    unique_obs <- sort(unique(regular_rows$obsID))
+    n_alts <- max(regular_rows$altID[regular_rows$profileID != 0])
+
+    # Rebuild design matrix from survey data
+    design_matrix <- matrix(0, nrow = length(unique_obs), ncol = n_alts)
+
+    for (i in seq_along(unique_obs)) {
+        obs_data <- regular_rows[regular_rows$obsID == unique_obs[i], ]
+        obs_data <- obs_data[order(obs_data$altID), ]  # Ensure proper order
+        design_matrix[i, ] <- obs_data$profileID[1:n_alts]
+    }
+
+    # Use existing compute_design_d_error function
+    return(compute_design_d_error(design_matrix, opt_env))
 }
 
 # Helper functions that will need to be implemented
@@ -1221,8 +1280,8 @@ generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter,
         cl <- parallel::makeCluster(n_cores, "PSOCK")
         # Export necessary functions to cluster
         parallel::clusterExport(cl, c(
-            "optimize_design_profileid", "compute_design_d_error_with_nochoice",
-            "sample_question_profiles", "add_no_choice_to_design_temp"
+            "optimize_design_profileid", "sample_question_profiles",
+            "add_no_choice_to_design_temp"
         ), envir = environment())
 
         results <- suppressMessages(suppressWarnings(
@@ -1279,7 +1338,7 @@ generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter,
 optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blocks, max_iter) {
 
     # Compute initial D-error (temporarily adding no-choice if needed)
-    current_d_error <- compute_design_d_error_with_nochoice(design_matrix, opt_env)
+    current_d_error <- compute_design_d_error(design_matrix, opt_env)
 
     total_questions <- n_q * n_blocks
 
@@ -1336,7 +1395,7 @@ optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blo
                     }
 
                     # Compute D-error for test design (temporarily adding no-choice)
-                    test_d_error <- compute_design_d_error_with_nochoice(test_design, opt_env)
+                    test_d_error <- compute_design_d_error(test_design, opt_env)
 
                     # Accept if improvement
                     if (test_d_error < best_d_error) {
@@ -1366,19 +1425,6 @@ optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blo
         method = "sequential",
         iterations = iter
     ))
-}
-
-# Helper function to compute D-error with temporary no-choice insertion
-compute_design_d_error_with_nochoice <- function(design_matrix, opt_env) {
-
-    if (opt_env$no_choice) {
-        # Temporarily add no-choice to compute D-error
-        temp_design <- add_no_choice_to_design(design_matrix, ncol(design_matrix))
-        return(compute_design_d_error(temp_design, opt_env))
-    } else {
-        # No no-choice needed
-        return(compute_design_d_error(design_matrix, opt_env))
-    }
 }
 
 #' Add no-choice option to design matrix
@@ -1426,14 +1472,14 @@ set_num_cores <- function(n_cores) {
     return(n_cores)
 }
 
-#' Repeat base design across respondents with optional randomization
+#' Repeat base design across respondents with optional randomization (Fixed for no-choice)
 #'
 #' Used for sequential designs to take the optimized base design and repeat it
 #' across multiple respondents with optional question/alternative randomization
 #'
 #' @param base_design Base design data frame (for 1 respondent)
 #' @param n_resp Number of respondents
-#' @param n_alts Number of alternatives per question
+#' @param n_alts Number of regular alternatives per question (excluding no-choice)
 #' @param n_q Number of questions per respondent
 #' @param n_blocks Number of blocks
 #' @param randomize_questions Randomize question order for each respondent
@@ -1447,6 +1493,10 @@ repeat_design_across_respondents <- function(
     if (n_resp == 1) {
         return(base_design)  # No need to repeat
     }
+
+    # Determine actual number of alternatives in the base design
+    actual_n_alts <- max(base_design$altID)
+    has_no_choice <- "no_choice" %in% names(base_design)
 
     # Replicate base design across respondents
     full_design_list <- list()
@@ -1462,6 +1512,7 @@ repeat_design_across_respondents <- function(
 
         # Randomize alternative order if requested
         if (randomize_alts) {
+            # Pass the original n_alts (excluding no-choice)
             resp_design <- randomize_alternative_order(resp_design, n_q, n_alts)
         }
 
@@ -1472,8 +1523,9 @@ repeat_design_across_respondents <- function(
     full_design <- do.call(rbind, full_design_list)
 
     # Update obsID to be unique across all respondents
+    # Calculate total questions based on actual alternatives in base design
     total_questions <- n_q * n_resp * n_blocks
-    full_design$obsID <- rep(1:total_questions, each = n_alts)
+    full_design$obsID <- rep(1:total_questions, each = actual_n_alts)
 
     # Reorder by respID, qID, altID
     full_design <- full_design[order(full_design$respID, full_design$qID, full_design$altID), ]
@@ -1505,19 +1557,41 @@ randomize_question_order <- function(resp_design, n_q, n_alts) {
     return(resp_design)
 }
 
-#' Randomize alternative order within questions
+#' Randomize alternative order within questions (Fixed for no-choice)
 #'
 #' @param resp_design Design for one respondent
 #' @param n_q Number of questions per respondent
-#' @param n_alts Number of alternatives per question
+#' @param n_alts Number of regular alternatives per question (excluding no-choice)
 #' @return Design with randomized alternative order
 randomize_alternative_order <- function(resp_design, n_q, n_alts) {
+
+    # Check if design has no-choice option
+    has_no_choice <- "no_choice" %in% names(resp_design)
 
     # For each question, randomize alternative order
     for (q in 1:n_q) {
         q_rows <- which(resp_design$qID == q)
-        new_alt_order <- sample(1:n_alts)
-        resp_design$altID[q_rows] <- new_alt_order
+
+        if (has_no_choice) {
+            # Separate regular alternatives from no-choice
+            regular_rows <- q_rows[resp_design$altID[q_rows] <= n_alts]
+            nochoice_rows <- q_rows[resp_design$altID[q_rows] > n_alts]
+
+            # Only randomize the regular alternatives
+            if (length(regular_rows) > 0) {
+                new_alt_order <- sample(1:n_alts)
+                resp_design$altID[regular_rows] <- new_alt_order
+            }
+
+            # Keep no-choice alternative in last position
+            if (length(nochoice_rows) > 0) {
+                resp_design$altID[nochoice_rows] <- n_alts + 1
+            }
+        } else {
+            # No no-choice: randomize all alternatives
+            new_alt_order <- sample(1:n_alts)
+            resp_design$altID[q_rows] <- new_alt_order
+        }
     }
 
     return(resp_design)
@@ -1674,4 +1748,38 @@ decode_categorical_variables <- function(design, categorical_structure) {
     }
 
     return(decoded_design)
+}
+
+#' Compute D-error from a full survey design data frame
+#'
+#' This is a wrapper function that converts a full survey design back to
+#' design matrix format and then computes the D-error. Useful for calculating
+#' D-error of the full survey after it's been constructed.
+#'
+#' @param survey_design Full survey design data frame with profileID, obsID, altID columns
+#' @param opt_env Optimization environment containing X_matrix and other parameters
+#' @return Numeric D-error value for the full survey
+compute_design_d_error_from_survey <- function(survey_design, opt_env) {
+    # Get regular (non-no-choice) rows
+    if ("no_choice" %in% names(survey_design)) {
+        regular_rows <- survey_design[survey_design$profileID != 0, ]
+    } else {
+        regular_rows <- survey_design
+    }
+
+    # Get unique observation IDs and determine matrix dimensions
+    unique_obs <- sort(unique(regular_rows$obsID))
+    n_alts <- max(regular_rows$altID[regular_rows$profileID != 0])
+
+    # Rebuild design matrix from survey data
+    design_matrix <- matrix(0, nrow = length(unique_obs), ncol = n_alts)
+
+    for (i in seq_along(unique_obs)) {
+        obs_data <- regular_rows[regular_rows$obsID == unique_obs[i], ]
+        obs_data <- obs_data[order(obs_data$altID), ]  # Ensure proper order
+        design_matrix[i, ] <- obs_data$profileID[1:n_alts]
+    }
+
+    # Use existing compute_design_d_error function
+    return(compute_design_d_error(design_matrix, opt_env))
 }
