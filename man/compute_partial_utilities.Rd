@@ -4,14 +4,12 @@
 \alias{compute_partial_utilities}
 \title{Compute partial utilities for dominance checking}
 \usage{
-compute_partial_utilities(X_matrix, priors, attr_names)
+compute_partial_utilities(X_matrix, priors)
 }
 \arguments{
 \item{X_matrix}{Encoded design matrix from logitr::recodeData}
 
 \item{priors}{cbc_priors object}
-
-\item{attr_names}{Original attribute names}
 }
 \value{
 Matrix with profiles as rows and attributes as columns

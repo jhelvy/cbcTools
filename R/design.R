@@ -56,7 +56,7 @@ cbc_design <- function(
 
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
-        profiles, n_alts, priors, no_choice, label, remove_dominant,
+        profiles, n_alts, n_q, priors, no_choice, label, remove_dominant,
         dominance_types, dominance_threshold
     )
 
@@ -115,7 +115,7 @@ cbc_design <- function(
 
 # Set up the optimization environment with pre-computed utilities and proper factor alignment
 setup_optimization_environment <- function(
-        profiles, n_alts, priors, no_choice, label, remove_dominant,
+        profiles, n_alts, n_q, priors, no_choice, label, remove_dominant,
         dominance_types, dominance_threshold
 ) {
 
@@ -189,7 +189,7 @@ setup_optimization_environment <- function(
         # Pre-compute partial utilities for dominance checking if needed
         partial_utilities <- NULL
         if (remove_dominant && "partial" %in% dominance_types) {
-            partial_utilities <- compute_partial_utilities(X_matrix, priors, attr_names)
+            partial_utilities <- compute_partial_utilities(X_matrix, priors)
         }
 
     } else {
@@ -210,6 +210,14 @@ setup_optimization_environment <- function(
         label_constraints <- setup_label_constraints(profiles, label, n_alts)
     }
 
+    # Determine total alternatives (including no-choice if present)
+    n_questions <- n_q*n_resp
+    n_alts_total <- if (no_choice) n_alts + 1 else n_alts
+    reps <- rep(n_alts_total, n_questions)
+
+    # Precompute obsID vector for regular alternatives
+    obsID <- rep(1:n_questions, each = n_alts_total)
+
     return(list(
         profiles = profiles_aligned,  # Use aligned profiles
         priors = priors,
@@ -223,6 +231,8 @@ setup_optimization_environment <- function(
         no_choice = no_choice,
         label = label,
         label_constraints = label_constraints,
+        reps = reps,
+        obsID = obsID,
         remove_dominant = remove_dominant,
         dominance_types = dominance_types,
         dominance_threshold = dominance_threshold,
@@ -432,17 +442,95 @@ find_problematic_questions <- function(design_matrix, opt_env, n_q, n_resp) {
 
     # Check for dominance if required
     if (opt_env$remove_dominant) {
-        for (q in 1:n_questions) {
-            if (problematic[q]) next  # Already marked as problematic
 
-            question_profiles <- design_matrix[q, ]
-            if (has_dominant_alternative(question_profiles, opt_env)) {
-                problematic[q] <- TRUE
+        # Total dominance check
+        if ("total" %in% opt_env$dominance_types) {
+            total_bad <- get_total_bad(design_matrix, opt_env)
+            problematic[total_bad] <- TRUE
+        }
+
+        # Partial dominance check
+        if ("partial" %in% opt_env$dominance_types) {
+            partial_bad <- get_partial_bad(design_matrix, opt_env)
+            problematic[partial_bad] <- TRUE
+        }
+
+    }
+
+    return(which(problematic))
+}
+
+get_total_bad <- function(design_matrix, opt_env) {
+    probs <- get_probs(design_matrix, opt_env)
+    total_bad <- opt_env$obsID[which(probs > opt_env$dominance_threshold)]
+    return(total_bad)
+}
+
+get_partial_bad <- function(design_matrix, opt_env) {
+    partials <- opt_env$partial_utilities[as.vector(t(design_matrix)),]
+    partial_bad <- find_dominant_rows_by_group(partials, opt_env$obsID)
+    return(opt_env$obsID[partial_bad])
+}
+
+# Function to find dominant rows within groups
+find_dominant_rows_by_group <- function(partials_matrix, group_ids) {
+    # Split row indices by group
+    group_splits <- split(1:nrow(partials_matrix), group_ids)
+
+    # Find dominant rows within each group
+    dominant_indices <- c()
+
+    for (group_rows in group_splits) {
+        if (length(group_rows) > 1) {  # Only check if group has multiple rows
+            # Extract submatrix for this group
+            group_matrix <- partials_matrix[group_rows, , drop = FALSE]
+
+            # Find dominant rows within this group
+            local_dominant <- find_best_rows(group_matrix)
+
+            # Convert local indices back to global indices
+            if (length(local_dominant) > 0) {
+                global_dominant <- group_rows[local_dominant]
+                dominant_indices <- c(dominant_indices, global_dominant)
             }
         }
     }
 
-    return(which(problematic))
+    return(sort(dominant_indices))
+}
+
+find_best_rows <- function(mat) {
+    # Check if each row has the maximum value in every column
+    row_indices <- 1:nrow(mat)
+    best_rows <- row_indices[apply(mat, 1, function(row) {
+        all(sapply(1:ncol(mat), function(col) row[col] == max(mat[, col])))
+    })]
+
+    return(best_rows)
+}
+
+# Helper function to compute choice probabilities
+logit <- function(expV, obsID, reps) {
+    sumExpV <- rowsum(expV, group = obsID, reorder = FALSE)
+    return(expV / sumExpV[rep(seq_along(reps), reps),])
+}
+
+logit_regular <- function(design_matrix, opt_env) {
+    expV <- opt_env$exp_utilities[as.vector(t(design_matrix)),]
+    return(logit(expV, opt_env$obsID, opt_env$reps))
+}
+
+logit_draws <- function(design_matrix, opt_env) {
+    expVDraws <- opt_env$exp_utilities_draws[as.vector(t(design_matrix)),]
+    logitDraws <- logit(expVDraws, opt_env$obsID, opt_env$reps)
+    return(rowMeans(logitDraws))
+}
+
+get_probs <- function(design_matrix, opt_env) {
+    if (!is.null(opt_env$exp_utilities_draws)) {
+        return(logit_draws(design_matrix, opt_env))
+    }
+    return(logit_regular(design_matrix, opt_env))
 }
 
 #' Sample profileIDs for a single question
@@ -479,57 +567,6 @@ sample_labeled_profiles <- function(label_constraints, n_alts) {
     }
 
     return(profiles)
-}
-
-#' Check if a question has a dominant alternative
-#'
-#' @param question_profiles Vector of profileIDs
-#' @param opt_env Optimization environment
-#' @return Logical indicating if dominance exists
-has_dominant_alternative <- function(question_profiles, opt_env) {
-
-    # Total dominance check
-    if ("total" %in% opt_env$dominance_types) {
-        probs <- compute_question_probabilities(question_profiles, opt_env)
-        if (max(probs) > opt_env$dominance_threshold) {
-            return(TRUE)
-        }
-    }
-
-    # Partial dominance check
-    if ("partial" %in% opt_env$dominance_types && !is.null(opt_env$partial_utilities)) {
-        if (has_partial_dominance(question_profiles, opt_env)) {
-            return(TRUE)
-        }
-    }
-
-    return(FALSE)
-}
-
-#' Compute choice probabilities for a question
-#'
-#' @param question_profiles Vector of profileIDs
-#' @param opt_env Optimization environment
-#' @return Vector of choice probabilities
-compute_question_probabilities <- function(question_profiles, opt_env) {
-
-    if (!is.null(opt_env$exp_utilities_draws)) {
-        # Bayesian case: average probabilities across draws
-        n_draws <- ncol(opt_env$exp_utilities_draws)
-        prob_matrix <- matrix(0, nrow = length(question_profiles), ncol = n_draws)
-
-        for (i in 1:n_draws) {
-            exp_utils <- opt_env$exp_utilities_draws[question_profiles, i]
-            prob_matrix[, i] <- exp_utils / sum(exp_utils)
-        }
-
-        return(rowMeans(prob_matrix))
-
-    } else {
-        # Fixed parameters case
-        exp_utils <- opt_env$exp_utilities[question_profiles]
-        return(exp_utils / sum(exp_utils))
-    }
 }
 
 #' Compute D-error for entire design using profileID matrix
@@ -1154,40 +1191,38 @@ get_rand_pars <- function(priors) {
 #'
 #' @param X_matrix Encoded design matrix from logitr::recodeData
 #' @param priors cbc_priors object
-#' @param attr_names Original attribute names
 #' @return Matrix with profiles as rows and attributes as columns
-compute_partial_utilities <- function(X_matrix, priors, attr_names) {
+compute_partial_utilities <- function(X_matrix, priors) {
 
     if (is.null(priors)) {
         stop("Priors required for partial dominance checking")
     }
 
     n_profiles <- nrow(X_matrix)
-    partial_utils <- matrix(0, nrow = n_profiles, ncol = length(attr_names))
-    colnames(partial_utils) <- attr_names
 
-    # Get parameter names and their mapping to original attributes
-    par_names <- names(priors$pars)
-
-    # For each original attribute, sum up the relevant parameter contributions
-    for (attr in attr_names) {
-        # Find parameters that belong to this attribute
-        attr_pars <- par_names[grepl(paste0("^", attr), par_names)]
-
-        if (length(attr_pars) > 0) {
-            # Get the column indices in X_matrix for these parameters
-            attr_cols_X <- which(colnames(X_matrix) %in% attr_pars)
-
-            if (length(attr_cols_X) > 0) {
-                # Compute partial utility for each profile
-                X_attr <- X_matrix[, attr_cols_X, drop = FALSE]
-                pars_attr <- priors$pars[attr_cols_X]
-                partial_utils[, attr] <- X_attr %*% pars_attr
-            }
+    # Compute mean partial utility across par draws if exist
+    par_draws <- priors$par_draws
+    n_draws <- nrow(par_draws)
+    if (!is.null(par_draws)) {
+        pars <- par_draws[1,]
+        partials <- compute_partial_utility_single(X_matrix, pars, n_profiles)
+        for (i in 2:n_draws) {
+            pars <- par_draws[i,]
+            partials <- partials + compute_partial_utility_single(X_matrix, pars, n_profiles)
         }
+        return(partials / n_draws)
     }
+    # Otherwise just compute direct partial utility using prior pars
+    return(compute_partial_utility_single(X_matrix, priors$pars, n_profiles))
+}
 
-    return(partial_utils)
+compute_partial_utility_single <- function(X_matrix, pars, n_profiles) {
+    par_mat <- matrix(
+        rep(pars, n_profiles),
+        nrow = n_profiles,
+        byrow = TRUE
+    )
+    return(X_matrix*par_mat)
 }
 
 #' Set up label constraints for labeled designs
@@ -1209,50 +1244,6 @@ setup_label_constraints <- function(profiles, label, n_alts) {
         values = label_values,
         groups = groups
     ))
-}
-
-#' Check for partial dominance between alternatives
-#'
-#' Uses pre-computed partial utilities matrix for fast dominance checking
-#' Checks if any alternative has higher partial utility for ALL attributes
-#'
-#' @param question_profiles Vector of profileIDs in this question
-#' @param opt_env Optimization environment containing partial_utilities matrix
-#' @return Logical indicating if partial dominance exists
-has_partial_dominance <- function(question_profiles, opt_env) {
-
-    if (is.null(opt_env$partial_utilities)) {
-        return(FALSE)
-    }
-
-    # Get partial utilities for these profiles
-    # Convert profileIDs to row indices (assuming 1-indexed profiles)
-    profile_indices <- question_profiles[question_profiles > 0]  # Exclude no-choice
-
-    if (length(profile_indices) < 2) {
-        return(FALSE)
-    }
-
-    partial_utils <- opt_env$partial_utilities[profile_indices, , drop = FALSE]
-
-    # Check if any alternative dominates on ALL attributes
-    n_alts <- nrow(partial_utils)
-    n_attrs <- ncol(partial_utils)
-
-    for (i in 1:n_alts) {
-        is_best_for_all <- TRUE
-        for (j in 1:n_attrs) {
-            if (partial_utils[i, j] < max(partial_utils[, j])) {
-                is_best_for_all <- FALSE
-                break
-            }
-        }
-        if (is_best_for_all) {
-            return(TRUE)
-        }
-    }
-
-    return(FALSE)
 }
 
 generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter, n_start, max_attempts) {
