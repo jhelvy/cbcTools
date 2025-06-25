@@ -856,9 +856,9 @@ get_categorical_structure_from_profiles <- function(profiles, attr_names) {
     return(categorical_info)
 }
 
-#' Finalize the design object with metadata and class
+#' Finalize the design object with metadata including both D-errors
 #'
-#' @param design The design data frame
+#' @param design The design data frame (always dummy-coded)
 #' @param opt_env Optimization environment
 #' @param design_result Result from design generation
 #' @param method Design method used
@@ -875,10 +875,6 @@ finalize_design_object <- function(design, opt_env, design_result, method,
                                    n_alts, n_q, n_resp, n_blocks, no_choice, label,
                                    randomize_questions, randomize_alts) {
 
-    # Store metadata
-    attr(design, "profiles") <- opt_env$profiles
-    attr(design, "priors") <- opt_env$priors
-
     # Build design_params list
     design_params <- list(
         method = method,
@@ -892,20 +888,49 @@ finalize_design_object <- function(design, opt_env, design_result, method,
         randomize_alts = if (method == "sequential") randomize_alts else NA,
         created_at = Sys.time(),
         remove_dominant = opt_env$remove_dominant,
-        dominance_types = if (opt_env$remove_dominant) opt_env$dominance_types else NULL
+        dominance_types = if (opt_env$remove_dominant) opt_env$dominance_types else NULL,
+        dummy_coded = TRUE
     )
 
-    # Add D-error information
+    # Add D-error information (both null and prior-based)
     if (method == "sequential" && design_result$repeated_across_respondents) {
-        # Calculate D-error for the full survey
-        full_survey_d_error <- compute_design_d_error_from_survey(design, opt_env)
-        design_params$d_error_base <- design_result$d_error
-        design_params$d_error_full <- full_survey_d_error
-        design_params$d_error <- full_survey_d_error  # Primary D-error
+        # For sequential designs, compute both D-errors for base and full survey
+
+        # Base design D-errors (from optimization)
+        base_d_errors <- compute_both_d_errors(design_result$design_matrix, opt_env)
+
+        # Full survey D-errors
+        full_d_errors <- compute_both_d_errors_from_survey(design, opt_env)
+
+        # Store all D-error information
+        design_params$d_error_base_null <- base_d_errors$null_d_error
+        design_params$d_error_full_null <- full_d_errors$null_d_error
+
+        if (base_d_errors$has_priors) {
+            design_params$d_error_base_prior <- base_d_errors$prior_d_error
+            design_params$d_error_full_prior <- full_d_errors$prior_d_error
+            design_params$d_error <- full_d_errors$prior_d_error  # Primary D-error (prior-based)
+        } else {
+            design_params$d_error <- full_d_errors$null_d_error   # Primary D-error (null)
+        }
+
     } else {
-        design_params$d_error <- design_result$d_error
+        # For random designs, compute both D-errors
+        d_errors <- compute_both_d_errors(design_result$design_matrix, opt_env)
+
+        design_params$d_error_null <- d_errors$null_d_error
+
+        if (d_errors$has_priors) {
+            design_params$d_error_prior <- d_errors$prior_d_error
+            design_params$d_error <- d_errors$prior_d_error  # Primary D-error (prior-based)
+        } else {
+            design_params$d_error <- d_errors$null_d_error   # Primary D-error (null)
+        }
     }
 
+    # Store metadata
+    attr(design, "profiles") <- opt_env$profiles
+    attr(design, "priors") <- opt_env$priors
     attr(design, "design_params") <- design_params
 
     # Calculate summary statistics
@@ -932,40 +957,6 @@ finalize_design_object <- function(design, opt_env, design_result, method,
 
     class(design) <- c("cbc_design", "data.frame")
     return(design)
-}
-
-#' Compute D-error from a full survey design data frame
-#'
-#' This is a wrapper function that converts a full survey design back to
-#' design matrix format and then computes the D-error. Useful for calculating
-#' D-error of the full survey after it's been constructed.
-#'
-#' @param survey_design Full survey design data frame with profileID, obsID, altID columns
-#' @param opt_env Optimization environment containing X_matrix and other parameters
-#' @return Numeric D-error value for the full survey
-compute_design_d_error_from_survey <- function(survey_design, opt_env) {
-    # Get regular (non-no-choice) rows
-    if ("no_choice" %in% names(survey_design)) {
-        regular_rows <- survey_design[survey_design$profileID != 0, ]
-    } else {
-        regular_rows <- survey_design
-    }
-
-    # Get unique observation IDs and determine matrix dimensions
-    unique_obs <- sort(unique(regular_rows$obsID))
-    n_alts <- max(regular_rows$altID[regular_rows$profileID != 0])
-
-    # Rebuild design matrix from survey data
-    design_matrix <- matrix(0, nrow = length(unique_obs), ncol = n_alts)
-
-    for (i in seq_along(unique_obs)) {
-        obs_data <- regular_rows[regular_rows$obsID == unique_obs[i], ]
-        obs_data <- obs_data[order(obs_data$altID), ]  # Ensure proper order
-        design_matrix[i, ] <- obs_data$profileID[1:n_alts]
-    }
-
-    # Use existing compute_design_d_error function
-    return(compute_design_d_error(design_matrix, opt_env))
 }
 
 # Helper functions that will need to be implemented
@@ -1782,4 +1773,107 @@ compute_design_d_error_from_survey <- function(survey_design, opt_env) {
 
     # Use existing compute_design_d_error function
     return(compute_design_d_error(design_matrix, opt_env))
+}
+
+#' Compute both null and prior-based D-errors for a design matrix
+#'
+#' @param design_matrix Matrix of profileIDs (questions x alternatives)
+#' @param opt_env Optimization environment
+#' @return List with null_d_error and prior_d_error (if priors available)
+compute_both_d_errors <- function(design_matrix, opt_env) {
+
+    # Always compute null D-error (no priors, equal probabilities)
+    null_d_error <- compute_design_d_error_null(design_matrix, opt_env)
+
+    # Compute prior-based D-error if priors are available
+    prior_d_error <- NULL
+    if (!is.null(opt_env$priors)) {
+        prior_d_error <- compute_design_d_error(design_matrix, opt_env)
+    }
+
+    return(list(
+        null_d_error = null_d_error,
+        prior_d_error = prior_d_error,
+        has_priors = !is.null(opt_env$priors)
+    ))
+}
+
+#' Compute D-error assuming no priors (equal choice probabilities)
+#'
+#' @param design_matrix Matrix of profileIDs (questions x alternatives)
+#' @param opt_env Optimization environment
+#' @return Numeric D-error value under null assumption
+compute_design_d_error_null <- function(design_matrix, opt_env) {
+
+    n_questions <- nrow(design_matrix)
+    n_alts <- ncol(design_matrix)
+
+    # Reconstruct X matrix for entire design by slicing the encoded profiles
+    design_profiles <- as.vector(t(design_matrix))
+
+    # Build X matrix for this design using the encoded profiles matrix
+    n_params <- ncol(opt_env$X_matrix)
+    X_design <- opt_env$X_matrix[design_profiles, ]
+
+    # Create obsID and altID for regular alternatives
+    obsID <- rep(1:n_questions, each = n_alts)
+    altID <- rep(1:n_alts, n_questions)
+
+    # If no-choice is enabled, append no-choice rows
+    if (opt_env$no_choice) {
+        # Add no-choice rows (all zeros)
+        no_choice_rows <- matrix(0, nrow = n_questions, ncol = n_params)
+        X_design <- rbind(X_design, no_choice_rows)
+
+        # Add obsID and altID for no-choice alternatives
+        obsID <- c(obsID, 1:n_questions)  # Same obsID as questions
+        altID <- c(altID, rep(n_alts + 1, n_questions))  # altID = n_alts + 1
+
+        # Sort by obsID then altID to get proper interleaving
+        sort_order <- order(obsID, altID)
+        X_design <- X_design[sort_order, ]
+        obsID <- obsID[sort_order]
+        altID <- altID[sort_order]
+
+        n_alts_final <- n_alts + 1
+    } else {
+        n_alts_final <- n_alts
+    }
+
+    # Compute equal probabilities (null assumption)
+    probs <- rep(1/n_alts_final, length(obsID))
+
+    # Compute D-error
+    return(compute_d_error_from_probs(X_design, probs, obsID))
+}
+
+#' Compute both D-errors from a full survey design data frame
+#'
+#' @param survey_design Full survey design data frame
+#' @param opt_env Optimization environment
+#' @return List with null_d_error and prior_d_error (if available)
+compute_both_d_errors_from_survey <- function(survey_design, opt_env) {
+
+    # Get regular (non-no-choice) rows
+    if ("no_choice" %in% names(survey_design)) {
+        regular_rows <- survey_design[survey_design$profileID != 0, ]
+    } else {
+        regular_rows <- survey_design
+    }
+
+    # Get unique observation IDs and determine matrix dimensions
+    unique_obs <- sort(unique(regular_rows$obsID))
+    n_alts <- max(regular_rows$altID[regular_rows$profileID != 0])
+
+    # Rebuild design matrix from survey data
+    design_matrix <- matrix(0, nrow = length(unique_obs), ncol = n_alts)
+
+    for (i in seq_along(unique_obs)) {
+        obs_data <- regular_rows[regular_rows$obsID == unique_obs[i], ]
+        obs_data <- obs_data[order(obs_data$altID), ]  # Ensure proper order
+        design_matrix[i, ] <- obs_data$profileID[1:n_alts]
+    }
+
+    # Compute both D-errors
+    return(compute_both_d_errors(design_matrix, opt_env))
 }

@@ -125,6 +125,52 @@ print.cbc_priors <- function(x, ...) {
   invisible(x)
 }
 
+#' Print D-error information showing both null and prior-based values
+#'
+#' This function handles the D-error display logic for the print method
+#'
+#' @param params Design parameters list
+print_d_error_info <- function(params) {
+
+    cat('\n')
+
+    # Determine if this is a sequential design with base/full distinction
+    is_sequential_repeated <- !is.null(params$d_error_base_null)
+
+    if (is_sequential_repeated) {
+        # Sequential design with base and full D-errors
+
+        # Base design D-errors
+        cat("D-error (base design):\n")
+        cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_base_null))
+        if (!is.null(params$d_error_base_prior)) {
+            cat(sprintf("  With priors:                 %.6f\n", params$d_error_base_prior))
+        }
+
+        # Full survey D-errors
+        cat("D-error (full survey):\n")
+        cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_full_null))
+        if (!is.null(params$d_error_full_prior)) {
+            cat(sprintf("  With priors:                 %.6f\n", params$d_error_full_prior))
+        }
+
+    } else {
+        # Regular design (random method or sequential without repetition)
+
+        cat("D-error:\n")
+        cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_null))
+        if (!is.null(params$d_error_prior)) {
+            cat(sprintf("  With priors:                 %.6f\n", params$d_error_prior))
+
+            # Show improvement from using priors
+            improvement <- (params$d_error_null - params$d_error_prior) / params$d_error_null * 100
+            cat(sprintf("  Improvement from priors:     %.1f%%\n", improvement))
+        }
+    }
+
+    cat('\n')
+}
+
 #' Enhanced print method for cbc_design objects (Updated for dummy coding)
 #' @param x A cbc_design object
 #' @param ... Additional arguments passed to print
@@ -138,22 +184,18 @@ print.cbc_design <- function(x, ...) {
 
     cat("Choice-Based Conjoint Design\n")
     cat("============================\n")
+    cat(sprintf("Design created: %s\n", format(params$created_at, "%Y-%m-%d %H:%M:%S")))
     cat(sprintf("Method: %s\n", params$method))
+
+    # Profile usage
+    cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",
+                summary_info$n_profiles_used, summary_info$n_profiles_available,
+                summary_info$profile_usage_rate * 100))
+
     cat(sprintf("Respondents: %d\n", params$n_resp))
     cat(sprintf("Alternatives per question: %d\n", params$n_alts))
     cat(sprintf("Questions per respondent: %d\n", params$n_q))
-
-    if (!is.null(summary_info$method_specific$total_questions_generated)) {
-        cat(sprintf("Total questions generated: %d\n", summary_info$method_specific$total_questions_generated))
-    }
     cat(sprintf("Number of blocks: %d\n", params$n_blocks))
-
-    if (params$no_choice) {
-        cat("No-choice option: Yes\n")
-    }
-    if (!is.null(params$label)) {
-        cat(sprintf("Labeled design using: %s\n", params$label))
-    }
 
     # Method-specific information
     if (params$method == "sequential") {
@@ -165,20 +207,34 @@ print.cbc_design <- function(x, ...) {
         }
     }
 
-    # Design efficiency
-    if (!is.null(params$d_error_base) && !is.null(params$d_error_full)) {
-        # Sequential design with both D-errors
-        cat(sprintf("D-error (base design): %.6f\n", params$d_error_base))
-        cat(sprintf("D-error (full survey): %.6f\n", params$d_error_full))
-    } else if (!is.null(params$d_error)) {
-        # Regular design with single D-error
-        cat(sprintf("D-error: %.6f\n", params$d_error))
+    # Method-specific details
+    if (!is.null(summary_info$method_specific)) {
+        if (params$method == "random") {
+            if (!is.null(summary_info$method_specific$optimization_attempts)) {
+                cat(sprintf("Optimization attempts: %d\n", summary_info$method_specific$optimization_attempts))
+            }
+        } else if (params$method == "sequential") {
+            cat("Base design optimized: Yes\n")
+            if (summary_info$method_specific$repeated_across_respondents) {
+                cat("Repeated across respondents: Yes\n")
+            }
+        }
     }
 
-    # Profile usage
-    cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",
-                summary_info$n_profiles_used, summary_info$n_profiles_available,
-                summary_info$profile_usage_rate * 100))
+    # Special design features
+    if (params$no_choice) {
+        cat("No-choice option: Yes\n")
+    }
+    if (!is.null(params$label)) {
+        cat(sprintf("Labeled design using: %s\n", params$label))
+    }
+
+    # Dominance information
+    if (!is.null(params$remove_dominant) && params$remove_dominant) {
+        cat(sprintf("Dominance removal: %s (threshold: %.2f)\n",
+                    paste(params$dominance_types, collapse = ", "),
+                    attr(x, "design_params")$dominance_threshold %||% 0.8))
+    }
 
     # Dummy coding information
     is_dummy_coded <- attr(x, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
@@ -198,34 +254,18 @@ print.cbc_design <- function(x, ...) {
 
         # Show decode option if no no-choice
         if (!params$no_choice) {
-            cat("  Use cbc_decode() to convert back to categorical format\n")
+            cat("  Use cbc_decode_design() to convert back to categorical format\n")
         }
     } else {
         cat("Variable encoding: Categorical format\n")
     }
 
-    # Method-specific details
-    if (!is.null(summary_info$method_specific)) {
-        if (params$method == "random") {
-            cat(sprintf("Optimization attempts: %d\n", summary_info$method_specific$optimization_attempts))
-        } else if (params$method == "sequential") {
-            cat("Base design optimized: Yes\n")
-            if (summary_info$method_specific$repeated_across_respondents) {
-                cat("Repeated across respondents: Yes\n")
-            }
-        }
-    }
-
-    # Dominance information
-    if (!is.null(params$remove_dominant) && params$remove_dominant) {
-        cat(sprintf("Dominance removal: %s (threshold: %.2f)\n",
-                    paste(params$dominance_types, collapse = ", "),
-                    attr(x, "design_params")$dominance_threshold %||% 0.8))
-    }
+    # D-error information
+    print_d_error_info(params)
 
     # Priors information
     if (!is.null(priors)) {
-        cat("\nPriors summary:\n")
+        cat("Priors summary:\n")
         n_fixed <- sum(!sapply(priors$attrs, function(a) a$random))
         n_random <- sum(sapply(priors$attrs, function(a) a$random))
         cat(sprintf("  Fixed parameters: %d\n", n_fixed))
@@ -233,10 +273,10 @@ print.cbc_design <- function(x, ...) {
         if (!is.null(priors$correlation)) {
             cat("  Parameter correlations: Yes\n")
         }
+        cat('\n')
     }
 
-    cat(sprintf("\nDesign created: %s\n", format(params$created_at, "%Y-%m-%d %H:%M:%S")))
-    cat("\nFirst few rows of design:\n")
+    cat("First few rows of design:\n")
 
     # Remove class temporarily to avoid infinite recursion
     design_df <- x
