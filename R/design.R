@@ -42,6 +42,8 @@ cbc_design <- function(
         n_start = 5
 ) {
 
+    time_start <- Sys.time()
+
     # Validate inputs
     validate_design_inputs(
         profiles, method, priors, n_alts, n_q, n_resp, n_blocks,
@@ -107,10 +109,12 @@ cbc_design <- function(
     # }
 
     # Add metadata and return
-    finalize_design_object(
+    final <- finalize_design_object(
         final_design, design_result, opt_env, method,
-        randomize_questions, randomize_alts
+        randomize_questions, randomize_alts, time_start
     )
+
+    return(final)
 }
 
 # Set up the optimization environment with pre-computed utilities and proper factor alignment
@@ -446,7 +450,10 @@ find_problematic_questions <- function(design_matrix, opt_env) {
 
 get_total_bad <- function(design_matrix, opt_env) {
     probs <- get_probs(design_matrix, opt_env)
-    probs <- rowMeans(probs)
+    if (opt_env$is_bayesian) {
+        # here probs is a matrix of prob draws
+        probs <- rowMeans(probs)
+    }
     total_bad <- opt_env$obsID[which(probs > opt_env$dominance_threshold)]
     return(total_bad)
 }
@@ -730,7 +737,7 @@ get_categorical_structure_from_profiles <- function(profiles, attr_names) {
 # Finalize the design object with metadata including both D-errors
 finalize_design_object <- function(
     design, design_result, opt_env, method,
-    randomize_questions, randomize_alts
+    randomize_questions, randomize_alts, time_start
 ) {
 
     design_matrix <- design_result$design_matrix
@@ -792,6 +799,8 @@ finalize_design_object <- function(
     # Store metadata
     attr(design, "profiles") <- opt_env$profiles
     attr(design, "priors") <- opt_env$priors
+    time_stop <- Sys.time()
+    design_params$time_elapsed_sec <- as.numeric(time_stop - time_start)
     attr(design, "design_params") <- design_params
 
     # Calculate summary statistics
