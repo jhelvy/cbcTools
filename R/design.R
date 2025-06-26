@@ -43,10 +43,12 @@ cbc_design <- function(
 ) {
 
     # Validate inputs
-    validate_design_inputs(profiles, method, priors, n_alts, n_q, n_resp, n_blocks,
-                           no_choice, label, randomize_questions, randomize_alts,
-                           remove_dominant, dominance_types, dominance_threshold,
-                           max_dominance_attempts)
+    validate_design_inputs(
+        profiles, method, priors, n_alts, n_q, n_resp, n_blocks,
+        no_choice, label, randomize_questions, randomize_alts,
+        remove_dominant, dominance_types, dominance_threshold,
+        max_dominance_attempts
+    )
 
     # Override randomize_alts for labeled designs
     if (!is.null(label) && randomize_alts) {
@@ -56,8 +58,9 @@ cbc_design <- function(
 
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
-        profiles, n_alts, n_q, priors, no_choice, label, remove_dominant,
-        dominance_types, dominance_threshold
+        profiles, n_alts, n_q, n_resp, n_blocks, priors, no_choice, label,
+        remove_dominant, dominance_types, dominance_threshold,
+        max_dominance_attempts
     )
 
     # Generate design based on method
@@ -69,9 +72,7 @@ cbc_design <- function(
         }
 
         # Random designs: generate completely random design for all respondents
-        design_result <- generate_random_design(
-            opt_env, n_alts, n_q, n_resp, n_blocks, max_dominance_attempts
-        )
+        design_result <- generate_random_design(opt_env)
 
         # Convert profileID matrix back to full design
         final_design <- construct_final_design(
@@ -115,8 +116,8 @@ cbc_design <- function(
 
 # Set up the optimization environment with pre-computed utilities and proper factor alignment
 setup_optimization_environment <- function(
-        profiles, n_alts, n_q, priors, no_choice, label, remove_dominant,
-        dominance_types, dominance_threshold
+    profiles, n_alts, n_q, n_resp, n_blocks, priors, no_choice, label,
+    remove_dominant, dominance_types, dominance_threshold, max_dominance_attempts
 ) {
 
     # Get attribute names (excluding profileID)
@@ -137,6 +138,7 @@ setup_optimization_environment <- function(
     exp_no_choice_draws <- NULL
 
     # Compute utilities if we have priors
+    n_draws <- NULL
     if (!is.null(priors)) {
 
         # Handle no_choice parameter extraction
@@ -210,13 +212,31 @@ setup_optimization_environment <- function(
         label_constraints <- setup_label_constraints(profiles, label, n_alts)
     }
 
-    # Determine total alternatives (including no-choice if present)
-    n_questions <- n_q*n_resp
-    n_alts_total <- if (no_choice) n_alts + 1 else n_alts
-    reps <- rep(n_alts_total, n_questions)
+    # Setup n parameter
+    n <- list(
+        draws = n_draws,
+        q = n_q,
+        alts = n_alts,
+        resp = n_resp,
+        blocks = n_blocks,
+        questions =n_q*n_resp,
+        n_params = ncol(X_matrix),
+        max_attempts = max_dominance_attempts
+    )
 
-    # Precompute obsID vector for regular alternatives
+    # Precompute all ID vectors
+    if (no_choice) {
+        n_alts_total <- n_alts + 1
+        no_choice_rows <- matrix(0, nrow = n_questions, ncol = n_params)
+    } else {
+        n_alts_total <- n_alts
+        no_choice_rows <- NULL
+    }
+    n$alts_total <- n_alts_total
+    reps <- rep(n_alts_total, n_questions)
+    respID <- rep(1:n_resp, each = n_alts_total*n_q)
     obsID <- rep(1:n_questions, each = n_alts_total)
+    altID <- rep(1:n_alts_total, n_questions)
 
     return(list(
         profiles = profiles_aligned,  # Use aligned profiles
@@ -231,8 +251,12 @@ setup_optimization_environment <- function(
         no_choice = no_choice,
         label = label,
         label_constraints = label_constraints,
+        n = n,
         reps = reps,
+        respID = respID,
         obsID = obsID,
+        altID = altID,
+        no_choice_rows = no_choice_rows,
         remove_dominant = remove_dominant,
         dominance_types = dominance_types,
         dominance_threshold = dominance_threshold,
@@ -312,32 +336,18 @@ align_profiles_with_priors <- function(profiles, priors, attr_names) {
 }
 
 #' Generate a random design using profileID sampling with matrix operations
-#'
-#' For random designs, generates a completely random design for ALL respondents.
-#' Each respondent gets their own random questions.
-#'
-#' @param opt_env Optimization environment from setup_optimization_environment
-#' @param n_alts Number of alternatives per question
-#' @param n_q Number of questions per respondent
-#' @param n_resp Number of respondents
-#' @param n_blocks Number of blocks
-#' @param max_attempts Maximum attempts to find valid design
-#' @return A list with design_matrix and metadata
-generate_random_design <- function(opt_env, n_alts, n_q, n_resp, n_blocks, max_attempts) {
-
-    # For random designs: total questions = n_q * n_resp * n_blocks
-    total_questions <- n_q * n_resp * n_blocks
+generate_random_design <- function(opt_env) {
 
     # Start with a completely random design matrix
-    design_matrix <- generate_initial_random_matrix(opt_env, n_alts, total_questions)
+    design_matrix <- generate_initial_random_matrix(opt_env)
 
     # Iteratively fix problems
     attempts <- 0
-    while (attempts < max_attempts) {
+    while (attempts < opt_env$n$max_attempts) {
         attempts <- attempts + 1
 
         # Find all problematic questions
-        problem_questions <- find_problematic_questions(design_matrix, opt_env, n_q, n_resp)
+        problem_questions <- find_problematic_questions(design_matrix, opt_env)
 
         if (length(problem_questions) == 0) {
             break  # Design is valid
@@ -345,11 +355,12 @@ generate_random_design <- function(opt_env, n_alts, n_q, n_resp, n_blocks, max_a
 
         # Replace problematic questions
         for (q in problem_questions) {
-            design_matrix[q, ] <- sample_question_profiles(opt_env, n_alts)
+            design_matrix[q, ] <- sample_question_profiles(opt_env)
         }
     }
 
-    if (length(find_problematic_questions(design_matrix, opt_env, n_q, n_resp)) > 0) {
+    # Find all remaining problematic questions (if any)
+    if (length(find_problematic_questions(design_matrix, opt_env)) > 0) {
         warning(sprintf("Could not generate fully valid design after %d attempts", max_attempts))
     }
 
@@ -361,51 +372,39 @@ generate_random_design <- function(opt_env, n_alts, n_q, n_resp, n_blocks, max_a
         d_error = d_error,
         method = "random",
         total_attempts = attempts,
-        total_questions = total_questions
+        n_questions = n_questions
     ))
 }
 
 #' Generate initial random design matrix
-#'
-#' @param opt_env Optimization environment
-#' @param n_alts Number of alternatives per question
-#' @param total_questions Total number of questions
-#' @return Matrix of profileIDs
-generate_initial_random_matrix <- function(opt_env, n_alts, total_questions) {
+generate_initial_random_matrix <- function(opt_env) {
 
-    design_matrix <- matrix(0, nrow = total_questions, ncol = n_alts)
+    n <- opt_env$n
+    design_matrix <- matrix(0, nrow = n$questions, ncol = n$alts)
 
     if (!is.null(opt_env$label_constraints)) {
         # Labeled design: sample one from each label group for each question
-        for (q in 1:total_questions) {
-            design_matrix[q, ] <- sample_labeled_profiles(opt_env$label_constraints, n_alts)
+        for (q in 1:n$questions) {
+            design_matrix[q, ] <- sample_labeled_profiles(opt_env)
         }
     } else {
         # Regular design: sample without replacement for each question
-        for (q in 1:total_questions) {
-            design_matrix[q, ] <- sample(opt_env$available_profile_ids, n_alts, replace = FALSE)
+        for (q in 1:n$questions) {
+            design_matrix[q, ] <- sample(opt_env$available_profile_ids, n$alts, replace = FALSE)
         }
     }
 
     return(design_matrix)
 }
 
-#' Find all questions that have problems (vectorized approach)
-#'
-#' For random designs, checks for duplicates within each respondent's question set
-#'
-#' @param design_matrix Current design matrix
-#' @param opt_env Optimization environment
-#' @param n_q Number of questions per respondent
-#' @param n_resp Number of respondents
-#' @return Vector of question indices that have problems
-find_problematic_questions <- function(design_matrix, opt_env, n_q, n_resp) {
+#' Find all questions that have problems
+find_problematic_questions <- function(design_matrix, opt_env) {
 
-    n_questions <- nrow(design_matrix)
-    problematic <- logical(n_questions)
+    n <- opt_env$n
+    problematic <- logical(n$questions)
 
     # Check for within-question duplicates
-    for (q in 1:n_questions) {
+    for (q in 1:n$questions) {
         question_profiles <- design_matrix[q, ]
         if (length(unique(question_profiles)) != length(question_profiles)) {
             problematic[q] <- TRUE
@@ -413,10 +412,10 @@ find_problematic_questions <- function(design_matrix, opt_env, n_q, n_resp) {
     }
 
     # Check for duplicate questions within each respondent
-    for (resp in 1:n_resp) {
+    for (resp in 1:n$resp) {
         # Get question indices for this respondent
-        resp_start <- (resp - 1) * n_q + 1
-        resp_end <- resp * n_q
+        resp_start <- (resp - 1) * n$q + 1
+        resp_end <- resp * n$q
         resp_questions <- resp_start:resp_end
 
         # Check for duplicates within this respondent's questions
@@ -443,15 +442,17 @@ find_problematic_questions <- function(design_matrix, opt_env, n_q, n_resp) {
     # Check for dominance if required
     if (opt_env$remove_dominant) {
 
+        design_vector <- get_design_vector(design_matrix)
+
         # Total dominance check
         if ("total" %in% opt_env$dominance_types) {
-            total_bad <- get_total_bad(design_matrix, opt_env)
+            total_bad <- get_total_bad(design_vector, opt_env)
             problematic[total_bad] <- TRUE
         }
 
         # Partial dominance check
         if ("partial" %in% opt_env$dominance_types) {
-            partial_bad <- get_partial_bad(design_matrix, opt_env)
+            partial_bad <- get_partial_bad(design_vector, opt_env)
             problematic[partial_bad] <- TRUE
         }
 
@@ -460,14 +461,18 @@ find_problematic_questions <- function(design_matrix, opt_env, n_q, n_resp) {
     return(which(problematic))
 }
 
-get_total_bad <- function(design_matrix, opt_env) {
-    probs <- get_probs(design_matrix, opt_env)
+get_design_vector <- function(design_matrix) {
+    return(as.vector(t(design_matrix)))
+}
+
+get_total_bad <- function(design_vector, opt_env) {
+    probs <- get_probs(design_vector, opt_env)
     total_bad <- opt_env$obsID[which(probs > opt_env$dominance_threshold)]
     return(total_bad)
 }
 
-get_partial_bad <- function(design_matrix, opt_env) {
-    partials <- opt_env$partial_utilities[as.vector(t(design_matrix)),]
+get_partial_bad <- function(design_vector, opt_env) {
+    partials <- opt_env$partial_utilities[design_vector,]
     partial_bad <- find_dominant_rows_by_group(partials, opt_env$obsID)
     return(opt_env$obsID[partial_bad])
 }
@@ -515,234 +520,59 @@ logit <- function(expV, obsID, reps) {
     return(expV / sumExpV[rep(seq_along(reps), reps),])
 }
 
-logit_regular <- function(design_matrix, opt_env) {
-    expV <- opt_env$exp_utilities[as.vector(t(design_matrix)),]
+logit_regular <- function(design_vector, opt_env) {
+    expV <- opt_env$exp_utilities[design_vector,]
     return(logit(expV, opt_env$obsID, opt_env$reps))
 }
 
-logit_draws <- function(design_matrix, opt_env) {
-    expVDraws <- opt_env$exp_utilities_draws[as.vector(t(design_matrix)),]
+logit_draws <- function(design_vector, opt_env) {
+    expVDraws <- opt_env$exp_utilities_draws[design_vector,]
     logitDraws <- logit(expVDraws, opt_env$obsID, opt_env$reps)
     return(rowMeans(logitDraws))
 }
 
-get_probs <- function(design_matrix, opt_env) {
+get_probs <- function(design_vector, opt_env) {
     if (!is.null(opt_env$exp_utilities_draws)) {
-        return(logit_draws(design_matrix, opt_env))
+        return(logit_draws(design_vector, opt_env))
     }
-    return(logit_regular(design_matrix, opt_env))
+    return(logit_regular(design_vector, opt_env))
 }
 
-#' Sample profileIDs for a single question
-#'
-#' @param opt_env Optimization environment
-#' @param n_alts Number of alternatives to sample
-#' @return Vector of profileIDs
-sample_question_profiles <- function(opt_env, n_alts) {
-
+# Sample profileIDs for a single question
+sample_question_profiles <- function(opt_env) {
+    n_alts <- opt_env$n$alts
     if (!is.null(opt_env$label_constraints)) {
         # Labeled design: sample one from each label group
-        return(sample_labeled_profiles(opt_env$label_constraints, n_alts))
+        return(sample_labeled_profiles(opt_env))
     } else {
         # Regular design: sample without replacement from all available profiles
         return(sample(opt_env$available_profile_ids, n_alts, replace = FALSE))
     }
 }
 
-#' Sample profiles for labeled design
-#'
-#' @param label_constraints Label constraint structure
-#' @param n_alts Number of alternatives (should match number of label groups)
-#' @return Vector of profileIDs, one from each label group
-sample_labeled_profiles <- function(label_constraints, n_alts) {
-
+# Sample profiles for labeled design
+sample_labeled_profiles <- function(opt_env) {
+    label_constraints <- opt_env$label_constraints
+    n_alts <- opt_env$n$alts
     if (length(label_constraints$groups) != n_alts) {
         stop("Number of alternatives must match number of label groups")
     }
-
     profiles <- numeric(n_alts)
     for (i in 1:n_alts) {
         group_profiles <- label_constraints$groups[[i]]
         profiles[i] <- sample(group_profiles, 1)
     }
-
     return(profiles)
 }
 
-#' Compute D-error for entire design using profileID matrix
-#'
-#' Reconstructs X matrix from profileIDs and computes full information matrix
-#'
-#' @param design_matrix Matrix of profileIDs (questions x alternatives)
-#' @param opt_env Optimization environment
-#' @return Numeric D-error value
+# Compute D-error for entire design using profileID matrix
 compute_design_d_error <- function(design_matrix, opt_env) {
-
-    n_questions <- nrow(design_matrix)
-    n_alts <- ncol(design_matrix)
-
-    # Reconstruct X matrix for entire design by slicing the encoded profiles
-    design_profiles <- as.vector(t(design_matrix))
-
-    # Build X matrix for this design using the encoded profiles matrix
-    n_params <- ncol(opt_env$X_matrix)
-    X_design <- opt_env$X_matrix[design_profiles, ]
-
-    # Create obsID and altID for regular alternatives
-    obsID <- rep(1:n_questions, each = n_alts)
-    altID <- rep(1:n_alts, n_questions)
-
-    # If no-choice is enabled, append no-choice rows
-    if (opt_env$no_choice) {
-        # Add no-choice rows (all zeros)
-        no_choice_rows <- matrix(0, nrow = n_questions, ncol = n_params)
-        X_design <- rbind(X_design, no_choice_rows)
-
-        # Add obsID and altID for no-choice alternatives
-        obsID <- c(obsID, 1:n_questions)  # Same obsID as questions
-        altID <- c(altID, rep(n_alts + 1, n_questions))  # altID = n_alts + 1
-
-        # Sort by obsID then altID to get proper interleaving
-        sort_order <- order(obsID, altID)
-        X_design <- X_design[sort_order, ]
-        obsID <- obsID[sort_order]
-        altID <- altID[sort_order]
-
-        n_alts_final <- n_alts + 1
-    } else {
-        n_alts_final <- n_alts
-    }
-
-    # Compute probabilities for each question
-    if (!is.null(opt_env$exp_utilities_draws)) {
-        # Bayesian case: average D-error across draws
-        n_draws <- ncol(opt_env$exp_utilities_draws)
-        d_errors <- numeric(n_draws)
-
-        for (draw in 1:n_draws) {
-            probs <- compute_design_probabilities_with_nochoice(design_matrix, opt_env, draw)
-            d_errors[draw] <- compute_d_error_from_probs(X_design, probs, obsID)
-        }
-
-        return(mean(d_errors))
-
-    } else {
-        # Fixed parameters case or no priors case
-        probs <- compute_design_probabilities_with_nochoice(design_matrix, opt_env, NULL)
-        return(compute_d_error_from_probs(X_design, probs, obsID))
-    }
+    design_vector <- get_design_vector(design_matrix)
+    probs <- get_probs(design_vector, opt_env)
+    compute_d_error_from_probs(X_design, probs, obsID)
 }
 
-# Helper function to compute probabilities including no-choice
-compute_design_probabilities_with_nochoice <- function(design_matrix, opt_env, draw_index = NULL) {
-
-    n_questions <- nrow(design_matrix)
-    n_alts <- ncol(design_matrix)
-
-    if (opt_env$no_choice) {
-        # Compute probabilities for each question including no-choice
-        all_probs <- numeric(n_questions * (n_alts + 1))
-
-        for (q in 1:n_questions) {
-            question_profiles <- design_matrix[q, ]
-
-            # Get utilities for regular alternatives
-            if (!is.null(draw_index)) {
-                # Bayesian case
-                exp_utils_regular <- opt_env$exp_utilities_draws[question_profiles, draw_index]
-                exp_util_nochoice <- opt_env$exp_no_choice_draws[draw_index]
-            } else {
-                # Fixed case or no priors
-                if (!is.null(opt_env$exp_utilities)) {
-                    exp_utils_regular <- opt_env$exp_utilities[question_profiles]
-                } else {
-                    exp_utils_regular <- rep(1, n_alts)  # No priors case
-                }
-                exp_util_nochoice <- opt_env$exp_no_choice
-            }
-
-            # Combine utilities and compute probabilities
-            all_exp_utils <- c(exp_utils_regular, exp_util_nochoice)
-            question_probs <- all_exp_utils / sum(all_exp_utils)
-
-            # Store probabilities in correct positions (before sorting)
-            regular_indices <- (q - 1) * (n_alts + 1) + 1:n_alts
-            nochoice_index <- q * (n_alts + 1)
-
-            all_probs[regular_indices] <- question_probs[1:n_alts]
-            all_probs[nochoice_index] <- question_probs[n_alts + 1]
-        }
-
-        # Now sort probabilities to match the sorted X_design
-        obsID_prob <- rep(1:n_questions, each = n_alts + 1)
-        altID_prob <- rep(1:(n_alts + 1), n_questions)
-        sort_order <- order(obsID_prob, altID_prob)
-        all_probs <- all_probs[sort_order]
-
-    } else {
-        # No no-choice case - use existing function
-        all_probs <- compute_design_probabilities_fixed(design_matrix, opt_env)
-    }
-
-    return(all_probs)
-}
-
-#' Compute probabilities for entire design (fixed parameters)
-#'
-#' @param design_matrix Matrix of profileIDs
-#' @param opt_env Optimization environment
-#' @return Vector of probabilities for all alternatives
-compute_design_probabilities_fixed <- function(design_matrix, opt_env) {
-
-    n_questions <- nrow(design_matrix)
-    n_alts <- ncol(design_matrix)
-    probs <- numeric(n_questions * n_alts)
-
-    for (q in 1:n_questions) {
-        question_profiles <- design_matrix[q, ]
-        question_probs <- compute_question_probabilities(question_profiles, opt_env)
-
-        start_idx <- (q - 1) * n_alts + 1
-        end_idx <- q * n_alts
-        probs[start_idx:end_idx] <- question_probs
-    }
-
-    return(probs)
-}
-
-#' Compute probabilities for entire design (single draw)
-#'
-#' @param design_matrix Matrix of profileIDs
-#' @param opt_env Optimization environment
-#' @param draw_index Which parameter draw to use
-#' @return Vector of probabilities for all alternatives
-compute_design_probabilities_draw <- function(design_matrix, opt_env, draw_index) {
-
-    n_questions <- nrow(design_matrix)
-    n_alts <- ncol(design_matrix)
-    probs <- numeric(n_questions * n_alts)
-
-    for (q in 1:n_questions) {
-        question_profiles <- design_matrix[q, ]
-
-        # Get exp utilities for this draw
-        exp_utils <- opt_env$exp_utilities_draws[as.character(question_profiles), draw_index]
-        question_probs <- exp_utils / sum(exp_utils)
-
-        start_idx <- (q - 1) * n_alts + 1
-        end_idx <- q * n_alts
-        probs[start_idx:end_idx] <- question_probs
-    }
-
-    return(probs)
-}
-
-#' Compute D-error from X matrix and probabilities
-#'
-#' @param X_design Design matrix (all alternatives x parameters)
-#' @param probs Vector of choice probabilities
-#' @param obsID Vector indicating which observation each row belongs to
-#' @return D-error value
+# Compute D-error from X matrix and probabilities
 compute_d_error_from_probs <- function(X_design, probs, obsID) {
 
     # Split X and probs by observation
