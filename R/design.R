@@ -10,6 +10,8 @@
 #' @param n_q Number of questions per respondent (or per block)
 #' @param n_resp Number of respondents (for random designs) or 1 (for sequential designs that get repeated)
 #' @param n_blocks Number of blocks in the design. Defaults to 1
+#' @param n_cores Number of cores to use for parallel processing in the design search.
+#' Defaults to NULL, in which case it is set to the number of available cores minus 1.
 #' @param no_choice Include a "no choice" option? Defaults to FALSE
 #' @param label The name of the variable to use in a "labeled" design. Defaults to NULL
 #' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (sequential only)
@@ -23,23 +25,24 @@
 #' @return A `cbc_design` object containing the experimental design
 #' @export
 cbc_design <- function(
-        profiles,
-        method = "random",
-        priors = NULL,
-        n_alts,
-        n_q,
-        n_resp = 1,
-        n_blocks = 1,
-        no_choice = FALSE,
-        label = NULL,
-        randomize_questions = TRUE,
-        randomize_alts = TRUE,
-        remove_dominant = FALSE,
-        dominance_types = c("total", "partial"),
-        dominance_threshold = 0.8,
-        max_dominance_attempts = 50,
-        max_iter = 50,
-        n_start = 5
+    profiles,
+    method = "random",
+    priors = NULL,
+    n_alts,
+    n_q,
+    n_resp = 1,
+    n_blocks = 1,
+    n_cores = NULL,
+    no_choice = FALSE,
+    label = NULL,
+    randomize_questions = TRUE,
+    randomize_alts = TRUE,
+    remove_dominant = FALSE,
+    dominance_types = c("total", "partial"),
+    dominance_threshold = 0.8,
+    max_dominance_attempts = 50,
+    max_iter = 50,
+    n_start = 5
 ) {
 
     time_start <- Sys.time()
@@ -60,7 +63,8 @@ cbc_design <- function(
 
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
-        profiles, n_alts, n_q, n_resp, n_blocks, priors, no_choice, label,
+        profiles, n_alts, n_q, n_resp, n_blocks, n_cores, n_start, max_iter,
+        priors, no_choice, label,
         remove_dominant, dominance_types, dominance_threshold,
         max_dominance_attempts
     )
@@ -77,17 +81,17 @@ cbc_design <- function(
         design_result <- generate_random_design(opt_env)
 
         # Convert profileID matrix back to full design
-        final_design <- construct_final_design(design_result$design_matrix, opt_env)
+        final_design <- construct_final_design(
+            design_result$design_matrix, opt_env
+        )
 
     } else if (method == "sequential") {
         # Sequential designs: create optimized base design, then repeat across respondents
-        base_design_result <- generate_sequential_design(
-            opt_env, n_alts, n_q, n_blocks, max_iter, n_start, max_dominance_attempts
-        )
+        base_design_result <- generate_sequential_design(opt_env)
 
         # Convert base design to full design
         base_design <- construct_final_design(
-            base_design_result$design_matrix, opt_env, n_alts, n_q, 1, n_blocks
+            base_design_result$design_matrix, opt_env
         )
 
         # Repeat and randomize across respondents
@@ -119,8 +123,10 @@ cbc_design <- function(
 
 # Set up the optimization environment with pre-computed utilities and proper factor alignment
 setup_optimization_environment <- function(
-    profiles, n_alts, n_q, n_resp, n_blocks, priors, no_choice, label,
-    remove_dominant, dominance_types, dominance_threshold, max_dominance_attempts
+    profiles, n_alts, n_q, n_resp, n_blocks, n_cores, n_start, max_iter,
+    priors, no_choice, label,
+    remove_dominant, dominance_types, dominance_threshold,
+    max_dominance_attempts
 ) {
 
     # Get attribute names (excluding profileID)
@@ -217,10 +223,13 @@ setup_optimization_environment <- function(
         alts = n_alts,
         resp = n_resp,
         blocks = n_blocks,
-        questions =n_q*n_resp,
+        start = n_start,
+        cores = set_num_cores(n_cores),
+        questions = ifelse(method == 'random', n_q*n_resp, n_q*n_blocks),
         params = ncol(X_matrix),
         draws = n_draws,
         profiles = nrow(profiles),
+        max_iter = max_iter,
         max_attempts = max_dominance_attempts
     )
 
@@ -365,20 +374,28 @@ generate_random_design <- function(opt_env) {
     ))
 }
 
-#' Generate initial random design matrix
-generate_initial_random_matrix <- function(opt_env) {
+# Generate initial random design matrix
+generate_initial_random_matrix <- function(
+    opt_env, n_questions = NULL, n_alts = NULL
+) {
 
     n <- opt_env$n
-    design_matrix <- matrix(0, nrow = n$questions, ncol = n$alts)
+    if (is.null(n_questions)) {
+        n_questions <- n$questions
+    }
+    if (is.null(n_alts)) {
+        n_alts <- n$alts
+    }
+    design_matrix <- matrix(0, nrow = n_questions, ncol = n_alts)
 
     if (!is.null(opt_env$label_constraints)) {
         # Labeled design: sample one from each label group for each question
-        for (q in 1:n$questions) {
+        for (q in 1:n_questions) {
             design_matrix[q, ] <- sample_labeled_profiles(opt_env)
         }
     } else {
         # Regular design: sample without replacement for each question
-        for (q in 1:n$questions) {
+        for (q in 1:n_questions) {
             design_matrix[q, ] <- sample(opt_env$available_profile_ids, n$alts, replace = FALSE)
         }
     }
@@ -386,25 +403,43 @@ generate_initial_random_matrix <- function(opt_env) {
     return(design_matrix)
 }
 
-#' Find all questions that have problems
+# Find all questions that have problems
 find_problematic_questions <- function(design_matrix, opt_env) {
 
     n <- opt_env$n
     problematic <- logical(n$questions)
 
     # Check for within-question duplicates
-    for (q in 1:n$questions) {
+    problematic <- check_problem_question_dupes(design_matrix, opt_env, problematic)
+
+    # Check for duplicate questions within each respondent
+    problematic <- check_problem_resp_dupes(design_matrix, opt_env, problematic)
+
+    # Check for dominance if required
+    problematic <- check_problem_dominance(design_matrix, opt_env, problematic)
+
+    return(which(problematic))
+}
+
+check_problem_question_dupes <- function(design_matrix, opt_env, problematic) {
+    for (q in 1:opt_env$n$questions) {
         question_profiles <- design_matrix[q, ]
         if (length(unique(question_profiles)) != length(question_profiles)) {
             problematic[q] <- TRUE
         }
     }
+    return(problematic)
+}
 
-    # Check for duplicate questions within each respondent
-    for (resp in 1:n$resp) {
+check_problem_resp_dupes <- function(design_matrix, opt_env, problematic) {
+    n_iter <- opt_env$n$blocks
+    if (method == 'random') {
+        n_iter <- opt_env$n$resp
+    }
+    for (resp in 1:n_iter) {
         # Get question indices for this respondent
-        resp_start <- (resp - 1) * n$q + 1
-        resp_end <- resp * n$q
+        resp_start <- (resp - 1) * n_q + 1
+        resp_end <- resp * n_q
         resp_questions <- resp_start:resp_end
 
         # Check for duplicates within this respondent's questions
@@ -427,8 +462,10 @@ find_problematic_questions <- function(design_matrix, opt_env) {
             }
         }
     }
+    return(problematic)
+}
 
-    # Check for dominance if required
+check_problem_dominance <- function(design_matrix, opt_env, problematic) {
     if (opt_env$remove_dominant) {
 
         # Total dominance check
@@ -442,10 +479,8 @@ find_problematic_questions <- function(design_matrix, opt_env) {
             partial_bad <- get_partial_bad(design_matrix, opt_env)
             problematic[partial_bad] <- TRUE
         }
-
     }
-
-    return(which(problematic))
+    return(problematic)
 }
 
 get_total_bad <- function(design_matrix, opt_env) {
@@ -572,25 +607,6 @@ sample_labeled_profiles <- function(opt_env) {
     return(profiles)
 }
 
-# Compute D-error for entire design using profileID matrix
-compute_design_d_error <- function(design_matrix, opt_env) {
-    X_list <- make_X_list(design_matrix, opt_env)
-    probs <- get_probs(design_matrix, opt_env)
-    if (opt_env$is_bayesian) {
-        # here probs is a matrix of prob draws
-        return(compute_db_error(X_list, probs, opt_env))
-    }
-    return(compute_d_error(X_list, probs, opt_env))
-}
-
-# Compute D-error for entire design using profileID matrix
-compute_design_d_error_null <- function(design_matrix, opt_env) {
-    n <- opt_env$n
-    X_list <- make_X_list(design_matrix, opt_env)
-    probs <- rep(1/n$alts_total, n$questions*n$alts_total)
-    return(compute_d_error(X_list, probs, opt_env))
-}
-
 make_X_list <- function(design_matrix, opt_env) {
     X_design <- opt_env$X_matrix
     if (opt_env$no_choice) {
@@ -602,6 +618,20 @@ make_X_list <- function(design_matrix, opt_env) {
     X_list <- split(as.data.frame(X_design), opt_env$obsID)
     X_list <- lapply(X_list, as.matrix)
     return(X_list)
+}
+
+# Compute D-error for entire design using profileID matrix
+compute_design_d_error <- function(design_matrix, opt_env) {
+    if (!opt_env$has_priors) {
+        return(compute_design_d_error_null(design_matrix, opt_env))
+    }
+    X_list <- make_X_list(design_matrix, opt_env)
+    probs <- get_probs(design_matrix, opt_env)
+    if (opt_env$is_bayesian) {
+        # here probs is a matrix of prob draws
+        return(compute_db_error(X_list, probs, opt_env))
+    }
+    return(compute_d_error(X_list, probs, opt_env))
 }
 
 compute_d_error <- function(X_list, probs, opt_env) {
@@ -628,6 +658,14 @@ compute_info_matrix <- function(X_list, P_list) {
     return(M)
 }
 
+# Compute D-error for entire design using profileID matrix
+compute_design_d_error_null <- function(design_matrix, opt_env) {
+    n <- opt_env$n
+    X_list <- make_X_list(design_matrix, opt_env)
+    probs <- rep(1/n$alts_total, n$questions*n$alts_total)
+    return(compute_d_error(X_list, probs, opt_env))
+}
+
 compute_db_error <- function(X_list, probs, opt_env) {
     n_draws <- opt_env$n$draws
 
@@ -645,20 +683,14 @@ compute_db_error <- function(X_list, probs, opt_env) {
 construct_final_design <- function(design_matrix, opt_env) {
 
     n <- opt_env$n
+    n_resp <- 1
+    if (method == 'random') {
+        n_resp <- n$resp
+    }
 
     if (opt_env$no_choice) {
         design_matrix <- design_matrix_no_choice(design_matrix, opt_env)
     }
-
-    # Initialize design data frame with ID columns
-    design <- data.frame(
-        profileID = as.vector(t(design_matrix)),
-        blockID = rep(rep(1:n$blocks, each = n$q), n$resp * n$alts_total),
-        respID = rep(rep(1:n$resp, each = n$q * n$blocks), each = n$alts_total),
-        qID = rep(rep(1:n$q, n$resp * n$blocks), each = n$alts_total),
-        altID = rep(1:n$alts_total, n$questions),
-        obsID = rep(1:n$questions, each = n$alts_total)
-    )
 
     # Create lookup table from X_matrix (which is already encoded)
     # X_matrix rows correspond to profiles$profileID order
@@ -680,8 +712,19 @@ construct_final_design <- function(design_matrix, opt_env) {
         X_df <- rbind(X_df, no_choice_row)
     }
 
+    # Initialize design data frame with ID columns
+    design <- data.frame(profileID = as.vector(t(design_matrix)))
+    design$blockID <- rep(rep(1:n$blocks, each = n$q), n_resp * n$alts_total)
+    design$respID <- rep(rep(1:n_resp, each = n$q * n$blocks), each = n$alts_total)
+    design$qID <- rep(rep(1:n$q, n_resp * n$blocks), each = n$alts_total)
+    design$altID <- rep(1:n$alts_total, n$questions)
+    design$obsID <- rep(1:n$questions, each = n$alts_total)
+
     # Join design with encoded attributes
     design <- merge(design, X_df, by = "profileID", sort = FALSE)
+
+    # Add IDs
+
 
     # Reorder columns and rows
     id_cols <- c("profileID", "blockID", "qID", "altID", "obsID")
@@ -805,6 +848,9 @@ finalize_design_object <- function(
 
     # Calculate summary statistics
     n_profiles_used <- length(unique(design$profileID[design$profileID != 0]))
+    if (opt_env$no_choice) {
+        n_profiles_used <- n_profiles_used - 1
+    }
 
     attr(design, "design_summary") <- list(
         n_profiles_available = n$profiles,
@@ -1056,20 +1102,20 @@ setup_label_constraints <- function(profiles, label, n_alts) {
     ))
 }
 
-generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter, n_start, max_attempts) {
+generate_sequential_design <- function(opt_env) {
 
     # Set up parallel processing
-    n_cores <- set_num_cores(NULL)
-    message("Running ", n_start, " design searches using ", n_cores, " cores...")
+    n <- opt_env$n
+    message("Running ", n$start, " design searches using ", n$cores, " cores...")
 
     # Create list of different random starting designs (base designs only)
-    start_designs <- lapply(1:n_start, function(i) {
-        generate_initial_random_matrix(opt_env, n_alts, n_q * n_blocks)
+    start_designs <- lapply(1:n$start, function(i) {
+        generate_initial_random_matrix(opt_env)
     })
 
     # Run optimization in parallel
     if (Sys.info()[['sysname']] == 'Windows') {
-        cl <- parallel::makeCluster(n_cores, "PSOCK")
+        cl <- parallel::makeCluster(n$cores, "PSOCK")
         # Export necessary functions to cluster
         parallel::clusterExport(cl, c(
             "optimize_design_profileid", "sample_question_profiles"
@@ -1081,7 +1127,7 @@ generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter,
                 seq_along(start_designs),
                 function(i) {
                     result <- optimize_design_profileid(
-                        start_designs[[i]], opt_env, n_alts, n_q, n_blocks, max_iter
+                        start_designs[[i]], opt_env
                     )
                     result$start_number <- i
                     return(result)
@@ -1095,12 +1141,12 @@ generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter,
                 seq_along(start_designs),
                 function(i) {
                     result <- optimize_design_profileid(
-                        start_designs[[i]], opt_env, n_alts, n_q, n_blocks, max_iter
+                        start_designs[[i]], opt_env
                     )
                     result$start_number <- i
                     return(result)
                 },
-                mc.cores = n_cores
+                mc.cores = n$cores
             )
         ))
     }
@@ -1126,28 +1172,27 @@ generate_sequential_design <- function(opt_env, n_alts, n_q, n_blocks, max_iter,
     return(best_result)
 }
 
-optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blocks, max_iter) {
+optimize_design_profileid <- function(design_matrix, opt_env) {
 
-    # Compute initial D-error (temporarily adding no-choice if needed)
+    # Compute initial D-error
     current_d_error <- compute_design_d_error(design_matrix, opt_env)
 
-    total_questions <- n_q * n_blocks
-
-    for (iter in 1:max_iter) {
+    n <- opt_env$n
+    for (iter in 1:n$max_iter) {
         message("Iteration ", iter, ": D-error = ", round(current_d_error, 6))
         improved <- FALSE
         start_d_error <- current_d_error
 
         # Try improving each position in the design
-        for (q in 1:total_questions) {
-            for (alt in 1:n_alts) {
+        for (q in 1:n$questions) {
+            for (alt in 1:n$alts) {
 
                 current_profile <- design_matrix[q, alt]
                 best_profile <- current_profile
                 best_d_error <- current_d_error
 
                 # Try multiple alternative profiles for this position
-                n_attempts <- 20  # Number of profiles to try
+                n_attempts <- length(opt_env$available_profile_ids)  # Number of profiles to try
                 for (attempt in 1:n_attempts) {
 
                     # Sample a new profile using the same constraints as random design
@@ -1172,16 +1217,11 @@ optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blo
                     test_design <- design_matrix
                     test_design[q, alt] <- new_profile
 
-                    # Check basic constraints (no duplicates within question)
-                    question_profiles <- test_design[q, ]
-                    if (length(unique(question_profiles)) != length(question_profiles)) {
-                        next  # Skip if duplicates within question
-                    }
-
-                    # Check dominance if required
-                    if (opt_env$remove_dominant) {
-                        if (has_dominant_alternative(question_profiles, opt_env)) {
-                            next  # Skip if dominant alternatives
+                    # Check all constraints
+                    problem_questions <- find_problematic_questions(test_design, opt_env)
+                    if (length(problem_questions) > 0) {
+                        if (q %in% problem_questions) {
+                            next
                         }
                     }
 
@@ -1218,7 +1258,6 @@ optimize_design_profileid <- function(design_matrix, opt_env, n_alts, n_q, n_blo
     ))
 }
 
-# Helper function from earlier (already defined)
 set_num_cores <- function(n_cores) {
     cores_available <- parallel::detectCores()
     max_cores <- cores_available - 1
@@ -1240,22 +1279,12 @@ set_num_cores <- function(n_cores) {
     return(n_cores)
 }
 
-#' Repeat base design across respondents with optional randomization (Fixed for no-choice)
-#'
-#' Used for sequential designs to take the optimized base design and repeat it
-#' across multiple respondents with optional question/alternative randomization
-#'
-#' @param base_design Base design data frame (for 1 respondent)
-#' @param n_resp Number of respondents
-#' @param n_alts Number of regular alternatives per question (excluding no-choice)
-#' @param n_q Number of questions per respondent
-#' @param n_blocks Number of blocks
-#' @param randomize_questions Randomize question order for each respondent
-#' @param randomize_alts Randomize alternative order within questions
-#' @return Full design data frame for all respondents
+# Repeat base design across respondents with optional randomization (Fixed for no-choice)
+# Used for sequential designs to take the optimized base design and repeat it
+# across multiple respondents with optional question/alternative randomization
 repeat_design_across_respondents <- function(
-        base_design, n_resp, n_alts, n_q, n_blocks,
-        randomize_questions, randomize_alts
+    base_design, n_resp, n_alts, n_q, n_blocks,
+    randomize_questions, randomize_alts
 ) {
 
     if (n_resp == 1) {

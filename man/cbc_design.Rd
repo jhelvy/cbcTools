@@ -12,6 +12,7 @@ cbc_design(
   n_q,
   n_resp = 1,
   n_blocks = 1,
+  n_cores = NULL,
   no_choice = FALSE,
   label = NULL,
   randomize_questions = TRUE,
@@ -38,6 +39,9 @@ cbc_design(
 \item{n_resp}{Number of respondents (for random designs) or 1 (for sequential designs that get repeated)}
 
 \item{n_blocks}{Number of blocks in the design. Defaults to 1}
+
+\item{n_cores}{Number of cores to use for parallel processing in the design search.
+Defaults to NULL, in which case it is set to the number of available cores minus 1.}
 
 \item{no_choice}{Include a "no choice" option? Defaults to FALSE}
 
