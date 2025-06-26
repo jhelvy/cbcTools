@@ -2,22 +2,10 @@
 % Please edit documentation in R/design.R
 \name{find_problematic_questions}
 \alias{find_problematic_questions}
-\title{Find all questions that have problems (vectorized approach)}
+\title{Find all questions that have problems}
 \usage{
-find_problematic_questions(design_matrix, opt_env, n_q, n_resp)
-}
-\arguments{
-\item{design_matrix}{Current design matrix}
-
-\item{opt_env}{Optimization environment}
-
-\item{n_q}{Number of questions per respondent}
-
-\item{n_resp}{Number of respondents}
-}
-\value{
-Vector of question indices that have problems
+find_problematic_questions(design_matrix, opt_env)
 }
 \description{
-For random designs, checks for duplicates within each respondent's question set
+Find all questions that have problems
 }

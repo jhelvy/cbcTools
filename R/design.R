@@ -222,11 +222,11 @@ setup_optimization_environment <- function(
     # Precompute all ID vectors
     n_alts_total <- ifelse(no_choice, n_alts + 1, n_alts)
     n$alts_total <- n_alts_total
-    reps <- rep(n_alts_total, n_questions)
+    reps <- rep(n_alts_total, n$questions)
     respID <- rep(1:n_resp, each = n_alts_total*n_q)
-    obsID_partials <- rep(1:n_questions, each = n_alts)
-    obsID <- rep(1:n_questions, each = n_alts_total)
-    altID <- rep(1:n_alts_total, n_questions)
+    obsID_partials <- rep(1:n$questions, each = n_alts)
+    obsID <- rep(1:n$questions, each = n_alts_total)
+    altID <- rep(1:n_alts_total, n$questions)
 
     return(list(
         profiles = profiles_aligned, # Use aligned profiles
@@ -246,7 +246,6 @@ setup_optimization_environment <- function(
         obsID = obsID,
         obsID_partials = obsID_partials,
         altID = altID,
-        no_choice_rows = no_choice_rows,
         remove_dominant = remove_dominant,
         dominance_types = dominance_types,
         dominance_threshold = dominance_threshold,
@@ -325,7 +324,7 @@ align_profiles_with_priors <- function(profiles, priors, attr_names) {
     return(profiles_aligned)
 }
 
-#' Generate a random design using profileID sampling with matrix operations
+# Generate a random design using profileID sampling with matrix operations
 generate_random_design <- function(opt_env) {
 
     # Start with a completely random design matrix
@@ -445,6 +444,7 @@ find_problematic_questions <- function(design_matrix, opt_env) {
 
 get_total_bad <- function(design_matrix, opt_env) {
     probs <- get_probs(design_matrix, opt_env)
+    probs <- rowMeans(probs)
     total_bad <- opt_env$obsID[which(probs > opt_env$dominance_threshold)]
     return(total_bad)
 }
@@ -533,7 +533,7 @@ logit_draws <- function(design_matrix, opt_env) {
     design_vector <- get_design_vector(design_matrix)
     expVDraws <- opt_env$exp_utilities_draws[design_vector,]
     logitDraws <- logit(expVDraws, opt_env$obsID, opt_env$reps)
-    return(rowMeans(logitDraws))
+    return(logitDraws)
 }
 
 # Sample profileIDs for a single question
@@ -565,9 +565,16 @@ sample_labeled_profiles <- function(opt_env) {
 
 # Compute D-error for entire design using profileID matrix
 compute_design_d_error <- function(design_matrix, opt_env) {
+    X_list <- make_X_list(design_matrix, opt_env)
     probs <- get_probs(design_matrix, opt_env)
+    if (opt_env$is_bayesian) {
+        # here probs is a matrix of prob draws
+        return(compute_db_error(X_list, probs, opt_env))
+    }
+    return(compute_d_error(X_list, probs, opt_env))
+}
 
-    # Split X and probs by observation
+make_X_list <- function(design_matrix, opt_env) {
     X_design <- opt_env$X_matrix
     if (opt_env$no_choice) {
         design_matrix <- design_matrix_no_choice(design_matrix, opt_env)
@@ -575,47 +582,41 @@ compute_design_d_error <- function(design_matrix, opt_env) {
     }
     design_vector <- get_design_vector(design_matrix)
     X_design <- X_design[design_vector, ]
-
     X_list <- split(as.data.frame(X_design), opt_env$obsID)
+    X_list <- lapply(X_list, as.matrix)
+    return(X_list)
+}
+
+compute_d_error <- function(X_list, probs, opt_env) {
     P_list <- split(probs, opt_env$obsID)
 
-    # Convert back to matrices
-    X_list <- lapply(X_list, as.matrix)
-
-    # Compute information matrix
-    info_result <- compute_info_matrix(X_list, P_list)
+    # Compute information matrix components for all observations at once
+    M <- Reduce(`+`, Map(function(x, p) {
+        p_mat <- diag(p) - tcrossprod(p)
+        crossprod(x, p_mat %*% x)
+    }, X_list, P_list))
 
     # Compute D-error
-    K <- opt_env$n$params
-    det_M <- det(info_result$M_total)
-
+    det_M <- det(M)
     if (det_M <= 0) {
         return(Inf)
     }
 
+    K <- opt_env$n$params
     return(det_M^(-1/K))
 }
 
-#' Compute information matrix from X and probability lists
-#'
-#' @param X_list List of X matrices (one per choice question)
-#' @param P_list List of probability vectors (one per choice question)
-#' @return List with M_list and M_total
-compute_info_matrix <- function(X_list, P_list) {
-    # Pre-compute information matrices for each choice set
-    M_list <- mapply(function(X, P) {
-        P_matrix <- diag(as.vector(P)) - tcrossprod(P)
-        t(X) %*% P_matrix %*% X
-    }, X_list, P_list, SIMPLIFY = FALSE)
+compute_db_error <- function(X_list, probs, opt_env) {
+    n_draws <- opt_env$n$draws
 
-    # Compute total information matrix
-    M_total <- Reduce("+", M_list)
+    # Compute D-error for each draw
+    d_errors <- apply(probs, 2, function(x) {
+        compute_d_error(X_list, x, opt_env)
+    })
 
-    # Return both matrices
-    return(list(
-        M_list = M_list,
-        M_total = M_total
-    ))
+    # DB-error is average of DP-errors
+    d_error <- mean(d_errors)
+    return(d_error)
 }
 
 # Convert profileID design matrix to full design data frame using existing encoded matrix

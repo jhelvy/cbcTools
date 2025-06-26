@@ -4,17 +4,7 @@
 \alias{generate_initial_random_matrix}
 \title{Generate initial random design matrix}
 \usage{
-generate_initial_random_matrix(opt_env, n_alts, total_questions)
-}
-\arguments{
-\item{opt_env}{Optimization environment}
-
-\item{n_alts}{Number of alternatives per question}
-
-\item{total_questions}{Total number of questions}
-}
-\value{
-Matrix of profileIDs
+generate_initial_random_matrix(opt_env)
 }
 \description{
 Generate initial random design matrix
