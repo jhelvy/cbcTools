@@ -161,10 +161,6 @@ print_d_error_info <- function(params) {
         cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_null))
         if (!is.null(params$d_error_prior)) {
             cat(sprintf("  With priors:                 %.6f\n", params$d_error_prior))
-
-            # Show improvement from using priors
-            improvement <- (params$d_error_null - params$d_error_prior) / params$d_error_null * 100
-            cat(sprintf("  Improvement from priors:     %.1f%%\n", improvement))
         }
     }
 
