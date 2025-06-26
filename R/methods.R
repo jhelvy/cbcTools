@@ -178,13 +178,10 @@ print.cbc_design <- function(x, ...) {
     priors <- attr(x, "priors")
     categorical_structure <- attr(x, "categorical_structure")
 
-    cat("Choice-Based Conjoint Design\n")
     cat("============================\n")
     cat(sprintf("Design created: %s\n", format(params$created_at, "%Y-%m-%d %H:%M:%S")))
     cat(sprintf("Elapsed time (sec): %s\n", round(params$time_elapsed_sec, 3)))
     cat(sprintf("Method: %s\n", params$method))
-
-
 
     # Profile usage
     cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",

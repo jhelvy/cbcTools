@@ -807,7 +807,7 @@ finalize_design_object <- function(
     n_profiles_used <- length(unique(design$profileID[design$profileID != 0]))
 
     attr(design, "design_summary") <- list(
-        n_profiles = n$profiles,
+        n_profiles_available = n$profiles,
         n_profiles_used = n_profiles_used,
         profile_usage_rate = n_profiles_used / n$profiles,
         n_choice_sets = n$blocks * n$q * n$resp,
