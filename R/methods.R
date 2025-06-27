@@ -134,11 +134,9 @@ print.cbc_design <- function(x, ...) {
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
 
-    cat("CBC Design")
-
     # Add key descriptors
     descriptors <- c()
-    descriptors <- c(descriptors, paste("method:", params$method))
+    descriptors <- c(descriptors, paste("Design method:", params$method))
 
     if (params$method == "sequential" && !is.null(params$d_error)) {
         descriptors <- c(descriptors, sprintf("D-error: %.4f", params$d_error))
@@ -154,7 +152,7 @@ print.cbc_design <- function(x, ...) {
 
     # Print descriptors in parentheses
     if (length(descriptors) > 0) {
-        cat(" (", paste(descriptors, collapse = ", "), ")", sep = "")
+        cat(paste(descriptors, collapse = ", "), sep = "")
     }
     cat("\n")
 
