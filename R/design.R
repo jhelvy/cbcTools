@@ -772,6 +772,75 @@ get_categorical_structure_from_profiles <- function(profiles, attr_names) {
     return(categorical_info)
 }
 
+compute_design_efficiency_metrics <- function(design) {
+    # Balance metrics
+    balance_result <- compute_balance_metrics_internal(design)
+
+    # Overlap metrics
+    overlap_result <- compute_overlap_metrics_internal(design)
+
+    return(list(
+        balance_score = balance_result$overall_balance,
+        balance_details = balance_result$balance_metrics,
+        overlap_score = overlap_result$overall_overlap,
+        overlap_details = overlap_result$overlap_metrics,
+        profiles_used = length(unique(design$profileID[design$profileID != 0])),
+        profiles_available = max(design$profileID, na.rm = TRUE)
+    ))
+}
+
+# Internal function for balance computation
+compute_balance_metrics_internal <- function(design) {
+    # Get attribute columns
+    atts <- setdiff(
+        names(design),
+        c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+    )
+
+    # Get counts of each individual attribute
+    counts <- lapply(atts, function(attr) table(design[[attr]]))
+    names(counts) <- atts
+
+    # Calculate balance metrics for each attribute
+    balance_metrics <- calculate_balance_metrics(counts)
+
+    # Calculate overall balance score
+    overall_balance <- mean(sapply(balance_metrics, function(x) x$balance_score))
+
+    return(list(
+        individual_counts = counts,
+        balance_metrics = balance_metrics,
+        overall_balance = overall_balance
+    ))
+}
+
+# Internal function for overlap computation
+compute_overlap_metrics_internal <- function(design) {
+    # Get attribute columns
+    atts <- setdiff(
+        names(design),
+        c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+    )
+
+    # Calculate overlap for each attribute
+    overlap_counts <- lapply(atts, function(attr) get_att_overlap_counts(attr, design))
+    names(overlap_counts) <- atts
+
+    # Calculate overlap metrics
+    overlap_metrics <- calculate_overlap_metrics(overlap_counts, design)
+
+    # Calculate overall overlap score (average of complete overlap rates)
+    overall_overlap <- mean(sapply(overlap_metrics, function(x) {
+        x$complete_overlap_rate
+    }))
+
+    return(list(
+        overlap_counts = overlap_counts,
+        overlap_metrics = overlap_metrics,
+        overall_overlap = overall_overlap
+    ))
+}
+
 # Finalize the design object with metadata including both D-errors
 finalize_design_object <- function(design, design_result, opt_env) {
 
@@ -820,6 +889,9 @@ finalize_design_object <- function(design, design_result, opt_env) {
         }
     }
 
+    # Pre-compute efficiency metrics
+    efficiency_metrics <- compute_design_efficiency_metrics(design)
+
     # Store metadata
     attr(design, "profiles") <- opt_env$profiles
     attr(design, "priors") <- opt_env$priors
@@ -838,7 +910,8 @@ finalize_design_object <- function(design, design_result, opt_env) {
         n_profiles_used = n_profiles_used,
         profile_usage_rate = n_profiles_used / n$profiles,
         n_choice_sets = n$blocks * n$q * n$resp,
-        optimization_attempts = design_result$total_attempts
+        optimization_attempts = design_result$total_attempts,
+        efficiency = efficiency_metrics
     )
 
     class(design) <- c("cbc_design", "data.frame")

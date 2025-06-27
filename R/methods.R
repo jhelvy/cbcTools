@@ -188,6 +188,8 @@ print.cbc_design <- function(x, ...) {
     invisible(x)
 }
 
+# Replace the existing summary.cbc_design function in methods.R with this:
+
 #' Detailed summary method for cbc_design objects
 #' @param object A cbc_design object
 #' @param ... Additional arguments passed to summary
@@ -264,6 +266,38 @@ summary.cbc_design <- function(object, ...) {
         cat("\n")
     }
 
+    # Design efficiency section (NEW)
+    if (!is.null(summary_info$efficiency)) {
+        cat("Design Efficiency:\n")
+        cat("------------------\n")
+
+        # D-error information
+        if (params$method != 'random') {
+            cat(sprintf("D-error (null):        %8.6f\n", params$d_error_null))
+            if (!is.null(params$d_error_prior)) {
+                cat(sprintf("D-error (priors):      %8.6f\n", params$d_error_prior))
+            }
+            cat("(Lower is better)\n\n")
+        }
+
+        # Quality metrics
+        efficiency <- summary_info$efficiency
+        print_aligned("Balance score", sprintf("%.3f (higher is better)", efficiency$balance_score), 20)
+        print_aligned("Overlap score", sprintf("%.3f (lower is better)", efficiency$overlap_score), 20)
+        cat("💡 Use cbc_inspect() for detailed quality analysis\n\n")
+    } else {
+        # Fallback for designs without pre-computed efficiency
+        if (params$method != 'random') {
+            cat("Design Efficiency (D-error):\n")
+            cat("----------------------------\n")
+            cat(sprintf("Null prior:        %8.6f\n", params$d_error_null))
+            if (!is.null(params$d_error_prior)) {
+                cat(sprintf("Specified priors:  %8.6f\n", params$d_error_prior))
+            }
+            cat("(Lower is better)\n\n")
+        }
+    }
+
     # Variable encoding with better formatting
     cat("Variable Encoding:\n")
     cat("------------------\n")
@@ -304,18 +338,6 @@ summary.cbc_design <- function(object, ...) {
             print_aligned("Parameter correlations", "Yes", width = 20)
         }
         cat("\n")
-    }
-
-    # D-error information with improved formatting and proper alignment
-    if (params$method != 'random') {
-        cat("Design Efficiency (D-error):\n")
-        cat("----------------------------\n")
-        # Use fixed-width formatting for proper alignment
-        cat(sprintf("Null prior:        %8.6f\n", params$d_error_null))
-        if (!is.null(params$d_error_prior)) {
-            cat(sprintf("Specified priors:  %8.6f\n", params$d_error_prior))
-        }
-        cat("(Lower is better)\n\n")
     }
 
     # Sample data with better header

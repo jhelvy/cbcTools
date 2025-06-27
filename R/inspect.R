@@ -1,321 +1,3 @@
-#' Inspect attribute balance in design
-#'
-#' This function prints out a summary of the individual and pairwise counts of
-#' each level for each attribute across all choice questions in the design.
-#' @keywords logitr mnl mxl mixed logit balance overlap
-#'
-#' @param x Either a `cbc_design` object created by `cbc_design()` or a data frame
-#'   containing a choice experiment design
-#' @param ... Additional arguments passed to methods
-#' @return Invisibly returns the balance statistics, but primarily prints
-#'   formatted information to the console
-#' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make a survey design from all possible profiles
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
-#' )
-#'
-#' # Inspect the design balance
-#' cbc_inspect_balance(design)
-cbc_inspect_balance <- function(x, ...) {
-  UseMethod("cbc_inspect_balance")
-}
-
-#' @rdname cbc_inspect_balance
-#' @export
-cbc_inspect_balance.cbc_design <- function(x, ...) {
-  # Extract information from attributes
-  params <- attr(x, "design_params")
-  summary_info <- attr(x, "design_summary")
-
-  cat("Design Balance Report\n")
-  cat("=====================\n")
-  cat(sprintf("Design method: %s\n", params$method))
-  if (!is.null(params$d_error)) {
-    cat(sprintf("D-error: %.6f\n", params$d_error))
-  }
-
-  # Profile usage info
-  cat(sprintf(
-    "Profiles used: %d/%d (%.1f%%)\n",
-    summary_info$n_profiles_used,
-    summary_info$n_profiles_available,
-    summary_info$profile_usage_rate * 100
-  ))
-
-  # Show balance score if available
-  if (!is.null(summary_info$efficiency$balance_score)) {
-    cat(sprintf(
-      "Overall balance score: %.3f (higher is better)\n",
-      summary_info$efficiency$balance_score
-    ))
-  }
-
-  cat("\n")
-
-  # Call the data frame method for detailed balance (x is now the data frame)
-  result <- cbc_inspect_balance.data.frame(x, ...)
-
-  # Add design-specific information to result
-  result$design_info <- list(
-    method = params$method,
-    d_error = params$d_error,
-    balance_score = summary_info$efficiency$balance_score,
-    profiles_used = summary_info$n_profiles_used,
-    profiles_available = summary_info$n_profiles_available
-  )
-
-  invisible(result)
-}
-
-#' @rdname cbc_inspect_balance
-#' @export
-cbc_inspect_balance.data.frame <- function(x, ...) {
-  # Get attribute columns
-  atts <- setdiff(
-    names(x),
-    c("respID", "qID", "altID", "obsID", "profileID", "blockID")
-  )
-
-  # Get counts of each individual attribute
-  counts <- lapply(atts, function(attr) table(x[[attr]]))
-  names(counts) <- atts
-
-  # Get pairwise counts matrix for each pair of attributes
-  if (length(atts) > 1) {
-    pairs <- data.frame(utils::combn(atts, 2))
-    counts_pair <- lapply(pairs, function(pair) {
-      table(x[[pair[1]]], x[[pair[2]]])
-    })
-  } else {
-    pairs <- data.frame()
-    counts_pair <- list()
-  }
-
-  # Calculate balance metrics for each attribute
-  balance_metrics <- calculate_balance_metrics(counts)
-
-  # Print individual attribute level counts
-  cat("=====================================\n")
-  cat("Individual attribute level counts\n\n")
-  for (i in seq_along(counts)) {
-    attr_name <- names(counts)[i]
-    cat(attr_name, ":\n", sep = "")
-    print(counts[[i]])
-
-    # Show balance metric
-    metric <- balance_metrics[[attr_name]]
-    cat(sprintf(
-      "  Balance score: %.3f (CV: %.3f)\n",
-      metric$balance_score,
-      metric$cv
-    ))
-    cat("\n")
-  }
-
-  # Print pairwise counts if we have multiple attributes
-  if (length(counts_pair) > 0) {
-    cat("=====================================\n")
-    cat("Pairwise attribute level counts\n\n")
-    for (i in seq_along(counts_pair)) {
-      pair_names <- pairs[, i]
-      counts1 <- counts[[pair_names[1]]]
-      counts2 <- counts[[pair_names[2]]]
-      cat(paste0(pair_names, collapse = " x "), ":\n\n", sep = "")
-      print(rbind(
-        c(NA, counts2),
-        cbind(counts1, counts_pair[[i]])
-      ))
-      cat("\n")
-    }
-  }
-
-  # Create return object
-  result <- list(
-    individual_counts = counts,
-    pairwise_counts = counts_pair,
-    balance_metrics = balance_metrics,
-    overall_balance = mean(sapply(balance_metrics, function(x) x$balance_score))
-  )
-
-  class(result) <- c("cbc_inspect_balance", "list")
-  invisible(result)
-}
-
-#' Inspect attribute overlap in design
-#'
-#' This function prints out a summary of the amount of "overlap" across
-#' attributes within the choice questions. For example, for each attribute, the
-#' count under `"1"` is the number of choice questions in which the same level
-#' was shown across all alternatives for that attribute (because there was only
-#' one level shown). Likewise, the count under `"2"` is the number of choice
-#' questions in which only two unique levels of that attribute were shown, and
-#' so on.
-#' @param x Either a `cbc_design` object created by `cbc_design()` or a data frame
-#'   containing a choice experiment design
-#' @param ... Additional arguments passed to methods
-#' @return Invisibly returns the overlap statistics, but primarily prints
-#'   formatted information to the console
-#' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   freshness = c("Excellent", "Average", "Poor"),
-#'   type      = c("Fuji", "Gala", "Honeycrisp")
-#' )
-#'
-#' # Make a randomized survey design
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts   = 3, # Number of alternatives per question
-#'   n_q      = 6 # Number of questions per respondent
-#' )
-#'
-#' # Inspect the design overlap
-#' cbc_inspect_overlap(design)
-cbc_inspect_overlap <- function(x, ...) {
-  UseMethod("cbc_inspect_overlap")
-}
-
-#' @rdname cbc_inspect_overlap
-#' @export
-cbc_inspect_overlap.cbc_design <- function(x, ...) {
-  # Extract information from attributes
-  params <- attr(x, "design_params")
-  summary_info <- attr(x, "design_summary")
-
-  cat("Design Overlap Report\n")
-  cat("=====================\n")
-  cat(sprintf("Design method: %s\n", params$method))
-  if (!is.null(params$d_error)) {
-    cat(sprintf("D-error: %.6f\n", params$d_error))
-  }
-
-  # Show overlap score if available
-  if (!is.null(summary_info$efficiency$overlap_score)) {
-    cat(sprintf(
-      "Overall overlap score: %.3f (lower is better)\n",
-      summary_info$efficiency$overlap_score
-    ))
-  }
-
-  cat("\n")
-
-  # Call the data frame method for detailed overlap (x is now the data frame)
-  result <- cbc_inspect_overlap.data.frame(x, ...)
-
-  # Add design-specific information to result
-  result$design_info <- list(
-    method = params$method,
-    d_error = params$d_error,
-    overlap_score = summary_info$efficiency$overlap_score,
-    n_choice_sets = summary_info$n_choice_sets
-  )
-
-  invisible(result)
-}
-
-#' @rdname cbc_inspect_overlap
-#' @export
-cbc_inspect_overlap.data.frame <- function(x, ...) {
-  # Get attribute columns
-  atts <- setdiff(
-    names(x),
-    c("respID", "qID", "altID", "obsID", "profileID", "blockID")
-  )
-
-  # Calculate overlap for each attribute
-  overlap_counts <- lapply(atts, function(attr) get_att_overlap_counts(attr, x))
-  names(overlap_counts) <- atts
-
-  # Calculate overlap metrics
-  overlap_metrics <- calculate_overlap_metrics(overlap_counts, x)
-
-  cat("==============================\n")
-  cat("Counts of attribute overlap:\n")
-  cat("(# of questions with N unique levels)\n\n")
-
-  total_questions <- max(x$obsID, na.rm = TRUE)
-
-  for (i in seq_along(overlap_counts)) {
-    attr_name <- atts[i]
-    attr_data <- overlap_counts[[i]]
-
-    cat(attr_name, ": ", sep = "")
-
-    if (attr_data$type == "continuous") {
-      cat("Continuous variable\n")
-      cat("  Unique levels: ", paste(names(attr_data$value_counts), collapse = ", "), "\n")
-    } else {
-      cat("Categorical variable\n")
-      cat("  Levels: ", paste(attr_data$max_possible_unique), " (",
-          paste(unique(x[[attr_name]]), collapse = ", "), ")\n", sep = "")
-    }
-
-    cat("  Questions by # unique levels:\n")
-
-    # Get the overlap distribution
-    unique_counts <- attr_data$unique_per_question
-    max_levels <- attr_data$max_possible_unique
-
-    # Process each level count
-    for (level in 1:max_levels) {
-      level_str <- as.character(level)
-      count <- if (level_str %in% names(unique_counts)) unique_counts[[level_str]] else 0
-      percentage <- (count / total_questions) * 100
-
-      # Create descriptive labels
-      if (level == 1) {
-        label <- " (complete overlap): "
-      } else if (level == max_levels) {
-        label <- " (no overlap):       "
-      } else {
-        label <- " (partial overlap):  "
-      }
-
-      cat(sprintf("  %d%s%5.1f%%  (%d / %d questions)\n",
-                  level, label, percentage, count, total_questions))
-    }
-
-    # Show average unique levels
-    metric <- overlap_metrics[[attr_name]]
-    cat(sprintf("  Average unique levels per question: %.2f\n",
-                metric$avg_unique_levels))
-    cat("\n")
-  }
-
-  # Create return object
-  result <- list(
-    overlap_counts = overlap_counts,
-    overlap_metrics = overlap_metrics,
-    overall_overlap = mean(sapply(overlap_metrics, function(x) {
-      x$complete_overlap_rate
-    }))
-  )
-
-  class(result) <- c("cbc_inspect_overlap", "list")
-  invisible(result)
-}
-
 #' Compare designs and surveys across multiple metrics
 #'
 #' This function compares multiple designs and/or surveys across various efficiency metrics
@@ -818,255 +500,314 @@ get_att_overlap_counts <- function(attr_name, design) {
   }
 }
 
-#' Inspect design for dominant choice sets
+#' Inspect design quality metrics
 #'
-#' This function identifies choice sets where one alternative dominates others
-#' either through high total utility or by having the best partial utility
-#' across all attributes. Dominant choice sets provide little information
-#' and may reduce the efficiency of the design.
+#' This function provides comprehensive inspection of choice experiment designs
+#' across multiple quality dimensions including attribute balance, overlap, and
+#' dominance patterns.
 #'
-#' @param x Either a `cbc_design` object created by `cbc_design()`, a `cbc_survey`
-#'   object, or a data frame containing a choice experiment design
-#' @param priors A `cbc_priors` object created by `cbc_priors()` that will be
-#'   used to compute utilities. Required for dominance detection.
+#' @param design A `cbc_design` object created by `cbc_design()`
+#' @param metrics Character vector specifying which metrics to inspect.
+#'   Options: "balance", "overlap", "dominance", or "all" (default).
+#'   Can specify multiple: `c("balance", "overlap")`
+#' @param verbose Logical. If TRUE, shows detailed technical metrics like
+#'   coefficient of variation. If FALSE (default), shows simplified output.
+#' @param priors A `cbc_priors` object created by `cbc_priors()`. Required
+#'   for dominance inspection.
 #' @param total_threshold Numeric threshold for total utility dominance detection.
-#'   If one alternative has a choice probability above this threshold, the choice
-#'   set is flagged. Default is 0.8.
-#' @param exclude Character vector of attribute names to exclude from dominance
-#'   calculations
-#' @return The original design with two additional columns:
-#'   \itemize{
-#'     \item dominant_total: Logical indicating if choice set has total utility dominance
-#'     \item dominant_partial: Logical indicating if choice set has partial utility dominance
-#'   }
-#' @details
-#' Two types of dominance are detected:
-#' \itemize{
-#'   \item **Total utility dominance**: One alternative has a choice probability
-#'         above the threshold when all attributes are considered together
-#'   \item **Partial utility dominance**: One alternative has the highest partial
-#'         utility for every single attribute (regardless of total utility)
-#' }
-#'
-#' Partial utility dominance can occur even when total utility dominance doesn't,
-#' particularly when the dominant alternative isn't much better overall but is
-#' consistently better across all attributes.
+#'   Default is 0.8.
+#' @param exclude Character vector of attribute names to exclude from calculations
+#' @return Invisibly returns the inspection results, but primarily prints
+#'   formatted information to the console
 #' @export
 #' @examples
-#' # Create profiles with clear dominance potential
+#' library(cbcTools)
+#'
+#' # Create profiles and design
 #' profiles <- cbc_profiles(
-#'   price = c(10, 20, 30),
-#'   quality = c("Low", "Medium", "High"),
-#'   warranty = c(1, 2, 3)
+#'   price = c(1, 2, 3),
+#'   type = c("A", "B", "C"),
+#'   quality = c("Low", "High")
 #' )
 #'
-#' # Create priors favoring lower price, higher quality, longer warranty
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_alts = 2,
+#'   n_q = 4
+#' )
+#'
+#' # Inspect all metrics (default, simple output)
+#' cbc_inspect(design)
+#'
+#' # Detailed output with technical metrics
+#' cbc_inspect(design, verbose = TRUE)
+#'
+#' # Inspect specific metrics
+#' cbc_inspect(design, metrics = "balance")
+#' cbc_inspect(design, metrics = c("balance", "overlap"))
+#'
+#' # Inspect dominance (requires priors)
 #' priors <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.1,        # negative: prefer lower prices
-#'   quality = c(0.5, 1.0), # prefer Medium and High over Low
-#'   warranty = 0.3       # positive: prefer longer warranty
+#'   price = -0.5,
+#'   type = c(0.2, 0.3),
+#'   quality = 0.4
 #' )
-#'
-#' design <- cbc_design(profiles, n_alts = 3, n_q = 8, priors = priors)
-#'
-#' # Inspect for dominance
-#' design_flagged <- cbc_inspect_dominance(design, priors)
-#'
-#' # Check results
-#' table(design_flagged$dominant_total)
-#' table(design_flagged$dominant_partial)
-cbc_inspect_dominance <- function(
-  x,
-  priors,
-  total_threshold = 0.8,
-  exclude = NULL
-) {
-  UseMethod("cbc_inspect_dominance")
-}
+#' cbc_inspect(design, metrics = "dominance", priors = priors)
+cbc_inspect <- function(design, metrics = "all", verbose = FALSE, priors = NULL,
+                        total_threshold = 0.8, exclude = NULL) {
 
-#' @rdname cbc_inspect_dominance
-#' @export
-cbc_inspect_dominance.cbc_design <- function(
-  x,
-  priors,
-  total_threshold = 0.8,
-  exclude = NULL
-) {
-  # x is now the data frame directly, profiles are already an attribute
-  result <- cbc_inspect_dominance.data.frame(
-    x,
-    priors,
-    total_threshold,
-    exclude
-  )
-
-  # Copy over the design attributes to the result
-  attr(result, "profiles") <- attr(x, "profiles")
-  attr(result, "priors") <- attr(x, "priors")
-  attr(result, "design_params") <- attr(x, "design_params")
-  attr(result, "design_summary") <- attr(x, "design_summary")
-
-  return(result)
-}
-
-#' @rdname cbc_inspect_dominance
-#' @export
-cbc_inspect_dominance.cbc_survey <- function(
-  x,
-  priors,
-  total_threshold = 0.8,
-  exclude = NULL
-) {
-  # Apply to the survey data frame and return it with flags
-  cbc_inspect_dominance.data.frame(x, priors, total_threshold, exclude)
-}
-
-#' @rdname cbc_inspect_dominance
-#' @export
-cbc_inspect_dominance.data.frame <- function(
-    x,
-    priors,
-    total_threshold = 0.8,
-    exclude = NULL
-) {
   # Validate inputs
-  if (!inherits(priors, "cbc_priors")) {
-    stop("priors must be a cbc_priors object created by cbc_priors()")
+  if (!inherits(design, "cbc_design")) {
+    stop("design must be a cbc_design object created by cbc_design()")
   }
 
-  if (!all(get_id_names() %in% names(x))) {
-    stop(
-      "Design must be created by cbc_design() or contain the required ID columns: ",
-      paste(get_id_names(), collapse = ", ")
-    )
+  # Handle "all" metrics
+  if ("all" %in% metrics) {
+    metrics <- c("balance", "overlap")
   }
 
-  if (total_threshold <= 0 || total_threshold >= 1) {
-    stop("total_threshold must be between 0 and 1")
+  # Validate metrics
+  valid_metrics <- c("balance", "overlap", "dominance")
+  invalid_metrics <- setdiff(metrics, valid_metrics)
+  if (length(invalid_metrics) > 0) {
+    stop("Invalid metrics: ", paste(invalid_metrics, collapse = ", "),
+         ". Valid options are: ", paste(valid_metrics, collapse = ", "))
   }
 
-  # Get attribute columns
-  attr_cols <- get_var_names(x)
+  # Extract design information
+  params <- attr(design, "design_params")
+  summary_info <- attr(design, "design_summary")
 
-  # Remove excluded attributes
-  if (!is.null(exclude)) {
-    attr_cols <- setdiff(attr_cols, exclude)
+  # Print header
+  cat("Design Quality Inspection\n")
+  cat("=========================\n")
+  cat(sprintf("Design method: %s\n", params$method))
+  if (!is.null(params$d_error_prior)) {
+    cat(sprintf("D-error: %.6f\n", params$d_error_prior))
+  } else if (!is.null(params$d_error_null)) {
+    cat(sprintf("D-error (null): %.6f\n", params$d_error_null))
   }
-  if (length(attr_cols) == 0) {
-    stop("No attribute columns found in design after exclusions")
-  }
+  cat("\n")
 
-  # Validate priors against design - only if profiles attribute is available
-  profiles_attr <- attr(x, "profiles")
-  if (!is.null(profiles_attr) && inherits(profiles_attr, "cbc_profiles")) {
-    validate_priors_profiles(priors, profiles_attr)
-  }
+  # Initialize results list
+  results <- list()
 
-  # Get random parameters for encoding
-  randPars <- get_rand_pars(priors)
+  # Inspect balance
+  if ("balance" %in% metrics) {
+    cat("ATTRIBUTE BALANCE\n")
+    cat("=================\n")
 
-  # Encode the design matrix
-  codedData <- logitr::recodeData(x, attr_cols, randPars)
-  X <- codedData$X
+    # Use pre-computed metrics if available
+    if (!is.null(summary_info$efficiency$balance_score)) {
+      cat(sprintf("Overall balance score: %.3f (higher is better)\n\n",
+                  summary_info$efficiency$balance_score))
 
-  # Split by choice questions
-  questions <- split(x, x$qID)
-  obsID_list <- split(seq_len(nrow(x)), x$qID)
-
-  # Initialize flags
-  x$dominant_total <- FALSE
-  x$dominant_partial <- FALSE
-
-  # Check each choice question
-  for (q_name in names(questions)) {
-    q_data <- questions[[q_name]]
-    q_indices <- obsID_list[[q_name]]
-
-    # Get design matrix for this question
-    X_q <- X[q_indices, , drop = FALSE]
-
-    # Compute total utilities
-    total_utilities <- X_q %*% priors$pars
-
-    # Convert to probabilities using logit model
-    exp_utils <- exp(total_utilities)
-    choice_probs <- exp_utils / sum(exp_utils)
-
-    # Check total utility dominance
-    max_prob <- max(choice_probs)
-    has_total_dominance <- max_prob > total_threshold
-
-    # Check partial utility dominance
-    has_partial_dominance <- check_partial_dominance(
-      q_data,
-      X_q,
-      priors,
-      attr_cols
-    )
-
-    # Flag all rows in this choice question
-    x$dominant_total[q_indices] <- has_total_dominance
-    x$dominant_partial[q_indices] <- has_partial_dominance
+      # Show detailed balance from pre-computed data
+      balance_details <- summary_info$efficiency$balance_details
+      results$balance <- inspect_balance_detailed(design, balance_details, verbose)
+    } else {
+      # Compute on the fly if not pre-computed
+      results$balance <- inspect_balance_detailed(design, verbose = verbose)
+    }
+    cat("\n")
   }
 
-  # Add summary attributes
-  n_total_dominant <- length(unique(x$qID[x$dominant_total]))
-  n_partial_dominant <- length(unique(x$qID[x$dominant_partial]))
-  n_total_questions <- length(unique(x$qID))
+  # Inspect overlap
+  if ("overlap" %in% metrics) {
+    cat("ATTRIBUTE OVERLAP\n")
+    cat("=================\n")
 
-  attr(x, "dominance_summary") <- list(
-    total_dominant_questions = n_total_dominant,
-    partial_dominant_questions = n_partial_dominant,
-    total_questions = n_total_questions,
-    total_threshold = total_threshold
+    # Use pre-computed metrics if available
+    if (!is.null(summary_info$efficiency$overlap_score)) {
+      cat(sprintf("Overall overlap score: %.3f (lower is better)\n\n",
+                  summary_info$efficiency$overlap_score))
+
+      # Show detailed overlap from pre-computed data
+      overlap_details <- summary_info$efficiency$overlap_details
+      results$overlap <- inspect_overlap_detailed(design, overlap_details, verbose)
+    } else {
+      # Compute on the fly if not pre-computed
+      results$overlap <- inspect_overlap_detailed(design, verbose = verbose)
+    }
+    cat("\n")
+  }
+
+  # Inspect dominance
+  if ("dominance" %in% metrics) {
+    if (is.null(priors)) {
+      stop("Dominance inspection requires priors. Please provide a cbc_priors object.")
+    }
+
+    cat("DOMINANCE PATTERNS\n")
+    cat("==================\n")
+    results$dominance <- inspect_dominance_detailed(design, priors, total_threshold, exclude)
+    cat("\n")
+  }
+
+  # Add design information to results
+  results$design_info <- list(
+    method = params$method,
+    d_error = params$d_error_prior %||% params$d_error_null,
+    n_choice_sets = summary_info$n_choice_sets,
+    profiles_used = summary_info$n_profiles_used,
+    profiles_available = summary_info$n_profiles_available
   )
 
-  class(x) <- c("cbc_design_flagged", class(x))
-  return(x)
+  class(results) <- c("cbc_inspection", "list")
+  invisible(results)
 }
 
-#' Print method for flagged designs
-#' @param x A cbc_design_flagged object
-#' @param ... Additional arguments passed to print
-#' @export
-print.cbc_design_flagged <- function(x, ...) {
-  # Get summary information
-  summary_info <- attr(x, "dominance_summary")
+# Detailed balance inspection
+inspect_balance_detailed <- function(design, balance_details = NULL, verbose = FALSE) {
+  if (is.null(balance_details)) {
+    # Compute balance metrics
+    balance_result <- compute_balance_metrics_internal(design)
+    counts <- balance_result$individual_counts
+    balance_metrics <- balance_result$balance_metrics
+  } else {
+    # Use pre-computed data - need to recompute counts for display
+    atts <- setdiff(names(design), c("respID", "qID", "altID", "obsID", "profileID", "blockID"))
+    counts <- lapply(atts, function(attr) table(design[[attr]]))
+    names(counts) <- atts
+    balance_metrics <- balance_details
+  }
 
-  cat("CBC Design with Dominance Flags\n")
-  cat("===============================\n\n")
+  # Print individual attribute level counts
+  cat("Individual attribute level counts:\n")
+  for (i in seq_along(counts)) {
+    attr_name <- names(counts)[i]
+    cat(sprintf("\n%s:\n", attr_name))
+    print(counts[[i]])
+
+    # Show balance metric with optional verbose details
+    if (!is.null(balance_metrics[[attr_name]])) {
+      metric <- balance_metrics[[attr_name]]
+      if (verbose) {
+        cat(sprintf("  Balance score: %.3f (higher is better), CV: %.3f (lower is better)\n",
+                    metric$balance_score, metric$cv))
+      } else {
+        cat(sprintf("  Balance score: %.3f (higher is better)\n",
+                    metric$balance_score))
+      }
+    }
+  }
+
+  return(list(
+    individual_counts = counts,
+    balance_metrics = balance_metrics,
+    overall_balance = mean(sapply(balance_metrics, function(x) x$balance_score))
+  ))
+}
+
+# Detailed overlap inspection
+inspect_overlap_detailed <- function(design, overlap_details = NULL, verbose = FALSE) {
+  if (is.null(overlap_details)) {
+    # Compute overlap metrics
+    overlap_result <- compute_overlap_metrics_internal(design)
+    overlap_counts <- overlap_result$overlap_counts
+    overlap_metrics <- overlap_result$overlap_metrics
+  } else {
+    # Use pre-computed data - need to recompute counts for display
+    atts <- setdiff(names(design), c("respID", "qID", "altID", "obsID", "profileID", "blockID"))
+    overlap_counts <- lapply(atts, function(attr) get_att_overlap_counts(attr, design))
+    names(overlap_counts) <- atts
+    overlap_metrics <- overlap_details
+  }
+
+  total_questions <- max(design$obsID, na.rm = TRUE)
+
+  cat("Counts of attribute overlap:\n")
+  cat("(# of questions with N unique levels)\n\n")
+
+  for (i in seq_along(overlap_counts)) {
+    attr_name <- names(overlap_counts)[i]
+    attr_data <- overlap_counts[[i]]
+
+    cat(sprintf("%s: ", attr_name))
+
+    if (attr_data$type == "continuous") {
+      cat("Continuous variable\n")
+      if (verbose) {
+        cat("  Unique levels: ", paste(names(attr_data$value_counts), collapse = ", "), "\n")
+      }
+    } else {
+      cat("Categorical variable\n")
+      if (verbose) {
+        cat("  Levels: ", paste(attr_data$max_possible_unique), " (",
+            paste(unique(design[[attr_name]]), collapse = ", "), ")\n", sep = "")
+      }
+    }
+
+    cat("  Questions by # unique levels:\n")
+
+    # Get the overlap distribution
+    unique_counts <- attr_data$unique_per_question
+    max_levels <- attr_data$max_possible_unique
+
+    # Process each level count
+    for (level in 1:max_levels) {
+      level_str <- as.character(level)
+      count <- if (level_str %in% names(unique_counts)) unique_counts[[level_str]] else 0
+      percentage <- (count / total_questions) * 100
+
+      # Create descriptive labels
+      if (level == 1) {
+        label <- " (complete overlap): "
+      } else if (level == max_levels) {
+        label <- " (no overlap):       "
+      } else {
+        label <- " (partial overlap):  "
+      }
+
+      cat(sprintf("  %d%s%5.1f%%  (%d / %d questions)\n",
+                  level, label, percentage, count, total_questions))
+    }
+
+    # Show average unique levels
+    if (!is.null(overlap_metrics[[attr_name]])) {
+      metric <- overlap_metrics[[attr_name]]
+      cat(sprintf("  Average unique levels per question: %.2f\n",
+                  metric$avg_unique_levels))
+    }
+    cat("\n")
+  }
+
+  return(list(
+    overlap_counts = overlap_counts,
+    overlap_metrics = overlap_metrics,
+    overall_overlap = mean(sapply(overlap_metrics, function(x) x$complete_overlap_rate))
+  ))
+}
+
+# Detailed dominance inspection
+inspect_dominance_detailed <- function(design, priors, total_threshold, exclude) {
+  # Apply the existing dominance detection
+  design_flagged <- cbc_inspect_dominance.data.frame(
+    design, priors, total_threshold, exclude
+  )
+
+  # Get summary information
+  summary_info <- attr(design_flagged, "dominance_summary")
 
   if (!is.null(summary_info)) {
     cat("Dominance Detection Summary:\n")
-    cat(sprintf(
-      "  Total questions:           %d\n",
-      summary_info$total_questions
-    ))
-    cat(sprintf(
-      "  Total dominance flagged:   %d (%.1f%%)\n",
-      summary_info$total_dominant_questions,
-      100 * summary_info$total_dominant_questions / summary_info$total_questions
-    ))
-    cat(sprintf(
-      "  Partial dominance flagged: %d (%.1f%%)\n",
-      summary_info$partial_dominant_questions,
-      100 *
-        summary_info$partial_dominant_questions /
-        summary_info$total_questions
-    ))
-    cat(sprintf(
-      "  Total threshold used:      %.2f\n",
-      summary_info$total_threshold
-    ))
+    cat(sprintf("  Total questions:           %d\n", summary_info$total_questions))
+    cat(sprintf("  Total dominance flagged:   %d (%.1f%%)\n",
+                summary_info$total_dominant_questions,
+                100 * summary_info$total_dominant_questions / summary_info$total_questions))
+    cat(sprintf("  Partial dominance flagged: %d (%.1f%%)\n",
+                summary_info$partial_dominant_questions,
+                100 * summary_info$partial_dominant_questions / summary_info$total_questions))
+    cat(sprintf("  Total threshold used:      %.2f\n", summary_info$total_threshold))
     cat("\n")
   }
 
   # Show breakdown by question
-  if (nrow(x) > 0) {
+  if (nrow(design_flagged) > 0) {
     question_summary <- aggregate(
       cbind(dominant_total, dominant_partial) ~ qID,
-      data = x,
+      data = design_flagged,
       FUN = function(x) x[1] # Take first value (all should be same within question)
     )
 
@@ -1079,40 +820,61 @@ print.cbc_design_flagged <- function(x, ...) {
       for (i in seq_len(nrow(flagged_questions))) {
         q <- flagged_questions[i, ]
         flags <- c()
-        if (q$dominant_total) {
-          flags <- c(flags, "total")
-        }
-        if (q$dominant_partial) {
-          flags <- c(flags, "partial")
-        }
-        cat(sprintf(
-          "  Q%s: %s dominance\n",
-          q$qID,
-          paste(flags, collapse = " & ")
-        ))
+        if (q$dominant_total) flags <- c(flags, "total")
+        if (q$dominant_partial) flags <- c(flags, "partial")
+        cat(sprintf("  Q%s: %s dominance\n", q$qID, paste(flags, collapse = " & ")))
       }
     } else {
       cat("  None\n")
     }
-    cat("\n")
   }
 
-  cat("Note: Use remove_dominant=TRUE in cbc_design() or cbc_survey_random() to prevent dominant choice sets\n")
-
-  # Call the regular print method for the underlying object
-  NextMethod("print")
+  return(list(
+    design_flagged = design_flagged,
+    summary = summary_info
+  ))
 }
 
-# Backward compatibility aliases
-
-#' @rdname cbc_inspect_balance
+#' Print method for cbc_inspection objects
+#' @param x A cbc_inspection object
+#' @param ... Additional arguments passed to print
 #' @export
-cbc_balance <- function(x, ...) {
-  cbc_inspect_balance(x, ...)
-}
+print.cbc_inspection <- function(x, ...) {
+  cat("CBC Design Inspection Results\n")
+  cat("=============================\n\n")
 
-#' @rdname cbc_inspect_overlap
-#' @export
-cbc_overlap <- function(x, ...) {
-  cbc_inspect_overlap(x, ...)
+  # Print summary of what was inspected
+  metrics_inspected <- setdiff(names(x), "design_info")
+  cat("Metrics inspected:", paste(metrics_inspected, collapse = ", "), "\n")
+
+  if (!is.null(x$design_info)) {
+    info <- x$design_info
+    cat(sprintf("Design method: %s\n", info$method))
+    if (!is.null(info$d_error)) {
+      cat(sprintf("D-error: %.6f\n", info$d_error))
+    }
+    cat(sprintf("Choice sets: %d\n", info$n_choice_sets))
+    cat(sprintf("Profile usage: %d/%d\n", info$profiles_used, info$profiles_available))
+  }
+
+  # Print summary scores
+  cat("\nSummary Scores:\n")
+  if (!is.null(x$balance)) {
+    cat(sprintf("  Balance: %.3f (higher is better)\n", x$balance$overall_balance))
+  }
+  if (!is.null(x$overlap)) {
+    cat(sprintf("  Overlap: %.3f (lower is better)\n", x$overlap$overall_overlap))
+  }
+  if (!is.null(x$dominance)) {
+    summary_info <- x$dominance$summary
+    if (!is.null(summary_info)) {
+      total_pct <- 100 * summary_info$total_dominant_questions / summary_info$total_questions
+      partial_pct <- 100 * summary_info$partial_dominant_questions / summary_info$total_questions
+      cat(sprintf("  Total dominance: %.1f%% of questions\n", total_pct))
+      cat(sprintf("  Partial dominance: %.1f%% of questions\n", partial_pct))
+    }
+  }
+
+  cat("\nNote: Detailed results shown when cbc_inspect() was called.\n")
+  invisible(x)
 }
