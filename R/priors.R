@@ -25,11 +25,11 @@
 #'   random coefficients
 #' @export
 cbc_priors <- function(
-        profiles,
-        no_choice = NULL,
-        n_draws = 100,
-        draw_type = "halton",
-        ...
+    profiles,
+    no_choice = NULL,
+    n_draws = 100,
+    draw_type = "halton",
+    ...
 ) {
     # Validate input class
     if (!inherits(profiles, "cbc_profiles")) {
