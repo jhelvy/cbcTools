@@ -2,7 +2,7 @@
 % Please edit documentation in R/methods.R
 \name{print.cbc_design}
 \alias{print.cbc_design}
-\title{Enhanced print method for cbc_design objects with improved formatting}
+\title{Concise print method for cbc_design objects}
 \usage{
 \method{print}{cbc_design}(x, ...)
 }
@@ -12,5 +12,5 @@
 \item{...}{Additional arguments passed to print}
 }
 \description{
-Enhanced print method for cbc_design objects with improved formatting
+Concise print method for cbc_design objects
 }

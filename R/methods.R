@@ -125,16 +125,81 @@ print.cbc_priors <- function(x, ...) {
   invisible(x)
 }
 
-#' Enhanced print method for cbc_design objects with improved formatting
+#' Concise print method for cbc_design objects
 #' @param x A cbc_design object
 #' @param ... Additional arguments passed to print
 #' @export
 print.cbc_design <- function(x, ...) {
-    # Extract information from attributes
+    # Extract basic information
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
-    priors <- attr(x, "priors")
-    categorical_structure <- attr(x, "categorical_structure")
+
+    cat("CBC Design")
+
+    # Add key descriptors
+    descriptors <- c()
+    descriptors <- c(descriptors, paste("method:", params$method))
+
+    if (params$method == "sequential" && !is.null(params$d_error)) {
+        descriptors <- c(descriptors, sprintf("D-error: %.4f", params$d_error))
+    }
+
+    if (!is.null(params$label)) {
+        descriptors <- c(descriptors, paste("labeled:", params$label))
+    }
+
+    if (params$no_choice) {
+        descriptors <- c(descriptors, "no-choice")
+    }
+
+    # Print descriptors in parentheses
+    if (length(descriptors) > 0) {
+        cat(" (", paste(descriptors, collapse = ", "), ")", sep = "")
+    }
+    cat("\n")
+
+    # Basic structure info
+    cat(sprintf("%d respondents × %d questions × %d alternatives",
+                params$n_resp, params$n_q, params$n_alts))
+
+    if (params$n_blocks > 1) {
+        cat(sprintf(" [%d blocks]", params$n_blocks))
+    }
+    cat("\n")
+
+    # Profile usage
+    cat(sprintf("Profiles: %d/%d used (%.1f%%)\n",
+                summary_info$n_profiles_used,
+                summary_info$n_profiles_available,
+                summary_info$profile_usage_rate * 100))
+
+    # Hint for more details
+    cat("\nUse summary() for detailed information\n\n")
+
+    # Sample data with better header
+    cat("First few rows of design:\n")
+
+    # Remove class temporarily to avoid infinite recursion
+    design_df <- x
+    class(design_df) <- "data.frame"
+    print(utils::head(design_df))
+    if (nrow(design_df) > 6) {
+        cat(sprintf("... and %d more rows\n", nrow(design_df) - 6))
+    }
+
+    invisible(x)
+}
+
+#' Detailed summary method for cbc_design objects
+#' @param object A cbc_design object
+#' @param ... Additional arguments passed to summary
+#' @export
+summary.cbc_design <- function(object, ...) {
+    # Extract information from attributes
+    params <- attr(object, "design_params")
+    summary_info <- attr(object, "design_summary")
+    priors <- attr(object, "priors")
+    categorical_structure <- attr(object, "categorical_structure")
 
     # Helper function for aligned printing
     print_aligned <- function(label, value, width = 27) {
@@ -142,7 +207,7 @@ print.cbc_design <- function(x, ...) {
     }
 
     # Header with design type and timing
-    cat("Choice-Based Conjoint Design\n")
+    cat("Choice-Based Conjoint Design Summary\n")
     cat("=====================================\n")
 
     # Basic design information in aligned table format
@@ -204,7 +269,7 @@ print.cbc_design <- function(x, ...) {
     # Variable encoding with better formatting
     cat("Variable Encoding:\n")
     cat("------------------\n")
-    is_dummy_coded <- attr(x, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
+    is_dummy_coded <- attr(object, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
     if (is_dummy_coded) {
         cat("Format: Dummy-coded")
 
@@ -238,7 +303,7 @@ print.cbc_design <- function(x, ...) {
         print_aligned("Fixed parameters", n_fixed, width = 20)
         print_aligned("Random parameters", n_random, width = 20)
         if (!is.null(priors$correlation)) {
-            print_aligned("Parameter correlations", "Yes")
+            print_aligned("Parameter correlations", "Yes", width = 20)
         }
         cat("\n")
     }
@@ -259,14 +324,14 @@ print.cbc_design <- function(x, ...) {
     cat("First few rows of design:\n")
 
     # Remove class temporarily to avoid infinite recursion
-    design_df <- x
+    design_df <- object
     class(design_df) <- "data.frame"
     print(utils::head(design_df))
     if (nrow(design_df) > 6) {
         cat(sprintf("... and %d more rows\n", nrow(design_df) - 6))
     }
 
-    invisible(x)
+    invisible(object)
 }
 
 #' Print method for D-error comparisons

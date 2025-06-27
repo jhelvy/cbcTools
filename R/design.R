@@ -63,7 +63,7 @@ cbc_design <- function(
 
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
-        profiles,
+        profiles, method,
         n_alts, n_q, n_resp, n_blocks, n_cores, n_start, max_iter,
         priors, no_choice, label,
         remove_dominant, dominance_types, dominance_threshold,
@@ -108,7 +108,8 @@ cbc_design <- function(
 
 # Set up the optimization environment with pre-computed utilities and proper factor alignment
 setup_optimization_environment <- function(
-    profiles, n_alts, n_q, n_resp, n_blocks, n_cores, n_start, max_iter,
+    profiles, method,
+    n_alts, n_q, n_resp, n_blocks, n_cores, n_start, max_iter,
     priors, no_choice, label,
     remove_dominant, dominance_types, dominance_threshold,
     max_dominance_attempts, randomize_questions, randomize_alts
@@ -1098,7 +1099,8 @@ generate_sequential_design <- function(opt_env) {
         cl <- parallel::makeCluster(n$cores, "PSOCK")
         # Export necessary functions to cluster
         parallel::clusterExport(cl, c(
-            "optimize_design_profileid", "sample_question_profiles"
+            "optimize_design", "sample_question_profiles",
+            "compute_design_d_error", "find_problematic_questions"
         ), envir = environment())
 
         results <- suppressMessages(suppressWarnings(
@@ -1106,7 +1108,7 @@ generate_sequential_design <- function(opt_env) {
                 cl = cl,
                 seq_along(start_designs),
                 function(i) {
-                    result <- optimize_design_profileid(
+                    result <- optimize_design(
                         start_designs[[i]], opt_env, opt_env$obsID
                     )
                     result$start_number <- i
@@ -1120,7 +1122,7 @@ generate_sequential_design <- function(opt_env) {
             parallel::mclapply(
                 seq_along(start_designs),
                 function(i) {
-                    result <- optimize_design_profileid(
+                    result <- optimize_design(
                         start_designs[[i]], opt_env, opt_env$obsID
                     )
                     result$start_number <- i
@@ -1130,6 +1132,8 @@ generate_sequential_design <- function(opt_env) {
             )
         ))
     }
+    print(length(results))
+    print(names(results[[1]]))
 
     # Find best design based on D-error
     d_errors <- sapply(results, function(x) x$d_error)
@@ -1152,7 +1156,7 @@ generate_sequential_design <- function(opt_env) {
     return(best_result)
 }
 
-optimize_design_profileid <- function(design_matrix, opt_env, obsID) {
+optimize_design <- function(design_matrix, opt_env, obsID) {
 
     # Compute initial D-error
     current_d_error <- compute_design_d_error(design_matrix, opt_env, obsID)
