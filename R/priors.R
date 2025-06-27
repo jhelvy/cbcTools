@@ -51,9 +51,6 @@ cbc_priors <- function(
     codedData <- logitr::recodeData(model_data, profile_attrs, profile_randPars)
     codedParNames <- if (!is.null(no_choice)) c(codedData$pars, "no_choice") else codedData$pars
 
-    # Build parameter vectors in coded order
-    pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
-
     # Generate parameter draws if we have random parameters
     par_draws <- NULL
     cor_mat <- NULL
@@ -62,6 +59,17 @@ cbc_priors <- function(
         par_draws <- generate_parameter_draws(
             codedParNames, attrs, processed_params, cor_mat, n_draws, draw_type
         )
+    }
+
+    # Build parameter vectors in coded order
+    if (!is.null(par_draws)) {
+        # Use actual expected values from parameter draws
+        # This correctly handles log-normal, censored normal, and correlated parameters
+        pars_mean <- colMeans(par_draws)
+        names(pars_mean) <- colnames(par_draws)
+    } else {
+        # No random parameters, use the input specification means
+        pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
     }
 
     # Create return object with metadata
