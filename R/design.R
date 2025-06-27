@@ -802,40 +802,21 @@ finalize_design_object <- function(
     )
 
     # Add D-error information (both null and prior-based)
-    design_matrix <- design_result$design_matrix
-    design_matrix_survey <- get_design_matrix_from_survey(design, opt_env)
 
     if (method == "sequential") {
         # For sequential designs, compute both D-errors for base and full survey
 
-        # Base design D-errors (from optimization)
-        d_errors_base <- compute_both_d_errors(design_matrix, opt_env, opt_env$obsID)
+        # Always compute null D-error (no priors, equal probabilities)
+        design_params$d_error_null <- compute_design_d_error_null(
+            design_result$design_matrix, opt_env, opt_env$obsID
+        )
 
-        # Full survey D-errors
-        d_errors_survey <- compute_both_d_errors(design_matrix_survey, opt_env, design$obsID)
-
-        # Store all D-error information
-        design_params$d_error_base_null <- d_errors_base$d_error_null
-        design_params$d_error_full_null <- d_errors_survey$d_error_null
-
+        # Compute prior-based D-error if priors are available
+        design_params$d_error_prior <- NULL
         if (opt_env$has_priors) {
-            design_params$d_error_base_prior <- d_errors_base$d_error_prior
-            design_params$d_error_full_prior <- d_errors_survey$d_error_prior
-            design_params$d_error <- d_errors_survey$d_error_prior  # Primary D-error (prior-based)
-        } else {
-            design_params$d_error <- d_errors_survey$d_error_null   # Primary D-error (null)
-        }
-
-    } else {
-        # For random designs, compute both D-errors
-        d_errors <- compute_both_d_errors(design_matrix, opt_env, design$obsID)
-        design_params$d_error_null <- d_errors$d_error_null
-
-        if (opt_env$has_priors) {
-            design_params$d_error_prior <- d_errors$d_error_prior
-            design_params$d_error <- d_errors$d_error_prior  # Primary D-error (prior-based)
-        } else {
-            design_params$d_error <- d_errors$d_error_null   # Primary D-error (null)
+            design_params$d_error_prior <- compute_design_d_error(
+                design_result$design_matrix, opt_env, opt_env$obsID
+            )
         }
     }
 
@@ -857,16 +838,7 @@ finalize_design_object <- function(
         n_profiles_used = n_profiles_used,
         profile_usage_rate = n_profiles_used / n$profiles,
         n_choice_sets = n$blocks * n$q * n$resp,
-        method_specific = if (method == "random") {
-            list(
-                total_questions_generated = n$questions,
-                optimization_attempts = design_result$total_attempts
-            )
-        } else {
-            list(
-                base_design_optimized = TRUE
-            )
-        }
+        optimization_attempts = design_result$total_attempts
     )
 
     class(design) <- c("cbc_design", "data.frame")
@@ -1262,7 +1234,7 @@ optimize_design_profileid <- function(design_matrix, opt_env, obsID) {
         design_matrix = design_matrix,
         d_error = current_d_error,
         method = "sequential",
-        iterations = iter
+        total_attempts = iter
     ))
 }
 
@@ -1437,24 +1409,6 @@ randomize_alternative_order <- function(resp_design, n_q, n_alts) {
     }
 
     return(resp_design)
-}
-
-# Compute both null and prior-based D-errors for a design matrix
-compute_both_d_errors <- function(design_matrix, opt_env, obsID) {
-
-    # Always compute null D-error (no priors, equal probabilities)
-    d_error_null <- compute_design_d_error_null(design_matrix, opt_env, obsID)
-
-    # Compute prior-based D-error if priors are available
-    d_error_prior <- NULL
-    if (opt_env$has_priors) {
-        d_error_prior <- compute_design_d_error(design_matrix, opt_env, obsID)
-    }
-
-    return(list(
-        d_error_null = d_error_null,
-        d_error_prior = d_error_prior
-    ))
 }
 
 get_design_matrix_from_survey <- function(survey_design, opt_env) {

@@ -125,49 +125,7 @@ print.cbc_priors <- function(x, ...) {
   invisible(x)
 }
 
-#' Print D-error information showing both null and prior-based values
-#'
-#' This function handles the D-error display logic for the print method
-#'
-#' @param params Design parameters list
-print_d_error_info <- function(params) {
-
-    cat('\n')
-
-    # Determine if this is a sequential design with base/full distinction
-    is_sequential_repeated <- !is.null(params$d_error_base_null)
-
-    if (is_sequential_repeated) {
-        # Sequential design with base and full D-errors
-
-        # Base design D-errors
-        cat("D-error (base design):\n")
-        cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_base_null))
-        if (!is.null(params$d_error_base_prior)) {
-            cat(sprintf("  With priors:                 %.6f\n", params$d_error_base_prior))
-        }
-
-        # Full survey D-errors
-        cat("D-error (full survey):\n")
-        cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_full_null))
-        if (!is.null(params$d_error_full_prior)) {
-            cat(sprintf("  With priors:                 %.6f\n", params$d_error_full_prior))
-        }
-
-    } else {
-        # Regular design (random method or sequential without repetition)
-
-        cat("D-error:\n")
-        cat(sprintf("  Null (equal probabilities): %.6f\n", params$d_error_null))
-        if (!is.null(params$d_error_prior)) {
-            cat(sprintf("  With priors:                 %.6f\n", params$d_error_prior))
-        }
-    }
-
-    cat('\n')
-}
-
-#' Enhanced print method for cbc_design objects (Updated for dummy coding)
+#' Enhanced print method for cbc_design objects with improved formatting
 #' @param x A cbc_design object
 #' @param ... Additional arguments passed to print
 #' @export
@@ -178,61 +136,77 @@ print.cbc_design <- function(x, ...) {
     priors <- attr(x, "priors")
     categorical_structure <- attr(x, "categorical_structure")
 
-    cat("============================\n")
-    cat(sprintf("Design created: %s\n", format(params$created_at, "%Y-%m-%d %H:%M:%S")))
-    cat(sprintf("Elapsed time (sec): %s\n", round(params$time_elapsed_sec, 3)))
-    cat(sprintf("Method: %s\n", params$method))
+    # Helper function for aligned printing
+    print_aligned <- function(label, value, width = 27) {
+        cat(sprintf("%-*s %s\n", width, paste0(label, ":"), value))
+    }
 
-    # Profile usage
-    cat(sprintf("Profiles used: %d/%d (%.1f%%)\n",
-                summary_info$n_profiles_used, summary_info$n_profiles_available,
-                summary_info$profile_usage_rate * 100))
+    # Header with design type and timing
+    cat("Choice-Based Conjoint Design\n")
+    cat("=====================================\n")
 
-    cat(sprintf("Respondents: %d\n", params$n_resp))
-    cat(sprintf("Alternatives per question: %d\n", params$n_alts))
-    cat(sprintf("Questions per respondent: %d\n", params$n_q))
-    cat(sprintf("Number of blocks: %d\n", params$n_blocks))
+    # Basic design information in aligned table format
+    print_aligned("Method", params$method, width = 17)
+    print_aligned("Created", format(params$created_at, "%Y-%m-%d %H:%M:%S"), width = 17)
+    print_aligned("Generation time", paste(round(params$time_elapsed_sec, 3), "seconds"), width = 17)
+    cat("\n")
 
-    # Method-specific information
+    # Design structure
+    cat("Design Structure:\n")
+    cat("-----------------\n")
+    print_aligned("Respondents", params$n_resp)
+    print_aligned("Questions per respondent", params$n_q)
+    print_aligned("Alternatives per question", params$n_alts)
+    print_aligned("Number of blocks", params$n_blocks)
+    print_aligned("Profile usage", sprintf("%d/%d (%.1f%%)",
+                                           summary_info$n_profiles_used,
+                                           summary_info$n_profiles_available,
+                                           summary_info$profile_usage_rate * 100))
+
+    # Method-specific options
     if (params$method == "sequential") {
         if (!is.na(params$randomize_questions)) {
-            cat(sprintf("Randomize questions: %s\n", params$randomize_questions))
+            print_aligned("Randomize questions", params$randomize_questions)
         }
         if (!is.na(params$randomize_alts)) {
-            cat(sprintf("Randomize alternatives: %s\n", params$randomize_alts))
+            print_aligned("Randomize alternatives", params$randomize_alts)
         }
     }
 
-    # Method-specific details
-    if (!is.null(summary_info$method_specific)) {
-        if (params$method == "random") {
-            if (!is.null(summary_info$method_specific$optimization_attempts)) {
-                cat(sprintf("Optimization attempts: %d\n", summary_info$method_specific$optimization_attempts))
-            }
-        } else if (params$method == "sequential") {
-            cat("Base design optimized: Yes\n")
-        }
+    # Optimization info
+    if (!is.null(summary_info$optimization_attempts)) {
+        print_aligned("Optimization attempts", summary_info$optimization_attempts)
     }
+    cat("\n")
 
-    # Special design features
+    # Special features section
+    features <- c()
     if (params$no_choice) {
-        cat("No-choice option: Yes\n")
+        features <- c(features, "No-choice option")
     }
     if (!is.null(params$label)) {
-        cat(sprintf("Labeled design using: %s\n", params$label))
+        features <- c(features, paste("Labeled design:", params$label))
     }
-
-    # Dominance information
     if (!is.null(params$remove_dominant) && params$remove_dominant) {
-        cat(sprintf("Dominance removal: %s (threshold: %.2f)\n",
-                    paste(params$dominance_types, collapse = ", "),
-                    attr(x, "design_params")$dominance_threshold %||% 0.8))
+        features <- c(features, paste("Dominance removal:",
+                                      paste(params$dominance_types, collapse = ", ")))
     }
 
-    # Dummy coding information
+    if (length(features) > 0) {
+        cat("Special Features:\n")
+        cat("-----------------\n")
+        for (feature in features) {
+            cat("✓", feature, "\n")
+        }
+        cat("\n")
+    }
+
+    # Variable encoding with better formatting
+    cat("Variable Encoding:\n")
+    cat("------------------\n")
     is_dummy_coded <- attr(x, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
     if (is_dummy_coded) {
-        cat("Variable encoding: Dummy-coded")
+        cat("Format: Dummy-coded")
 
         # Show which variables are categorical
         if (!is.null(categorical_structure)) {
@@ -247,28 +221,41 @@ print.cbc_design <- function(x, ...) {
 
         # Show decode option if no no-choice
         if (!params$no_choice) {
-            cat("  Use cbc_decode_design() to convert back to categorical format\n")
+            cat("💡 Use cbc_decode_design() to convert to categorical format\n")
         }
     } else {
-        cat("Variable encoding: Categorical format\n")
+        cat("Format: Categorical\n")
     }
+    cat("\n")
 
-    # D-error information
-    print_d_error_info(params)
-
-    # Priors information
+    # Priors information with better structure
     if (!is.null(priors)) {
-        cat("Priors summary:\n")
+        cat("Prior Specifications:\n")
+        cat("---------------------\n")
         n_fixed <- sum(!sapply(priors$attrs, function(a) a$random))
         n_random <- sum(sapply(priors$attrs, function(a) a$random))
-        cat(sprintf("  Fixed parameters: %d\n", n_fixed))
-        cat(sprintf("  Random parameters: %d\n", n_random))
+
+        print_aligned("Fixed parameters", n_fixed, width = 20)
+        print_aligned("Random parameters", n_random, width = 20)
         if (!is.null(priors$correlation)) {
-            cat("  Parameter correlations: Yes\n")
+            print_aligned("Parameter correlations", "Yes")
         }
-        cat('\n')
+        cat("\n")
     }
 
+    # D-error information with improved formatting and proper alignment
+    if (params$method != 'random') {
+        cat("Design Efficiency (D-error):\n")
+        cat("----------------------------\n")
+        # Use fixed-width formatting for proper alignment
+        cat(sprintf("Null prior:        %8.6f\n", params$d_error_null))
+        if (!is.null(params$d_error_prior)) {
+            cat(sprintf("Specified priors:  %8.6f\n", params$d_error_prior))
+        }
+        cat("(Lower is better)\n\n")
+    }
+
+    # Sample data with better header
     cat("First few rows of design:\n")
 
     # Remove class temporarily to avoid infinite recursion
