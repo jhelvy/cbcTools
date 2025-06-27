@@ -211,9 +211,6 @@ print.cbc_design <- function(x, ...) {
             }
         } else if (params$method == "sequential") {
             cat("Base design optimized: Yes\n")
-            if (summary_info$method_specific$repeated_across_respondents) {
-                cat("Repeated across respondents: Yes\n")
-            }
         }
     }
 
