@@ -134,30 +134,9 @@ print.cbc_design <- function(x, ...) {
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
 
-    # Add key descriptors
-    descriptors <- c()
-    descriptors <- c(descriptors, paste("Design method:", params$method))
-
-    if (params$method == "sequential" && !is.null(params$d_error)) {
-        descriptors <- c(descriptors, sprintf("D-error: %.4f", params$d_error))
-    }
-
-    if (!is.null(params$label)) {
-        descriptors <- c(descriptors, paste("labeled:", params$label))
-    }
-
-    if (params$no_choice) {
-        descriptors <- c(descriptors, "no-choice")
-    }
-
-    # Print descriptors in parentheses
-    if (length(descriptors) > 0) {
-        cat(paste(descriptors, collapse = ", "), sep = "")
-    }
-    cat("\n")
-
     # Basic structure info
-    cat(sprintf("%d respondents × %d questions × %d alternatives",
+    cat(sprintf("Design method: %s\n", params$method))
+    cat(sprintf("Structure: %d respondents × %d questions × %d alternatives",
                 params$n_resp, params$n_q, params$n_alts))
 
     if (params$n_blocks > 1) {
@@ -166,15 +145,22 @@ print.cbc_design <- function(x, ...) {
     cat("\n")
 
     # Profile usage
-    cat(sprintf("Profiles: %d/%d used (%.1f%%)\n",
+    cat(sprintf("Profile usage: %d/%d (%.1f%%)\n",
                 summary_info$n_profiles_used,
                 summary_info$n_profiles_available,
                 summary_info$profile_usage_rate * 100))
 
-    # Hint for more details
-    cat("\nUse summary() for detailed information\n\n")
+    # D-error (show best available)
+    if (!is.null(params$d_error_prior)) {
+        cat(sprintf("D-error: %.6f\n", params$d_error_prior))
+    } else if (!is.null(params$d_error_null)) {
+        cat(sprintf("D-error: %.6f\n", params$d_error_null))
+    }
 
-    # Sample data with better header
+    cat("\n")
+    cat("💡 Use cbc_inspect() for a more detailed summary\n\n")
+
+    # Sample data
     cat("First few rows of design:\n")
 
     # Remove class temporarily to avoid infinite recursion
@@ -186,172 +172,6 @@ print.cbc_design <- function(x, ...) {
     }
 
     invisible(x)
-}
-
-# Replace the existing summary.cbc_design function in methods.R with this:
-
-#' Detailed summary method for cbc_design objects
-#' @param object A cbc_design object
-#' @param ... Additional arguments passed to summary
-#' @export
-summary.cbc_design <- function(object, ...) {
-    # Extract information from attributes
-    params <- attr(object, "design_params")
-    summary_info <- attr(object, "design_summary")
-    priors <- attr(object, "priors")
-    categorical_structure <- attr(object, "categorical_structure")
-
-    # Helper function for aligned printing
-    print_aligned <- function(label, value, width = 27) {
-        cat(sprintf("%-*s %s\n", width, paste0(label, ":"), value))
-    }
-
-    # Header with design type and timing
-    cat("Choice-Based Conjoint Design Summary\n")
-    cat("=====================================\n")
-
-    # Basic design information in aligned table format
-    print_aligned("Method", params$method, width = 17)
-    print_aligned("Created", format(params$created_at, "%Y-%m-%d %H:%M:%S"), width = 17)
-    print_aligned("Generation time", paste(round(params$time_elapsed_sec, 3), "seconds"), width = 17)
-    cat("\n")
-
-    # Design structure
-    cat("Design Structure:\n")
-    cat("-----------------\n")
-    print_aligned("Respondents", params$n_resp)
-    print_aligned("Questions per respondent", params$n_q)
-    print_aligned("Alternatives per question", params$n_alts)
-    print_aligned("Number of blocks", params$n_blocks)
-    print_aligned("Profile usage", sprintf("%d/%d (%.1f%%)",
-                                           summary_info$n_profiles_used,
-                                           summary_info$n_profiles_available,
-                                           summary_info$profile_usage_rate * 100))
-
-    # Method-specific options
-    if (params$method == "sequential") {
-        if (!is.na(params$randomize_questions)) {
-            print_aligned("Randomize questions", params$randomize_questions)
-        }
-        if (!is.na(params$randomize_alts)) {
-            print_aligned("Randomize alternatives", params$randomize_alts)
-        }
-    }
-
-    # Optimization info
-    if (!is.null(summary_info$optimization_attempts)) {
-        print_aligned("Optimization attempts", summary_info$optimization_attempts)
-    }
-    cat("\n")
-
-    # Special features section
-    features <- c()
-    if (params$no_choice) {
-        features <- c(features, "No-choice option")
-    }
-    if (!is.null(params$label)) {
-        features <- c(features, paste("Labeled design:", params$label))
-    }
-    if (!is.null(params$remove_dominant) && params$remove_dominant) {
-        features <- c(features, paste("Dominance removal:",
-                                      paste(params$dominance_types, collapse = ", ")))
-    }
-
-    if (length(features) > 0) {
-        cat("Special Features:\n")
-        cat("-----------------\n")
-        for (feature in features) {
-            cat("✓", feature, "\n")
-        }
-        cat("\n")
-    }
-
-    # Design efficiency section (NEW)
-    if (!is.null(summary_info$efficiency)) {
-        cat("Design Efficiency:\n")
-        cat("------------------\n")
-
-        # D-error information
-        if (params$method != 'random') {
-            cat(sprintf("D-error (null):        %8.6f\n", params$d_error_null))
-            if (!is.null(params$d_error_prior)) {
-                cat(sprintf("D-error (priors):      %8.6f\n", params$d_error_prior))
-            }
-            cat("(Lower is better)\n\n")
-        }
-
-        # Quality metrics
-        efficiency <- summary_info$efficiency
-        print_aligned("Balance score", sprintf("%.3f (higher is better)", efficiency$balance_score), 20)
-        print_aligned("Overlap score", sprintf("%.3f (lower is better)", efficiency$overlap_score), 20)
-        cat("💡 Use cbc_inspect() for detailed quality analysis\n\n")
-    } else {
-        # Fallback for designs without pre-computed efficiency
-        if (params$method != 'random') {
-            cat("Design Efficiency (D-error):\n")
-            cat("----------------------------\n")
-            cat(sprintf("Null prior:        %8.6f\n", params$d_error_null))
-            if (!is.null(params$d_error_prior)) {
-                cat(sprintf("Specified priors:  %8.6f\n", params$d_error_prior))
-            }
-            cat("(Lower is better)\n\n")
-        }
-    }
-
-    # Variable encoding with better formatting
-    cat("Variable Encoding:\n")
-    cat("------------------\n")
-    is_dummy_coded <- attr(object, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
-    if (is_dummy_coded) {
-        cat("Format: Dummy-coded")
-
-        # Show which variables are categorical
-        if (!is.null(categorical_structure)) {
-            categorical_vars <- names(categorical_structure)[
-                sapply(categorical_structure, function(info) info$is_categorical)
-            ]
-            if (length(categorical_vars) > 0) {
-                cat(sprintf(" (%s)", paste(categorical_vars, collapse = ", ")))
-            }
-        }
-        cat("\n")
-
-        # Show decode option if no no-choice
-        if (!params$no_choice) {
-            cat("💡 Use cbc_decode_design() to convert to categorical format\n")
-        }
-    } else {
-        cat("Format: Categorical\n")
-    }
-    cat("\n")
-
-    # Priors information with better structure
-    if (!is.null(priors)) {
-        cat("Prior Specifications:\n")
-        cat("---------------------\n")
-        n_fixed <- sum(!sapply(priors$attrs, function(a) a$random))
-        n_random <- sum(sapply(priors$attrs, function(a) a$random))
-
-        print_aligned("Fixed parameters", n_fixed, width = 20)
-        print_aligned("Random parameters", n_random, width = 20)
-        if (!is.null(priors$correlation)) {
-            print_aligned("Parameter correlations", "Yes", width = 20)
-        }
-        cat("\n")
-    }
-
-    # Sample data with better header
-    cat("First few rows of design:\n")
-
-    # Remove class temporarily to avoid infinite recursion
-    design_df <- object
-    class(design_df) <- "data.frame"
-    print(utils::head(design_df))
-    if (nrow(design_df) > 6) {
-        cat(sprintf("... and %d more rows\n", nrow(design_df) - 6))
-    }
-
-    invisible(object)
 }
 
 #' Print method for cbc_choices objects
@@ -598,4 +418,249 @@ print.cbc_power_errors <- function(x, ...) {
   cat("Use plot() to visualize power curves.\n")
 
   invisible(x)
+}
+
+#' Print method for cbc_inspection objects
+#' @param x A cbc_inspection object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_inspection <- function(x, ...) {
+    # Print header
+    cat("DESIGN SUMMARY\n")
+    cat("=========================\n\n")
+
+    # Structure section
+    if (!is.null(x$structure)) {
+        cat("STRUCTURE\n")
+        cat("================\n")
+        print_structure_section(x$structure, x$verbose)
+        cat("\n")
+    }
+
+    # Efficiency section
+    if (!is.null(x$efficiency)) {
+        cat("SUMMARY METRICS\n")
+        cat("=================\n")
+        print_efficiency_section(x$efficiency, x$verbose)
+        cat("\n")
+    }
+
+    # Encoding section
+    if (!is.null(x$encoding)) {
+        cat("VARIABLE ENCODING\n")
+        cat("=================\n")
+        print_encoding_section(x$encoding, x$verbose)
+        cat("\n")
+    }
+
+    # Balance section
+    if (!is.null(x$balance)) {
+        cat("ATTRIBUTE BALANCE\n")
+        cat("=================\n")
+        print_balance_section(x$balance, x$verbose)
+        cat("\n")
+    }
+
+    # Overlap section
+    if (!is.null(x$overlap)) {
+        cat("ATTRIBUTE OVERLAP\n")
+        cat("=================\n")
+        print_overlap_section(x$overlap, x$verbose)
+        cat("\n")
+    }
+
+    invisible(x)
+}
+
+# Helper functions for printing each section in inspection
+
+print_structure_section <- function(structure_data, verbose) {
+    cat(sprintf("Method: %s\n", structure_data$method))
+    cat(sprintf("Created: %s\n", format(structure_data$created_at, "%Y-%m-%d %H:%M:%S")))
+
+    if (verbose) {
+        cat(sprintf("Generation time: %.3f seconds\n", structure_data$generation_time))
+    }
+
+    cat(sprintf("Respondents: %d\n", structure_data$n_resp))
+    cat(sprintf("Questions per respondent: %d\n", structure_data$n_q))
+    cat(sprintf("Alternatives per question: %d\n", structure_data$n_alts))
+
+    if (structure_data$n_blocks > 1) {
+        cat(sprintf("Blocks: %d\n", structure_data$n_blocks))
+    }
+
+    cat(sprintf("Total choice sets: %d\n", structure_data$n_choice_sets))
+    cat(sprintf("Profile usage: %d/%d (%.1f%%)\n",
+                structure_data$n_profiles_used,
+                structure_data$n_profiles_available,
+                structure_data$profile_usage_rate * 100))
+
+    # Special features
+    if (length(structure_data$features) > 0) {
+        cat("Special features:\n")
+        for (feature in structure_data$features) {
+            cat("  • ", feature, "\n", sep = "")
+        }
+    }
+
+    if (verbose && !is.null(structure_data$optimization_attempts)) {
+        cat(sprintf("Optimization attempts: %d\n", structure_data$optimization_attempts))
+    }
+}
+
+print_efficiency_section <- function(efficiency_data, verbose) {
+    # D-error information
+    if (efficiency_data$method != 'random') {
+        if (!is.null(efficiency_data$d_error_prior)) {
+            cat(sprintf("D-error (with priors): %.6f\n", efficiency_data$d_error_prior))
+        }
+        if (!is.null(efficiency_data$d_error_null)) {
+            cat(sprintf("D-error (null model): %.6f\n", efficiency_data$d_error_null))
+        }
+        cat("(Lower values indicate more efficient designs)\n\n")
+    } else {
+        cat("D-error calculation not available for random designs\n")
+    }
+
+    # Quality metrics if available
+    if (!is.na(efficiency_data$balance_score)) {
+        cat(sprintf("Overall balance score: %.3f (higher is better)\n", efficiency_data$balance_score))
+        cat(sprintf("Overall overlap score: %.3f (lower is better)\n", efficiency_data$overlap_score))
+
+        if (verbose && !is.na(efficiency_data$profiles_used)) {
+            cat(sprintf("  Profiles used: %d/%d\n",
+                        efficiency_data$profiles_used,
+                        efficiency_data$profiles_available))
+        }
+    }
+}
+
+print_balance_section <- function(balance_data, verbose) {
+    if (!is.null(balance_data$overall_balance)) {
+        cat(sprintf("Overall balance score: %.3f (higher is better)\n\n",
+                    balance_data$overall_balance))
+    }
+
+    # Print detailed balance info
+    if (!is.null(balance_data$individual_counts)) {
+        cat("Individual attribute level counts:\n")
+        for (i in seq_along(balance_data$individual_counts)) {
+            attr_name <- names(balance_data$individual_counts)[i]
+            cat(sprintf("\n%s:\n", attr_name))
+            print(balance_data$individual_counts[[i]])
+
+            # Show balance metric
+            if (!is.null(balance_data$balance_metrics[[attr_name]])) {
+                metric <- balance_data$balance_metrics[[attr_name]]
+                if (verbose) {
+                    cat(sprintf("  Balance score: %.3f (higher is better), CV: %.3f (lower is better)\n",
+                                metric$balance_score, metric$cv))
+                } else {
+                    cat(sprintf("  Balance score: %.3f (higher is better)\n",
+                                metric$balance_score))
+                }
+            }
+        }
+    }
+}
+
+print_overlap_section <- function(overlap_data, verbose) {
+    if (!is.null(overlap_data$overall_overlap)) {
+        cat(sprintf("Overall overlap score: %.3f (lower is better)\n\n",
+                    overlap_data$overall_overlap))
+    }
+
+    # Print detailed overlap info
+    if (!is.null(overlap_data$overlap_counts)) {
+        cat("Counts of attribute overlap:\n")
+        cat("(# of questions with N unique levels)\n\n")
+
+        total_questions <- max(sapply(overlap_data$overlap_counts, function(x) {
+            sum(as.numeric(x$unique_per_question))
+        }))
+
+        for (i in seq_along(overlap_data$overlap_counts)) {
+            attr_name <- names(overlap_data$overlap_counts)[i]
+            attr_data <- overlap_data$overlap_counts[[i]]
+
+            cat(sprintf("%s: ", attr_name))
+
+            if (attr_data$type == "continuous") {
+                cat("Continuous variable\n")
+                if (verbose) {
+                    cat("  Unique levels: ", paste(names(attr_data$value_counts), collapse = ", "), "\n")
+                }
+            } else {
+                cat("Categorical variable\n")
+                if (verbose) {
+                    cat("  Levels: ", paste(attr_data$max_possible_unique), " (",
+                        paste(unique(design[[attr_name]]), collapse = ", "), ")\n", sep = "")
+                }
+            }
+
+            cat("  Questions by # unique levels:\n")
+
+            # Get the overlap distribution
+            unique_counts <- attr_data$unique_per_question
+            max_levels <- attr_data$max_possible_unique
+
+            # Process each level count
+            for (level in 1:max_levels) {
+                level_str <- as.character(level)
+                count <- if (level_str %in% names(unique_counts)) unique_counts[[level_str]] else 0
+                percentage <- (count / total_questions) * 100
+
+                # Create descriptive labels
+                if (level == 1) {
+                    label <- " (complete overlap): "
+                } else if (level == max_levels) {
+                    label <- " (no overlap):       "
+                } else {
+                    label <- " (partial overlap):  "
+                }
+
+                cat(sprintf("  %d%s%5.1f%%  (%d / %d questions)\n",
+                            level, label, percentage, count, total_questions))
+            }
+
+            # Show average unique levels
+            if (!is.null(overlap_data$overlap_metrics[[attr_name]])) {
+                metric <- overlap_data$overlap_metrics[[attr_name]]
+                cat(sprintf("  Average unique levels per question: %.2f\n",
+                            metric$avg_unique_levels))
+            }
+            cat("\n")
+        }
+    }
+}
+
+print_encoding_section <- function(encoding_data, verbose) {
+    if (encoding_data$is_dummy_coded) {
+        cat("Format: Dummy-coded")
+
+        # Show which variables are categorical
+        if (!is.null(encoding_data$categorical_variables) && length(encoding_data$categorical_variables) > 0) {
+            cat(sprintf(" (%s)", paste(encoding_data$categorical_variables, collapse = ", ")))
+        }
+        cat("\n")
+
+        if (verbose && !is.null(encoding_data$categorical_details)) {
+            cat("\nCategorical variable details:\n")
+            for (var in names(encoding_data$categorical_details)) {
+                details <- encoding_data$categorical_details[[var]]
+                cat(sprintf("  %s: %s (reference: %s)\n",
+                            var,
+                            paste(details$levels, collapse = ", "),
+                            details$reference_level))
+            }
+        }
+
+        # Show decode option if no no-choice
+        if (!encoding_data$no_choice) {
+            cat("💡 Use cbc_decode_design() to convert to categorical format\n")
+        }
+    } else {
+        cat("Format: Categorical\n")
+    }
 }

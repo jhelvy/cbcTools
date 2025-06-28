@@ -2,43 +2,27 @@
 % Please edit documentation in R/inspect.R
 \name{cbc_inspect}
 \alias{cbc_inspect}
-\title{Inspect design quality metrics}
+\title{Comprehensive design quality inspection}
 \usage{
-cbc_inspect(
-  design,
-  metrics = "all",
-  verbose = FALSE,
-  priors = NULL,
-  total_threshold = 0.8,
-  exclude = NULL
-)
+cbc_inspect(design, sections = "all", verbose = FALSE)
 }
 \arguments{
 \item{design}{A \code{cbc_design} object created by \code{cbc_design()}}
 
-\item{metrics}{Character vector specifying which metrics to inspect.
-Options: "balance", "overlap", "dominance", or "all" (default).
+\item{sections}{Character vector specifying which sections to show.
+Options: "structure", "efficiency", "balance", "overlap", "encoding", or "all" (default).
 Can specify multiple: \code{c("balance", "overlap")}}
 
-\item{verbose}{Logical. If TRUE, shows detailed technical metrics like
-coefficient of variation. If FALSE (default), shows simplified output.}
-
-\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}. Required
-for dominance inspection.}
-
-\item{total_threshold}{Numeric threshold for total utility dominance detection.
-Default is 0.8.}
-
-\item{exclude}{Character vector of attribute names to exclude from calculations}
+\item{verbose}{Logical. If TRUE, shows additional technical details.
+If FALSE (default), shows simplified output.}
 }
 \value{
-Invisibly returns the inspection results, but primarily prints
-formatted information to the console
+A \code{cbc_inspection} object containing the inspection results
 }
 \description{
-This function provides comprehensive inspection of choice experiment designs
-across multiple quality dimensions including attribute balance, overlap, and
-dominance patterns.
+This function provides detailed inspection of choice experiment designs
+across multiple dimensions including design structure, efficiency metrics,
+attribute balance, overlap patterns, and variable encoding.
 }
 \examples{
 library(cbcTools)
@@ -56,22 +40,13 @@ design <- cbc_design(
   n_q = 4
 )
 
-# Inspect all metrics (default, simple output)
+# Inspect all sections (default) - prints automatically
 cbc_inspect(design)
 
-# Detailed output with technical metrics
+# Store results for later use
+inspection <- cbc_inspect(design, sections = "balance")
+inspection  # prints the same output
+
+# Verbose output with technical details
 cbc_inspect(design, verbose = TRUE)
-
-# Inspect specific metrics
-cbc_inspect(design, metrics = "balance")
-cbc_inspect(design, metrics = c("balance", "overlap"))
-
-# Inspect dominance (requires priors)
-priors <- cbc_priors(
-  profiles = profiles,
-  price = -0.5,
-  type = c(0.2, 0.3),
-  quality = 0.4
-)
-cbc_inspect(design, metrics = "dominance", priors = priors)
 }
