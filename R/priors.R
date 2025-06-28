@@ -873,7 +873,7 @@ validate_interactions <- function(interactions, attrs) {
     invisible(TRUE)
 }
 
-#' Validate level specifications for interactions
+# Validate level specifications for interactions
 validate_interaction_levels <- function(int, attrs) {
     attr1_continuous <- attrs[[int$attr1]]$continuous
     attr2_continuous <- attrs[[int$attr2]]$continuous
@@ -933,7 +933,7 @@ validate_interaction_levels <- function(int, attrs) {
     invisible(TRUE)
 }
 
-#' Get variable names including interaction terms for logitr
+# Get variable names including interaction terms for logitr
 get_var_names_with_interactions <- function(profile_attrs, interactions = NULL) {
     if (is.null(interactions)) {
         return(profile_attrs)
@@ -944,7 +944,7 @@ get_var_names_with_interactions <- function(profile_attrs, interactions = NULL) 
     return(c(profile_attrs, interaction_terms))
 }
 
-#' Build interaction terms in logitr format
+# Build interaction terms in logitr format
 build_interaction_terms <- function(interactions) {
     # For logitr, we only need to specify the general interaction terms
     # like "price*type". logitr will automatically create all the
@@ -957,7 +957,7 @@ build_interaction_terms <- function(interactions) {
     return(unique_pairs)
 }
 
-#' Build parameter vector including interaction values
+# Build parameter vector including interaction values
 build_parameter_vector_with_interactions <- function(codedParNames, attrs, means, interactions) {
     # Start with the original function
     pars_mean <- build_parameter_vector(codedParNames, attrs, means)
@@ -968,7 +968,7 @@ build_parameter_vector_with_interactions <- function(codedParNames, attrs, means
     return(pars_mean)
 }
 
-#' Set interaction parameter values in the parameter vector
+# Set interaction parameter values in the parameter vector
 set_interaction_values <- function(pars_mean, codedParNames, interactions, attrs) {
     if (is.null(interactions)) {
         return(pars_mean)
@@ -986,13 +986,13 @@ set_interaction_values <- function(pars_mean, codedParNames, interactions, attrs
     return(pars_mean)
 }
 
-#' Check if a parameter name represents an interaction
+# Check if a parameter name represents an interaction
 is_interaction_parameter <- function(param_name) {
     # logitr uses ":" for interactions, e.g., "price:typeGala"
     grepl(":", param_name, fixed = TRUE)
 }
 
-#' Extract interaction value for a specific coded parameter
+# Extract interaction value for a specific coded parameter
 extract_interaction_value <- function(param_name, interactions, attrs) {
     if (is.null(interactions)) {
         return(NA)
@@ -1016,7 +1016,7 @@ extract_interaction_value <- function(param_name, interactions, attrs) {
     return(0)  # Default value for unspecified interactions
 }
 
-#' Check if a coded parameter matches an interaction specification
+# Check if a coded parameter matches an interaction specification
 matches_interaction_spec <- function(param_name, param_parts, int_spec, attrs) {
     # This function needs to handle the complex matching between
     # logitr's parameter naming (e.g., "price:typeGala") and our
@@ -1075,7 +1075,7 @@ matches_interaction_spec <- function(param_name, param_parts, int_spec, attrs) {
     return(FALSE)
 }
 
-#' Get all possible interaction parameter names that logitr might create
+# Get all possible interaction parameter names that logitr might create
 get_expected_interaction_params <- function(interactions, attrs) {
     if (is.null(interactions)) {
         return(character(0))

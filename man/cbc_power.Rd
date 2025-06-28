@@ -47,7 +47,7 @@ cbc_power(data, ...)
 data frame containing choice data with the required columns.}
 
 \item{...}{Other arguments that are passed to \code{logitr::logitr()} for model
-estimation. See the {logitr} documentation for details about other
+estimation. See the logitr documentation for details about other
 available arguments.}
 
 \item{outcome}{The name of the column that identifies the outcome variable,

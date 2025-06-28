@@ -23,10 +23,8 @@ Suggests:
     testthat,
     tibble
 Imports:
-    fastDummies,
     ggplot2,
     logitr (>= 1.0.1),
-    MASS,
     parallel,
     randtoolbox,
     rlang,

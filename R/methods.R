@@ -46,6 +46,8 @@ print.cbc_profiles <- function(x, ...) {
 }
 
 #' Print method for cbc_priors objects
+#' @param x A cbc_priors object
+#' @param ... Additional arguments passed to print
 #' @export
 print.cbc_priors <- function(x, ...) {
     cat("CBC Prior Specifications:\n\n")
@@ -122,7 +124,7 @@ print.cbc_priors <- function(x, ...) {
             int <- x$interactions[[i]]
             cat("  ", int$attr1, sep = "")
             if (!is.null(int$level)) cat("[", int$level, "]", sep = "")
-            cat(" × ", int$attr2, sep = "")
+            cat(" \u00D7 ", int$attr2, sep = "")
             if (!is.null(int$with_level)) cat("[", int$with_level, "]", sep = "")
             cat(": ", round(int$value, 3), "\n", sep = "")
         }
@@ -148,7 +150,7 @@ print.cbc_design <- function(x, ...) {
 
     # Basic structure info
     cat(sprintf("Design method: %s\n", params$method))
-    cat(sprintf("Structure: %d respondents × %d questions × %d alternatives",
+    cat(sprintf("Structure: %d respondents \u00D7 %d questions \u00D7 %d alternatives",
                 params$n_resp, params$n_q, params$n_alts))
 
     if (params$n_blocks > 1) {
@@ -179,7 +181,7 @@ print.cbc_design <- function(x, ...) {
     }
 
     cat("\n")
-    cat("💡 Use cbc_inspect() for a more detailed summary\n\n")
+    cat("\U0001F4A1 Use cbc_inspect() for a more detailed summary\n\n")
 
     # Sample data
     cat("First few rows of design:\n")
@@ -362,30 +364,6 @@ plot.cbc_power_errors <- function (x, ...) {
   return(plot)
 }
 
-#' Print method for design error metrics
-#' @param x A cbc_errors object
-#' @param ... Additional arguments passed to print
-#' @export
-print.cbc_errors <- function(x, ...) {
-  cat("Design Error Metrics\n")
-  cat("====================\n\n")
-
-  if (!is.null(x$d_error)) {
-    cat(sprintf("D-error (lower is better): %.6f\n", x$d_error))
-  }
-  if (!is.null(x$a_error)) {
-    cat(sprintf("A-error (lower is better): %.6f\n", x$a_error))
-  }
-  if (!is.null(x$g_error)) {
-    cat(sprintf("G-error (lower is better): %.6f\n", x$g_error))
-  }
-  if (!is.null(x$e_error)) {
-    cat(sprintf("E-error (higher is better): %.6f\n", x$e_error))
-  }
-
-  invisible(x)
-}
-
 #' Enhanced print method for cbc_power_errors objects
 #' @param x A cbc_power_errors object
 #' @param ... Additional arguments passed to print
@@ -521,7 +499,7 @@ print_structure_section <- function(structure_data, verbose) {
     if (length(structure_data$features) > 0) {
         cat("Special features:\n")
         for (feature in structure_data$features) {
-            cat("  • ", feature, "\n", sep = "")
+            cat("  \u2022 ", feature, "\n", sep = "")
         }
     }
 
@@ -614,10 +592,6 @@ print_overlap_section <- function(overlap_data, verbose) {
                 }
             } else {
                 cat("Categorical variable\n")
-                if (verbose) {
-                    cat("  Levels: ", paste(attr_data$max_possible_unique), " (",
-                        paste(unique(design[[attr_name]]), collapse = ", "), ")\n", sep = "")
-                }
             }
 
             cat("  Questions by # unique levels:\n")
@@ -679,9 +653,198 @@ print_encoding_section <- function(encoding_data, verbose) {
 
         # Show decode option if no no-choice
         if (!encoding_data$no_choice) {
-            cat("💡 Use cbc_decode_design() to convert to categorical format\n")
+            cat("\U0001F4A1 Use cbc_decode_design() to convert to categorical format\n")
         }
     } else {
         cat("Format: Categorical\n")
+    }
+}
+
+#' Print method for cbc_comparison objects
+#' @param x A cbc_comparison object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_comparison <- function(x, ...) {
+    # Header
+    cat("CBC Design Comparison\n")
+    cat("=====================\n")
+    cat(sprintf("Designs compared: %d\n", x$n_designs))
+    cat(sprintf("Metrics: %s\n", paste(x$metrics_compared, collapse = ", ")))
+
+    if (x$sort_by != "none") {
+        order_desc <- if (x$ascending) "ascending" else "descending"
+        cat(sprintf("Sorted by: %s (%s)\n", x$sort_by, order_desc))
+    }
+
+    # Structure section
+    if ("structure" %in% x$metrics_compared) {
+        cat("\nStructure\n")
+        cat("=====================\n")
+        print_structure_tables(x$data)
+    }
+
+    # Design Metrics section
+    if (any(c("efficiency", "balance", "overlap") %in% x$metrics_compared)) {
+        cat("\nDesign Metrics\n")
+        cat("=====================\n")
+        print_metrics_table(x$data, x$metrics_compared)
+    }
+
+    # Interpretation
+    cat("\nInterpretation:\n")
+    print_interpretation(x$metrics_compared)
+
+    # Best performers
+    cat("\nBest performers:\n")
+    print_best_performers(x$data)
+
+    cat("\nUse summary() for detailed information on any one design.\n")
+
+    invisible(x)
+}
+
+# Print structure tables
+print_structure_tables <- function(data) {
+    # First table: Design, Method, respondents, questions
+    table1 <- data[, c("design_name", "method", "respondents", "questions")]
+    names(table1) <- c("Design", "Method", "respondents", "questions")
+    print(table1, row.names = FALSE)
+
+    # Second table: Alternatives, Blocks, Profile Usage
+    profile_usage_formatted <- sprintf("(%d/%d) %s%%",
+                                       data$profiles_used,
+                                       data$profiles_available,
+                                       data$profile_usage_pct)
+
+    table2 <- data.frame(
+        Alternatives = data$alternatives,
+        Blocks = data$blocks,
+        `Profile Usage` = profile_usage_formatted,
+        check.names = FALSE
+    )
+    print(table2, row.names = FALSE)
+
+    # Third table: No Choice, Labeled?
+    table3 <- data.frame(
+        `No Choice` = ifelse(data$no_choice, "Yes", "No"),
+        `Labeled?` = ifelse(data$labeled, "Yes", "No"),
+        check.names = FALSE
+    )
+    print(table3, row.names = FALSE)
+}
+
+# Print metrics table
+print_metrics_table <- function(data, metrics) {
+
+    # Start with design and method
+    metrics_data <- data[, c("design_name", "method")]
+    names(metrics_data) <- c("Design", "Method")
+
+    # Add D-Error columns if efficiency is included
+    if ("efficiency" %in% metrics) {
+        d_error_null_formatted <- ifelse(is.na(data$d_error_null), "NA", sprintf("%.6f", data$d_error_null))
+        d_error_prior_formatted <- ifelse(is.na(data$d_error_prior), "NA", sprintf("%.6f", data$d_error_prior))
+
+        metrics_data$`D-Error (Null)` <- d_error_null_formatted
+        metrics_data$`D-Error (Prior)` <- d_error_prior_formatted
+    }
+
+    # Add Balance if included
+    if ("balance" %in% metrics) {
+        balance_formatted <- ifelse(is.na(data$balance_score), "NA", sprintf("%.3f", data$balance_score))
+        metrics_data$Balance <- balance_formatted
+    }
+
+    # Add Overlap if included
+    if ("overlap" %in% metrics) {
+        overlap_formatted <- ifelse(is.na(data$overlap_score), "NA", sprintf("%.3f", data$overlap_score))
+        metrics_data$Overlap <- overlap_formatted
+    }
+
+    print(metrics_data, row.names = FALSE)
+}
+
+# Print interpretation of metrics
+print_interpretation <- function(metrics) {
+    interpretations <- c()
+
+    if ("efficiency" %in% metrics) {
+        interpretations <- c(interpretations, "- D-Error: Lower is better (design efficiency)")
+    }
+
+    if ("balance" %in% metrics) {
+        interpretations <- c(interpretations, "- Balance: Higher is better (level distribution)")
+    }
+
+    if ("overlap" %in% metrics) {
+        interpretations <- c(interpretations, "- Overlap: Lower is better (attribute variation)")
+    }
+
+    if ("structure" %in% metrics) {
+        interpretations <- c(interpretations, "- Profile Usage: Higher means more profiles used")
+    }
+
+    if (length(interpretations) > 0) {
+        cat(paste(interpretations, collapse = "\n"))
+        cat("\n")
+    }
+}
+
+# Print best performers for each metric
+print_best_performers <- function(data) {
+    performers <- c()
+
+    # D-error best performer
+    if ("d_error_prior" %in% names(data)) {
+        d_errors <- data$d_error_prior[!is.na(data$d_error_prior)]
+        if (length(d_errors) > 0) {
+            best_idx <- which.min(data$d_error_prior)
+            performers <- c(performers, sprintf("- D-Error: %s (%.6f)",
+                                                data$design_name[best_idx],
+                                                data$d_error_prior[best_idx]))
+        }
+    } else if ("d_error_null" %in% names(data)) {
+        d_errors <- data$d_error_null[!is.na(data$d_error_null)]
+        if (length(d_errors) > 0) {
+            best_idx <- which.min(data$d_error_null)
+            performers <- c(performers, sprintf("- D-Error: %s (%.6f)",
+                                                data$design_name[best_idx],
+                                                data$d_error_null[best_idx]))
+        }
+    }
+
+    # Balance best performer
+    if ("balance_score" %in% names(data)) {
+        balance_scores <- data$balance_score[!is.na(data$balance_score)]
+        if (length(balance_scores) > 0) {
+            best_idx <- which.max(data$balance_score)
+            performers <- c(performers, sprintf("- Balance: %s (%.3f)",
+                                                data$design_name[best_idx],
+                                                data$balance_score[best_idx]))
+        }
+    }
+
+    # Overlap best performer
+    if ("overlap_score" %in% names(data)) {
+        overlap_scores <- data$overlap_score[!is.na(data$overlap_score)]
+        if (length(overlap_scores) > 0) {
+            best_idx <- which.min(data$overlap_score)
+            performers <- c(performers, sprintf("- Overlap: %s (%.3f)",
+                                                data$design_name[best_idx],
+                                                data$overlap_score[best_idx]))
+        }
+    }
+
+    # Profile usage best performer
+    if ("profile_usage_pct" %in% names(data)) {
+        best_idx <- which.max(data$profile_usage_pct)
+        performers <- c(performers, sprintf("- Profile Usage: %s (%.1f%%)",
+                                            data$design_name[best_idx],
+                                            data$profile_usage_pct[best_idx]))
+    }
+
+    if (length(performers) > 0) {
+        cat(paste(performers, collapse = "\n"))
+        cat("\n")
     }
 }

@@ -32,7 +32,7 @@ validate_profiles <- function(profiles) {
 }
 
 validate_design <- function(design) {
-    if (!inherits(profiles, "cbc_design")) {
+    if (!inherits(design, "cbc_design")) {
         stop("profiles must be a cbc_design object created by cbc_design()")
     }
 }
@@ -102,13 +102,7 @@ validate_priors <- function(priors, profiles, no_choice) {
     }
 }
 
-#' Validate that priors are compatible with profiles
-#'
-#' This function checks if priors were created for the same profiles structure
-#' @param priors A cbc_priors object
-#' @param profiles A cbc_profiles object
-#' @return Invisibly returns TRUE if compatible, throws error or warning if not
-#' @export
+# Validate that priors are compatible with profiles
 validate_priors_profiles <- function(priors, profiles) {
     if (!inherits(priors, "cbc_priors")) {
         stop("priors must be a cbc_priors object created by cbc_priors()")

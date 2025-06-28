@@ -30,7 +30,7 @@ cbc_design <- function(
     priors = NULL,
     n_alts,
     n_q,
-    n_resp = 1,
+    n_resp = 100,
     n_blocks = 1,
     n_cores = NULL,
     no_choice = FALSE,
@@ -300,15 +300,6 @@ build_interaction_terms <- function(interactions) {
     return(unique_pairs)
 }
 
-#' Align profile factor levels with priors before encoding
-#'
-#' This ensures that logitr::recodeData creates dummy variables that match
-#' the prior specifications exactly.
-#'
-#' @param profiles Original profiles data frame
-#' @param priors cbc_priors object or NULL
-#' @param attr_names Attribute names to process
-#' @return profiles data frame with properly aligned factor levels
 align_profiles_with_priors <- function(profiles, priors, attr_names) {
     if (is.null(priors)) {
         return(profiles)  # No alignment needed
@@ -379,7 +370,8 @@ generate_random_design <- function(opt_env) {
 
     # Iteratively fix problems
     attempts <- 0
-    while (attempts < opt_env$n$max_attempts) {
+    max_attempts <- opt_env$n$max_attempts
+    while (attempts < max_attempts) {
         attempts <- attempts + 1
 
         # Find all problematic questions
@@ -782,11 +774,7 @@ add_metadata_other <- function(design, n_block, n_alts, n_q) {
     return(design)
 }
 
-#' Get categorical structure information from original profiles
-#'
-#' @param profiles Original profiles data frame
-#' @param attr_names Attribute names
-#' @return List containing information about categorical variables
+# Get categorical structure information from original profiles
 get_categorical_structure_from_profiles <- function(profiles, attr_names) {
     categorical_info <- list()
 
@@ -1019,14 +1007,7 @@ compute_partial_utilities_with_interactions <- function(X_matrix, priors) {
     return(compute_partial_utility_single(X_matrix, pars_without_no_choice, n_profiles))
 }
 
-#' Compute partial utilities for dominance checking
-#'
-#' Pre-computes partial utility contribution of each attribute for each profile
-#' This allows fast dominance checking by simple matrix lookups and comparisons
-#'
-#' @param X_matrix Encoded design matrix from logitr::recodeData
-#' @param priors cbc_priors object
-#' @return Matrix with profiles as rows and attributes as columns
+# Compute partial utilities for dominance checking
 compute_partial_utilities <- function(X_matrix, priors) {
 
     n_profiles <- nrow(X_matrix)
@@ -1056,7 +1037,7 @@ compute_partial_utility_single <- function(X_matrix, pars, n_profiles) {
     return(X_matrix*par_mat)
 }
 
-#' Set up label constraints for labeled designs
+# Set up label constraints for labeled designs
 setup_label_constraints <- function(profiles, label, n_alts) {
     # Split profiles by label values
     label_values <- unique(profiles[[label]])
@@ -1430,16 +1411,6 @@ get_design_matrix_from_survey <- function(survey_design, opt_env) {
     return(design_matrix)
 }
 
-
-
-
-
-
-
-
-
-
-
 #' Convert dummy-coded design back to categorical format
 #'
 #' This function converts a dummy-coded CBC design back to its original
@@ -1522,9 +1493,6 @@ cbc_decode_design <- function(design) {
 
 # Helper functions needed for cbc_decode_design
 
-#' Check if design is dummy-coded
-#' @param design Design object to check
-#' @return Logical indicating if design is dummy-coded
 is_dummy_coded <- function(design) {
     is_coded <- attr(design, "is_dummy_coded")
     if (is.null(is_coded)) {
@@ -1547,10 +1515,7 @@ is_dummy_coded <- function(design) {
     return(is_coded)
 }
 
-#' Decode categorical variables from dummy coding
-#' @param design Design data frame with dummy-coded variables
-#' @param categorical_structure Information about original categorical structure
-#' @return Design data frame with categorical variables restored
+# Decode categorical variables from dummy coding
 decode_categorical_variables <- function(design, categorical_structure) {
 
     decoded_design <- design

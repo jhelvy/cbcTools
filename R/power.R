@@ -48,7 +48,7 @@
 #'   cores is set to `parallel::detectCores() - 1`. Max cores allowed is capped
 #'   at `parallel::detectCores()`.
 #' @param ... Other arguments that are passed to `logitr::logitr()` for model
-#'   estimation. See the {logitr} documentation for details about other
+#'   estimation. See the logitr documentation for details about other
 #'   available arguments.
 #' @references
 #' Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,

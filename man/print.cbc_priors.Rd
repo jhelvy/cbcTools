@@ -6,6 +6,11 @@
 \usage{
 \method{print}{cbc_priors}(x, ...)
 }
+\arguments{
+\item{x}{A cbc_priors object}
+
+\item{...}{Additional arguments passed to print}
+}
 \description{
 Print method for cbc_priors objects
 }

@@ -20,48 +20,6 @@
 #' @return Returns the input data with an additional `choice` column
 #' identifying the simulated choices.
 #' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make a survey design from all possible profiles
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
-#' )
-#'
-#' # Create survey and simulate choices
-#' survey <- cbc_survey(design, n_resp = 100)
-#' data_with_choices <- cbc_choices(survey)
-#'
-#' # Simulate choices according to a prior utility model
-#' priors <- cbc_priors(
-#'   profiles = profiles,
-#'   price     = -0.1,
-#'   type      = c(0.1, 0.2),
-#'   freshness = c(0.1, 0.2)
-#' )
-#'
-#' data <- cbc_choices(survey, priors = priors)
-#'
-#' # Simulate choices according to a prior utility model with random parameters
-#' priors_random <- cbc_priors(
-#'   profiles = profiles,
-#'   price = -0.1,
-#'   type = rand_spec(mean = c(0.1, 0.2), sd = c(0.5, 0.8)),
-#'   freshness = c(0.1, 0.2)
-#' )
-#'
-#' data <- cbc_choices(survey, priors = priors_random)
 cbc_choices <- function(x, ...) {
   UseMethod("cbc_choices")
 }

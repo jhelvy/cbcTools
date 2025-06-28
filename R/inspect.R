@@ -262,7 +262,7 @@ calculate_balance_metrics <- function(counts) {
     expected_count <- sum(attr_counts) / length(attr_counts)
 
     # Calculate coefficient of variation
-    cv <- sd(attr_counts) / mean(attr_counts)
+    cv <- stats::sd(attr_counts) / mean(attr_counts)
 
     # Balance score: higher is better, max = 1 (perfect balance)
     balance_score <- 1 / (1 + cv)

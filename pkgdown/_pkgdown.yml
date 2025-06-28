@@ -27,23 +27,29 @@ navbar:
       href: news/index.html
 
 reference:
+- title: "Priors"
+  desc: "Functions for generating a set of prior (assumed) coefficients."
+  contents:
+  - cbc_priors
+  - rand_spec
+  - cor_spec
+  - int_spec
 - title: "Design"
   desc: "Functions for generating survey designs."
   contents:
   - cbc_profiles
   - cbc_restrict
   - cbc_design
+  - cbc_decode_design
+  - cbc_compare
 - title: "Inspect"
   desc: "Functions for inspecting survey designs."
   contents:
-  - cbc_balance
-  - cbc_overlap
+  - cbc_inspect
 - title: "Simulate Choice"
   desc: "Functions for simulating choices."
   contents:
   - cbc_choices
-  - randN
-  - randLN
 - title: "Power Analysis"
   desc: "Functions for conducting a power analysis."
   contents:
@@ -52,5 +58,12 @@ reference:
 - title: "Methods"
   desc: "Various methods."
   contents:
+  - print.cbc_profiles
+  - print.cbc_priors
+  - print.cbc_design
+  - print.cbc_choices
   - print.cbc_models
-  - plot.cbc_errors
+  - plot.cbc_power_errors
+  - print.cbc_power_errors
+  - print.cbc_inspection
+  - print.cbc_comparison

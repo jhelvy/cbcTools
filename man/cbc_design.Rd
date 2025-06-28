@@ -10,7 +10,7 @@ cbc_design(
   priors = NULL,
   n_alts,
   n_q,
-  n_resp = 1,
+  n_resp = 100,
   n_blocks = 1,
   n_cores = NULL,
   no_choice = FALSE,
