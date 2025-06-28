@@ -2,7 +2,8 @@
 #'
 #' Creates a standardized prior specification object for use in CBC analysis
 #' functions like `cbc_choices()` and `cbc_design()`. Supports both fixed and random
-#' parameters, with flexible specification of categorical variable levels.
+#' parameters, with flexible specification of categorical variable levels and
+#' interaction terms between fixed parameters.
 #'
 #' @param profiles A data frame of profiles created by `cbc_profiles()`
 #' @param no_choice Prior specification for no-choice alternative. Can be:
@@ -14,6 +15,10 @@
 #' @param draw_type Specify the draw type as a character: `"halton"`
 #'   (the default) or `"sobol"` (recommended for models with more than 5
 #'   random parameters).
+#' @param interactions A list of interaction specifications created by `int_spec()`.
+#'   Only interactions between fixed (non-random) parameters are supported.
+#'   Each interaction must specify the appropriate level(s) for categorical variables.
+#'   Defaults to `NULL` (no interactions).
 #' @param ... Named arguments specifying priors for each attribute:
 #'   - For fixed parameters:
 #'     - Continuous variables: provide a single numeric value
@@ -22,13 +27,14 @@
 #'       - A named vector mapping levels to coefficients (remaining level becomes reference)
 #'   - For random parameters: use `rand_spec()` to specify distribution, parameters, and correlations
 #' @return A structured prior specification object including parameter draws for
-#'   random coefficients
+#'   random coefficients and interaction terms
 #' @export
 cbc_priors <- function(
     profiles,
     no_choice = NULL,
     n_draws = 100,
     draw_type = "halton",
+    interactions = NULL,  # New parameter
     ...
 ) {
     # Validate input class
@@ -41,6 +47,12 @@ cbc_priors <- function(
     if (!is.null(no_choice)) params$no_choice <- no_choice
 
     attrs <- get_combined_attr_info(profiles, params, include_no_choice = !is.null(no_choice))
+
+    # Validate interactions (only for fixed parameters)
+    if (!is.null(interactions)) {
+        validate_interactions(interactions, attrs)
+    }
+
     processed_params <- process_parameters(attrs)
 
     # Create coded data structure for parameter ordering
@@ -48,7 +60,10 @@ cbc_priors <- function(
     profile_attrs <- names(attrs)[names(attrs) != "no_choice"]
     profile_randPars <- get_random_pars_for_logitr(processed_params$random, attrs, profile_attrs)
 
-    codedData <- logitr::recodeData(model_data, profile_attrs, profile_randPars)
+    # Include interaction terms in variable names for logitr
+    var_names_with_interactions <- get_var_names_with_interactions(profile_attrs, interactions)
+
+    codedData <- logitr::recodeData(model_data, var_names_with_interactions, profile_randPars)
     codedParNames <- if (!is.null(no_choice)) c(codedData$pars, "no_choice") else codedData$pars
 
     # Generate parameter draws if we have random parameters
@@ -61,21 +76,23 @@ cbc_priors <- function(
         )
     }
 
-    # Build parameter vectors in coded order
+    # Build parameter vectors in coded order (including interactions)
     if (!is.null(par_draws)) {
-        # Use actual expected values from parameter draws
-        # This correctly handles log-normal, censored normal, and correlated parameters
+        # Use actual expected values from parameter draws for random parameters
         pars_mean <- colMeans(par_draws)
         names(pars_mean) <- codedParNames
+        # But override interaction values since they're always fixed
+        pars_mean <- set_interaction_values(pars_mean, codedParNames, interactions, attrs)
     } else {
         # No random parameters, use the input specification means
-        pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
+        pars_mean <- build_parameter_vector_with_interactions(codedParNames, attrs, processed_params$means, interactions)
     }
 
     # Create return object with metadata
     result <- list(
         profiles_metadata = create_profiles_metadata(profiles),
         attrs = attrs,
+        interactions = interactions,  # Store interactions
         pars = pars_mean,
         correlation = cor_mat,
         par_draws = par_draws,
@@ -127,6 +144,46 @@ cor_spec <- function(with, value, level = NULL, with_level = NULL) {
     structure(
         list(attr = with, value = value, level = level, with_level = with_level),
         class = "cbc_correlation"
+    )
+}
+
+#' Create an interaction specification for fixed parameters
+#'
+#' @param between Character vector of length 2 specifying the two attributes to interact
+#' @param value Numeric. Interaction coefficient value
+#' @param level Character. For categorical variables, specific level of first attribute
+#' @param with_level Character. For categorical variables, specific level of second attribute
+#' @return An interaction specification list
+#' @export
+#' @examples
+#' # Continuous * continuous interaction
+#' int_spec(between = c("price", "weight"), value = 0.1)
+#'
+#' # Continuous * categorical interactions (must specify categorical level)
+#' int_spec(between = c("price", "type"), with_level = "Fuji", value = 0.15)
+#' int_spec(between = c("price", "type"), with_level = "Gala", value = 0.05)
+#'
+#' # Categorical * categorical interactions (must specify both levels)
+#' int_spec(between = c("type", "freshness"),
+#'          level = "Fuji", with_level = "Poor", value = -0.2)
+int_spec <- function(between, value, level = NULL, with_level = NULL) {
+    if (length(between) != 2) {
+        stop("'between' must specify exactly 2 attributes")
+    }
+
+    if (!is.numeric(value) || length(value) != 1) {
+        stop("'value' must be a single numeric value")
+    }
+
+    structure(
+        list(
+            attr1 = between[1],
+            attr2 = between[2],
+            value = value,
+            level = level,
+            with_level = with_level
+        ),
+        class = "cbc_interaction"
     )
 }
 
@@ -781,4 +838,283 @@ getStandardDraws <- function(parIDs, numDraws, draw_type) {
     }
     draws[, parIDs$f] <- 0 * draws[, parIDs$f]
     return(draws)
+}
+
+# Interactions ----
+
+# Validate interaction specifications
+validate_interactions <- function(interactions, attrs) {
+    if (!is.list(interactions)) {
+        stop("interactions must be a list of interaction specifications created by int_spec()")
+    }
+
+    if (!all(sapply(interactions, inherits, "cbc_interaction"))) {
+        stop("all interactions must be created using int_spec()")
+    }
+
+    for (int in interactions) {
+        # Check that both attributes exist
+        missing_attrs <- setdiff(c(int$attr1, int$attr2), names(attrs))
+        if (length(missing_attrs) > 0) {
+            stop(sprintf("Interaction references non-existent attributes: %s",
+                         paste(missing_attrs, collapse = ", ")))
+        }
+
+        # Check that neither attribute is random
+        if (attrs[[int$attr1]]$random || attrs[[int$attr2]]$random) {
+            stop(sprintf("Interactions with random parameters not supported. Attributes '%s' and '%s' must be fixed parameters.",
+                         int$attr1, int$attr2))
+        }
+
+        # Validate level specifications
+        validate_interaction_levels(int, attrs)
+    }
+
+    invisible(TRUE)
+}
+
+#' Validate level specifications for interactions
+validate_interaction_levels <- function(int, attrs) {
+    attr1_continuous <- attrs[[int$attr1]]$continuous
+    attr2_continuous <- attrs[[int$attr2]]$continuous
+
+    # For continuous * categorical interactions, must specify the categorical level
+    if (attr1_continuous && !attr2_continuous) {
+        # price * type case: must specify with_level for the categorical variable
+        if (is.null(int$with_level)) {
+            stop(sprintf("For interaction between continuous '%s' and categorical '%s', must specify with_level",
+                         int$attr1, int$attr2))
+        }
+        if (!is.null(int$level)) {
+            stop(sprintf("Cannot specify level for continuous attribute '%s'", int$attr1))
+        }
+    }
+
+    if (!attr1_continuous && attr2_continuous) {
+        # type * price case: must specify level for the categorical variable
+        if (is.null(int$level)) {
+            stop(sprintf("For interaction between categorical '%s' and continuous '%s', must specify level",
+                         int$attr1, int$attr2))
+        }
+        if (!is.null(int$with_level)) {
+            stop(sprintf("Cannot specify with_level for continuous attribute '%s'", int$attr2))
+        }
+    }
+
+    # For categorical * categorical, both level and with_level should be specified
+    if (!attr1_continuous && !attr2_continuous) {
+        if (is.null(int$level) || is.null(int$with_level)) {
+            stop(sprintf("For interaction between categorical '%s' and categorical '%s', must specify both level and with_level",
+                         int$attr1, int$attr2))
+        }
+    }
+
+    # For continuous * continuous, neither level nor with_level should be specified
+    if (attr1_continuous && attr2_continuous) {
+        if (!is.null(int$level) || !is.null(int$with_level)) {
+            stop(sprintf("Cannot specify level or with_level for interaction between continuous attributes '%s' and '%s'",
+                         int$attr1, int$attr2))
+        }
+    }
+
+    # Validate that specified levels exist
+    if (!is.null(int$level)) {
+        if (!int$level %in% names(attrs[[int$attr1]]$mean)) {
+            stop(sprintf("Invalid level '%s' for attribute '%s'", int$level, int$attr1))
+        }
+    }
+
+    if (!is.null(int$with_level)) {
+        if (!int$with_level %in% names(attrs[[int$attr2]]$mean)) {
+            stop(sprintf("Invalid with_level '%s' for attribute '%s'", int$with_level, int$attr2))
+        }
+    }
+
+    invisible(TRUE)
+}
+
+#' Get variable names including interaction terms for logitr
+get_var_names_with_interactions <- function(profile_attrs, interactions = NULL) {
+    if (is.null(interactions)) {
+        return(profile_attrs)
+    }
+
+    # Add interaction terms in logitr format
+    interaction_terms <- build_interaction_terms(interactions)
+    return(c(profile_attrs, interaction_terms))
+}
+
+#' Build interaction terms in logitr format
+build_interaction_terms <- function(interactions) {
+    # For logitr, we only need to specify the general interaction terms
+    # like "price*type". logitr will automatically create all the
+    # specific level interactions like "price:typeGala"
+
+    unique_pairs <- unique(sapply(interactions, function(int) {
+        paste(sort(c(int$attr1, int$attr2)), collapse = "*")
+    }))
+
+    return(unique_pairs)
+}
+
+#' Build parameter vector including interaction values
+build_parameter_vector_with_interactions <- function(codedParNames, attrs, means, interactions) {
+    # Start with the original function
+    pars_mean <- build_parameter_vector(codedParNames, attrs, means)
+
+    # Add interaction values
+    pars_mean <- set_interaction_values(pars_mean, codedParNames, interactions, attrs)
+
+    return(pars_mean)
+}
+
+#' Set interaction parameter values in the parameter vector
+set_interaction_values <- function(pars_mean, codedParNames, interactions, attrs) {
+    if (is.null(interactions)) {
+        return(pars_mean)
+    }
+
+    for (param_name in codedParNames) {
+        if (is_interaction_parameter(param_name)) {
+            int_value <- extract_interaction_value(param_name, interactions, attrs)
+            if (!is.na(int_value)) {
+                pars_mean[param_name] <- int_value
+            }
+        }
+    }
+
+    return(pars_mean)
+}
+
+#' Check if a parameter name represents an interaction
+is_interaction_parameter <- function(param_name) {
+    # logitr uses ":" for interactions, e.g., "price:typeGala"
+    grepl(":", param_name, fixed = TRUE)
+}
+
+#' Extract interaction value for a specific coded parameter
+extract_interaction_value <- function(param_name, interactions, attrs) {
+    if (is.null(interactions)) {
+        return(NA)
+    }
+
+    # Parse the interaction parameter name
+    # Format: "attr1:attr2level" or "attr1level:attr2level" etc.
+    parts <- strsplit(param_name, ":", fixed = TRUE)[[1]]
+
+    if (length(parts) != 2) {
+        return(NA)
+    }
+
+    # Try to match this parameter to one of our interaction specifications
+    for (int in interactions) {
+        if (matches_interaction_spec(param_name, parts, int, attrs)) {
+            return(int$value)
+        }
+    }
+
+    return(0)  # Default value for unspecified interactions
+}
+
+#' Check if a coded parameter matches an interaction specification
+matches_interaction_spec <- function(param_name, param_parts, int_spec, attrs) {
+    # This function needs to handle the complex matching between
+    # logitr's parameter naming (e.g., "price:typeGala") and our
+    # interaction specifications
+
+    attr1 <- int_spec$attr1
+    attr2 <- int_spec$attr2
+    level <- int_spec$level
+    with_level <- int_spec$with_level
+
+    # Handle different cases based on parameter structure
+
+    # Case 1: continuous * categorical (e.g., "price:typeGala")
+    if (attrs[[attr1]]$continuous && !attrs[[attr2]]$continuous) {
+        expected_pattern <- paste0(attr1, ":", attr2, if (!is.null(with_level)) with_level else "")
+        if (is.null(with_level)) {
+            # General interaction - match any level
+            return(startsWith(param_name, paste0(attr1, ":", attr2)))
+        } else {
+            # Specific level interaction
+            return(param_name == paste0(attr1, ":", attr2, with_level))
+        }
+    }
+
+    # Case 2: categorical * continuous (e.g., "typeGala:price")
+    if (!attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
+        if (is.null(level)) {
+            # General interaction - match any level
+            return(grepl(paste0(attr1, ".*:", attr2), param_name))
+        } else {
+            # Specific level interaction
+            return(param_name == paste0(attr1, level, ":", attr2))
+        }
+    }
+
+    # Case 3: categorical * categorical (e.g., "typeGala:freshnessAverage")
+    if (!attrs[[attr1]]$continuous && !attrs[[attr2]]$continuous) {
+        if (is.null(level) && is.null(with_level)) {
+            # General interaction - this is complex for categorical*categorical
+            # Would need to match any combination of levels
+            return(grepl(paste0(attr1, ".*:", attr2), param_name) ||
+                       grepl(paste0(attr2, ".*:", attr1), param_name))
+        } else if (!is.null(level) && !is.null(with_level)) {
+            # Specific level interaction
+            return(param_name == paste0(attr1, level, ":", attr2, with_level) ||
+                       param_name == paste0(attr2, with_level, ":", attr1, level))
+        }
+    }
+
+    # Case 4: continuous * continuous - straightforward
+    if (attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
+        return(param_name == paste0(attr1, ":", attr2) ||
+                   param_name == paste0(attr2, ":", attr1))
+    }
+
+    return(FALSE)
+}
+
+#' Get all possible interaction parameter names that logitr might create
+get_expected_interaction_params <- function(interactions, attrs) {
+    if (is.null(interactions)) {
+        return(character(0))
+    }
+
+    expected_params <- c()
+
+    for (int in interactions) {
+        attr1 <- int$attr1
+        attr2 <- int$attr2
+
+        # Generate all possible parameter names for this interaction
+        if (attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
+            # continuous * continuous: one parameter
+            expected_params <- c(expected_params,
+                                 paste0(attr1, ":", attr2),
+                                 paste0(attr2, ":", attr1))
+        } else if (attrs[[attr1]]$continuous && !attrs[[attr2]]$continuous) {
+            # continuous * categorical: one parameter per categorical level
+            levels2 <- names(attrs[[attr2]]$mean)
+            expected_params <- c(expected_params,
+                                 paste0(attr1, ":", attr2, levels2))
+        } else if (!attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
+            # categorical * continuous: one parameter per categorical level
+            levels1 <- names(attrs[[attr1]]$mean)
+            expected_params <- c(expected_params,
+                                 paste0(attr1, levels1, ":", attr2))
+        } else {
+            # categorical * categorical: one parameter per level combination
+            levels1 <- names(attrs[[attr1]]$mean)
+            levels2 <- names(attrs[[attr2]]$mean)
+            for (l1 in levels1) {
+                for (l2 in levels2) {
+                    expected_params <- c(expected_params,
+                                         paste0(attr1, l1, ":", attr2, l2))
+                }
+            }
+        }
+    }
+
+    return(unique(expected_params))
 }

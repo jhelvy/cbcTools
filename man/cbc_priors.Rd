@@ -9,6 +9,7 @@ cbc_priors(
   no_choice = NULL,
   n_draws = 100,
   draw_type = "halton",
+  interactions = NULL,
   ...
 )
 }
@@ -29,6 +30,11 @@ priors. Defaults to \code{100}}
 (the default) or \code{"sobol"} (recommended for models with more than 5
 random parameters).}
 
+\item{interactions}{A list of interaction specifications created by \code{int_spec()}.
+Only interactions between fixed (non-random) parameters are supported.
+Each interaction must specify the appropriate level(s) for categorical variables.
+Defaults to \code{NULL} (no interactions).}
+
 \item{...}{Named arguments specifying priors for each attribute:
 \itemize{
 \item For fixed parameters:
@@ -45,10 +51,11 @@ random parameters).}
 }
 \value{
 A structured prior specification object including parameter draws for
-random coefficients
+random coefficients and interaction terms
 }
 \description{
 Creates a standardized prior specification object for use in CBC analysis
 functions like \code{cbc_choices()} and \code{cbc_design()}. Supports both fixed and random
-parameters, with flexible specification of categorical variable levels.
+parameters, with flexible specification of categorical variable levels and
+interaction terms between fixed parameters.
 }
