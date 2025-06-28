@@ -130,57 +130,7 @@ cor_spec <- function(with, value, level = NULL, with_level = NULL) {
     )
 }
 
-#' Validate that priors are compatible with profiles
-#'
-#' This function checks if priors were created for the same profiles structure
-#' @param priors A cbc_priors object
-#' @param profiles A cbc_profiles object
-#' @return Invisibly returns TRUE if compatible, throws error or warning if not
-#' @export
-validate_priors_profiles <- function(priors, profiles) {
-    if (!inherits(priors, "cbc_priors")) {
-        stop("priors must be a cbc_priors object created by cbc_priors()")
-    }
-    if (!inherits(profiles, "cbc_profiles")) {
-        stop("profiles must be a cbc_profiles object created by cbc_profiles()")
-    }
-
-    priors_meta <- priors$profiles_metadata
-    current_hash <- digest_profiles(profiles)
-
-    # Check if profiles structure has changed
-    if (priors_meta$profile_hash != current_hash) {
-        current_attr_info <- attr(profiles, "attribute_info")
-
-        if (!identical(priors_meta$attribute_info, current_attr_info)) {
-            warning(
-                "Priors were created for different profile attributes or levels. ",
-                "Consider recreating priors with cbc_priors().",
-                call. = FALSE
-            )
-        } else if (priors_meta$n_profiles != nrow(profiles)) {
-            message(
-                "Priors were created for profiles with ", priors_meta$n_profiles,
-                " rows, but current profiles have ", nrow(profiles), " rows. ",
-                "This is typically fine if you've applied restrictions."
-            )
-        }
-    }
-
-    invisible(TRUE)
-}
-
 # Helper Functions ----
-
-# Validate correlations list
-validate_correlations <- function(correlations) {
-    if (!is.list(correlations)) {
-        stop("correlations must be a list of correlation specifications created by cor_spec()")
-    }
-    if (!all(sapply(correlations, inherits, "cbc_correlation"))) {
-        stop("all correlations must be created using cor_spec()")
-    }
-}
 
 # Create profiles metadata for validation
 create_profiles_metadata <- function(profiles) {
