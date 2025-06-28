@@ -11,19 +11,12 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
-## NOTE: This package will undergo a major overhaul in May 2025 to address many of the current issues
-
-Functions for designing surveys and conducting power analyses for
-choice-based conjoint survey experiments in R. Each function in the
-package begins with `cbc_` and supports a step in the following process
-for designing and analyzing surveys:
+This package provides functions for designing surveys and conducting
+power analyses for choice-based conjoint survey experiments in R. Each
+function in the package begins with `cbc_` and supports a step in the
+following process for designing and analyzing surveys:
 
 ![](man/figures/program_diagram.png)
-
-# Usage
-
-View the [usage](https://jhelvy.github.io/cbcTools/articles/usage.html)
-page for details on how to use **cbcTools**.
 
 # Installation
 
@@ -37,11 +30,11 @@ or you can install the development version of {cbcTools} from
 [GitHub](https://github.com/jhelvy/cbcTools):
 
 ``` r
-# install.packages("remotes")
-remotes::install_github("jhelvy/cbcTools")
+# install.packages("pak")
+pak::pak("jhelvy/cbcTools")
 ```
 
-Load the library with:
+Load the package with:
 
 ``` r
 library(cbcTools)
