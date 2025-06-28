@@ -156,6 +156,11 @@ print.cbc_design <- function(x, ...) {
     }
     cat("\n")
 
+    # Show interaction information
+    if (!is.null(params$has_interactions) && params$has_interactions) {
+        cat(sprintf("Interactions: %d interaction terms used in design search\n", params$n_interactions))
+    }
+
     # Profile usage
     cat(sprintf("Profile usage: %d/%d (%.1f%%)\n",
                 summary_info$n_profiles_used,
@@ -164,7 +169,11 @@ print.cbc_design <- function(x, ...) {
 
     # D-error (show best available)
     if (!is.null(params$d_error_prior)) {
-        cat(sprintf("D-error: %.6f\n", params$d_error_prior))
+        cat(sprintf("D-error: %.6f", params$d_error_prior))
+        if (!is.null(params$has_interactions) && params$has_interactions) {
+            cat(" (with interactions)")
+        }
+        cat("\n")
     } else if (!is.null(params$d_error_null)) {
         cat(sprintf("D-error: %.6f\n", params$d_error_null))
     }

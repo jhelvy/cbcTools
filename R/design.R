@@ -115,15 +115,24 @@ setup_optimization_environment <- function(
     # Get attribute names (excluding profileID)
     attr_names <- setdiff(names(profiles), "profileID")
 
+    # Check if we have interactions
+    has_interactions <- !is.null(priors) && !is.null(priors$interactions) && length(priors$interactions) > 0
+
     # Align factor levels with priors BEFORE encoding
     profiles_aligned <- align_profiles_with_priors(profiles, priors, attr_names)
 
     # Get random parameters for encoding
     randPars <- get_rand_pars(priors)
 
-    # Encode the profiles using aligned profiles
-    coded_data <- logitr::recodeData(profiles_aligned, attr_names, randPars)
-    X_matrix <- coded_data$X
+    # ALWAYS create the main X_matrix (without interactions) for D-error calculation
+    X_matrix <- logitr::recodeData(profiles_aligned, attr_names, randPars)$X
+
+    # Create separate interaction-augmented matrix for utility calculations if needed
+    X_matrix_utility <- X_matrix
+    if (has_interactions) {
+        var_names_with_interactions <- c(attr_names, build_interaction_terms(priors$interactions))
+        X_matrix_utility <- logitr::recodeData(profiles_aligned, var_names_with_interactions, randPars)$X
+    }
 
     # Defaults
     is_bayesian <- FALSE
@@ -145,10 +154,25 @@ setup_optimization_environment <- function(
         if (no_choice) {
             no_choice_index <- which(names(priors$pars) == "no_choice")
             exp_no_choice <- exp(priors$pars[no_choice_index])
-            priors$pars <- priors$pars[-no_choice_index]
+            # Extract priors parameters (including interactions) excluding no_choice
+            priors_pars <- priors$pars[-no_choice_index]
+        } else {
+            priors_pars <- priors$pars
         }
 
-        # Compute utilities for each profile
+        # Validate parameter dimensions if we have interactions
+        if (has_interactions) {
+            expected_params <- ncol(X_matrix_utility)
+            actual_params <- length(priors_pars)
+            if (expected_params != actual_params) {
+                stop(sprintf(
+                    "Parameter dimension mismatch: Utility matrix expects %d parameters but priors provides %d. Check interaction specifications.",
+                    expected_params, actual_params
+                ))
+            }
+        }
+
+        # Compute utilities for each profile using the interaction-aware matrix
         if (is_bayesian) {
             # Use draws for Bayesian calculation if exist
             n_draws <- nrow(priors$par_draws)
@@ -156,14 +180,16 @@ setup_optimization_environment <- function(
             # Handle no_choice draws
             if (no_choice) {
                 exp_no_choice_draws <- exp(priors$par_draws[, no_choice_index])
-                priors$par_draws <- priors$par_draws[, -no_choice_index]
+                priors_par_draws <- priors$par_draws[, -no_choice_index]
+            } else {
+                priors_par_draws <- priors$par_draws
             }
 
-            # Bayesian case with parameter draws
+            # Bayesian case with parameter draws (including interactions)
             exp_utilities_draws <- array(dim = c(nrow(profiles), n_draws))
 
             for (i in 1:n_draws) {
-                utilities_i <- X_matrix %*% priors$par_draws[i, ]
+                utilities_i <- X_matrix_utility %*% priors_par_draws[i, ]
                 exp_utilities_draws[, i] <- exp(utilities_i)
             }
             if (no_choice) {
@@ -171,8 +197,8 @@ setup_optimization_environment <- function(
             }
 
         } else {
-            # Fixed parameters case
-            utilities <- X_matrix %*% priors$pars
+            # Fixed parameters case - use interaction-aware matrix for utilities
+            utilities <- X_matrix_utility %*% priors_pars
             exp_utilities <- exp(utilities)
             if (no_choice) {
                 exp_utilities <- rbind(exp_utilities, exp_no_choice)
@@ -181,7 +207,12 @@ setup_optimization_environment <- function(
 
         # Pre-compute partial utilities for dominance checking if needed
         if (remove_dominant && "partial" %in% dominance_types) {
-            partial_utilities <- compute_partial_utilities(X_matrix, priors)
+            if (has_interactions) {
+                # Use interaction-aware partial utilities computation
+                partial_utilities <- compute_partial_utilities_with_interactions(X_matrix_utility, priors)
+            } else {
+                partial_utilities <- compute_partial_utilities(X_matrix, priors)
+            }
         }
 
     } else {
@@ -209,7 +240,7 @@ setup_optimization_environment <- function(
         start = n_start,
         cores = set_num_cores(n_cores),
         questions = ifelse(method == 'random', n_q*n_resp, n_q*n_blocks),
-        params = ncol(X_matrix),
+        params = ncol(X_matrix),  # Use main matrix for parameter count
         draws = n_draws,
         profiles = nrow(profiles),
         max_iter = max_iter,
@@ -226,16 +257,18 @@ setup_optimization_environment <- function(
     altID <- rep(1:n_alts_total, n$questions)
 
     return(list(
-        profiles = profiles_aligned, # Use aligned profiles
+        profiles = profiles_aligned,
         priors = priors,
         method = method,
         time_start = time_start,
         has_priors = has_priors,
+        has_interactions = has_interactions,
         attr_names = attr_names,
         exp_utilities = exp_utilities,
         exp_utilities_draws = exp_utilities_draws,
         partial_utilities = partial_utilities,
-        X_matrix = X_matrix,
+        X_matrix = X_matrix,  # Main matrix for D-error calculations
+        X_matrix_utility = X_matrix_utility,  # Interaction-aware matrix for utilities
         no_choice = no_choice,
         label = label,
         label_constraints = label_constraints,
@@ -253,6 +286,18 @@ setup_optimization_environment <- function(
         randomize_questions = randomize_questions,
         randomize_alts = randomize_alts
     ))
+}
+
+build_interaction_terms <- function(interactions) {
+    # For logitr, we only need to specify the general interaction terms
+    # like "price*type". logitr will automatically create all the
+    # specific level interactions like "price:typeGala"
+
+    unique_pairs <- unique(sapply(interactions, function(int) {
+        paste(sort(c(int$attr1, int$attr2)), collapse = "*")
+    }))
+
+    return(unique_pairs)
 }
 
 #' Align profile factor levels with priors before encoding
@@ -596,9 +641,11 @@ sample_labeled_profiles <- function(opt_env) {
 }
 
 make_X_list <- function(design_matrix, opt_env) {
+    # Use the main X_matrix (without interactions) for D-error calculation
     X_design <- opt_env$X_matrix
     if (opt_env$no_choice) {
         design_matrix <- design_matrix_no_choice(design_matrix, opt_env)
+        # Add no-choice row to X_design (all zeros)
         X_design <- rbind(X_design, X_design[1,]*0)
     }
     design_vector <- get_design_vector(design_matrix)
@@ -683,9 +730,8 @@ construct_final_design <- function(design_matrix, opt_env) {
         id_cols <- c("profileID", "blockID", "qID", "altID", "obsID")
     }
 
-    # Create lookup table from X_matrix (which is already encoded)
-    # X_matrix rows correspond to profiles$profileID order
-    X_df <- as.data.frame(opt_env$X_matrix)
+    # Create lookup table from the MAIN X_matrix (without interactions for the final design)
+    X_df <- as.data.frame(opt_env$X_matrix)  # This is the main matrix
     X_df$profileID <- opt_env$profiles$profileID
 
     # Handle no-choice option if present
@@ -703,7 +749,7 @@ construct_final_design <- function(design_matrix, opt_env) {
         X_df <- rbind(X_df, no_choice_row)
     }
 
-    # Join design with encoded attributes
+    # Join design with encoded attributes (main effects only, no interactions in final design)
     design <- merge(design, X_df, by = "profileID", sort = FALSE)
 
     # Reorder columns and rows
@@ -865,6 +911,8 @@ finalize_design_object <- function(design, design_result, opt_env) {
         randomize_questions = if (method == "random") NA else opt_env$randomize_questions,
         randomize_alts = if (method == "random") NA else opt_env$randomize_alts,
         created_at = Sys.time(),
+        has_interactions = opt_env$has_interactions,
+        n_interactions = if (opt_env$has_interactions) length(opt_env$priors$interactions) else 0,
         remove_dominant = opt_env$remove_dominant,
         dominance_types = if (opt_env$remove_dominant) opt_env$dominance_types else NULL,
         dummy_coded = TRUE
@@ -935,6 +983,40 @@ get_rand_pars <- function(priors) {
     }
 
     return(rand_pars)
+}
+
+compute_partial_utilities_with_interactions <- function(X_matrix, priors) {
+    n_profiles <- nrow(X_matrix)
+
+    # Extract parameters excluding no_choice if present
+    if (priors$has_no_choice) {
+        no_choice_index <- which(names(priors$pars) == "no_choice")
+        pars_without_no_choice <- priors$pars[-no_choice_index]
+    } else {
+        pars_without_no_choice <- priors$pars
+    }
+
+    # Compute mean partial utility across par draws if exist
+    par_draws <- priors$par_draws
+    if (!is.null(par_draws)) {
+        # For Bayesian case, exclude no_choice from draws too
+        if (priors$has_no_choice) {
+            par_draws_without_no_choice <- par_draws[, -no_choice_index]
+        } else {
+            par_draws_without_no_choice <- par_draws
+        }
+
+        n_draws <- nrow(par_draws_without_no_choice)
+        pars <- par_draws_without_no_choice[1,]
+        partials <- compute_partial_utility_single(X_matrix, pars, n_profiles)
+        for (i in 2:n_draws) {
+            pars <- par_draws_without_no_choice[i,]
+            partials <- partials + compute_partial_utility_single(X_matrix, pars, n_profiles)
+        }
+        return(partials / n_draws)
+    }
+    # Otherwise compute partial utility using priors (now including interactions)
+    return(compute_partial_utility_single(X_matrix, pars_without_no_choice, n_profiles))
 }
 
 #' Compute partial utilities for dominance checking
