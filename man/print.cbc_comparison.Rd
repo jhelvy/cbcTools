@@ -2,15 +2,15 @@
 % Please edit documentation in R/compare.R
 \name{print.cbc_comparison}
 \alias{print.cbc_comparison}
-\title{Print method for comparisons}
+\title{Print method for cbc_comparison objects}
 \usage{
 \method{print}{cbc_comparison}(x, ...)
 }
 \arguments{
-\item{x}{A cbc_comparison or cbc_error_comparison object}
+\item{x}{A cbc_comparison object}
 
 \item{...}{Additional arguments passed to print}
 }
 \description{
-Print method for comparisons
+Print method for cbc_comparison objects
 }

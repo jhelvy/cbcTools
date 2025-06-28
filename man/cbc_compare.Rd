@@ -2,87 +2,64 @@
 % Please edit documentation in R/compare.R
 \name{cbc_compare}
 \alias{cbc_compare}
-\title{Compare designs and surveys across multiple metrics}
+\title{Compare multiple choice experiment designs}
 \usage{
-cbc_compare(
-  ...,
-  errors = "d",
-  include_metrics = TRUE,
-  priors = NULL,
-  exclude = NULL
-)
+cbc_compare(..., metrics = "all", sort_by = "d_error", ascending = NULL)
 }
 \arguments{
-\item{...}{Multiple \code{cbc_design} or \code{cbc_survey} objects to compare, or named
-arguments where each argument is a design or survey object}
+\item{...}{Any number of \code{cbc_design} objects to compare, separated by commas.
+Can be named for clearer output (e.g., \verb{random = design1, sequential = design2}).}
 
-\item{errors}{Character vector specifying which error metrics to compute.
-Options: "d" (D-error), "a" (A-error), "g" (G-error), "e" (E-error),
-"all" (comprehensive metrics). Defaults to "d". When priors contain
-random parameters, Bayesian versions are automatically computed.}
+\item{metrics}{Character vector specifying which metrics to compare.
+Options: "structure", "efficiency", "balance", "overlap", or "all" (default).
+Can specify multiple: \code{c("efficiency", "balance")}}
 
-\item{include_metrics}{Logical. Include balance, overlap, and profile usage
-metrics in addition to error metrics? Defaults to TRUE for comprehensive
-comparison. Set to FALSE for error-only comparison.}
+\item{sort_by}{Character. Metric to sort designs by. Options: "d_error" (default),
+"balance", "overlap", "profiles_used", "generation_time", or "none"}
 
-\item{priors}{Optional \code{cbc_priors} object to use for all designs/surveys. If not
-specified, each object's own priors will be used.}
-
-\item{exclude}{Character vector of attribute names to exclude from error
-calculations}
+\item{ascending}{Logical. If TRUE, sort in ascending order (lower is better).
+If FALSE, sort in descending order (higher is better). Default depends on metric.}
 }
 \value{
-A data frame comparing metrics across designs, sorted by primary
-error metric (D-error by default)
+A \code{cbc_comparison} object containing comparison results, printed in
+a formatted table.
 }
 \description{
-This function compares multiple designs and/or surveys across various efficiency metrics
-including error criteria, balance, overlap, and profile usage. Provides
-flexible error type selection and comprehensive or simplified output.
+This function compares multiple CBC designs across key quality metrics
+including D-error, balance, overlap, and structural characteristics.
+Useful for evaluating different design methods or parameter settings.
 }
 \examples{
+library(cbcTools)
+
 # Create profiles
 profiles <- cbc_profiles(
   price = c(1, 2, 3),
-  type = c("A", "B", "C")
+  type = c("A", "B", "C"),
+  quality = c("Low", "High")
 )
 
 # Create different designs
-design_random <- cbc_design(profiles, n_alts = 2, n_q = 4, method = "random")
-
-priors <- cbc_priors(
+design_random <- cbc_design(
   profiles = profiles,
-  price = -0.5,
-  type = c(0.2, 0.3)
+  method = "random",
+  n_alts = 2, n_q = 4
 )
 
 design_sequential <- cbc_design(
-  profiles, priors = priors, n_alts = 2, n_q = 4, method = "sequential"
+  profiles = profiles,
+  method = "sequential",
+  n_alts = 2, n_q = 4
 )
 
-# Comprehensive comparison (default)
-cbc_compare(
-  Random = design_random,
-  Sequential = design_sequential
-)
+# Compare designs
+cbc_compare(design_random, design_sequential)
 
-# Multiple error types with full metrics
-cbc_compare(
-  Random = design_random,
-  Sequential = design_sequential,
-  errors = c("d", "a", "g")
-)
-
-# Error-only comparison
+# Named comparison with specific metrics
 cbc_compare(
   Random = design_random,
   Sequential = design_sequential,
-  errors = c("d", "a"),
-  include_metrics = FALSE
+  metrics = c("efficiency", "balance"),
+  sort_by = "d_error"
 )
-
-# Compare surveys
-survey1 <- cbc_survey(design_random, n_resp = 100)
-survey2 <- cbc_survey(design_sequential, n_resp = 100)
-cbc_compare(Sequential = survey1, Random = survey2)
 }
