@@ -57,38 +57,6 @@
 #' errors for the same model estimated on subsets of the `data` with increasing
 #' sample sizes.
 #' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make a survey design from all possible profiles
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
-#' )
-#'
-#' # Create survey and simulate choices
-#' survey <- cbc_survey(design, n_resp = 300)
-#' choices <- cbc_choices(survey)
-#'
-#' # Conduct a power analysis using cbc_choices object
-#' power <- cbc_power(
-#'   data = choices,
-#'   nbreaks = 10,
-#'   n_cores = 2
-#' )
-#'
-#' # Visualize the results
-#' plot(power)
 cbc_power <- function(data, ...) {
   UseMethod("cbc_power")
 }
@@ -339,51 +307,6 @@ extract_errors <- function(models) {
 #' theme element_blank labs facet_wrap
 #' @importFrom rlang .data
 #' @export
-#' @examples
-#' \dontrun{
-#' library(cbcTools)
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make designs to compare: random vs sequential
-#' design_random <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts = 3, n_q = 6, method = "random"
-#' )
-#'
-#' # Same priors will be used in sequential design and simulated choices
-#' priors <- cbc_priors(
-#'   profiles = profiles,
-#'   price     = -0.1,
-#'   type      = c(0.1, 0.2),
-#'   freshness = c(0.1, 0.2)
-#' )
-#'
-#' design_sequential <- cbc_design(
-#'   profiles  = profiles,
-#'   priors = priors,
-#'   n_alts = 3, n_q = 6, method = "sequential"
-#' )
-#'
-#' # Create surveys and simulate choices
-#' survey_random <- cbc_survey(design_random, n_resp = 100)
-#' choices_random <- cbc_choices(survey_random, priors = priors)
-#'
-#' survey_sequential <- cbc_survey(design_sequential, n_resp = 100)
-#' choices_sequential <- cbc_choices(survey_sequential, priors = priors)
-#'
-#' # Obtain power for each design
-#' power_random <- cbc_power(choices_random, nbreaks = 5, n_cores = 2)
-#' power_sequential <- cbc_power(choices_sequential, nbreaks = 5, n_cores = 2)
-#'
-#' # Compare power of each design
-#' plot_compare_power(power_random, power_sequential)
-#' }
 plot_compare_power <- function(...) {
   power <- list(...)
   design_names <- unlist(lapply(as.list(match.call())[-1], deparse))

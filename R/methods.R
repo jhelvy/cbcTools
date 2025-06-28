@@ -307,45 +307,6 @@ print.cbc_models <- function (
 #' @importFrom rlang .data
 #' @rdname miscmethods.cbc_power_errors
 #' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make a survey design from all possible profiles
-#' # (This is the default setting where method = 'full' for "full factorial")
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
-#' )
-#'
-#' # Simulate random choices
-#' data <- cbc_choices(
-#'   design = design,
-#'   obsID  = "obsID"
-#' )
-#'
-#' # Conduct a power analysis
-#' power <- cbc_power(
-#'   data    = data,
-#'   pars    = c("price", "type", "freshness"),
-#'   outcome = "choice",
-#'   obsID   = "obsID",
-#'   nbreaks = 10,
-#'   n_q     = 6
-#' )
-#'
-#' # Visualize the results
-#' plot(power)
 plot.cbc_power_errors <- function (x, ...) {
   plot <- ggplot2::ggplot(x) +
     geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
