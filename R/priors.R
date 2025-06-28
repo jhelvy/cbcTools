@@ -66,7 +66,7 @@ cbc_priors <- function(
         # Use actual expected values from parameter draws
         # This correctly handles log-normal, censored normal, and correlated parameters
         pars_mean <- colMeans(par_draws)
-        names(pars_mean) <- colnames(par_draws)
+        names(pars_mean) <- codedParNames
     } else {
         # No random parameters, use the input specification means
         pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
