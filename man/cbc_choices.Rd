@@ -2,28 +2,21 @@
 % Please edit documentation in R/choices.R
 \name{cbc_choices}
 \alias{cbc_choices}
-\alias{cbc_choices.cbc_survey}
-\alias{cbc_choices.data.frame}
 \title{Simulate choices for a survey design}
 \usage{
-cbc_choices(x, ...)
-
-\method{cbc_choices}{cbc_survey}(x, priors = NULL, n_draws = 100, ...)
-
-\method{cbc_choices}{data.frame}(x, priors = NULL, n_draws = 100, ...)
+cbc_choices(design, priors = NULL, n_draws = 100, ...)
 }
 \arguments{
-\item{x}{Either a \code{cbc_survey} object created by \code{cbc_survey()} or a data frame
-containing a survey design}
-
-\item{...}{Additional arguments passed to methods}
+\item{design}{A \code{cbc_design} object created by \code{cbc_design()} or a data frame
+containing a survey design with the required structure}
 
 \item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL} for
-random choices. If \code{x} is a \code{cbc_survey} object, the priors from that
-object will be used by default.}
+random choices. If \code{NULL}, choices will be simulated randomly.}
 
-\item{n_draws}{The number of Halton draws to use for simulated choices
-for mixed logit models. Defaults to \code{100}.}
+\item{n_draws}{The number of draws to use for simulated choices
+for mixed logit models with random parameters. Defaults to \code{100}.}
+
+\item{...}{Additional arguments (currently unused)}
 }
 \value{
 Returns the input data with an additional \code{choice} column
@@ -32,8 +25,8 @@ identifying the simulated choices.
 \description{
 Simulate choices for a survey design, either randomly or according to a
 utility model defined by user-provided prior parameters. All choices are
-simulated using the 'logitr' package. For more details see the JSS article
-on the 'logitr' package (Helveston, 2023).
+simulated using the same utility framework as \code{cbc_design()}. For more
+details see the JSS article on the 'logitr' package (Helveston, 2023).
 }
 \references{
 Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,

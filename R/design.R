@@ -886,6 +886,10 @@ finalize_design_object <- function(design, design_result, opt_env) {
         design$profileID[which(design$profileID == maxID)] <- 0
     }
 
+    # Store the design matrix for later use in cbc_choices
+    # This ensures exact consistency between design optimization and choice simulation
+    attr(design, "design_matrix") <- design_result$design_matrix
+
     # Build design_params list
     n <- opt_env$n
     design_params <- list(
@@ -928,9 +932,23 @@ finalize_design_object <- function(design, design_result, opt_env) {
     # Pre-compute efficiency metrics
     efficiency_metrics <- compute_design_efficiency_metrics(design)
 
-    # Store metadata
+    # Store metadata including the optimization environment
+    # This allows cbc_choices to recreate the exact same utility calculations
     attr(design, "profiles") <- opt_env$profiles
     attr(design, "priors") <- opt_env$priors
+    attr(design, "optimization_environment") <- list(
+        has_interactions = opt_env$has_interactions,
+        attr_names = opt_env$attr_names,
+        no_choice = opt_env$no_choice,
+        available_profile_ids = opt_env$available_profile_ids,
+        # Store the utility matrices for reuse
+        X_matrix = opt_env$X_matrix,
+        X_matrix_utility = opt_env$X_matrix_utility,
+        exp_utilities = opt_env$exp_utilities,
+        exp_utilities_draws = opt_env$exp_utilities_draws,
+        is_bayesian = opt_env$is_bayesian
+    )
+
     time_stop <- Sys.time()
     design_params$time_elapsed_sec <- as.numeric(time_stop - opt_env$time_start)
     attr(design, "design_params") <- design_params
