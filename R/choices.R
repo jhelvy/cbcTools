@@ -1,194 +1,247 @@
 #' Simulate choices for a survey design
 #'
 #' Simulate choices for a survey design, either randomly or according to a
-#' utility model defined by user-provided prior parameters. All choices are
-#' simulated using the 'logitr' package. For more details see the JSS article
-#' on the 'logitr' package (Helveston, 2023).
-#' @keywords logitr mnl mxl mixed logit simulation
+#' utility model defined by user-provided prior parameters. When priors are
+#' provided, choices are simulated using the same probability computation
+#' framework as used in cbc_design() for consistency.
 #'
-#' @param x Either a `cbc_survey` object created by `cbc_survey()` or a data frame
-#'   containing a survey design
-#' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL` for
-#'   random choices. If `x` is a `cbc_survey` object, the priors from that
-#'   object will be used by default.
-#' @param n_draws The number of Halton draws to use for simulated choices
-#'   for mixed logit models. Defaults to `100`.
-#' @param ... Additional arguments passed to methods
-#' @references
-#' Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
-#' \doi{10.18637/jss.v105.i10}
-#' @return Returns the input data with an additional `choice` column
-#' identifying the simulated choices.
-#' @export
-cbc_choices <- function(x, ...) {
-  UseMethod("cbc_choices")
-}
+#' @param design A `cbc_design` object created by `cbc_design()`
+#' @param priors A `cbc_priors` object created by `cbc_priors()`, or `NULL`
+#'   (default) for random choices.
 
-#' @rdname cbc_choices
+#' @return Returns the input design with an additional `choice` column
+#'   identifying the simulated choices.
 #' @export
-cbc_choices.cbc_survey <- function(x, priors = NULL, n_draws = 100, ...) {
-  # Get design reference from survey
-  design_ref <- attr(x, "design_ref")
+#' @examples
+#' library(cbcTools)
+#'
+#' # Create profiles and design
+#' profiles <- cbc_profiles(
+#'   price = c(1, 2, 3),
+#'   type = c("A", "B", "C"),
+#'   quality = c("Low", "High")
+#' )
+#'
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_alts = 2,
+#'   n_q = 4
+#' )
+#'
+#' # Simulate random choices (default)
+#' choices_random <- cbc_choices(design)
+#'
+#' # Create priors and simulate utility-based choices
+#' priors <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.1,
+#'   type = c(0.5, 0.2),  # vs reference level
+#'   quality = 0.3
+#' )
+#'
+#' choices_utility <- cbc_choices(design, priors = priors)
+cbc_choices <- function(design, priors = NULL) {
 
-  # Use priors from design object if not specified
-  if (is.null(priors)) {
-    if (!is.null(design_ref)) {
-      priors <- design_ref$priors
+    # Validate input
+    if (!inherits(design, "cbc_design")) {
+        stop("design must be a cbc_design object created by cbc_design()")
     }
+
     if (is.null(priors)) {
-      message("No priors specified. Simulating random choices.")
+        # Simulate random choices
+        result <- simulate_random_choices(design)
+        simulation_method <- "random"
+        priors_used <- FALSE
+    } else {
+        # Validate priors
+        if (!inherits(priors, "cbc_priors")) {
+            stop("priors must be a cbc_priors object created by cbc_priors()")
+        }
+
+        # Check if different priors were used in design optimization
+        check_priors_consistency(priors, design)
+
+        # Simulate utility-based choices
+        result <- simulate_utility_based_choices(design, priors)
+        simulation_method <- "utility_based"
+        priors_used <- TRUE
     }
-  } else {
-    # Validate provided priors against survey's profiles
-    if (!inherits(priors, "cbc_priors")) {
-      stop("priors must be a cbc_priors object created by cbc_priors()")
+
+    # Add choice simulation metadata
+    design_params <- attr(design, "design_params")
+    attr(result, "choice_info") <- list(
+        simulation_method = simulation_method,
+        d_error = design_params$d_error_prior %||% design_params$d_error_null %||% NA,
+        n_respondents = if ("respID" %in% names(result)) max(result$respID, na.rm = TRUE) else 1,
+        priors_used = priors_used,
+        simulated_at = Sys.time()
+    )
+
+    class(result) <- c("cbc_choices", "data.frame")
+    return(result)
+}
+
+# Helper functions ----
+
+# Simulate random choices
+simulate_random_choices <- function(design) {
+    choices <- rep(0, nrow(design))
+
+    # Get unique observation IDs
+    unique_obs <- unique(design$obsID)
+
+    for (obs in unique_obs) {
+        obs_rows <- which(design$obsID == obs)
+        # Randomly select one alternative
+        chosen_row <- sample(obs_rows, 1)
+        choices[chosen_row] <- 1
     }
-    if (!is.null(design_ref)) {
-      validate_priors_profiles(priors, design_ref$profiles)
+
+    design$choice <- choices
+    return(design)
+}
+
+# Check if different priors were used in design vs choice simulation
+check_priors_consistency <- function(choice_priors, design) {
+    design_priors <- attr(design, "priors")
+
+    if (!is.null(design_priors)) {
+        # Simple check: compare parameter vectors
+        if (!identical(choice_priors$pars, design_priors$pars)) {
+            warning(
+                "Different priors used for choice simulation than for design optimization. ",
+                "This may not be the intended behavior. Consider using the same priors ",
+                "for both design creation and choice simulation.",
+                call. = FALSE
+            )
+        }
+
+        # Also check parameter draws if both have them
+        if (!is.null(choice_priors$par_draws) && !is.null(design_priors$par_draws)) {
+            if (!identical(choice_priors$par_draws, design_priors$par_draws)) {
+                warning(
+                    "Different parameter draws used for choice simulation than for design optimization.",
+                    call. = FALSE
+                )
+            }
+        }
     }
-  }
-
-  # Call the data frame method
-  result <- cbc_choices.data.frame(x, priors, n_draws, ...)
-
-  # Add metadata about the choice simulation
-  survey_info <- attr(x, "survey_info")
-  attr(result, "choice_info") <- list(
-    design_method = if (!is.null(design_ref)) design_ref$method else "unknown",
-    d_error = if (!is.null(design_ref)) design_ref$d_error else NA,
-    n_respondents = survey_info$n_resp,
-    priors_used = !is.null(priors),
-    simulation_method = if (is.null(priors)) "random" else "utility_based",
-    simulated_at = Sys.time()
-  )
-
-  class(result) <- c("cbc_choices", "data.frame")
-  return(result)
 }
 
-#' @rdname cbc_choices
-#' @export
-cbc_choices.data.frame <- function(x, priors = NULL, n_draws = 100, ...) {
-  # Validate that input has required columns
-  if (!"obsID" %in% names(x)) {
-    stop("Data frame must contain an 'obsID' column. Use cbc_survey() to create proper survey data.")
-  }
+# Simulate utility-based choices using design infrastructure
+simulate_utility_based_choices <- function(design, priors) {
 
-  if (is.null(priors)) {
-    result <- sim_choices_rand(x)
-  } else {
-    # Validate priors object
-    if (!inherits(priors, "cbc_priors")) {
-      stop("priors must be a cbc_priors object created by cbc_priors()")
+    # Extract information from design object
+    design_params <- attr(design, "design_params")
+    profiles <- attr(design, "profiles")
+
+    if (is.null(profiles)) {
+        stop("Design object missing required profile information for choice simulation")
     }
-    result <- sim_choices_prior(x, priors, n_draws)
-  }
 
-  # Add metadata about the choice simulation
-  attr(result, "choice_info") <- list(
-    design_method = "unknown",
-    d_error = NA,
-    priors_used = !is.null(priors),
-    simulation_method = if (is.null(priors)) "random" else "utility_based",
-    simulated_at = Sys.time()
-  )
+    # Create optimization environment using the existing function
+    opt_env <- setup_optimization_environment(
+        profiles = profiles,
+        method = "random",            # Hard-code this so that the obsID vectors are correct
+        time_start = Sys.time(),      # Not important for choice simulation
+        n_alts = design_params$n_alts,
+        n_q = design_params$n_q,
+        n_resp = design_params$n_resp,
+        n_blocks = design_params$n_blocks,
+        n_cores = 1,                  # Not used for choice simulation
+        n_start = 1,                  # Not used for choice simulation
+        max_iter = 1,                 # Not used for choice simulation
+        priors = priors,              # The new priors for choice simulation
+        no_choice = design_params$no_choice,
+        label = design_params$label,
+        remove_dominant = FALSE,      # Not needed for choice simulation
+        dominance_types = NULL,       # Not needed for choice simulation
+        dominance_threshold = 0.8,    # Not needed for choice simulation
+        max_dominance_attempts = 1,   # Not needed for choice simulation
+        randomize_questions = TRUE,   # Not used for choice simulation
+        randomize_alts = TRUE         # Not used for choice simulation
+    )
 
-  class(result) <- c("cbc_choices", "data.frame")
-  return(result)
-}
+    # Get design matrix from the design object
+    design_matrix <- get_design_matrix_from_design_object(design, opt_env)
 
-# Core simulation functions
+    # Compute probabilities using existing functions
+    probs <- get_probs(design_matrix, opt_env)
 
-sim_choices_rand <- function(design) {
-  if (!"obsID" %in% names(design)) {
-    stop("Design must contain 'obsID' column")
-  }
-
-  nrows <- table(design['obsID'])
-  choices <- list()
-  for (i in seq_len(length(nrows))) {
-    n <- nrows[i]
-    choice <- rep(0, n)
-    choice[sample(seq(n), 1)] <- 1
-    choices[[i]] <- choice
-  }
-  design$choice <- unlist(choices)
-  return(design)
-}
-
-sim_choices_prior <- function(survey, priors, n_draws) {
-  if (!"obsID" %in% names(survey)) {
-    stop("Survey must contain 'obsID' column")
-  }
-
-  # Get variable names for the model
-  var_names <- get_var_names(survey)
-
-  # Set up random parameters if any
-  randPars <- get_rand_pars(priors)
-
-  # Encode the design matrix
-  codedData <- logitr::recodeData(survey, var_names, randPars)
-  X <- codedData$X
-
-  # Calculate utilities
-  if (!is.null(priors$par_draws)) {
-    # For random parameters, use draws
-    n_draws_actual <- min(n_draws, nrow(priors$par_draws))
-    # Sample from the draws
-    draw_indices <- sample(nrow(priors$par_draws), n_draws_actual, replace = TRUE)
-    selected_draws <- priors$par_draws[draw_indices, , drop = FALSE]
-
-    # Calculate utilities for each draw and average
-    utilities <- matrix(0, nrow = nrow(X), ncol = n_draws_actual)
-    for (i in 1:n_draws_actual) {
-      utilities[, i] <- X %*% selected_draws[i, ]
+    # Handle Bayesian case
+    if (opt_env$is_bayesian) {
+        # probs is a matrix of probability draws, use average probabilities
+        probs <- rowMeans(probs)
     }
-    # Average utilities across draws
-    V <- rowMeans(utilities)
-  } else {
-    # For fixed parameters
-    V <- X %*% priors$pars
-  }
 
-  # Convert utilities to probabilities using logit
-  obsID <- survey$obsID
-  reps <- table(obsID)
-  probs <- logit_choice_probs(V, obsID, reps)
+    # Simulate choices based on probabilities
+    design$choice <- simulate_choices_from_probabilities(probs, opt_env$obsID)
 
-  # Simulate choices based on probabilities
-  survey$choice <- simulate_choices_from_probs(probs, obsID, reps)
-
-  return(survey)
+    return(design)
 }
 
-# Helper function to compute logit probabilities
-logit_choice_probs <- function(V, obsID, reps) {
-  expV <- exp(V)
-  sumExpV <- rowsum(expV, group = obsID, reorder = FALSE)
-  return(expV / sumExpV[rep(seq_along(reps), reps), ])
+# Get design matrix from design object (use stored matrix if available)
+get_design_matrix_from_design_object <- function(design, opt_env) {
+
+    # Get the regular profiles (excluding no-choice if present)
+    regular_design <- design
+    if (opt_env$no_choice) {
+        regular_design <- design[design$profileID != 0, ]
+    }
+
+    # Determine matrix dimensions
+    n_questions <- max(regular_design$obsID)
+    n_alts <- opt_env$n$alts
+
+    # Initialize design matrix
+    design_matrix <- matrix(0, nrow = n_questions, ncol = n_alts)
+
+    # Fill matrix from profileID data
+    for (obs in 1:n_questions) {
+        obs_rows <- regular_design[regular_design$obsID == obs, ]
+        obs_rows <- obs_rows[order(obs_rows$altID), ]  # Ensure proper order
+
+        if (nrow(obs_rows) == n_alts) {
+            design_matrix[obs, ] <- obs_rows$profileID
+        } else {
+            stop(sprintf("Inconsistent number of alternatives in observation %d", obs))
+        }
+    }
+
+    return(design_matrix)
 }
 
-# Helper function to simulate choices from probabilities
-simulate_choices_from_probs <- function(probs, obsID, reps) {
-  choices <- numeric(length(probs))
+# Simulate choices from computed probabilities
+simulate_choices_from_probabilities <- function(probs, obsID) {
+    choices <- rep(0, length(probs))
 
-  for (obs in unique(obsID)) {
-    obs_rows <- which(obsID == obs)
-    obs_probs <- probs[obs_rows]
+    # Group by observation and simulate choice for each
+    unique_obs <- unique(obsID)
 
-    # Simulate choice based on probabilities
-    chosen_alt <- sample(length(obs_probs), 1, prob = obs_probs)
-    choices[obs_rows[chosen_alt]] <- 1
-  }
+    for (obs in unique_obs) {
+        obs_rows <- which(obsID == obs)
+        obs_probs <- probs[obs_rows]
 
-  return(choices)
+        # Normalize probabilities (in case of numerical issues)
+        obs_probs <- pmax(obs_probs, 1e-10)  # Avoid zero probabilities
+        obs_probs <- obs_probs / sum(obs_probs)
+
+        # Sample one alternative based on probabilities
+        chosen_alt <- sample(length(obs_probs), 1, prob = obs_probs)
+        choices[obs_rows[chosen_alt]] <- 1
+    }
+
+    return(choices)
 }
 
-drop_interactions <- function(parNames) {
-  ints <- grepl("\\*", parNames)
-  if (any(ints)) {
-    return(parNames[ints == FALSE])
-  }
-  return(parNames)
-}
+# Note: This implementation reuses the following functions from design.R:
+# - setup_optimization_environment()
+# - get_probs()
+# - logit_regular()
+# - logit_draws()
+# - logit()
+# - get_design_vector()
+# - design_matrix_no_choice()
+#
+# And from util.R:
+# - `%||%` operator

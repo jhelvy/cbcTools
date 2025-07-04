@@ -896,6 +896,7 @@ finalize_design_object <- function(design, design_result, opt_env) {
         method = method,
         n_q = n$q,
         n_alts = n$alts,
+        n_alts_total = n$alts_total,
         n_resp = n$resp,
         n_blocks = n$blocks,
         no_choice = opt_env$no_choice,
