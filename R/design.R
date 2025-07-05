@@ -1,14 +1,14 @@
 #' Generate survey designs for choice experiments (Updated Implementation)
 #'
 #' This function creates experimental designs for choice-based conjoint experiments
-#' using multiple optimization approaches for improved efficiency.
+#' using multiple design approaches including optimization and frequency-based methods.
 #'
 #' @param profiles A data frame of class `cbc_profiles` created using `cbc_profiles()`
-#' @param method Choose the design method: "random", "stochastic", "modfed", or "cea". Defaults to "random"
-#' @param priors A `cbc_priors` object created by `cbc_priors()`, or NULL for random designs
+#' @param method Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"
+#' @param priors A `cbc_priors` object created by `cbc_priors()`, or NULL for random/shortcut designs
 #' @param n_alts Number of alternatives per choice question
 #' @param n_q Number of questions per respondent (or per block)
-#' @param n_resp Number of respondents (for random designs) or 1 (for optimized designs that get repeated)
+#' @param n_resp Number of respondents (for random/shortcut designs) or 1 (for optimized designs that get repeated)
 #' @param n_blocks Number of blocks in the design. Defaults to 1
 #' @param n_cores Number of cores to use for parallel processing in the design search.
 #' Defaults to NULL, in which case it is set to the number of available cores minus 1.
@@ -22,6 +22,58 @@
 #' @param max_dominance_attempts Maximum attempts to replace dominant choice sets. Defaults to 50.
 #' @param max_iter Maximum iterations for optimized designs. Defaults to 50
 #' @param n_start Number of random starts for optimized designs. Defaults to 5
+#'
+#' @details
+#' ## Design Methods
+#'
+#' The `method` argument determines the design approach used:
+#'
+#' - `"random"`: Creates designs by randomly sampling profiles for each respondent independently
+#' - `"stochastic"`: Stochastic profile swapping with D-error optimization (first improvement found)
+#' - `"modfed"`: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
+#' - `"cea"`: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
+#' - `"shortcut"`: Frequency-based greedy algorithm that balances attribute level usage
+#'
+#' ## Method Compatibility
+#'
+#' The table below summarizes method compatibility with design features:
+#'
+#' | Method | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Interactions? | Dominance removal? | Requires priors? |
+#' |--------|------------|------------------|---------------------|-----------|---------------|-------------------|------------------|
+#' | `"random"`     | Yes | Yes | Yes | No  | Yes | Yes | No  |
+#' | `"stochastic"` | Yes | Yes | Yes | Yes | Yes | Yes | No* |
+#' | `"modfed"`     | Yes | Yes | Yes | Yes | Yes | Yes | No* |
+#' | `"cea"`        | Yes | Yes | No  | Yes | Yes | Yes | No* |
+#' | `"shortcut"`   | Yes | Yes | Yes | No  | No  | No  | No  |
+#'
+#' *Priors optional but recommended for D-error optimization methods
+#'
+#' ## Design Quality Assurance
+#'
+#' All methods ensure the following criteria are met:
+#'
+#' 1. No duplicate profiles within any choice set
+#' 2. No duplicate choice sets within any respondent
+#' 3. If `remove_dominant = TRUE`, choice sets with dominant alternatives are eliminated (optimization methods only)
+#'
+#' ## Method Details
+#'
+#' ### Random Method
+#' Creates designs where each respondent sees completely independent, randomly generated choice sets.
+#'
+#' ### D-Error Optimization Methods (stochastic, modfed, cea)
+#' These methods minimize D-error to create statistically efficient designs:
+#' - **Stochastic**: Random profile sampling with first improvement acceptance
+#' - **Modfed**: Exhaustive profile testing for best improvement (slower but thorough)
+#' - **CEA**: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
+#'
+#' ### Shortcut Method
+#' Uses a frequency-based greedy algorithm that:
+#' - Tracks attribute level usage within questions and across the overall design
+#' - Selects profiles with least frequently used attribute levels
+#' - Provides good level balance without requiring priors or D-error calculations
+#' - Fast execution suitable for large designs
+#'
 #' @return A `cbc_design` object containing the experimental design
 #' @export
 cbc_design <- function(
@@ -80,6 +132,20 @@ cbc_design <- function(
 
         # Random designs: generate completely random design for all respondents
         design_result <- generate_random_design(opt_env)
+        design_matrix <- design_result$design_matrix
+
+        # Convert profileID matrix back to full design
+        final_design <- construct_final_design(design_matrix, opt_env)
+
+    } else if (method == "shortcut") {
+        # Override any provided blocks - it's always 1 for shortcut method
+        if (n_blocks != 1) {
+            message("For 'shortcut' designs, n_blocks is ignored and set to 1")
+            n_blocks <- 1
+        }
+
+        # Shortcut designs: frequency-based greedy construction for all respondents
+        design_result <- generate_shortcut_design(opt_env)
         design_matrix <- design_result$design_matrix
 
         # Convert profileID matrix back to full design
@@ -714,7 +780,7 @@ construct_final_design <- function(design_matrix, opt_env) {
 
     # Initialize design data frame
     design <- data.frame(profileID = as.vector(t(design_matrix)))
-    if (opt_env$method == 'random') {
+    if (opt_env$method %in% c('random', 'shortcut')) {
         design <- add_metadata_random(design, n$resp, n$alts_total, n$q)
         id_cols <- c("profileID", "respID", "qID", "altID", "obsID")
     } else {
@@ -913,7 +979,7 @@ finalize_design_object <- function(design, design_result, opt_env) {
 
     # Add D-error information (both null and prior-based)
 
-    if (method != "random") {
+    if (method %in% c("stochastic", "modfed", "cea")) {
         # For optimized designs, compute D-errors
 
         # Always compute null D-error (no priors, equal probabilities)
@@ -1076,6 +1142,8 @@ setup_label_constraints <- function(profiles, label, n_alts) {
         groups = groups
     ))
 }
+
+# D-optimal designs ----
 
 generate_optimized_design <- function(opt_env) {
 
@@ -1790,4 +1858,220 @@ decode_categorical_variables <- function(design, categorical_structure) {
     }
 
     return(decoded_design)
+}
+
+# Other designs (non D-optimal) ----
+
+# Generate shortcut design using frequency-based greedy algorithm (parallelized)
+generate_shortcut_design <- function(opt_env) {
+
+    n <- opt_env$n
+    message("Generating shortcut design for ", n$resp, " respondents using ", n$cores, " cores...")
+
+    # Generate designs in parallel
+    if (n$cores == 1 || n$resp == 1) {
+        # Sequential execution
+        resp_designs <- lapply(1:n$resp, function(resp) {
+            generate_shortcut_for_respondent(resp, opt_env)
+        })
+    } else {
+        # Parallel execution
+        if (Sys.info()[['sysname']] == 'Windows') {
+            cl <- parallel::makeCluster(min(n$cores, n$resp), "PSOCK")
+            # Export necessary functions and objects to cluster
+            parallel::clusterExport(cl, c(
+                "generate_shortcut_for_respondent", "initialize_frequency_tracker",
+                "reset_frequency_tracker", "update_frequency_tracker",
+                "get_eligible_profiles_shortcut", "select_profile_shortcut",
+                "calculate_shortcut_score", "filter_dominant_profiles",
+                "would_create_dominance", "get_probs"
+            ), envir = environment())
+
+            resp_designs <- suppressMessages(suppressWarnings(
+                parallel::parLapply(cl, 1:n$resp, function(resp) {
+                    generate_shortcut_for_respondent(resp, opt_env)
+                })
+            ))
+            parallel::stopCluster(cl)
+        } else {
+            resp_designs <- suppressMessages(suppressWarnings(
+                parallel::mclapply(1:n$resp, function(resp) {
+                    generate_shortcut_for_respondent(resp, opt_env)
+                }, mc.cores = min(n$cores, n$resp))
+            ))
+        }
+    }
+
+    # Combine all respondent designs into a single matrix
+    design_matrix <- do.call(rbind, resp_designs)
+
+    return(list(
+        design_matrix = design_matrix,
+        total_attempts = 1,  # No iteration needed for shortcut
+        method = "shortcut"
+    ))
+}
+
+# Generate shortcut design for a single respondent
+generate_shortcut_for_respondent <- function(resp_id, opt_env) {
+
+    n <- opt_env$n
+    attr_names <- opt_env$attr_names
+    profiles <- opt_env$profiles
+
+    # Initialize frequency trackers for this respondent
+    question_freq <- initialize_frequency_tracker(attr_names, profiles)  # Within current question
+    overall_freq <- initialize_frequency_tracker(attr_names, profiles)   # Across all questions so far
+
+    # Create design matrix for this respondent
+    resp_design <- matrix(0, nrow = n$q, ncol = n$alts)
+
+    # Generate each question for this respondent
+    for (q in 1:n$q) {
+
+        # Reset question-level frequencies for each new question
+        question_freq <- reset_frequency_tracker(question_freq)
+
+        # Generate each alternative in this question
+        for (alt in 1:n$alts) {
+
+            # Get eligible profiles based on constraints
+            eligible_profiles <- get_eligible_profiles_shortcut(alt, opt_env)
+
+            # Select best profile using shortcut algorithm
+            selected_profile <- select_profile_shortcut(
+                eligible_profiles, question_freq, overall_freq,
+                resp_design, q, alt, opt_env
+            )
+
+            # Store selected profile
+            resp_design[q, alt] <- selected_profile
+
+            # Update frequency trackers
+            question_freq <- update_frequency_tracker(question_freq, selected_profile, profiles, attr_names)
+            overall_freq <- update_frequency_tracker(overall_freq, selected_profile, profiles, attr_names)
+        }
+    }
+
+    return(resp_design)
+}
+
+# Initialize frequency tracker for attributes
+initialize_frequency_tracker <- function(attr_names, profiles) {
+    freq_tracker <- list()
+
+    for (attr in attr_names) {
+        levels <- unique(profiles[[attr]])
+        freq_tracker[[attr]] <- setNames(rep(0, length(levels)), levels)
+    }
+
+    return(freq_tracker)
+}
+
+# Reset question-level frequency tracker
+reset_frequency_tracker <- function(freq_tracker) {
+    for (attr in names(freq_tracker)) {
+        freq_tracker[[attr]][] <- 0  # Reset all counts to 0
+    }
+    return(freq_tracker)
+}
+
+# Update frequency tracker with new profile
+update_frequency_tracker <- function(freq_tracker, profile_id, profiles, attr_names) {
+    # Get the profile data
+    profile_row <- profiles[profiles$profileID == profile_id, ]
+
+    # Update frequency for each attribute
+    for (attr in attr_names) {
+        level <- as.character(profile_row[[attr]])
+        freq_tracker[[attr]][level] <- freq_tracker[[attr]][level] + 1
+    }
+
+    return(freq_tracker)
+}
+
+# Get eligible profiles based on constraints (labeled designs, etc.)
+get_eligible_profiles_shortcut <- function(alt, opt_env) {
+    if (!is.null(opt_env$label_constraints)) {
+        # For labeled designs, only consider profiles from the correct label group
+        label_group_index <- alt
+        if (label_group_index <= length(opt_env$label_constraints$groups)) {
+            return(opt_env$label_constraints$groups[[label_group_index]])
+        } else {
+            return(c())  # No eligible profiles
+        }
+    } else {
+        # Regular design: consider all profiles
+        return(opt_env$available_profile_ids)
+    }
+}
+
+# Select profile using shortcut algorithm
+select_profile_shortcut <- function(eligible_profiles, question_freq, overall_freq,
+                                    resp_design, current_q, current_alt, opt_env) {
+
+    if (length(eligible_profiles) == 0) {
+        stop("No eligible profiles available")
+    }
+
+    attr_names <- opt_env$attr_names
+    profiles <- opt_env$profiles
+
+    # Calculate scores for each eligible profile
+    profile_scores <- numeric(length(eligible_profiles))
+    names(profile_scores) <- as.character(eligible_profiles)
+
+    for (i in seq_along(eligible_profiles)) {
+        profile_id <- eligible_profiles[i]
+
+        # Check if this profile would create duplicates in current question
+        if (profile_id %in% resp_design[current_q, 1:(current_alt-1)]) {
+            profile_scores[i] <- Inf  # Penalize duplicates heavily
+            next
+        }
+
+        # Calculate shortcut score for this profile
+        profile_scores[i] <- calculate_shortcut_score(
+            profile_id, question_freq, overall_freq, profiles, attr_names
+        )
+    }
+
+    # Select profile with best (lowest) score
+    best_indices <- which(profile_scores == min(profile_scores))
+
+    if (length(best_indices) == 1) {
+        return(eligible_profiles[best_indices])
+    } else {
+        # Tie-breaking: random selection among tied profiles
+        selected_index <- sample(best_indices, 1)
+        return(eligible_profiles[selected_index])
+    }
+}
+
+# Calculate shortcut score for a profile (lower is better)
+calculate_shortcut_score <- function(profile_id, question_freq, overall_freq, profiles, attr_names) {
+
+    # Get the profile data
+    profile_row <- profiles[profiles$profileID == profile_id, ]
+
+    total_score <- 0
+
+    # For each attribute, add frequency-based score
+    for (attr in attr_names) {
+        level <- as.character(profile_row[[attr]])
+
+        # Primary criterion: frequency within current question
+        question_count <- question_freq[[attr]][level]
+
+        # Secondary criterion: frequency across all questions so far
+        overall_count <- overall_freq[[attr]][level]
+
+        # Score: prioritize least used in question, then least used overall
+        # Higher frequencies get higher scores (we want to minimize)
+        attr_score <- question_count * 1000 + overall_count  # Weight question frequency heavily
+
+        total_score <- total_score + attr_score
+    }
+
+    return(total_score)
 }

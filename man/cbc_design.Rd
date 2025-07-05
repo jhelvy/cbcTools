@@ -28,15 +28,15 @@ cbc_design(
 \arguments{
 \item{profiles}{A data frame of class \code{cbc_profiles} created using \code{cbc_profiles()}}
 
-\item{method}{Choose the design method: "random", "stochastic", "modfed", or "cea". Defaults to "random"}
+\item{method}{Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"}
 
-\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or NULL for random designs}
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or NULL for random/shortcut designs}
 
 \item{n_alts}{Number of alternatives per choice question}
 
 \item{n_q}{Number of questions per respondent (or per block)}
 
-\item{n_resp}{Number of respondents (for random designs) or 1 (for optimized designs that get repeated)}
+\item{n_resp}{Number of respondents (for random/shortcut designs) or 1 (for optimized designs that get repeated)}
 
 \item{n_blocks}{Number of blocks in the design. Defaults to 1}
 
@@ -68,5 +68,72 @@ A \code{cbc_design} object containing the experimental design
 }
 \description{
 This function creates experimental designs for choice-based conjoint experiments
-using multiple optimization approaches for improved efficiency.
+using multiple design approaches including optimization and frequency-based methods.
+}
+\details{
+\subsection{Design Methods}{
+
+The \code{method} argument determines the design approach used:
+\itemize{
+\item \code{"random"}: Creates designs by randomly sampling profiles for each respondent independently
+\item \code{"stochastic"}: Stochastic profile swapping with D-error optimization (first improvement found)
+\item \code{"modfed"}: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
+\item \code{"cea"}: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
+\item \code{"shortcut"}: Frequency-based greedy algorithm that balances attribute level usage
+}
+}
+
+\subsection{Method Compatibility}{
+
+The table below summarizes method compatibility with design features:\tabular{llllllll}{
+   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Interactions? \tab Dominance removal? \tab Requires priors? \cr
+   \code{"random"} \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab No \cr
+   \code{"stochastic"} \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab No* \cr
+   \code{"modfed"} \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab No* \cr
+   \code{"cea"} \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \tab No* \cr
+   \code{"shortcut"} \tab Yes \tab Yes \tab Yes \tab No \tab No \tab No \tab No \cr
+}
+
+
+*Priors optional but recommended for D-error optimization methods
+}
+
+\subsection{Design Quality Assurance}{
+
+All methods ensure the following criteria are met:
+\enumerate{
+\item No duplicate profiles within any choice set
+\item No duplicate choice sets within any respondent
+\item If \code{remove_dominant = TRUE}, choice sets with dominant alternatives are eliminated (optimization methods only)
+}
+}
+
+\subsection{Method Details}{
+\subsection{Random Method}{
+
+Creates designs where each respondent sees completely independent, randomly generated choice sets.
+}
+
+\subsection{D-Error Optimization Methods (stochastic, modfed, cea)}{
+
+These methods minimize D-error to create statistically efficient designs:
+\itemize{
+\item \strong{Stochastic}: Random profile sampling with first improvement acceptance
+\item \strong{Modfed}: Exhaustive profile testing for best improvement (slower but thorough)
+\item \strong{CEA}: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
+}
+}
+
+\subsection{Shortcut Method}{
+
+Uses a frequency-based greedy algorithm that:
+\itemize{
+\item Tracks attribute level usage within questions and across the overall design
+\item Selects profiles with least frequently used attribute levels
+\item Provides good level balance without requiring priors or D-error calculations
+\item Fast execution suitable for large designs
+}
+}
+
+}
 }
