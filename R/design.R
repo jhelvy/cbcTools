@@ -38,15 +38,13 @@
 #'
 #' The table below summarizes method compatibility with design features:
 #'
-#' | Method | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Interactions? | Dominance removal? | Requires priors? |
-#' |--------|------------|------------------|---------------------|-----------|---------------|-------------------|------------------|
-#' | `"random"`     | Yes | Yes | Yes | No  | Yes | Yes | No  |
-#' | `"stochastic"` | Yes | Yes | Yes | Yes | Yes | Yes | No* |
-#' | `"modfed"`     | Yes | Yes | Yes | Yes | Yes | Yes | No* |
-#' | `"cea"`        | Yes | Yes | No  | Yes | Yes | Yes | No* |
-#' | `"shortcut"`   | Yes | Yes | Yes | No  | No  | No  | No  |
-#'
-#' *Priors optional but recommended for D-error optimization methods
+#' | Method | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Interactions? | Dominance removal? |
+#' |--------|------------|------------------|---------------------|-----------|---------------|-------------------|
+#' | `"random"`     | Yes | Yes | Yes | No  | Yes | Yes |
+#' | `"stochastic"` | Yes | Yes | Yes | Yes | Yes | Yes |
+#' | `"modfed"`     | Yes | Yes | Yes | Yes | Yes | Yes |
+#' | `"cea"`        | Yes | Yes | No  | Yes | Yes | Yes |
+#' | `"shortcut"`   | Yes | Yes | Yes | No  | No  | Yes |
 #'
 #' ## Design Quality Assurance
 #'
@@ -1990,20 +1988,135 @@ update_frequency_tracker <- function(freq_tracker, profile_id, profiles, attr_na
     return(freq_tracker)
 }
 
-# Get eligible profiles based on constraints (labeled designs, etc.)
-get_eligible_profiles_shortcut <- function(alt, opt_env) {
+get_eligible_profiles_shortcut <- function(alt, opt_env, resp_design = NULL, current_q = NULL) {
+
+    # Start with basic constraint filtering
     if (!is.null(opt_env$label_constraints)) {
         # For labeled designs, only consider profiles from the correct label group
         label_group_index <- alt
         if (label_group_index <= length(opt_env$label_constraints$groups)) {
-            return(opt_env$label_constraints$groups[[label_group_index]])
+            eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
         } else {
             return(c())  # No eligible profiles
         }
     } else {
         # Regular design: consider all profiles
-        return(opt_env$available_profile_ids)
+        eligible_profiles <- opt_env$available_profile_ids
     }
+
+    # Apply dominance filtering if requested and priors available
+    if (opt_env$remove_dominant && opt_env$has_priors &&
+        !is.null(resp_design) && !is.null(current_q)) {
+
+        # Filter out profiles that would create dominant alternatives
+        eligible_profiles <- filter_dominant_profiles(
+            eligible_profiles, resp_design, current_q, alt, opt_env
+        )
+    }
+
+    return(eligible_profiles)
+}
+
+# Helper function to filter out profiles that would create dominance
+filter_dominant_profiles <- function(eligible_profiles, resp_design, current_q, current_alt, opt_env) {
+
+    if (length(eligible_profiles) == 0) return(eligible_profiles)
+
+    # Get profiles already selected for this question
+    existing_profiles <- resp_design[current_q, 1:(current_alt-1)]
+    existing_profiles <- existing_profiles[existing_profiles != 0]
+
+    if (length(existing_profiles) == 0) {
+        # First alternative in question - no dominance check needed yet
+        return(eligible_profiles)
+    }
+
+    valid_profiles <- c()
+
+    for (profile_id in eligible_profiles) {
+        # Create test question with current profile added
+        test_question <- c(existing_profiles, profile_id)
+
+        # Check if this would create dominance
+        if (!would_create_dominance(test_question, opt_env)) {
+            valid_profiles <- c(valid_profiles, profile_id)
+        }
+    }
+
+    return(valid_profiles)
+}
+
+# Check if a specific question configuration would create dominance
+would_create_dominance <- function(question_profiles, opt_env) {
+
+    # Create mini design matrix for this question
+    test_matrix <- matrix(question_profiles, nrow = 1)
+
+    # Check total dominance
+    if ("total" %in% opt_env$dominance_types) {
+        probs <- get_probs(test_matrix, opt_env)
+        if (opt_env$is_bayesian) {
+            probs <- rowMeans(probs)
+        }
+        if (any(probs > opt_env$dominance_threshold)) {
+            return(TRUE)
+        }
+    }
+
+    # Check partial dominance
+    if ("partial" %in% opt_env$dominance_types && !is.null(opt_env$partial_utilities)) {
+        design_vector <- as.vector(test_matrix)
+        partials <- opt_env$partial_utilities[design_vector, , drop = FALSE]
+
+        # Check if any profile dominates others
+        if (nrow(partials) > 1) {
+            for (i in 1:nrow(partials)) {
+                dominates_all <- TRUE
+                for (j in 1:nrow(partials)) {
+                    if (i != j) {
+                        # Check if profile i dominates profile j
+                        if (!all(partials[i, ] >= partials[j, ])) {
+                            dominates_all <- FALSE
+                            break
+                        }
+                    }
+                }
+                if (dominates_all) {
+                    return(TRUE)  # Found a dominant profile
+                }
+            }
+        }
+    }
+
+    return(FALSE)
+}
+
+
+# Function to find dominant rows within groups
+find_dominant_rows_by_group <- function(partials_matrix, group_ids) {
+    # Split row indices by group
+    group_splits <- split(1:nrow(partials_matrix), group_ids)
+
+    # Find dominant rows within each group
+    dominant_indices <- c()
+
+    for (group_rows in group_splits) {
+        if (length(group_rows) > 1) {  # Only check if group has multiple rows
+            # Extract submatrix for this group
+            group_matrix <- partials_matrix[group_rows, , drop = FALSE]
+
+            # Find dominant rows within this group
+            local_dominant <- find_best_rows(group_matrix)
+
+            # Convert local indices back to global indices
+            if (length(local_dominant) > 0) {
+                global_dominant <- group_rows[local_dominant]
+                dominant_indices <- c(dominant_indices, global_dominant)
+            }
+        }
+    }
+
+    return(sort(dominant_indices))
 }
 
 # Select profile using shortcut algorithm
