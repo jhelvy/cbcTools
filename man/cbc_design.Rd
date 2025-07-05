@@ -2,7 +2,7 @@
 % Please edit documentation in R/design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Generate survey designs for choice experiments (New Implementation)}
+\title{Generate survey designs for choice experiments (Updated Implementation)}
 \usage{
 cbc_design(
   profiles,
@@ -28,7 +28,7 @@ cbc_design(
 \arguments{
 \item{profiles}{A data frame of class \code{cbc_profiles} created using \code{cbc_profiles()}}
 
-\item{method}{Choose the design method: "random" or "sequential". Defaults to "random"}
+\item{method}{Choose the design method: "random", "stochastic", "modfed", or "cea". Defaults to "random"}
 
 \item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or NULL for random designs}
 
@@ -36,7 +36,7 @@ cbc_design(
 
 \item{n_q}{Number of questions per respondent (or per block)}
 
-\item{n_resp}{Number of respondents (for random designs) or 1 (for sequential designs that get repeated)}
+\item{n_resp}{Number of respondents (for random designs) or 1 (for optimized designs that get repeated)}
 
 \item{n_blocks}{Number of blocks in the design. Defaults to 1}
 
@@ -47,9 +47,9 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 
 \item{label}{The name of the variable to use in a "labeled" design. Defaults to NULL}
 
-\item{randomize_questions}{Randomize question order for each respondent? Defaults to TRUE (sequential only)}
+\item{randomize_questions}{Randomize question order for each respondent? Defaults to TRUE (optimized methods only)}
 
-\item{randomize_alts}{Randomize alternative order within questions? Defaults to TRUE (sequential only)}
+\item{randomize_alts}{Randomize alternative order within questions? Defaults to TRUE (optimized methods only)}
 
 \item{remove_dominant}{Remove choice sets with dominant alternatives? Defaults to FALSE}
 
@@ -59,14 +59,14 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 
 \item{max_dominance_attempts}{Maximum attempts to replace dominant choice sets. Defaults to 50.}
 
-\item{max_iter}{Maximum iterations for sequential optimization. Defaults to 50}
+\item{max_iter}{Maximum iterations for optimized designs. Defaults to 50}
 
-\item{n_start}{Number of random starts for sequential designs. Defaults to 5}
+\item{n_start}{Number of random starts for optimized designs. Defaults to 5}
 }
 \value{
 A \code{cbc_design} object containing the experimental design
 }
 \description{
 This function creates experimental designs for choice-based conjoint experiments
-using a new profileID-based optimization approach for improved efficiency.
+using multiple optimization approaches for improved efficiency.
 }

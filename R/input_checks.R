@@ -152,8 +152,13 @@ validate_design_inputs <- function(
     }
 
     # Validate method
-    if (!method %in% c("random", "sequential")) {
-        stop("method must be 'random' or 'sequential'")
+    if (!method %in% c("random", "stochastic", "modfed", "cea")) {
+        stop("method must be 'random', 'stochastic', 'modfed', or 'cea'")
+    }
+
+    # CEA-specific validation: requires full factorial profiles
+    if (method == "cea") {
+        validate_cea_profiles(profiles)
     }
 
     # Validate priors
@@ -181,19 +186,19 @@ validate_design_inputs <- function(
     # Method-specific validation
     if (method == "random") {
         if (n_resp == 1) {
-            warning("For random designs with n_resp = 1, consider using method = 'sequential' for better efficiency")
+            warning("For random designs with n_resp = 1, consider using an optimized method for better efficiency")
         }
-    } else if (method == "sequential") {
+    } else if (method %in% c("stochastic", "modfed", "cea")) {
         if (n_blocks == 1) {
             message(sprintf(
-                "Sequential design will be optimized into 1 design block, then allocated across %d respondents",
-                n_resp
+                "%s design will be optimized into 1 design block, then allocated across %d respondents",
+                stringr::str_to_title(method), n_resp
             ))
         }
         if (n_blocks > 1) {
             message(sprintf(
-                "Sequential design will be optimized into %d design blocks, then allocated across %d respondents",
-                n_blocks, n_resp
+                "%s design will be optimized into %d design blocks, then allocated across %d respondents",
+                stringr::str_to_title(method), n_blocks, n_resp
             ))
         }
     }
@@ -311,8 +316,9 @@ validate_design_inputs <- function(
                 ))
             }
         }
-    } else if (method == "sequential") {
-        # For sequential designs, check n_q * n_blocks (base design size)
+
+    } else {
+        # For non-random designs, check n_q * n_blocks (base design size)
         max_possible_questions <- choose(nrow(profiles), n_alts)
         base_design_questions <- n_q * n_blocks
 
@@ -356,6 +362,63 @@ validate_design_inputs <- function(
           "to increase the number of choice set combinations."
         )
       }
+    }
+
+    invisible(TRUE)
+}
+
+# CEA validation function
+validate_cea_profiles <- function(profiles) {
+    # Check if profiles appear to be restricted (not full factorial)
+
+    # Get attribute info
+    attr_info <- attr(profiles, "attribute_info")
+    if (is.null(attr_info)) {
+        # If no metadata, try to infer from the data
+        attr_names <- setdiff(names(profiles), "profileID")
+        total_combinations <- 1
+
+        for (attr in attr_names) {
+            n_levels <- length(unique(profiles[[attr]]))
+            total_combinations <- total_combinations * n_levels
+        }
+
+        if (nrow(profiles) < total_combinations) {
+            stop(sprintf(
+                "CEA method requires full factorial profiles (all possible attribute combinations). ",
+                "Expected %d profiles but found %d. ",
+                "CEA cannot optimize when some attribute combinations are missing. ",
+                "Consider using 'stochastic' or 'modfed' methods instead, or use unrestricted profiles.",
+                total_combinations, nrow(profiles)
+            ))
+        }
+    } else {
+        # Use metadata if available
+        total_removed <- attr(profiles, "total_removed") %||% 0
+        restrictions_applied <- attr(profiles, "restrictions_applied")
+
+        if (total_removed > 0 || (!is.null(restrictions_applied) && length(restrictions_applied) > 0)) {
+            stop(
+                "CEA method requires full factorial profiles (all possible attribute combinations). ",
+                "The provided profiles have restrictions applied, which means some attribute ",
+                "combinations are missing. CEA cannot optimize when some combinations are unavailable. ",
+                "Consider using 'stochastic' or 'modfed' methods instead, or use unrestricted profiles."
+            )
+        }
+
+        # Double-check by calculating expected combinations
+        total_combinations <- 1
+        for (attr_name in names(attr_info)) {
+            total_combinations <- total_combinations * attr_info[[attr_name]]$n_levels
+        }
+
+        if (nrow(profiles) < total_combinations) {
+            stop(sprintf(
+                "CEA method requires full factorial profiles. Expected %d profiles but found %d. ",
+                "Some attribute combinations appear to be missing.",
+                total_combinations, nrow(profiles)
+            ))
+        }
     }
 
     invisible(TRUE)

@@ -23,3 +23,24 @@ get_var_names <- function(design) {
 `%||%` <- function(lhs, rhs) {
   if (!is.null(lhs)) lhs else rhs
 }
+
+set_num_cores <- function(n_cores) {
+    cores_available <- parallel::detectCores()
+    max_cores <- cores_available - 1
+    # CRAN checks limits you to 2 cores
+    chk <- tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))
+    if (nzchar(chk) && (chk != "false")) {
+        return(2L)
+    }
+    if (is.null(n_cores)) {
+        return(max_cores)
+    } else if (!is.numeric(n_cores)) {
+        warning("Non-numeric value provided for n_cores...setting n_cores to ", max_cores)
+        return(max_cores)
+    } else if (n_cores > cores_available) {
+        warning("Cannot use ", n_cores, " cores because your machine only has ",
+                cores_available, " available...setting n_cores to ", max_cores)
+        return(max_cores)
+    }
+    return(n_cores)
+}

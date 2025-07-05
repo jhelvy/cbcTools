@@ -4,12 +4,14 @@
 \alias{plot_compare_power}
 \title{Compare power across multiple designs}
 \usage{
-plot_compare_power(..., power_threshold = 0.8)
+plot_compare_power(..., type = "power", power_threshold = 0.8)
 }
 \arguments{
 \item{...}{Named cbc_power objects to compare}
 
-\item{power_threshold}{Power threshold for horizontal reference line. Defaults to 0.8}
+\item{type}{Type of plot: "power" for power curves or "se" for standard error curves}
+
+\item{power_threshold}{Power threshold for horizontal reference line (only for power plots). Defaults to 0.8}
 }
 \value{
 A ggplot object comparing power curves

@@ -1,48 +1,48 @@
-#' Generate survey designs for choice experiments (New Implementation)
+#' Generate survey designs for choice experiments (Updated Implementation)
 #'
 #' This function creates experimental designs for choice-based conjoint experiments
-#' using a new profileID-based optimization approach for improved efficiency.
+#' using multiple optimization approaches for improved efficiency.
 #'
 #' @param profiles A data frame of class `cbc_profiles` created using `cbc_profiles()`
-#' @param method Choose the design method: "random" or "sequential". Defaults to "random"
+#' @param method Choose the design method: "random", "stochastic", "modfed", or "cea". Defaults to "random"
 #' @param priors A `cbc_priors` object created by `cbc_priors()`, or NULL for random designs
 #' @param n_alts Number of alternatives per choice question
 #' @param n_q Number of questions per respondent (or per block)
-#' @param n_resp Number of respondents (for random designs) or 1 (for sequential designs that get repeated)
+#' @param n_resp Number of respondents (for random designs) or 1 (for optimized designs that get repeated)
 #' @param n_blocks Number of blocks in the design. Defaults to 1
 #' @param n_cores Number of cores to use for parallel processing in the design search.
 #' Defaults to NULL, in which case it is set to the number of available cores minus 1.
 #' @param no_choice Include a "no choice" option? Defaults to FALSE
 #' @param label The name of the variable to use in a "labeled" design. Defaults to NULL
-#' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (sequential only)
-#' @param randomize_alts Randomize alternative order within questions? Defaults to TRUE (sequential only)
+#' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (optimized methods only)
+#' @param randomize_alts Randomize alternative order within questions? Defaults to TRUE (optimized methods only)
 #' @param remove_dominant Remove choice sets with dominant alternatives? Defaults to FALSE
 #' @param dominance_types Types of dominance to check: "total" and/or "partial"
 #' @param dominance_threshold Threshold for total dominance detection. Defaults to 0.8
 #' @param max_dominance_attempts Maximum attempts to replace dominant choice sets. Defaults to 50.
-#' @param max_iter Maximum iterations for sequential optimization. Defaults to 50
-#' @param n_start Number of random starts for sequential designs. Defaults to 5
+#' @param max_iter Maximum iterations for optimized designs. Defaults to 50
+#' @param n_start Number of random starts for optimized designs. Defaults to 5
 #' @return A `cbc_design` object containing the experimental design
 #' @export
 cbc_design <- function(
-    profiles,
-    method = "random",
-    priors = NULL,
-    n_alts,
-    n_q,
-    n_resp = 100,
-    n_blocks = 1,
-    n_cores = NULL,
-    no_choice = FALSE,
-    label = NULL,
-    randomize_questions = TRUE,
-    randomize_alts = TRUE,
-    remove_dominant = FALSE,
-    dominance_types = c("total", "partial"),
-    dominance_threshold = 0.8,
-    max_dominance_attempts = 50,
-    max_iter = 50,
-    n_start = 5
+        profiles,
+        method = "random",
+        priors = NULL,
+        n_alts,
+        n_q,
+        n_resp = 100,
+        n_blocks = 1,
+        n_cores = NULL,
+        no_choice = FALSE,
+        label = NULL,
+        randomize_questions = TRUE,
+        randomize_alts = TRUE,
+        remove_dominant = FALSE,
+        dominance_types = c("total", "partial"),
+        dominance_threshold = 0.8,
+        max_dominance_attempts = 50,
+        max_iter = 50,
+        n_start = 5
 ) {
 
     time_start <- Sys.time()
@@ -85,9 +85,9 @@ cbc_design <- function(
         # Convert profileID matrix back to full design
         final_design <- construct_final_design(design_matrix, opt_env)
 
-    } else if (method == "sequential") {
-        # Sequential designs: create optimized base design, then repeat across respondents
-        design_result <- generate_sequential_design(opt_env)
+    } else if (method %in% c("stochastic", "modfed", "cea")) {
+        # Optimized designs: create optimized base design, then repeat across respondents
+        design_result <- generate_optimized_design(opt_env)
         design_matrix <- design_result$design_matrix
 
         # Convert base design to full design
@@ -913,8 +913,8 @@ finalize_design_object <- function(design, design_result, opt_env) {
 
     # Add D-error information (both null and prior-based)
 
-    if (method == "sequential") {
-        # For sequential designs, compute both D-errors for base and full survey
+    if (method != "random") {
+        # For optimized designs, compute D-errors
 
         # Always compute null D-error (no priors, equal probabilities)
         design_params$d_error_null <- compute_design_d_error_null(
@@ -1077,7 +1077,7 @@ setup_label_constraints <- function(profiles, label, n_alts) {
     ))
 }
 
-generate_sequential_design <- function(opt_env) {
+generate_optimized_design <- function(opt_env) {
 
     # Set up parallel processing
     n <- opt_env$n
@@ -1145,11 +1145,119 @@ generate_sequential_design <- function(opt_env) {
 }
 
 optimize_design <- function(design_matrix, opt_env) {
+    method <- opt_env$method
+
+    if (method == "stochastic") {
+        return(optimize_design_stochastic(design_matrix, opt_env))
+    } else if (method == "modfed") {
+        return(optimize_design_modfed(design_matrix, opt_env))
+    } else if (method == "cea") {
+        return(optimize_design_cea(design_matrix, opt_env))
+    } else {
+        stop("Unknown optimization method: ", method)
+    }
+}
+
+# Stochastic optimization (keep improving until no improvement found)
+optimize_design_stochastic <- function(design_matrix, opt_env) {
 
     # Compute initial D-error
-    current_d_error <- compute_design_d_error(
-        design_matrix, opt_env
-    )
+    current_d_error <- compute_design_d_error(design_matrix, opt_env)
+
+    n <- opt_env$n
+
+    for (iter in 1:n$max_iter) {
+        message("Iteration ", iter, ": D-error = ", round(current_d_error, 6))
+        improved <- FALSE
+        start_d_error <- current_d_error
+
+        # Try improving each position in the design
+        for (q in 1:n$questions) {
+            for (alt in 1:n$alts) {
+
+                current_profile <- design_matrix[q, alt]
+
+                # Get eligible profiles for this position
+                if (!is.null(opt_env$label_constraints)) {
+                    # For labeled designs, only consider profiles from the correct label group
+                    label_group_index <- alt
+                    if (label_group_index <= length(opt_env$label_constraints$groups)) {
+                        eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
+                    } else {
+                        next  # Skip if label group doesn't exist
+                    }
+                } else {
+                    # Regular design: consider all profiles
+                    eligible_profiles <- opt_env$available_profile_ids
+                }
+
+                # Remove current profile from candidates
+                candidate_profiles <- setdiff(eligible_profiles, current_profile)
+                if (length(candidate_profiles) == 0) next
+
+                # Keep trying random profiles until we find one that doesn't improve
+                attempted_profiles <- c()
+                position_improved <- FALSE
+
+                while (length(attempted_profiles) < length(candidate_profiles)) {
+
+                    # Sample a new profile we haven't tried yet
+                    remaining_candidates <- setdiff(candidate_profiles, attempted_profiles)
+                    if (length(remaining_candidates) == 0) break
+
+                    new_profile <- sample(remaining_candidates, 1)
+                    attempted_profiles <- c(attempted_profiles, new_profile)
+
+                    # Create test design
+                    test_design <- design_matrix
+                    test_design[q, alt] <- new_profile
+
+                    # Check all constraints
+                    problem_questions <- find_problematic_questions(test_design, opt_env)
+                    if (length(problem_questions) > 0) {
+                        if (q %in% problem_questions) {
+                            next  # Try next candidate - this doesn't count as "no improvement"
+                        }
+                    }
+
+                    # Compute D-error for test design
+                    test_d_error <- compute_design_d_error(test_design, opt_env)
+
+                    # Check if this improves the current design
+                    if (test_d_error < current_d_error) {
+                        # Accept improvement and keep current profile updated
+                        design_matrix[q, alt] <- new_profile
+                        current_d_error <- test_d_error
+                        improved <- TRUE
+                        position_improved <- TRUE
+                        # Continue searching for more improvements at this position
+                    } else {
+                        # No improvement found - stop searching at this position
+                        break
+                    }
+                }
+            }
+        }
+
+        if (!improved) {
+            message("No improvement found, stopping optimization")
+            break
+        }
+    }
+
+    return(list(
+        design_matrix = design_matrix,
+        d_error = current_d_error,
+        method = "stochastic",
+        total_attempts = iter
+    ))
+}
+
+# Modified Fedorov optimization (exhaustive profile swapping)
+optimize_design_modfed <- function(design_matrix, opt_env) {
+
+    # Compute initial D-error
+    current_d_error <- compute_design_d_error(design_matrix, opt_env)
 
     n <- opt_env$n
     for (iter in 1:n$max_iter) {
@@ -1165,25 +1273,22 @@ optimize_design <- function(design_matrix, opt_env) {
                 best_profile <- current_profile
                 best_d_error <- current_d_error
 
-                # Try multiple alternative profiles for this position
-                n_attempts <- length(opt_env$available_profile_ids)  # Number of profiles to try
-                for (attempt in 1:n_attempts) {
-
-                    # Sample a new profile using the same constraints as random design
-                    if (!is.null(opt_env$label_constraints)) {
-                        # For labeled designs, we need to maintain the label structure
-                        # Get which label group this alternative position should be
-                        label_group_index <- alt
-                        if (label_group_index <= length(opt_env$label_constraints$groups)) {
-                            eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
-                            new_profile <- sample(eligible_profiles, 1)
-                        } else {
-                            next  # Skip if label group doesn't exist
-                        }
+                # Get eligible profiles for this position
+                if (!is.null(opt_env$label_constraints)) {
+                    # For labeled designs, only consider profiles from the correct label group
+                    label_group_index <- alt
+                    if (label_group_index <= length(opt_env$label_constraints$groups)) {
+                        eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
                     } else {
-                        # Regular design: sample any profile
-                        new_profile <- sample(opt_env$available_profile_ids, 1)
+                        next  # Skip if label group doesn't exist
                     }
+                } else {
+                    # Regular design: consider all profiles
+                    eligible_profiles <- opt_env$available_profile_ids
+                }
+
+                # Try ALL eligible profiles for this position (exhaustive search)
+                for (new_profile in eligible_profiles) {
 
                     if (new_profile == current_profile) next
 
@@ -1199,7 +1304,7 @@ optimize_design <- function(design_matrix, opt_env) {
                         }
                     }
 
-                    # Compute D-error for test design (temporarily adding no-choice)
+                    # Compute D-error for test design
                     test_d_error <- compute_design_d_error(test_design, opt_env)
 
                     # Accept if improvement
@@ -1227,34 +1332,144 @@ optimize_design <- function(design_matrix, opt_env) {
     return(list(
         design_matrix = design_matrix,
         d_error = current_d_error,
-        method = "sequential",
+        method = "modfed",
         total_attempts = iter
     ))
 }
 
-set_num_cores <- function(n_cores) {
-    cores_available <- parallel::detectCores()
-    max_cores <- cores_available - 1
-    # CRAN checks limits you to 2 cores
-    chk <- tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))
-    if (nzchar(chk) && (chk != "false")) {
-        return(2L)
+# Coordinate Exchange Algorithm optimization (attribute-by-attribute)
+optimize_design_cea <- function(design_matrix, opt_env) {
+
+    # Compute initial D-error
+    current_d_error <- compute_design_d_error(design_matrix, opt_env)
+
+    n <- opt_env$n
+    for (iter in 1:n$max_iter) {
+        message("Iteration ", iter, ": D-error = ", round(current_d_error, 6))
+        improved <- FALSE
+        start_d_error <- current_d_error
+
+        # Try improving each position in the design
+        for (q in 1:n$questions) {
+            for (alt in 1:n$alts) {
+
+                current_profile <- design_matrix[q, alt]
+                best_profile <- current_profile
+                best_d_error <- current_d_error
+
+                # For each attribute, try all possible levels (coordinate exchange)
+                for (attr in opt_env$attr_names) {
+                    attr_levels <- get_attribute_levels(attr, opt_env)
+
+                    for (level in attr_levels) {
+                        # Find profile that matches current profile except for this attribute
+                        candidate_profile <- find_profile_with_attribute_change(
+                            current_profile, attr, level, opt_env
+                        )
+
+                        if (is.null(candidate_profile) || candidate_profile == current_profile) {
+                            next
+                        }
+
+                        # Check label constraints
+                        if (!is.null(opt_env$label_constraints)) {
+                            label_group_index <- alt
+                            if (label_group_index <= length(opt_env$label_constraints$groups)) {
+                                eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
+                                if (!candidate_profile %in% eligible_profiles) {
+                                    next
+                                }
+                            }
+                        }
+
+                        # Create test design
+                        test_design <- design_matrix
+                        test_design[q, alt] <- candidate_profile
+
+                        # Check all constraints
+                        problem_questions <- find_problematic_questions(test_design, opt_env)
+                        if (length(problem_questions) > 0) {
+                            if (q %in% problem_questions) {
+                                next
+                            }
+                        }
+
+                        # Compute D-error for test design
+                        test_d_error <- compute_design_d_error(test_design, opt_env)
+
+                        # Accept if improvement
+                        if (test_d_error < best_d_error) {
+                            best_profile <- candidate_profile
+                            best_d_error <- test_d_error
+                        }
+                    }
+                }
+
+                # Update design if we found an improvement
+                if (best_profile != current_profile) {
+                    design_matrix[q, alt] <- best_profile
+                    current_d_error <- best_d_error
+                    improved <- TRUE
+                }
+            }
+        }
+
+        if (!improved) {
+            message("No improvement found, stopping optimization")
+            break
+        }
     }
-    if (is.null(n_cores)) {
-        return(max_cores)
-    } else if (!is.numeric(n_cores)) {
-        warning("Non-numeric value provided for n_cores...setting n_cores to ", max_cores)
-        return(max_cores)
-    } else if (n_cores > cores_available) {
-        warning("Cannot use ", n_cores, " cores because your machine only has ",
-                cores_available, " available...setting n_cores to ", max_cores)
-        return(max_cores)
+
+    return(list(
+        design_matrix = design_matrix,
+        d_error = current_d_error,
+        method = "cea",
+        total_attempts = iter
+    ))
+}
+
+# Helper functions for CEA
+
+# Get all possible levels for an attribute
+get_attribute_levels <- function(attr, opt_env) {
+    profiles <- opt_env$profiles
+    if (attr %in% names(profiles)) {
+        return(unique(profiles[[attr]]))
     }
-    return(n_cores)
+    return(NULL)
+}
+
+# Find a profile that matches the current profile except for one attribute
+find_profile_with_attribute_change <- function(current_profile_id, attr, new_level, opt_env) {
+    profiles <- opt_env$profiles
+
+    # Get current profile
+    current_profile_row <- profiles[profiles$profileID == current_profile_id, ]
+    if (nrow(current_profile_row) == 0) return(NULL)
+
+    # Create target profile (change only the specified attribute)
+    target_profile <- current_profile_row
+    target_profile[[attr]] <- new_level
+
+    # Find matching profile in profiles
+    for (i in 1:nrow(profiles)) {
+        match_found <- TRUE
+        for (col in opt_env$attr_names) {
+            if (profiles[i, col] != target_profile[[col]]) {
+                match_found <- FALSE
+                break
+            }
+        }
+        if (match_found) {
+            return(profiles$profileID[i])
+        }
+    }
+
+    return(NULL)  # No matching profile found
 }
 
 # Repeat base design across respondents with block allocation (Fixed)
-# Used for sequential designs to take the optimized base design and repeat it
+# Used for optimized designs to take the base design and repeat it
 # across multiple respondents with proper block allocation and optional randomization
 repeat_design_across_respondents <- function(base_design, opt_env) {
     n <- opt_env$n
