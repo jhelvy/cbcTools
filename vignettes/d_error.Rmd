@@ -228,3 +228,5 @@ cat("D-error:", attr(design_db, "design_params")$d_error_prior, "\n")
 4. **Sequential optimization** in `cbc_design()` uses these D-error calculations to find efficient experimental designs by minimizing the chosen D-error metric
 
 Understanding D-error helps you make informed decisions about experimental design and interpret the quality of your choice experiments when using `cbcTools`.
+
+> Note: This article is inspired by [this article](https://www.displayr.com/how-to-compute-d-error-for-a-choice-experiment/)

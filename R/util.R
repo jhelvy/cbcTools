@@ -19,13 +19,6 @@ get_var_names <- function(design) {
     return(setdiff(names(design), get_id_names()))
 }
 
-get_rand_pars <- function(priors) {
-    if (is.null(priors)) { return(NULL) }
-    randPars <- names(which(sapply(priors$attrs, function(x) x$random)))
-    if (length(randPars) == 0) { return(NULL) }
-    return(randPars)
-}
-
 # Null-coalescing operator helper
 `%||%` <- function(lhs, rhs) {
   if (!is.null(lhs)) lhs else rhs

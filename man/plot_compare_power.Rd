@@ -2,19 +2,18 @@
 % Please edit documentation in R/power.R
 \name{plot_compare_power}
 \alias{plot_compare_power}
-\title{Plot a comparison of different design powers}
+\title{Compare power across multiple designs}
 \usage{
-plot_compare_power(...)
+plot_compare_power(..., power_threshold = 0.8)
 }
 \arguments{
-\item{...}{Any number of data frame containing power results obtained from
-the \code{cbc_power()} function, separated by commas.}
+\item{...}{Named cbc_power objects to compare}
+
+\item{power_threshold}{Power threshold for horizontal reference line. Defaults to 0.8}
 }
 \value{
-A plot comparing the power curves of different designs.
+A ggplot object comparing power curves
 }
 \description{
-This function creates a ggplot2 object comparing the power curves of
-different designs. Each design is color coded and each facet (sub plot)
-is a model coefficient.
+Compare power across multiple designs
 }
