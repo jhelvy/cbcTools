@@ -1,0 +1,230 @@
+---
+title: "Computing D-error in Choice Experiments"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Computing D-error in Choice Experiments}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup}
+library(cbcTools)
+```
+
+## What is D-error?
+
+D-error is a measure of how good or bad a design is at extracting information from respondents in a choice experiment. A design with a **low D-error** is better than a design with a **high D-error**, provided that both designs are for the same experiment. Comparing D-error between designs for different experiments is meaningless.
+
+When generating designs using the sequential method in `cbc_design()`, the algorithm minimizes D-error to find efficient experimental designs. The specific type of D-error computed depends on the prior assumptions you provide.
+
+## Types of D-error
+
+### Prior Parameter Assumptions
+
+When computing D-error, a prior assumption about the respondent parameters needs to be made:
+
+- **D₀-error** assumes that all parameters are zero — i.e., respondents have no preference for any of the attribute levels
+- **Dₚ-error** assumes that all respondent parameters are equal to a fixed parameter vector  
+- **D_B-error** assumes that respondent parameters are distributed according to a probability distribution (typically multivariate normal)
+
+### How cbcTools Chooses D-error Type
+
+In `cbc_design()` with `method = "sequential"`, the type of D-error minimized depends on your prior specifications:
+
+1. **No priors provided** (`priors = NULL`) → Uses **D₀-error**
+2. **Fixed parameters** (using `cbc_priors()` with fixed values) → Uses **Dₚ-error**  
+3. **Random parameters** (using `cbc_priors()` with `rand_spec()`) → Uses **D_B-error**
+
+## Working Example
+
+Let's work through the mathematical steps of D-error computation using the same example from the literature.
+
+### The Design
+
+Consider this simple 3-attribute, 2-alternative choice experiment:
+
+| Version | Task | Question | Alternative | Attribute 1 | Attribute 2 | Attribute 3 |
+|---------|------|----------|-------------|-------------|-------------|-------------|
+| 1       | 1    | 1        | 1           | 1           | 2           | 1           |
+| 1       | 1    | 1        | 2           | 2           | 1           | 2           |
+| 1       | 2    | 2        | 1           | 1           | 2           | 2           |
+| 1       | 2    | 2        | 2           | 2           | 1           | 1           |
+| 1       | 3    | 3        | 1           | 2           | 2           | 1           |
+| 1       | 3    | 3        | 2           | 1           | 1           | 2           |
+
+### Step 1: Encode the Design
+
+The first step is to encode the design using dummy coding. For each 2-level attribute, we create one dummy variable (comparing level 2 vs. level 1 as reference). This gives us:
+
+**Question 1:**
+```
+     Attr1_2  Attr2_2  Attr3_2
+Alt1:   0       1       0
+Alt2:   1       0       1
+```
+
+**Question 2:**
+```
+     Attr1_2  Attr2_2  Attr3_2  
+Alt1:   0       1       1
+Alt2:   1       0       0
+```
+
+**Question 3:**
+```
+     Attr1_2  Attr2_2  Attr3_2
+Alt1:   1       1       0
+Alt2:   0       0       1
+```
+
+## Computing Dₚ-error (Fixed Parameters)
+
+For Dₚ-error, we assume specific parameter values: **β = [0.5, -0.5, 0.8]**.
+
+### Step 2: Compute Choice Probabilities
+
+Using the multinomial logit formula:
+
+**P_iq = exp(X_iq × β) / Σ_j exp(X_jq × β)**
+
+For Question 1:
+- Utility Alt1 = 0×0.5 + 1×(-0.5) + 0×0.8 = -0.5
+- Utility Alt2 = 1×0.5 + 0×(-0.5) + 1×0.8 = 1.3
+- P₁₁ = exp(-0.5) / [exp(-0.5) + exp(1.3)] = 0.143
+- P₂₁ = exp(1.3) / [exp(-0.5) + exp(1.3)] = 0.857
+
+Similar calculations for Questions 2 and 3 give us the choice probabilities for each alternative in each question.
+
+### Step 3: Compute Fisher Information Matrix
+
+The Fisher information matrix uses the formula:
+
+**I_q = X_q^T × (P_q × I - P_q × P_q^T) × X_q**
+
+where P_q is a diagonal matrix with choice probabilities. We sum across all questions to get the total information matrix.
+
+### Step 4: Compute Dₚ-error
+
+**Dₚ-error = det(I)^(-1/K)**
+
+where K = 3 (number of parameters).
+
+## Computing D₀-error (No Priors)
+
+D₀-error is a special case where **β = [0, 0, 0]**, making all alternatives equally likely.
+
+When all parameters are zero:
+- All utilities = 0
+- All choice probabilities = 1/2 (for 2 alternatives)
+
+The information matrix calculation follows the same formula, but with equal probabilities of 0.5 for all alternatives. This simplifies the calculation considerably.
+
+## Computing D_B-error (Random Parameters)
+
+D_B-error assumes parameters follow a probability distribution. For example, if we assume:
+- **β ~ N([0.5, -0.5, 0.8], diag([0.5², 0.5², 0.5²]))**
+
+The computation involves:
+
+1. **Draw parameter samples** from the distribution (e.g., 1000 draws)
+2. **Compute Dₚ-error** for each parameter draw
+3. **Average the results** to get D_B-error
+
+| Draw | Parameter 1 | Parameter 2 | Parameter 3 | Dₚ-error |
+|------|-------------|-------------|-------------|----------|
+| 1    | 0.25        | -0.73       | 0.67        | 1.45     |
+| 2    | 1.14        | -0.67       | 0.67        | 1.90     |
+| 3    | 0.69        | -0.50       | 1.23        | 1.92     |
+| ...  | ...         | ...         | ...         | ...      |
+| 1000 | 1.15        | -1.67       | 0.57        | 2.82     |
+
+**D_B-error = mean of all Dₚ-errors = 1.90**
+
+## Using D-error in cbcTools
+
+Now let's see how this works in practice with `cbcTools`. The package automatically computes the appropriate D-error type based on your specifications:
+
+```{r cbctools-example}
+# Create profiles for a simple experiment
+profiles <- cbc_profiles(
+  attr1 = c("Level1", "Level2"),
+  attr2 = c("Level1", "Level2"), 
+  attr3 = c("Level1", "Level2")
+)
+
+# Example 1: No priors (uses D0-error)
+design_d0 <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 3,
+  method = "sequential"
+)
+
+cat("Design with no priors (D0-error):\n")
+cat("D-error:", attr(design_d0, "design_params")$d_error_null, "\n\n")
+
+# Example 2: Fixed priors (uses DP-error)
+priors_fixed <- cbc_priors(
+  profiles = profiles,
+  attr1 = 0.5,
+  attr2 = -0.5,
+  attr3 = 0.8
+)
+
+design_dp <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 3,
+  priors = priors_fixed,
+  method = "sequential"
+)
+
+cat("Design with fixed priors (DP-error):\n")
+cat("D-error:", attr(design_dp, "design_params")$d_error_prior, "\n\n")
+
+# Example 3: Random priors (uses DB-error)
+priors_random <- cbc_priors(
+  profiles = profiles,
+  attr1 = rand_spec(mean = 0.5, sd = 0.5),
+  attr2 = rand_spec(mean = -0.5, sd = 0.5),
+  attr3 = rand_spec(mean = 0.8, sd = 0.5)
+)
+
+design_db <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 3,
+  priors = priors_random,
+  method = "sequential"
+)
+
+cat("Design with random priors (DB-error):\n")
+cat("D-error:", attr(design_db, "design_params")$d_error_prior, "\n")
+```
+
+## Key Takeaways
+
+1. **D-error measures design efficiency** - lower values indicate better designs that extract more information from respondents
+
+2. **Three types of D-error** exist depending on parameter assumptions:
+   - **D₀-error**: No parameter assumptions (all coefficients = 0)
+   - **Dₚ-error**: Fixed parameter values
+   - **D_B-error**: Random parameters with assumed distributions
+
+3. **cbcTools automatically selects** the appropriate D-error type:
+   - No `priors` → D₀-error
+   - Fixed `priors` → Dₚ-error  
+   - Random `priors` (using `rand_spec()`) → D_B-error
+
+4. **Sequential optimization** in `cbc_design()` uses these D-error calculations to find efficient experimental designs by minimizing the chosen D-error metric
+
+Understanding D-error helps you make informed decisions about experimental design and interpret the quality of your choice experiments when using `cbcTools`.

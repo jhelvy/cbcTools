@@ -25,6 +25,8 @@ navbar:
       menu:
         - text: "Generating Profiles"
           href: articles/profiles.html
+        - text: "Computing D-Error"
+          href: articles/d_error.html
     - text: "Changelog"
       href: news/index.html
 
