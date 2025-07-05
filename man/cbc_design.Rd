@@ -85,17 +85,17 @@ The \code{method} argument determines the design approach used:
 
 \subsection{Method Compatibility}{
 
-The table below summarizes method compatibility with design features:\tabular{llllllll}{
-   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Interactions? \tab Dominance removal? \tab Requires priors? \cr
-   \code{"random"} \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab No \cr
-   \code{"stochastic"} \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab No* \cr
-   \code{"modfed"} \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab No* \cr
-   \code{"cea"} \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \tab No* \cr
-   \code{"shortcut"} \tab Yes \tab Yes \tab Yes \tab No \tab No \tab No \tab No \cr
+The table below summarizes method compatibility with design features:\tabular{lllllll}{
+   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Interactions? \tab Dominance removal? \cr
+   "random" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \cr
+   "shortcut" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "minoverlap" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "balanced" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "stochastic" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
+   "modfed" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
+   "cea" \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
 }
 
-
-*Priors optional but recommended for D-error optimization methods
 }
 
 \subsection{Design Quality Assurance}{

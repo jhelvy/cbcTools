@@ -152,8 +152,9 @@ validate_design_inputs <- function(
     }
 
     # Validate method
-    if (!method %in% c("random", "shortcut", "stochastic", "modfed", "cea")) {
-        stop("method must be 'random', 'shortcut', 'stochastic', 'modfed', or 'cea'")
+    valid_methods <- get_design_methods_all()
+    if (!method %in% valid_methods) {
+        stop("method must be one of: ", paste(valid_methods, collapse = ", "))
     }
 
     # CEA-specific validation: requires full factorial profiles

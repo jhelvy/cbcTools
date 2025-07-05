@@ -24,6 +24,24 @@ get_var_names <- function(design) {
   if (!is.null(lhs)) lhs else rhs
 }
 
+get_design_methods_all <- function() {
+  return(c(
+    "random", "shortcut", "minoverlap", "balanced", "stochastic", "modfed", "cea"
+  ))
+}
+
+get_design_methods_optimal <- function() {
+    return(c(
+        "stochastic", "modfed", "cea"
+    ))
+}
+
+get_design_methods_other <- function() {
+    return(c(
+        "random", "shortcut", "minoverlap", "balanced"
+    ))
+}
+
 set_num_cores <- function(n_cores) {
     cores_available <- parallel::detectCores()
     max_cores <- cores_available - 1
