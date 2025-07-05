@@ -426,13 +426,18 @@ summary.cbc_power <- function(object, power_threshold = 0.8, ...) {
 
 #' Compare power across multiple designs
 #' @param ... Named cbc_power objects to compare
-#' @param power_threshold Power threshold for horizontal reference line. Defaults to 0.8
+#' @param type Type of plot: "power" for power curves or "se" for standard error curves
+#' @param power_threshold Power threshold for horizontal reference line (only for power plots). Defaults to 0.8
 #' @return A ggplot object comparing power curves
 #' @export
-plot_compare_power <- function(..., power_threshold = 0.8) {
+plot_compare_power <- function(..., type = "power", power_threshold = 0.8) {
 
     if (!requireNamespace("ggplot2", quietly = TRUE)) {
         stop("Package 'ggplot2' is required for plotting. Please install it with install.packages('ggplot2')")
+    }
+
+    if (!type %in% c("power", "se")) {
+        stop("type must be 'power' or 'se'")
     }
 
     power_objects <- list(...)
@@ -458,18 +463,34 @@ plot_compare_power <- function(..., power_threshold = 0.8) {
     plot_data <- do.call(rbind, combined_data)
 
     # Create comparison plot
-    ggplot2::ggplot(plot_data, ggplot2::aes(x = sample_size, y = power)) +
-        ggplot2::geom_hline(yintercept = power_threshold, color = "red", linetype = "dashed", alpha = 0.7) +
-        ggplot2::geom_line(ggplot2::aes(color = design), linewidth = 1) +
-        ggplot2::geom_point(ggplot2::aes(color = design), size = 2) +
-        ggplot2::facet_wrap(~ parameter) +
-        ggplot2::theme_bw() +
-        ggplot2::labs(
-            x = "Sample Size (number of respondents)",
-            y = "Statistical Power",
-            title = "Power Comparison Across Designs",
-            subtitle = sprintf("Dashed line shows %.0f%% power threshold", power_threshold * 100),
-            color = "Design"
-        ) +
-        ggplot2::ylim(0, 1)
+    if (type == "power") {
+        p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = sample_size, y = power)) +
+            ggplot2::geom_hline(yintercept = power_threshold, color = "red", linetype = "dashed", alpha = 0.7) +
+            ggplot2::geom_line(ggplot2::aes(color = design), linewidth = 1) +
+            ggplot2::geom_point(ggplot2::aes(color = design), size = 2) +
+            ggplot2::facet_wrap(~ parameter) +
+            ggplot2::theme_bw() +
+            ggplot2::labs(
+                x = "Sample Size (number of respondents)",
+                y = "Statistical Power",
+                title = "Power Comparison Across Designs",
+                subtitle = sprintf("Dashed line shows %.0f%% power threshold", power_threshold * 100),
+                color = "Design"
+            ) +
+            ggplot2::ylim(0, 1)
+    } else {
+        p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = sample_size, y = std_error)) +
+            ggplot2::geom_line(ggplot2::aes(color = design), linewidth = 1) +
+            ggplot2::geom_point(ggplot2::aes(color = design), size = 2) +
+            ggplot2::facet_wrap(~ parameter) +
+            ggplot2::theme_bw() +
+            ggplot2::labs(
+                x = "Sample Size (number of respondents)",
+                y = "Standard Error",
+                title = "Standard Error Comparison Across Designs",
+                color = "Design"
+            )
+    }
+
+    return(p)
 }
