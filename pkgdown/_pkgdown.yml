@@ -23,26 +23,39 @@ navbar:
       href: reference/index.html
     - text: "Articles"
       menu:
+        - text: "Getting Started"
+          href: articles/getting-started.html
         - text: "Generating Profiles"
           href: articles/profiles.html
+        - text: "Creating Priors"
+          href: articles/priors.html
+        - text: "Design Generation"
+          href: articles/design.html
         - text: "Computing D-Error"
           href: articles/d_error.html
+        - text: "Simulating Choices"
+          href: articles/choices.html
+        - text: "Power Analysis"
+          href: articles/power.html
     - text: "Changelog"
       href: news/index.html
 
 reference:
+- title: "Profiles"
+  desc: "Functions for generating attribute profiles."
+  contents:
+  - cbc_profiles
+  - cbc_restrict
 - title: "Priors"
-  desc: "Functions for generating a set of prior (assumed) coefficients."
+  desc: "Functions for generating prior (assumed) coefficients."
   contents:
   - cbc_priors
   - rand_spec
   - cor_spec
   - int_spec
 - title: "Design"
-  desc: "Functions for generating survey designs."
+  desc: "Functions for generating and comparing survey designs."
   contents:
-  - cbc_profiles
-  - cbc_restrict
   - cbc_design
   - cbc_decode_design
   - cbc_compare
@@ -55,19 +68,19 @@ reference:
   contents:
   - cbc_choices
 - title: "Power Analysis"
-  desc: "Functions for conducting a power analysis."
+  desc: "Functions for conducting power analysis."
   contents:
   - cbc_power
   - plot_compare_power
 - title: "Methods"
-  desc: "Various methods."
+  desc: "Various S3 methods."
   contents:
   - print.cbc_profiles
   - print.cbc_priors
   - print.cbc_design
   - print.cbc_choices
-  - print.cbc_models
-  - plot.cbc_power_errors
-  - print.cbc_power_errors
+  - print.cbc_power
+  - plot.cbc_power
+  - summary.cbc_power
   - print.cbc_inspection
   - print.cbc_comparison

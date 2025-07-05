@@ -266,120 +266,6 @@ print.cbc_choices <- function(x, ...) {
   invisible(x)
 }
 
-#' Methods for cbc_models objects
-#'
-#' Miscellaneous methods for `cbc_models` class objects.
-#'
-#' @name miscmethods.cbc_models
-#' @aliases print.cbc_models
-#' @param x is an object of class `cbc_models`.
-#' @param digits the number of digits for printing, defaults to `3`.
-#' @param width the width of the printing.
-#' @param ... further arguments.
-#' @return No return value, prints a summary of estimated models.
-#' @rdname miscmethods.cbc_models
-#' @export
-print.cbc_models <- function (
-  x,
-  digits = max(3, getOption("digits") - 2),
-  width = getOption("width"),
-  ...
-) {
-  cat("A list of models estimated with the following sample sizes:")
-  cat("\n\n", paste0(names(x), "\n"), "\n")
-  cat("Each model contains estimates for the following parameters:")
-  cat("\n\n", paste0(names(stats::coef(x[[1]])), "\n"))
-  invisible(x)
-}
-
-#' Methods for cbc_power_errors objects
-#'
-#' Miscellaneous methods for `cbc_power_errors` class objects.
-#'
-#' @name miscmethods.cbc_power_errors
-#' @aliases plot.cbc_power_errors
-#' @param x is an object of class `cbc_power_errors`.
-#' @param ... further arguments.
-#' @return Returns a ggplot2 object plotting standard errors versus sample
-#' size.
-#' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
-#' theme element_blank labs
-#' @importFrom rlang .data
-#' @rdname miscmethods.cbc_power_errors
-#' @export
-plot.cbc_power_errors <- function (x, ...) {
-  plot <- ggplot2::ggplot(x) +
-    geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
-    geom_point(
-      aes(x = .data$sampleSize, y = .data$se, color = .data$coef),
-      size = 1.8
-    ) +
-    expand_limits(y = 0) +
-    theme_bw(base_size = 14) +
-    theme(panel.grid.minor = element_blank()) +
-    labs(
-      color = "Coefficient",
-      x = "Sample size",
-      y = "Standard error"
-    )
-  return(plot)
-}
-
-#' Enhanced print method for cbc_power_errors objects
-#' @param x A cbc_power_errors object
-#' @param ... Additional arguments passed to print
-#' @export
-print.cbc_power_errors <- function(x, ...) {
-  cat("CBC Power Analysis Results\n")
-  cat("==========================\n")
-
-  # Get choice info if available
-  choice_info <- attr(x, "choice_info")
-  if (!is.null(choice_info)) {
-    cat(sprintf("Simulation method: %s\n", choice_info$simulation_method))
-    if (!is.na(choice_info$d_error)) {
-      cat(sprintf("Design D-error: %.6f\n", choice_info$d_error))
-    }
-    if (!is.null(choice_info$n_respondents)) {
-      cat(sprintf("Data from: %d respondents\n", choice_info$n_respondents))
-    }
-    cat("\n")
-  }
-
-  # Basic statistics
-  n_breaks <- length(unique(x$sampleSize))
-  sample_range <- range(x$sampleSize)
-  n_pars <- length(unique(x$coef))
-
-  cat(sprintf("Sample sizes: %d to %d (%d breaks)\n",
-              sample_range[1], sample_range[2], n_breaks))
-  cat(sprintf("Parameters: %d (%s)\n",
-              n_pars, paste(unique(x$coef), collapse = ", ")))
-  cat("\n")
-
-  # Summary of results at different sample sizes
-  cat("Standard errors by sample size:\n")
-  cat("(Showing every few sample sizes)\n\n")
-
-  # Show results for a few sample sizes
-  sample_sizes <- unique(x$sampleSize)
-  show_sizes <- sample_sizes[seq(1, length(sample_sizes), length.out = min(5, length(sample_sizes)))]
-
-  for (size in show_sizes) {
-    subset_data <- x[x$sampleSize == size, ]
-    cat(sprintf("n = %d:\n", size))
-    for (i in seq_len(nrow(subset_data))) {
-      cat(sprintf("  %-12s: SE = %.4f\n",
-                  subset_data$coef[i], subset_data$se[i]))
-    }
-    cat("\n")
-  }
-
-  cat("Use plot() to visualize power curves.\n")
-
-  invisible(x)
-}
-
 #' Print method for cbc_inspection objects
 #' @param x A cbc_inspection object
 #' @param ... Additional arguments passed to print
@@ -808,4 +694,134 @@ print_best_performers <- function(data) {
         cat(paste(performers, collapse = "\n"))
         cat("\n")
     }
+}
+
+#' Print method for cbc_power objects
+#' @param x A cbc_power object
+#' @param ... Additional arguments passed to print
+#' @export
+print.cbc_power <- function(x, ...) {
+    cat("CBC Power Analysis Results\n")
+    cat("==========================\n\n")
+
+    # Basic info
+    cat(sprintf("Sample sizes tested: %d to %d (%d breaks)\n",
+                min(x$sample_sizes), max(x$sample_sizes), x$n_breaks))
+    cat(sprintf("Significance level: %.3f\n", x$alpha))
+
+    # Parameter summary
+    params <- unique(x$power_summary$parameter)
+    cat(sprintf("Parameters: %s\n\n", paste(params, collapse = ", ")))
+
+    # Power summary at different sample sizes
+    cat("Power summary (probability of detecting true effect):\n")
+
+    # Show every few sample sizes for readability
+    sizes_to_show <- unique(x$power_summary$sample_size)
+    if (length(sizes_to_show) > 5) {
+        indices <- round(seq(1, length(sizes_to_show), length.out = 5))
+        sizes_to_show <- sizes_to_show[indices]
+    }
+
+    for (size in sizes_to_show) {
+        subset_data <- x$power_summary[x$power_summary$sample_size == size, ]
+        cat(sprintf("\nn = %d:\n", size))
+        for (i in 1:nrow(subset_data)) {
+            cat(sprintf("  %-12s: Power = %.3f, SE = %.4f\n",
+                        subset_data$parameter[i],
+                        subset_data$power[i],
+                        subset_data$std_error[i]))
+        }
+    }
+
+    cat("\nUse plot() to visualize power curves.\n")
+    cat("Use summary() for detailed power analysis.\n")
+
+    invisible(x)
+}
+
+#' Plot method for cbc_power objects
+#' @param x A cbc_power object
+#' @param type Type of plot: "power" for power curves or "se" for standard error curves
+#' @param power_threshold Power threshold for horizontal reference line (only for power plots). Defaults to 0.8
+#' @param ... Additional arguments passed to ggplot
+#' @export
+plot.cbc_power <- function(x, type = "power", power_threshold = 0.8, ...) {
+
+    if (!requireNamespace("ggplot2", quietly = TRUE)) {
+        stop("Package 'ggplot2' is required for plotting. Please install it with install.packages('ggplot2')")
+    }
+
+    if (!type %in% c("power", "se")) {
+        stop("type must be 'power' or 'se'")
+    }
+
+    if (type == "power") {
+        p <- ggplot2::ggplot(x$power_summary, ggplot2::aes(x = sample_size, y = power)) +
+            ggplot2::geom_hline(yintercept = power_threshold, color = "red", linetype = "dashed", alpha = 0.7) +
+            ggplot2::geom_line(ggplot2::aes(color = parameter), linewidth = 1) +
+            ggplot2::geom_point(ggplot2::aes(color = parameter), size = 2) +
+            ggplot2::theme_bw() +
+            ggplot2::labs(
+                x = "Sample Size (number of respondents)",
+                y = "Statistical Power",
+                title = "Power Analysis Results",
+                subtitle = sprintf("Dashed line shows %.0f%% power threshold", power_threshold * 100),
+                color = "Parameter"
+            ) +
+            ggplot2::ylim(0, 1)
+    } else {
+        p <- ggplot2::ggplot(x$power_summary, ggplot2::aes(x = sample_size, y = std_error)) +
+            ggplot2::geom_line(ggplot2::aes(color = parameter), linewidth = 1) +
+            ggplot2::geom_point(ggplot2::aes(color = parameter), size = 2) +
+            ggplot2::theme_bw() +
+            ggplot2::labs(
+                x = "Sample Size (number of respondents)",
+                y = "Standard Error",
+                title = "Standard Error vs Sample Size",
+                color = "Parameter"
+            )
+    }
+
+    return(p)
+}
+
+#' Summary method for cbc_power objects
+#' @param object A cbc_power object
+#' @param power_threshold Minimum power threshold to report sample size requirements
+#' @param ... Additional arguments
+#' @export
+summary.cbc_power <- function(object, power_threshold = 0.8, ...) {
+    cat("CBC Power Analysis Summary\n")
+    cat("===========================\n\n")
+
+    # For each parameter, find sample size needed for threshold power
+    params <- unique(object$power_summary$parameter)
+
+    cat(sprintf("Sample size requirements for %.0f%% power:\n\n", power_threshold * 100))
+
+    for (param in params) {
+        param_data <- object$power_summary[object$power_summary$parameter == param, ]
+        param_data <- param_data[order(param_data$sample_size), ]
+
+        # Find first sample size that achieves threshold power
+        sufficient_power <- param_data$power >= power_threshold
+
+        if (any(sufficient_power)) {
+            required_size <- min(param_data$sample_size[sufficient_power])
+            final_power <- param_data$power[param_data$sample_size == required_size][1]
+            final_se <- param_data$std_error[param_data$sample_size == required_size][1]
+
+            cat(sprintf("%-15s: n >= %d (achieves %.1f%% power, SE = %.4f)\n",
+                        param, required_size, final_power * 100, final_se))
+        } else {
+            max_power <- max(param_data$power)
+            max_size <- max(param_data$sample_size)
+            cat(sprintf("%-15s: Threshold not reached (max %.1f%% power at n = %d)\n",
+                        param, max_power * 100, max_size))
+        }
+    }
+
+    cat("\n")
+    invisible(object)
 }

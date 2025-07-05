@@ -1,0 +1,462 @@
+---
+title: "Creating Priors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Creating Priors}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+  \usepackage{xcolor}
+  \usepackage{bbding}
+bibliography: "`r here::here('vignettes', 'library.bib')`"
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.retina = 3,
+  comment = "#>"
+)
+```
+
+Prior specifications define your assumptions about respondent preferences before collecting data. These priors serve two key purposes in cbcTools: optimizing experimental designs (for D-optimal methods) and simulating realistic choice patterns. This article shows how to create and work with prior specifications using `cbc_priors()`.
+
+```{r}
+library(cbcTools)
+
+# Example profiles for demonstrations
+profiles <- cbc_profiles(
+  price     = c(1, 1.5, 2, 2.5, 3),
+  type      = c('Fuji', 'Gala', 'Honeycrisp'),
+  freshness = c('Poor', 'Average', 'Excellent')
+)
+
+profiles
+```
+
+# Understanding Priors
+
+## What Are Priors?
+
+Priors represent your beliefs about how attributes influence respondent choices before collecting data. They specify:
+
+- **Direction of effects**: Positive values increase utility, negative values decrease it
+- **Magnitude of effects**: Larger absolute values indicate stronger preferences
+- **Uncertainty**: For random parameters, the standard deviation captures uncertainty
+
+## When to Use Priors
+
+- **D-optimal design methods** (stochastic, modfed, cea) use priors to optimize design efficiency
+- **Choice simulation** uses priors to generate realistic choice patterns for power analysis
+- **Bayesian analysis** incorporates priors with collected data for parameter estimation
+
+## Sources of Prior Information
+
+- **Literature review**: Published studies in similar contexts
+- **Expert judgment**: Domain knowledge from researchers or practitioners
+- **Pilot studies**: Small preliminary studies to estimate effects
+- **Previous studies**: Your own past research in related areas
+- **Theoretical expectations**: Economic theory or behavioral assumptions
+
+# Basic Prior Specification
+
+## Fixed Parameters
+
+Fixed parameters assume you know the exact coefficient values. Start with the simplest case:
+
+```{r}
+# Basic fixed priors
+priors_fixed <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,           # Negative = prefer lower prices
+  type = c(0.1, 0.2),     # Preferences relative to reference level
+  freshness = c(0.1, 0.2) # Preferences relative to reference level
+)
+
+priors_fixed
+```
+
+### Understanding Categorical Variables
+
+For categorical variables, cbcTools uses **dummy coding** with the first level as the reference:
+
+- **Reference level**: `Fuji` (coefficient = 0)
+- **Gala**: coefficient = 0.1 (preferred over Fuji)
+- **Honeycrisp**: coefficient = 0.2 (most preferred)
+
+Similarly for freshness:
+- **Reference level**: `Poor` (coefficient = 0)
+- **Average**: coefficient = 0.1
+- **Excellent**: coefficient = 0.2
+
+### Named vs Unnamed Specifications
+
+You can specify categorical priors in two ways:
+
+```{r}
+# Method 1: Unnamed vector (uses order from profiles)
+priors_unnamed <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c(0.1, 0.2),     # Gala=0.1, Honeycrisp=0.2 (Fuji=reference)
+  freshness = c(0.1, 0.2) # Average=0.1, Excellent=0.2 (Poor=reference)
+)
+
+# Method 2: Named vector (explicit level specification)
+priors_named <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c("Gala" = 0.1, "Honeycrisp" = 0.2),     # Explicit names
+  freshness = c("Average" = 0.1, "Excellent" = 0.2) # Explicit names
+)
+
+# Both produce identical results
+identical(priors_unnamed$pars, priors_named$pars)
+```
+
+## Random Parameters
+
+Random parameters allow for preference heterogeneity across respondents. Use `rand_spec()` to define random parameters:
+
+```{r}
+# Random parameters with normal distributions
+priors_random <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.1, sd = 0.05),    # Normal distribution
+  type = c(0.1, 0.2),                                       # Fixed parameters
+  freshness = rand_spec(dist = "n", mean = c(0.1, 0.2), sd = c(0.05, 0.1)) # Random categorical
+)
+
+priors_random
+```
+
+### Distribution Types
+
+Three distributions are supported:
+
+```{r}
+# Normal distribution (can be positive or negative)
+price_normal <- rand_spec(dist = "n", mean = -0.1, sd = 0.05)
+
+# Log-normal distribution (always positive, for WTP estimates)
+price_lognormal <- rand_spec(dist = "ln", mean = -0.1, sd = 0.05)
+
+# Censored normal distribution (truncated at zero)
+price_censored <- rand_spec(dist = "cn", mean = -0.1, sd = 0.05)
+
+# Example with log-normal (useful for positive-valued attributes)
+priors_lognormal <- cbc_priors(
+  profiles = profiles,
+  price = price_lognormal,
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2)
+)
+```
+
+# Advanced Features
+
+## Parameter Correlations
+
+Model correlations between random parameters using `cor_spec()`:
+
+```{r}
+# Create correlated random parameters
+priors_correlated <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(
+    dist = "n",
+    mean = -0.1,
+    sd = 0.05,
+    correlations = list(
+      cor_spec(with = "type", with_level = "Honeycrisp", value = 0.3)
+    )
+  ),
+  type = rand_spec(
+    dist = "n",
+    mean = c("Gala" = 0.1, "Honeycrisp" = 0.2),
+    sd = c("Gala" = 0.05, "Honeycrisp" = 0.1)
+  ),
+  freshness = c(0.1, 0.2)
+)
+
+# View the correlation matrix
+priors_correlated$correlation
+```
+
+### Types of Correlations
+
+```{r eval=FALSE}
+# General correlation between all levels of two attributes
+cor_spec(with = "type", value = -0.2)
+
+# Correlation with a specific level of a categorical attribute
+cor_spec(with = "type", with_level = "Honeycrisp", value = 0.3)
+
+# Correlation from a specific level to another specific level
+cor_spec(with = "freshness", level = "Gala", with_level = "Excellent", value = 0.4)
+```
+
+## Interaction Effects
+
+Include interaction terms for D-optimal designs using `int_spec()`:
+
+```{r}
+# Create priors with interaction effects
+priors_interactions <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2),
+  interactions = list(
+    # Price sensitivity varies by apple type
+    int_spec(between = c("price", "type"), with_level = "Fuji", value = 0.05),
+    int_spec(between = c("price", "type"), with_level = "Gala", value = 0.02),
+    # Type preferences vary by freshness
+    int_spec(between = c("type", "freshness"),
+             level = "Honeycrisp", with_level = "Excellent", value = 0.15)
+  )
+)
+
+priors_interactions
+```
+
+### Interaction Types
+
+```{r eval=FALSE}
+# Continuous × Categorical: Must specify categorical level
+int_spec(between = c("price", "type"), with_level = "Fuji", value = 0.05)
+
+# Categorical × Categorical: Must specify both levels
+int_spec(between = c("type", "freshness"),
+         level = "Gala", with_level = "Excellent", value = 0.1)
+
+# Continuous × Continuous: No level specification needed
+int_spec(between = c("price", "weight"), value = 0.02)
+```
+
+## No-Choice Priors
+
+For designs with no-choice options, specify the no-choice utility:
+
+```{r}
+# Fixed no-choice prior
+priors_nochoice_fixed <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2),
+  no_choice = -0.5  # Negative values make no-choice less attractive
+)
+
+# Random no-choice prior
+priors_nochoice_random <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2),
+  no_choice = rand_spec(dist = "n", mean = -0.5, sd = 0.2)
+)
+
+priors_nochoice_fixed
+```
+
+# Parameter Draws for Bayesian Analysis
+
+When you specify random parameters, `cbc_priors()` automatically generates parameter draws for Bayesian D-error calculation:
+
+```{r}
+# Create priors with random parameters
+priors_bayesian <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.1, sd = 0.05),
+  type = rand_spec(dist = "n", mean = c(0.1, 0.2), sd = c(0.05, 0.1)),
+  freshness = c(0.1, 0.2),
+  n_draws = 500  # Number of parameter draws (default = 100)
+)
+
+# Inspect the parameter draws
+cat("Parameter draws dimensions:", dim(priors_bayesian$par_draws), "\n")
+cat("Mean of price draws:", mean(priors_bayesian$par_draws[, "price"]), "\n")
+cat("SD of price draws:", sd(priors_bayesian$par_draws[, "price"]), "\n")
+
+# Plot distribution of one parameter
+hist(priors_bayesian$par_draws[, "price"],
+     main = "Distribution of Price Parameter Draws",
+     xlab = "Price Coefficient")
+```
+
+## Draw Types
+
+Control the type of random draws used:
+
+```{r}
+# Halton draws (default, good for most cases)
+priors_halton <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.1, sd = 0.05),
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2),
+  draw_type = "halton"
+)
+
+# Sobol draws (recommended for >5 random parameters)
+priors_sobol <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.1, sd = 0.05),
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2),
+  draw_type = "sobol"
+)
+```
+
+# Best Practices
+
+## Starting with Literature
+
+Base your priors on existing research when possible:
+
+```{r}
+# Example based on typical food choice study findings
+priors_literature <- cbc_priors(
+  profiles = profiles,
+  price = -0.3,           # Strong price sensitivity (common in food studies)
+  type = c(0.2, 0.4),     # Moderate brand preferences
+  freshness = c(0.5, 1.0) # Strong freshness preferences
+)
+```
+
+## Conservative vs Optimistic Priors
+
+```{r}
+# Conservative priors (smaller effects, more uncertainty)
+priors_conservative <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.05, sd = 0.1),  # Large uncertainty
+  type = rand_spec(dist = "n", mean = c(0.05, 0.1), sd = c(0.1, 0.1)),
+  freshness = c(0.05, 0.1)
+)
+
+# Optimistic priors (larger effects, less uncertainty)
+priors_optimistic <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.2, sd = 0.02),  # Small uncertainty
+  type = rand_spec(dist = "n", mean = c(0.2, 0.4), sd = c(0.02, 0.02)),
+  freshness = c(0.2, 0.4)
+)
+```
+
+## Sensitivity Analysis
+
+Test how sensitive your design is to different prior specifications:
+
+```{r}
+# Create multiple prior scenarios
+scenarios <- list(
+  conservative = priors_conservative,
+  moderate = priors_fixed,
+  optimistic = priors_optimistic
+)
+
+# Could use these to create designs and compare efficiency
+# (This would be part of a larger design comparison workflow)
+```
+
+## Prior Validation
+
+Check that your priors make sense:
+
+```{r}
+# Inspect prior structure
+priors <- priors_fixed
+cat("Attributes with priors:", names(priors$attrs), "\n")
+
+# Check coefficient signs
+for (attr in names(priors$attrs)) {
+  cat(attr, "- Mean:", priors$attrs[[attr]]$mean, "\n")
+}
+
+# Simulate some choice probabilities to check reasonableness
+# (This would typically be done with a small design)
+```
+
+# Common Pitfalls
+
+## Mismatched Scales
+
+Ensure prior magnitudes match your attribute scales:
+
+```{r eval=FALSE}
+# Problem: Price in dollars, prior assumes price in cents
+profiles_dollars <- cbc_profiles(price = c(1.00, 2.00, 3.00), ...)
+priors_cents <- cbc_priors(profiles_dollars, price = -10, ...) # Too large!
+
+# Solution: Match scales
+priors_dollars <- cbc_priors(profiles_dollars, price = -0.10, ...) # Appropriate
+```
+
+## Wrong Reference Levels
+
+Remember the first level is always the reference:
+
+```{r}
+# If you want "Excellent" as reference, reorder profiles
+profiles_reordered <- cbc_profiles(
+  price = c(1, 1.5, 2, 2.5, 3),
+  type = c('Fuji', 'Gala', 'Honeycrisp'),
+  freshness = c('Excellent', 'Average', 'Poor')  # Excellent now reference
+)
+
+priors_reordered <- cbc_priors(
+  profiles_reordered,
+  price = -0.1,
+  type = c(0.1, 0.2),
+  freshness = c(-0.1, -0.2)  # Negative = worse than excellent
+)
+```
+
+## Incompatible Restrictions
+
+Ensure your priors are compatible with restricted profiles:
+
+```{r eval=FALSE}
+# If you've restricted certain profile combinations,
+# make sure your priors don't assume those combinations are common
+restricted_profiles <- cbc_restrict(profiles, type == "Fuji" & price > 2.5)
+
+# Prior should reflect that expensive Fuji combinations don't exist
+priors_compatible <- cbc_priors(restricted_profiles, ...)
+```
+
+# Using Priors in Practice
+
+Once created, priors are used in:
+
+1. **Design optimization**: Pass to `cbc_design()` for D-optimal methods
+2. **Choice simulation**: Pass to `cbc_choices()` for realistic choice patterns
+3. **Power analysis**: Indirectly through simulated choice data
+
+```{r eval=FALSE}
+# Typical workflow
+priors <- cbc_priors(profiles, price = -0.1, type = c(0.1, 0.2), freshness = c(0.1, 0.2))
+
+# Use in design optimization
+design <- cbc_design(profiles, priors = priors, method = "stochastic")
+
+# Use in choice simulation
+choices <- cbc_choices(design, priors = priors)
+
+# Use in power analysis
+power <- cbc_power(choices, pars = c("price", "type", "freshness"))
+```
+
+# Next Steps
+
+After creating priors:
+
+1. **Generate designs** using `cbc_design()` with your priors for D-optimal methods
+2. **Simulate choices** using `cbc_choices()` to test your assumptions
+3. **Conduct power analysis** to determine appropriate sample sizes
+4. **Validate assumptions** by comparing simulated patterns to expectations
+
+For details on these next steps, see the other vignettes: "Design Generation", "Simulating Choices", and "Power Analysis".
