@@ -26,15 +26,160 @@
 #'       - An unnamed vector of values one less than the number of levels (dummy coding)
 #'       - A named vector mapping levels to coefficients (remaining level becomes reference)
 #'   - For random parameters: use `rand_spec()` to specify distribution, parameters, and correlations
+#'
+#' @details
+#' ## Fixed vs Random Parameters
+#'
+#' **Fixed parameters** assume all respondents have the same preference coefficients.
+#' Specify these as simple numeric values.
+#'
+#' **Random parameters** assume preference coefficients vary across respondents
+#' according to a specified distribution. Use `rand_spec()` to define the
+#' distribution type, mean, and standard deviation.
+#'
+#' ## Categorical Variable Specification
+#'
+#' For categorical variables, you can specify priors in two ways:
+#'
+#' 1. **Unnamed vector**: Provide coefficients for all levels except the first
+#'    (which becomes the reference level). Order matters and should match the
+#'    natural order of levels.
+#'
+#' 2. **Named vector**: Explicitly map coefficient values to specific levels.
+#'    Any level not specified becomes the reference level.
+#'
+#' ## Interaction Terms
+#'
+#' Use the `interactions` parameter with `int_spec()` to include interaction
+#' effects between attributes. Only interactions between fixed parameters are
+#' supported. For categorical variables involved in interactions, you must
+#' specify the relevant levels.
+#'
+#' ## No-Choice Options
+#'
+#' When including a no-choice alternative, provide a `no_choice` parameter.
+#' This can be either a fixed numeric value or a `rand_spec()` for random
+#' no-choice utility.
+#'
 #' @return A structured prior specification object including parameter draws for
-#'   random coefficients and interaction terms
+#'   random coefficients and interaction terms. This object contains:
+#'   - `pars`: Vector of mean parameter values
+#'   - `par_draws`: Matrix of parameter draws (if random parameters specified)
+#'   - `correlation`: Correlation matrix for random parameters (if applicable)
+#'   - `interactions`: List of interaction specifications
+#'   - `attrs`: Detailed attribute information
+#'   - Additional metadata for validation and compatibility checking
+#'
+#' @export
+#' @examples
+#' library(cbcTools)
+#'
+#' # Create profiles for examples
+#' profiles <- cbc_profiles(
+#'   price = c(1, 2, 3, 4, 5),
+#'   type = c("Fuji", "Gala", "Honeycrisp"),
+#'   freshness = c("Poor", "Average", "Excellent")
+#' )
+#'
+#' # Example 1: Simple fixed priors
+#' priors_fixed <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.1,           # Continuous: negative price sensitivity
+#'   type = c(0.5, 0.2),     # Categorical: unnamed vector (vs "Fuji" reference)
+#'   freshness = c(-0.5, 0.3) # Categorical: unnamed vector (vs "Poor" reference)
+#' )
+#'
+#' # Example 2: Named categorical priors (more explicit)
+#' priors_named <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.1,
+#'   type = c("Gala" = 0.5, "Honeycrisp" = 0.2),  # "Fuji" is reference
+#'   freshness = c("Average" = 0.3, "Excellent" = 0.8)  # "Poor" is reference
+#' )
+#'
+#' # Example 3: Mixed fixed and random parameters
+#' priors_mixed <- cbc_priors(
+#'   profiles = profiles,
+#'   price = rand_spec(mean = -0.1, sd = 0.05),  # Random price sensitivity
+#'   type = c(0.5, 0.2),                         # Fixed type preferences
+#'   freshness = rand_spec(                      # Random freshness preferences
+#'     mean = c("Average" = 0.3, "Excellent" = 0.8),
+#'     sd = c("Average" = 0.2, "Excellent" = 0.3)
+#'   )
+#' )
+#'
+#' # Example 4: Correlated random parameters
+#' priors_correlated <- cbc_priors(
+#'   profiles = profiles,
+#'   price = rand_spec(
+#'     mean = -0.1,
+#'     sd = 0.05,
+#'     correlations = list(
+#'       cor_spec(with = "freshness", with_level = "Excellent", value = 0.3)
+#'     )
+#'   ),
+#'   type = c(0.5, 0.2),
+#'   freshness = rand_spec(
+#'     mean = c("Average" = 0.3, "Excellent" = 0.8),
+#'     sd = c("Average" = 0.2, "Excellent" = 0.3)
+#'   )
+#' )
+#'
+#' # Example 5: Including no-choice option
+#' priors_no_choice <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.1,
+#'   type = c(0.5, 0.2),
+#'   freshness = c(0.3, 0.8),
+#'   no_choice = -1.5  # Fixed no-choice utility
+#' )
+#'
+#' # Example 6: With interaction terms
+#' priors_interactions <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.1,
+#'   type = c("Gala" = 0.5, "Honeycrisp" = 0.2),
+#'   freshness = c("Average" = 0.3, "Excellent" = 0.8),
+#'   interactions = list(
+#'     # Price sensitivity differs by apple type
+#'     int_spec(between = c("price", "type"), with_level = "Honeycrisp", value = -0.05),
+#'     # Type preferences interact with freshness
+#'     int_spec(between = c("type", "freshness"),
+#'              level = "Gala", with_level = "Excellent", value = 0.2)
+#'   )
+#' )
+#'
+#' # Example 7: Random no-choice with different distributions
+#' priors_random_nochoice <- cbc_priors(
+#'   profiles = profiles,
+#'   price = rand_spec(mean = -0.1, sd = 0.05, dist = "n"),
+#'   type = c(0.5, 0.2),
+#'   freshness = c(0.3, 0.8),
+#'   no_choice = rand_spec(mean = -1.5, sd = 0.5, dist = "n")
+#' )
+#'
+#' # View the priors
+#' print(priors_fixed)
+#' print(priors_mixed)
+#'
+#' # Use priors in design generation
+#' design <- cbc_design(
+#'   profiles = profiles,
+#'   n_alts = 2,
+#'   n_q = 8,
+#'   priors = priors_mixed,
+#'   method = "stochastic"
+#' )
+#'
+#' # Use priors in choice simulation
+#' choices <- cbc_choices(design, priors = priors_mixed)
 #' @export
 cbc_priors <- function(
     profiles,
     no_choice = NULL,
     n_draws = 100,
     draw_type = "halton",
-    interactions = NULL,  # New parameter
+    interactions = NULL, # New parameter
     ...
 ) {
     # Validate input class
@@ -44,9 +189,15 @@ cbc_priors <- function(
 
     # Get attribute information and combine with parameter specifications
     params <- list(...)
-    if (!is.null(no_choice)) params$no_choice <- no_choice
+    if (!is.null(no_choice)) {
+        params$no_choice <- no_choice
+    }
 
-    attrs <- get_combined_attr_info(profiles, params, include_no_choice = !is.null(no_choice))
+    attrs <- get_combined_attr_info(
+        profiles,
+        params,
+        include_no_choice = !is.null(no_choice)
+    )
 
     # Validate interactions (only for fixed parameters)
     if (!is.null(interactions)) {
@@ -56,15 +207,34 @@ cbc_priors <- function(
     processed_params <- process_parameters(attrs)
 
     # Create coded data structure for parameter ordering
-    model_data <- prepare_profiles_for_model(profiles, processed_params$means, attrs)
+    model_data <- prepare_profiles_for_model(
+        profiles,
+        processed_params$means,
+        attrs
+    )
     profile_attrs <- names(attrs)[names(attrs) != "no_choice"]
-    profile_randPars <- get_random_pars_for_logitr(processed_params$random, attrs, profile_attrs)
+    profile_randPars <- get_random_pars_for_logitr(
+        processed_params$random,
+        attrs,
+        profile_attrs
+    )
 
     # Include interaction terms in variable names for logitr
-    var_names_with_interactions <- get_var_names_with_interactions(profile_attrs, interactions)
+    var_names_with_interactions <- get_var_names_with_interactions(
+        profile_attrs,
+        interactions
+    )
 
-    codedData <- logitr::recodeData(model_data, var_names_with_interactions, profile_randPars)
-    codedParNames <- if (!is.null(no_choice)) c(codedData$pars, "no_choice") else codedData$pars
+    codedData <- logitr::recodeData(
+        model_data,
+        var_names_with_interactions,
+        profile_randPars
+    )
+    codedParNames <- if (!is.null(no_choice)) {
+        c(codedData$pars, "no_choice")
+    } else {
+        codedData$pars
+    }
 
     # Generate parameter draws if we have random parameters
     par_draws <- NULL
@@ -72,7 +242,12 @@ cbc_priors <- function(
     if (length(processed_params$random) > 0) {
         cor_mat <- build_correlation_matrix(attrs, processed_params$random)
         par_draws <- generate_parameter_draws(
-            codedParNames, attrs, processed_params, cor_mat, n_draws, draw_type
+            codedParNames,
+            attrs,
+            processed_params,
+            cor_mat,
+            n_draws,
+            draw_type
         )
     }
 
@@ -82,17 +257,27 @@ cbc_priors <- function(
         pars_mean <- colMeans(par_draws)
         names(pars_mean) <- codedParNames
         # But override interaction values since they're always fixed
-        pars_mean <- set_interaction_values(pars_mean, codedParNames, interactions, attrs)
+        pars_mean <- set_interaction_values(
+            pars_mean,
+            codedParNames,
+            interactions,
+            attrs
+        )
     } else {
         # No random parameters, use the input specification means
-        pars_mean <- build_parameter_vector_with_interactions(codedParNames, attrs, processed_params$means, interactions)
+        pars_mean <- build_parameter_vector_with_interactions(
+            codedParNames,
+            attrs,
+            processed_params$means,
+            interactions
+        )
     }
 
     # Create return object with metadata
     result <- list(
         profiles_metadata = create_profiles_metadata(profiles),
         attrs = attrs,
-        interactions = interactions,  # Store interactions
+        interactions = interactions, # Store interactions
         pars = pars_mean,
         correlation = cor_mat,
         par_draws = par_draws,
@@ -115,7 +300,9 @@ cbc_priors <- function(
 #' @export
 rand_spec <- function(dist = "n", mean, sd, correlations = NULL) {
     if (!dist %in% c("n", "ln", "cn")) {
-        stop('dist must be one of "n" (normal), "ln" (log-normal), or "cn" (censored normal)')
+        stop(
+            'dist must be one of "n" (normal), "ln" (log-normal), or "cn" (censored normal)'
+        )
     }
 
     if (!is.null(correlations)) {
@@ -142,7 +329,12 @@ cor_spec <- function(with, value, level = NULL, with_level = NULL) {
     }
 
     structure(
-        list(attr = with, value = value, level = level, with_level = with_level),
+        list(
+            attr = with,
+            value = value,
+            level = level,
+            with_level = with_level
+        ),
         class = "cbc_correlation"
     )
 }
@@ -203,14 +395,20 @@ digest_profiles <- function(profiles) {
     attr_info <- attr(profiles, "attribute_info")
     structure_string <- paste(
         names(attr_info),
-        sapply(attr_info, function(x) paste(x$type, x$n_levels, collapse = "_")),
+        sapply(attr_info, function(x) {
+            paste(x$type, x$n_levels, collapse = "_")
+        }),
         collapse = "|"
     )
     abs(sum(utf8ToInt(structure_string)))
 }
 
 # Get combined attribute information with parameter specifications
-get_combined_attr_info <- function(profiles, params, include_no_choice = FALSE) {
+get_combined_attr_info <- function(
+    profiles,
+    params,
+    include_no_choice = FALSE
+) {
     profile_attrs <- profiles[, -which(names(profiles) == "profileID")]
 
     # Validate parameter specifications
@@ -234,15 +432,22 @@ get_combined_attr_info <- function(profiles, params, include_no_choice = FALSE) 
 validate_param_coverage <- function(profile_attrs, params, include_no_choice) {
     missing_attrs <- setdiff(names(profile_attrs), names(params))
     if (length(missing_attrs) > 0) {
-        stop("Missing prior specifications for attributes: ",
-             paste(missing_attrs, collapse = ", "))
+        stop(
+            "Missing prior specifications for attributes: ",
+            paste(missing_attrs, collapse = ", ")
+        )
     }
 
-    valid_params <- c(names(profile_attrs), if(include_no_choice) "no_choice" else NULL)
+    valid_params <- c(
+        names(profile_attrs),
+        if (include_no_choice) "no_choice" else NULL
+    )
     extra_attrs <- setdiff(names(params), valid_params)
     if (length(extra_attrs) > 0) {
-        stop("Prior specifications provided for non-existent attributes: ",
-             paste(extra_attrs, collapse = ", "))
+        stop(
+            "Prior specifications provided for non-existent attributes: ",
+            paste(extra_attrs, collapse = ", ")
+        )
     }
 }
 
@@ -264,13 +469,36 @@ create_attr_info <- function(values, param, attr_name) {
 
     # Process parameter values
     if (is_random) {
-        info <- c(info, list(
-            dist = param$dist,
-            correlations = param$correlations
-        ))
-        info <- c(info, process_param_values(param$mean, param$sd, all_levels, is_continuous, attr_name, TRUE))
+        info <- c(
+            info,
+            list(
+                dist = param$dist,
+                correlations = param$correlations
+            )
+        )
+        info <- c(
+            info,
+            process_param_values(
+                param$mean,
+                param$sd,
+                all_levels,
+                is_continuous,
+                attr_name,
+                TRUE
+            )
+        )
     } else {
-        info <- c(info, process_param_values(param, NULL, all_levels, is_continuous, attr_name, FALSE))
+        info <- c(
+            info,
+            process_param_values(
+                param,
+                NULL,
+                all_levels,
+                is_continuous,
+                attr_name,
+                FALSE
+            )
+        )
     }
 
     return(info)
@@ -306,10 +534,19 @@ get_all_levels <- function(values) {
 }
 
 # Process parameter values (handles both fixed and random)
-process_param_values <- function(mean_param, sd_param, all_levels, is_continuous, attr_name, is_random) {
+process_param_values <- function(
+    mean_param,
+    sd_param,
+    all_levels,
+    is_continuous,
+    attr_name,
+    is_random
+) {
     if (is_continuous) {
         result <- list(mean = mean_param)
-        if (is_random) result$sd <- sd_param
+        if (is_random) {
+            result$sd <- sd_param
+        }
         return(result)
     }
 
@@ -318,18 +555,24 @@ process_param_values <- function(mean_param, sd_param, all_levels, is_continuous
         # Named vector case
         validate_categorical_levels(names(mean_param), all_levels, attr_name)
         if (is_random && !identical(names(mean_param), names(sd_param))) {
-            stop(sprintf("Names for mean and sd must match for random parameter '%s'", attr_name))
+            stop(sprintf(
+                "Names for mean and sd must match for random parameter '%s'",
+                attr_name
+            ))
         }
         result <- list(mean = mean_param)
-        if (is_random) result$sd <- sd_param
+        if (is_random) {
+            result$sd <- sd_param
+        }
         return(result)
     } else {
         # Unnamed vector case - assign names based on remaining levels
-        remaining_levels <- all_levels[-1]  # All but first level
+        remaining_levels <- all_levels[-1] # All but first level
         if (length(mean_param) != length(remaining_levels)) {
             stop(sprintf(
                 "Incorrect number of values for '%s'. Expected %d values (one less than the number of levels)",
-                attr_name, length(remaining_levels)
+                attr_name,
+                length(remaining_levels)
             ))
         }
         names(mean_param) <- remaining_levels
@@ -343,7 +586,11 @@ process_param_values <- function(mean_param, sd_param, all_levels, is_continuous
 }
 
 # Validate categorical levels
-validate_categorical_levels <- function(provided_levels, all_levels, attr_name) {
+validate_categorical_levels <- function(
+    provided_levels,
+    all_levels,
+    attr_name
+) {
     invalid_levels <- setdiff(provided_levels, all_levels)
     if (length(invalid_levels) > 0) {
         stop(sprintf(
@@ -384,7 +631,8 @@ process_parameters <- function(attrs) {
 get_random_pars_for_logitr <- function(random_params, attrs, profile_attrs) {
     randPars <- list()
     for (attr in names(random_params)) {
-        if (attr %in% profile_attrs) {  # Only profile attributes, not no_choice
+        if (attr %in% profile_attrs) {
+            # Only profile attributes, not no_choice
             randPars[[attr]] <- random_params[[attr]]$dist
         }
     }
@@ -398,7 +646,12 @@ build_parameter_vector <- function(codedParNames, attrs, means) {
 
     for (param_name in codedParNames) {
         original_attr <- find_original_attribute(param_name, attrs)
-        pars_mean[param_name] <- extract_parameter_value(param_name, original_attr, attrs, means)
+        pars_mean[param_name] <- extract_parameter_value(
+            param_name,
+            original_attr,
+            attrs,
+            means
+        )
     }
 
     return(pars_mean)
@@ -421,7 +674,7 @@ find_original_attribute <- function(param_name, attrs) {
 # Extract parameter value for a specific coded parameter
 extract_parameter_value <- function(param_name, original_attr, attrs, means) {
     if (is.null(original_attr) || !original_attr %in% names(means)) {
-        return(0)  # Default value
+        return(0) # Default value
     }
 
     attr_mean <- means[[original_attr]]
@@ -442,7 +695,10 @@ prepare_profiles_for_model <- function(profiles, means, attrs) {
     for (attr in names(attrs)) {
         if (attr != "no_choice" && !attrs[[attr]]$continuous) {
             levels_order <- determine_level_order(attr, means, attrs)
-            model_data[[attr]] <- factor(profiles[[attr]], levels = levels_order)
+            model_data[[attr]] <- factor(
+                profiles[[attr]],
+                levels = levels_order
+            )
         }
     }
 
@@ -470,7 +726,9 @@ build_correlation_matrix <- function(attrs, random_params) {
     par_names <- get_parameter_names_for_correlation(attrs, random_params)
     n_pars <- length(par_names)
 
-    if (n_pars == 0) return(NULL)
+    if (n_pars == 0) {
+        return(NULL)
+    }
 
     cor_mat <- diag(n_pars)
     rownames(cor_mat) <- colnames(cor_mat) <- par_names
@@ -479,18 +737,33 @@ build_correlation_matrix <- function(attrs, random_params) {
     for (attr1 in names(random_params)) {
         param <- random_params[[attr1]]
         if (!is.null(param$correlations)) {
-            tryCatch({
-                cor_mat <- process_parameter_correlations(attr1, param$correlations, attrs, random_params, cor_mat)
-            }, error = function(e) {
-                stop(sprintf("Error processing correlations for attribute '%s': %s", attr1, e$message))
-            })
+            tryCatch(
+                {
+                    cor_mat <- process_parameter_correlations(
+                        attr1,
+                        param$correlations,
+                        attrs,
+                        random_params,
+                        cor_mat
+                    )
+                },
+                error = function(e) {
+                    stop(sprintf(
+                        "Error processing correlations for attribute '%s': %s",
+                        attr1,
+                        e$message
+                    ))
+                }
+            )
         }
     }
 
     # Validate correlation matrix is positive definite
     eigenvals <- eigen(cor_mat)$values
     if (!all(eigenvals > 1e-10)) {
-        stop("Specified correlations result in an invalid correlation matrix. Try specifying fewer or smaller correlations.")
+        stop(
+            "Specified correlations result in an invalid correlation matrix. Try specifying fewer or smaller correlations."
+        )
     }
 
     return(cor_mat)
@@ -512,7 +785,13 @@ get_parameter_names_for_correlation <- function(attrs, random_params) {
 }
 
 # Process correlations for a single parameter
-process_parameter_correlations <- function(attr1, correlations, attrs, random_params, cor_mat) {
+process_parameter_correlations <- function(
+    attr1,
+    correlations,
+    attrs,
+    random_params,
+    cor_mat
+) {
     # Group correlations by target attribute to handle general + specific overrides
     corr_by_attr <- list()
 
@@ -547,7 +826,8 @@ process_parameter_correlations <- function(attr1, correlations, attrs, random_pa
                 if (!is.null(general_cor)) {
                     warning(sprintf(
                         "Multiple general correlations specified between '%s' and '%s'. Using the last one.",
-                        attr1, attr2
+                        attr1,
+                        attr2
                     ))
                 }
                 general_cor <- cor
@@ -557,15 +837,28 @@ process_parameter_correlations <- function(attr1, correlations, attrs, random_pa
         }
 
         # Apply correlations - this modifies cor_mat in place and returns it
-        cor_mat <- apply_correlations_between_attributes(attr1, attr2, general_cor, specific_cors, attrs, cor_mat)
+        cor_mat <- apply_correlations_between_attributes(
+            attr1,
+            attr2,
+            general_cor,
+            specific_cors,
+            attrs,
+            cor_mat
+        )
     }
 
     return(cor_mat)
 }
 
 # Apply correlations between two attributes
-apply_correlations_between_attributes <- function(attr1, attr2, general_cor, specific_cors, attrs, cor_mat) {
-
+apply_correlations_between_attributes <- function(
+    attr1,
+    attr2,
+    general_cor,
+    specific_cors,
+    attrs,
+    cor_mat
+) {
     # Get parameter names for both attributes
     attr1_params <- get_attribute_parameter_names(attr1, attrs)
     attr2_params <- get_attribute_parameter_names(attr2, attrs)
@@ -575,7 +868,10 @@ apply_correlations_between_attributes <- function(attr1, attr2, general_cor, spe
         for (param1 in attr1_params) {
             for (param2 in attr2_params) {
                 # Check if parameters exist in matrix
-                if (!param1 %in% rownames(cor_mat) || !param2 %in% colnames(cor_mat)) {
+                if (
+                    !param1 %in% rownames(cor_mat) ||
+                        !param2 %in% colnames(cor_mat)
+                ) {
                     next
                 }
 
@@ -593,9 +889,17 @@ apply_correlations_between_attributes <- function(attr1, attr2, general_cor, spe
         if (!is.null(cor$level)) {
             # Source level specified
             if (attrs[[attr1]]$continuous) {
-                stop(sprintf("Cannot specify level '%s' for continuous attribute '%s'", cor$level, attr1))
+                stop(sprintf(
+                    "Cannot specify level '%s' for continuous attribute '%s'",
+                    cor$level,
+                    attr1
+                ))
             }
-            source_params <- get_specific_parameter_names(attr1, cor$level, attrs)
+            source_params <- get_specific_parameter_names(
+                attr1,
+                cor$level,
+                attrs
+            )
         } else {
             source_params <- attr1_params
         }
@@ -604,9 +908,17 @@ apply_correlations_between_attributes <- function(attr1, attr2, general_cor, spe
         if (!is.null(cor$with_level)) {
             # Target level specified
             if (attrs[[attr2]]$continuous) {
-                stop(sprintf("Cannot specify with_level '%s' for continuous attribute '%s'", cor$with_level, attr2))
+                stop(sprintf(
+                    "Cannot specify with_level '%s' for continuous attribute '%s'",
+                    cor$with_level,
+                    attr2
+                ))
             }
-            target_params <- get_specific_parameter_names(attr2, cor$with_level, attrs)
+            target_params <- get_specific_parameter_names(
+                attr2,
+                cor$with_level,
+                attrs
+            )
         } else {
             target_params <- attr2_params
         }
@@ -615,7 +927,10 @@ apply_correlations_between_attributes <- function(attr1, attr2, general_cor, spe
         for (param1 in source_params) {
             for (param2 in target_params) {
                 # Check if parameters exist in matrix
-                if (!param1 %in% rownames(cor_mat) || !param2 %in% colnames(cor_mat)) {
+                if (
+                    !param1 %in% rownames(cor_mat) ||
+                        !param2 %in% colnames(cor_mat)
+                ) {
                     next
                 }
 
@@ -647,7 +962,10 @@ get_parameter_names_for_correlation <- function(attrs, random_params) {
 # Get parameter names for a specific level of an attribute
 get_specific_parameter_names <- function(attr, level, attrs) {
     if (attrs[[attr]]$continuous) {
-        stop(sprintf("Cannot specify level for continuous attribute '%s'", attr))
+        stop(sprintf(
+            "Cannot specify level for continuous attribute '%s'",
+            attr
+        ))
     }
 
     # Validate level exists
@@ -681,13 +999,20 @@ determine_correlation_indices <- function(attr1, attr2, cor, attrs) {
 get_correlation_parameter_names <- function(attr, level, attrs) {
     if (attrs[[attr]]$continuous) {
         if (!is.null(level)) {
-            stop(sprintf("Cannot specify level for continuous attribute '%s'", attr))
+            stop(sprintf(
+                "Cannot specify level for continuous attribute '%s'",
+                attr
+            ))
         }
         return(attr)
     } else {
         if (!is.null(level)) {
             if (!level %in% names(attrs[[attr]]$mean)) {
-                stop(sprintf("Invalid level '%s' for attribute '%s'", level, attr))
+                stop(sprintf(
+                    "Invalid level '%s' for attribute '%s'",
+                    level,
+                    attr
+                ))
             }
             return(paste0(attr, ".", level))
         } else {
@@ -700,7 +1025,8 @@ get_correlation_parameter_names <- function(attr, level, attrs) {
 set_correlation_values <- function(cor_mat, rows, cols, value) {
     for (row in rows) {
         for (col in cols) {
-            if (row != col) {  # Don't set correlation with self
+            if (row != col) {
+                # Don't set correlation with self
                 cor_mat[row, col] <<- value
                 cor_mat[col, row] <<- value
             }
@@ -709,9 +1035,20 @@ set_correlation_values <- function(cor_mat, rows, cols, value) {
 }
 
 # Generate parameter draws for Bayesian analysis
-generate_parameter_draws <- function(codedParNames, attrs, processed_params, cor_mat, n_draws, draw_type) {
+generate_parameter_draws <- function(
+    codedParNames,
+    attrs,
+    processed_params,
+    cor_mat,
+    n_draws,
+    draw_type
+) {
     # Build parameter setup for logitr functions
-    all_randPars <- get_all_random_pars(codedParNames, attrs, processed_params$random)
+    all_randPars <- get_all_random_pars(
+        codedParNames,
+        attrs,
+        processed_params$random
+    )
     parSetup <- get_parSetup(codedParNames, all_randPars)
     parIDs <- get_parIDs(parSetup)
 
@@ -729,7 +1066,11 @@ generate_parameter_draws <- function(codedParNames, attrs, processed_params, cor
 
     # Generate parameter draws
     standardDraws <- getStandardDraws(parIDs, n$draws, draw_type)
-    pars_mean <- build_parameter_vector(codedParNames, attrs, processed_params$means)
+    pars_mean <- build_parameter_vector(
+        codedParNames,
+        attrs,
+        processed_params$means
+    )
 
     return(makeBetaDraws(pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat))
 }
@@ -740,7 +1081,9 @@ get_all_random_pars <- function(codedParNames, attrs, random_params) {
 
     for (param_name in codedParNames) {
         original_attr <- find_original_attribute(param_name, attrs)
-        if (!is.null(original_attr) && original_attr %in% names(random_params)) {
+        if (
+            !is.null(original_attr) && original_attr %in% names(random_params)
+        ) {
             all_randPars[[param_name]] <- random_params[[original_attr]]$dist
         }
     }
@@ -755,8 +1098,15 @@ build_sd_vector <- function(codedParNames, attrs, random_params) {
 
     for (param_name in codedParNames) {
         original_attr <- find_original_attribute(param_name, attrs)
-        if (!is.null(original_attr) && original_attr %in% names(random_params)) {
-            sd_value <- extract_sd_value(param_name, original_attr, attrs, random_params)
+        if (
+            !is.null(original_attr) && original_attr %in% names(random_params)
+        ) {
+            sd_value <- extract_sd_value(
+                param_name,
+                original_attr,
+                attrs,
+                random_params
+            )
             pars_sd <- c(pars_sd, sd_value)
             pars_sd_names <- c(pars_sd_names, param_name)
         }
@@ -793,21 +1143,28 @@ get_parSetup <- function(parNames, randPars) {
 
 get_parIDs <- function(parSetup) {
     return(list(
-        f  = which(parSetup == "f"),
-        r  = which(parSetup != "f"),
-        n  = which(parSetup == "n"),
+        f = which(parSetup == "f"),
+        r = which(parSetup != "f"),
+        n = which(parSetup == "n"),
         ln = which(parSetup == "ln"),
         cn = which(parSetup == "cn")
     ))
 }
 
-makeBetaDraws <- function(pars_mean, pars_sd, parIDs, n, standardDraws, cor_mat) {
+makeBetaDraws <- function(
+    pars_mean,
+    pars_sd,
+    parIDs,
+    n,
+    standardDraws,
+    cor_mat
+) {
     # First scale the draws according to the covariance matrix
     lowerMat <- cor_mat^2
     diag(lowerMat) <- pars_sd
     lowerMat[!lower.tri(lowerMat, diag = TRUE)] <- 0
     scaledDraws <- standardDraws
-    scaledDraws[,parIDs$r] <- scaledDraws[,parIDs$r] %*% lowerMat
+    scaledDraws[, parIDs$r] <- scaledDraws[, parIDs$r] %*% lowerMat
 
     # Now shift the draws according to the means
     meanMat <- matrix(rep(pars_mean, n$draws), ncol = n$vars, byrow = TRUE)
@@ -829,11 +1186,15 @@ getStandardDraws <- function(parIDs, numDraws, draw_type) {
     numBetas <- length(parIDs$f) + length(parIDs$r)
     if (draw_type == 'sobol') {
         draws <- as.matrix(randtoolbox::sobol(
-            numDraws, numBetas, normal = TRUE
+            numDraws,
+            numBetas,
+            normal = TRUE
         ))
     } else {
         draws <- as.matrix(randtoolbox::halton(
-            numDraws, numBetas, normal = TRUE
+            numDraws,
+            numBetas,
+            normal = TRUE
         ))
     }
     draws[, parIDs$f] <- 0 * draws[, parIDs$f]
@@ -845,7 +1206,9 @@ getStandardDraws <- function(parIDs, numDraws, draw_type) {
 # Validate interaction specifications
 validate_interactions <- function(interactions, attrs) {
     if (!is.list(interactions)) {
-        stop("interactions must be a list of interaction specifications created by int_spec()")
+        stop(
+            "interactions must be a list of interaction specifications created by int_spec()"
+        )
     }
 
     if (!all(sapply(interactions, inherits, "cbc_interaction"))) {
@@ -856,14 +1219,19 @@ validate_interactions <- function(interactions, attrs) {
         # Check that both attributes exist
         missing_attrs <- setdiff(c(int$attr1, int$attr2), names(attrs))
         if (length(missing_attrs) > 0) {
-            stop(sprintf("Interaction references non-existent attributes: %s",
-                         paste(missing_attrs, collapse = ", ")))
+            stop(sprintf(
+                "Interaction references non-existent attributes: %s",
+                paste(missing_attrs, collapse = ", ")
+            ))
         }
 
         # Check that neither attribute is random
         if (attrs[[int$attr1]]$random || attrs[[int$attr2]]$random) {
-            stop(sprintf("Interactions with random parameters not supported. Attributes '%s' and '%s' must be fixed parameters.",
-                         int$attr1, int$attr2))
+            stop(sprintf(
+                "Interactions with random parameters not supported. Attributes '%s' and '%s' must be fixed parameters.",
+                int$attr1,
+                int$attr2
+            ))
         }
 
         # Validate level specifications
@@ -882,51 +1250,77 @@ validate_interaction_levels <- function(int, attrs) {
     if (attr1_continuous && !attr2_continuous) {
         # price * type case: must specify with_level for the categorical variable
         if (is.null(int$with_level)) {
-            stop(sprintf("For interaction between continuous '%s' and categorical '%s', must specify with_level",
-                         int$attr1, int$attr2))
+            stop(sprintf(
+                "For interaction between continuous '%s' and categorical '%s', must specify with_level",
+                int$attr1,
+                int$attr2
+            ))
         }
         if (!is.null(int$level)) {
-            stop(sprintf("Cannot specify level for continuous attribute '%s'", int$attr1))
+            stop(sprintf(
+                "Cannot specify level for continuous attribute '%s'",
+                int$attr1
+            ))
         }
     }
 
     if (!attr1_continuous && attr2_continuous) {
         # type * price case: must specify level for the categorical variable
         if (is.null(int$level)) {
-            stop(sprintf("For interaction between categorical '%s' and continuous '%s', must specify level",
-                         int$attr1, int$attr2))
+            stop(sprintf(
+                "For interaction between categorical '%s' and continuous '%s', must specify level",
+                int$attr1,
+                int$attr2
+            ))
         }
         if (!is.null(int$with_level)) {
-            stop(sprintf("Cannot specify with_level for continuous attribute '%s'", int$attr2))
+            stop(sprintf(
+                "Cannot specify with_level for continuous attribute '%s'",
+                int$attr2
+            ))
         }
     }
 
     # For categorical * categorical, both level and with_level should be specified
     if (!attr1_continuous && !attr2_continuous) {
         if (is.null(int$level) || is.null(int$with_level)) {
-            stop(sprintf("For interaction between categorical '%s' and categorical '%s', must specify both level and with_level",
-                         int$attr1, int$attr2))
+            stop(sprintf(
+                "For interaction between categorical '%s' and categorical '%s', must specify both level and with_level",
+                int$attr1,
+                int$attr2
+            ))
         }
     }
 
     # For continuous * continuous, neither level nor with_level should be specified
     if (attr1_continuous && attr2_continuous) {
         if (!is.null(int$level) || !is.null(int$with_level)) {
-            stop(sprintf("Cannot specify level or with_level for interaction between continuous attributes '%s' and '%s'",
-                         int$attr1, int$attr2))
+            stop(sprintf(
+                "Cannot specify level or with_level for interaction between continuous attributes '%s' and '%s'",
+                int$attr1,
+                int$attr2
+            ))
         }
     }
 
     # Validate that specified levels exist
     if (!is.null(int$level)) {
         if (!int$level %in% names(attrs[[int$attr1]]$mean)) {
-            stop(sprintf("Invalid level '%s' for attribute '%s'", int$level, int$attr1))
+            stop(sprintf(
+                "Invalid level '%s' for attribute '%s'",
+                int$level,
+                int$attr1
+            ))
         }
     }
 
     if (!is.null(int$with_level)) {
         if (!int$with_level %in% names(attrs[[int$attr2]]$mean)) {
-            stop(sprintf("Invalid with_level '%s' for attribute '%s'", int$with_level, int$attr2))
+            stop(sprintf(
+                "Invalid with_level '%s' for attribute '%s'",
+                int$with_level,
+                int$attr2
+            ))
         }
     }
 
@@ -934,7 +1328,10 @@ validate_interaction_levels <- function(int, attrs) {
 }
 
 # Get variable names including interaction terms for logitr
-get_var_names_with_interactions <- function(profile_attrs, interactions = NULL) {
+get_var_names_with_interactions <- function(
+    profile_attrs,
+    interactions = NULL
+) {
     if (is.null(interactions)) {
         return(profile_attrs)
     }
@@ -958,25 +1355,44 @@ build_interaction_terms <- function(interactions) {
 }
 
 # Build parameter vector including interaction values
-build_parameter_vector_with_interactions <- function(codedParNames, attrs, means, interactions) {
+build_parameter_vector_with_interactions <- function(
+    codedParNames,
+    attrs,
+    means,
+    interactions
+) {
     # Start with the original function
     pars_mean <- build_parameter_vector(codedParNames, attrs, means)
 
     # Add interaction values
-    pars_mean <- set_interaction_values(pars_mean, codedParNames, interactions, attrs)
+    pars_mean <- set_interaction_values(
+        pars_mean,
+        codedParNames,
+        interactions,
+        attrs
+    )
 
     return(pars_mean)
 }
 
 # Set interaction parameter values in the parameter vector
-set_interaction_values <- function(pars_mean, codedParNames, interactions, attrs) {
+set_interaction_values <- function(
+    pars_mean,
+    codedParNames,
+    interactions,
+    attrs
+) {
     if (is.null(interactions)) {
         return(pars_mean)
     }
 
     for (param_name in codedParNames) {
         if (is_interaction_parameter(param_name)) {
-            int_value <- extract_interaction_value(param_name, interactions, attrs)
+            int_value <- extract_interaction_value(
+                param_name,
+                interactions,
+                attrs
+            )
             if (!is.na(int_value)) {
                 pars_mean[param_name] <- int_value
             }
@@ -1013,7 +1429,7 @@ extract_interaction_value <- function(param_name, interactions, attrs) {
         }
     }
 
-    return(0)  # Default value for unspecified interactions
+    return(0) # Default value for unspecified interactions
 }
 
 # Check if a coded parameter matches an interaction specification
@@ -1031,7 +1447,12 @@ matches_interaction_spec <- function(param_name, param_parts, int_spec, attrs) {
 
     # Case 1: continuous * categorical (e.g., "price:typeGala")
     if (attrs[[attr1]]$continuous && !attrs[[attr2]]$continuous) {
-        expected_pattern <- paste0(attr1, ":", attr2, if (!is.null(with_level)) with_level else "")
+        expected_pattern <- paste0(
+            attr1,
+            ":",
+            attr2,
+            if (!is.null(with_level)) with_level else ""
+        )
         if (is.null(with_level)) {
             # General interaction - match any level
             return(startsWith(param_name, paste0(attr1, ":", attr2)))
@@ -1057,19 +1478,25 @@ matches_interaction_spec <- function(param_name, param_parts, int_spec, attrs) {
         if (is.null(level) && is.null(with_level)) {
             # General interaction - this is complex for categorical*categorical
             # Would need to match any combination of levels
-            return(grepl(paste0(attr1, ".*:", attr2), param_name) ||
-                       grepl(paste0(attr2, ".*:", attr1), param_name))
+            return(
+                grepl(paste0(attr1, ".*:", attr2), param_name) ||
+                    grepl(paste0(attr2, ".*:", attr1), param_name)
+            )
         } else if (!is.null(level) && !is.null(with_level)) {
             # Specific level interaction
-            return(param_name == paste0(attr1, level, ":", attr2, with_level) ||
-                       param_name == paste0(attr2, with_level, ":", attr1, level))
+            return(
+                param_name == paste0(attr1, level, ":", attr2, with_level) ||
+                    param_name == paste0(attr2, with_level, ":", attr1, level)
+            )
         }
     }
 
     # Case 4: continuous * continuous - straightforward
     if (attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
-        return(param_name == paste0(attr1, ":", attr2) ||
-                   param_name == paste0(attr2, ":", attr1))
+        return(
+            param_name == paste0(attr1, ":", attr2) ||
+                param_name == paste0(attr2, ":", attr1)
+        )
     }
 
     return(FALSE)
@@ -1090,27 +1517,35 @@ get_expected_interaction_params <- function(interactions, attrs) {
         # Generate all possible parameter names for this interaction
         if (attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
             # continuous * continuous: one parameter
-            expected_params <- c(expected_params,
-                                 paste0(attr1, ":", attr2),
-                                 paste0(attr2, ":", attr1))
+            expected_params <- c(
+                expected_params,
+                paste0(attr1, ":", attr2),
+                paste0(attr2, ":", attr1)
+            )
         } else if (attrs[[attr1]]$continuous && !attrs[[attr2]]$continuous) {
             # continuous * categorical: one parameter per categorical level
             levels2 <- names(attrs[[attr2]]$mean)
-            expected_params <- c(expected_params,
-                                 paste0(attr1, ":", attr2, levels2))
+            expected_params <- c(
+                expected_params,
+                paste0(attr1, ":", attr2, levels2)
+            )
         } else if (!attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
             # categorical * continuous: one parameter per categorical level
             levels1 <- names(attrs[[attr1]]$mean)
-            expected_params <- c(expected_params,
-                                 paste0(attr1, levels1, ":", attr2))
+            expected_params <- c(
+                expected_params,
+                paste0(attr1, levels1, ":", attr2)
+            )
         } else {
             # categorical * categorical: one parameter per level combination
             levels1 <- names(attrs[[attr1]]$mean)
             levels2 <- names(attrs[[attr2]]$mean)
             for (l1 in levels1) {
                 for (l2 in levels2) {
-                    expected_params <- c(expected_params,
-                                         paste0(attr1, l1, ":", attr2, l2))
+                    expected_params <- c(
+                        expected_params,
+                        paste0(attr1, l1, ":", attr2, l2)
+                    )
                 }
             }
         }
