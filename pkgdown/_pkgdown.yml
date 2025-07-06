@@ -4,15 +4,20 @@ home:
   title: Tools For Designing Choice-Based Conjoint Survey Experiments.
 
 template:
-  params:
+  bootstrap: 5
+  light-switch: false
+  bslib:
     bootswatch: cosmo
+    border-radius: 0.5rem
+    btn-border-radius: 0.25rem
+    pkgdown-nav-height: 100px  
   opengraph:
     image:
       src: https://jhelvy.github.io/cbcTools/reference/figures/logo.png
       alt: "Logo for the cbcTools package"
-    twitter:
-      creator: "@JohnHelveston"
-      card: summary
+  twitter:
+    creator: "@jphelveston"
+    card: summary
 
 navbar:
   title: "cbcTools"
