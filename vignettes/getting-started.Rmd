@@ -35,9 +35,9 @@ The package supports a step-by-step process for developing choice experiment des
 Each step uses functions that begin with `cbc_` and builds on the previous step:
 
 1. **Generate Profiles** → `cbc_profiles()` - Define attributes and levels
-2. **Create Priors** → `cbc_priors()` - Specify prior preference assumptions (optional)
-3. **Generate Design** → `cbc_design()` - Create choice question design
-4. **Inspect Design** → `cbc_inspect()` - Evaluate design quality
+2. **Specify Priors** → `cbc_priors()` - Specify prior preference assumptions (optional)
+3. **Generate Designs** → `cbc_design()` - Create choice question design
+4. **Inspect Designs** → `cbc_inspect()` - Evaluate design quality
 5. **Simulate Choices** → `cbc_choices()` - Generate realistic choice data
 6. **Assess Power** → `cbc_power()` - Determine sample size requirements
 
@@ -59,7 +59,7 @@ profiles
 
 This creates all possible combinations of attribute levels - our "universe" of possible products to include in choice questions.
 
-See the [Profiles](profiles.html) article for more details and options on defining profiles, such as including restrictions. 
+See the [Generating Profiles](profiles.html) article for more details and options on defining profiles, such as including restrictions.
 
 ## Step 2: Specify Priors
 
@@ -68,8 +68,8 @@ Specify your assumptions about consumer preferences based on theory, literature,
 ```{r}
 priors <- cbc_priors(
   profiles = profiles,
-  price = -0.25,           # Negative = people prefer lower prices
-  type = c(0.5, 1),     # Gala and Honeycrisp preferred over Fuji (reference)
+  price = -0.25,          # Negative = people prefer lower prices
+  type = c(0.5, 1),       # Gala and Honeycrisp preferred over Fuji (reference)
   freshness = c(0.6, 1.2) # Average and Excellent preferred over Poor (reference)
 )
 
@@ -83,7 +83,7 @@ For categorical attributes, **the reference level is set by the first level defi
 - **Type**: Fuji (reference), Gala (+0.1), Honeycrisp (+0.2)
 - **Freshness**: Poor (reference), Average (+0.1), Excellent (+0.2)
 
-See the [Priors](priors.html) article for more details and options on defining priors. 
+See the [Specifying Priors](priors.html) article for more details and options on defining priors.
 
 ## Step 3: Generate Designs
 

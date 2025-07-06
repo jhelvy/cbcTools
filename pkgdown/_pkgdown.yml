@@ -32,8 +32,8 @@ navbar:
           href: articles/getting-started.html
         - text: "Generating Profiles"
           href: articles/profiles.html
-        # - text: "Creating Priors"
-        #   href: articles/priors.html
+        - text: "Specifying Priors"
+          href: articles/priors.html
         # - text: "Design Generation"
         #   href: articles/design.html
         # - text: "Computing D-Error"

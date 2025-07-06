@@ -20,9 +20,9 @@ knitr::opts_chunk$set(
 )
 ```
 
-## All profiles 
+The first step in designing an experiment is to define the attributes and levels for your experiment and then generate all of the `profiles` of each possible combination of those attributes and levels. 
 
-The first step in designing an experiment is to define the attributes and levels for your experiment and then generate all of the `profiles` of each possible combination of those attributes and levels. For example, let's say you're designing a conjoint experiment about apples and you want to include `price`, `type`, and `freshness` as attributes. You can obtain all of the possible profiles for these attributes using the `cbc_profiles()` function:
+For example, let's say you're designing a conjoint experiment about apples and you want to include `price`, `type`, and `freshness` as attributes. You can obtain all of the possible profiles for these attributes using the `cbc_profiles()` function:
 
 ```{r}
 library(cbcTools)
@@ -33,9 +33,7 @@ profiles <- cbc_profiles(
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-nrow(profiles)
-head(profiles)
-tail(profiles)
+profiles
 ```
 
 ## Restricted profiles 
@@ -44,7 +42,7 @@ Depending on the context of your survey, you may wish to eliminate some profiles
 
 > **CAUTION: including restrictions in your designs can substantially reduce the statistical power of your design, so use them cautiously and avoid them if possible**.
 
-If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of restricted pairs of attribute levels, defined as pairs of logical expressions separated by commas. In the example below, I include the following restrictions (these are arbitrary and just for illustration purposes):
+If you do wish to restrict some attribute level combinations, you can do so using the `cbc_restrict()` function, which takes the full set of `profiles` along with any number of restricted pairs of attribute levels, defined as pairs of logical expressions separated by commas. The example below includes the following restrictions (these are arbitrary and just for illustration purposes):
 
 - `"Gala"` apples will not be shown with the prices `1.5`, `2.5`, and `3.5`.
 - `"Honeycrisp"` apples will not be shown with prices less than `2`.
@@ -63,25 +61,4 @@ restricted_profiles <- cbc_restrict(
 dim(restricted_profiles)
 ```
 
-
-
-
-
-
-
-### Optional: Apply Restrictions
-
-If some combinations don't make sense, you can remove them. For example, premium apples (Honeycrisp) are rarely sold at lowest prices, so we can add that restriction with `cbc_restrict()`:
-
-```{r}
-# Example:
-profiles_restricted <- cbc_restrict(
-  profiles,
-  type == "Honeycrisp" & price < 1.5
-)
-
-profiles_restricted
-```
-
-For this example, we'll use the unrestricted profiles to keep things simple.
-
+Once you have your profiles, you can use them to generate an experiment design with `cbc_design()`. See the [Design](design.html) article for more details.
