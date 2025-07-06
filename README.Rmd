@@ -23,9 +23,17 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 [![metacran downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
-This package provides functions for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing surveys:
+This package provides functions for generating and inspecting survey designs for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing survey experiments:
 
-![](man/figures/program_diagram.png)
+```
+┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
+│Generate │─▶│ Create  │─▶│Generate │─▶│ Inspect │─▶│Simulate │─▶│ Assess  │
+│Profiles │  │ Priors  │  │ Design  │  │ Design  │  │Choices  │  │ Power   │
+└─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘
+     │            │            │            │            │            │
+cbc_profiles() cbc_priors() cbc_design() cbc_inspect() cbc_choices() cbc_power()
+                                         cbc_compare()
+```
 
 # Installation
 
