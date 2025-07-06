@@ -2,7 +2,7 @@
 title: "Specifying Priors"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Creating Priors}
+  %\VignetteIndexEntry{Specifying Priors}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
   \usepackage{xcolor}

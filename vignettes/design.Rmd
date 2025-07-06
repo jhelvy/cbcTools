@@ -2,7 +2,7 @@
 title: "Generating Designs"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Design Generation}
+  %\VignetteIndexEntry{Generating Designs}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
   \usepackage{xcolor}

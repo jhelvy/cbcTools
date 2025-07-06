@@ -1,16 +1,14 @@
 url: https://jhelvy.github.io/cbcTools/
 
 home:
-  title: Tools For Designing Choice-Based Conjoint Survey Experiments.
+  title: Tools For Designing Choice-Based Conjoint Survey Experiments
 
 template:
   bootstrap: 5
   light-switch: false
   bslib:
-    bootswatch: cosmo
+    bootswatch: morph
     border-radius: 0.5rem
-    btn-border-radius: 0.25rem
-    pkgdown-nav-height: 100px  
   opengraph:
     image:
       src: https://jhelvy.github.io/cbcTools/reference/figures/logo.png
@@ -26,10 +24,10 @@ navbar:
       href: index.html
     - text: "Reference"
       href: reference/index.html
+    - text: "Getting Started"
+      href: articles/getting-started.html
     - text: "Articles"
       menu:
-        - text: "Getting Started"
-          href: articles/getting-started.html
         - text: "Generating Profiles"
           href: articles/profiles.html
         - text: "Specifying Priors"
@@ -38,10 +36,10 @@ navbar:
           href: articles/design.html
         - text: "Computing D-Error"
           href: articles/d_error.html
-        # - text: "Simulating Choices"
-        #   href: articles/choices.html
-        # - text: "Power Analysis"
-        #   href: articles/power.html
+        - text: "Simulating Choices"
+          href: articles/choices.html
+        - text: "Power Analysis"
+          href: articles/power.html
     - text: "Changelog"
       href: news/index.html
 
