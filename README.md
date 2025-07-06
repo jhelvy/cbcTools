@@ -7,22 +7,22 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.org/package=cbcTools)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/cbcTools?color=blue)](https://cran.r-project.org/package=cbcTools)
+[![metacran
+downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
-Functions for designing surveys and conducting power analyses for
-choice-based conjoint survey experiments in R. Each function in the
-package begins with `cbc_` and supports a step in the following process
-for designing and analyzing surveys:
+This package provides functions for generating and inspecting survey
+designs for choice-based conjoint survey experiments in R. Each function
+in the package begins with `cbc_` and supports a step in the following
+process for designing and analyzing survey experiments:
 
-![](man/figures/program_diagram.png)
+![](man/figures/flowchart.png)
 
-# Usage
+After installing the package, got to the [Getting
+Started](https://jhelvy.github.io/cbcTools/articles/getting-started.html)
+page to learn how to use the package.
 
-View the [usage](https://jhelvy.github.io/cbcTools/articles/usage.html)
-page for details on how to use **cbcTools**.
-
-# Installation
+## Installation
 
 You can install the latest version of {cbcTools} from CRAN:
 
@@ -34,24 +34,24 @@ or you can install the development version of {cbcTools} from
 [GitHub](https://github.com/jhelvy/cbcTools):
 
 ``` r
-# install.packages("remotes")
-remotes::install_github("jhelvy/cbcTools")
+# install.packages("pak")
+pak::pak("jhelvy/cbcTools")
 ```
 
-Load the library with:
+Load the package with:
 
 ``` r
 library(cbcTools)
 ```
 
-# Author, Version, and License Information
+## Author, Version, and License Information
 
 - Author: *John Paul Helveston* <https://www.jhelvy.com/>
 - Date First Written: *October 23, 2020*
 - License:
   [MIT](https://github.com/jhelvy/cbcTools/blob/master/LICENSE.md)
 
-# Citation Information
+## Citation Information
 
 If you use this package for in a publication, I would greatly appreciate
 it if you cited it - you can get the citation by typing
@@ -59,12 +59,11 @@ it if you cited it - you can get the citation by typing
 
 ``` r
 citation("cbcTools")
-#> 
 #> To cite cbcTools in publications use:
 #> 
-#> Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
-#> Conjoint Survey Experiments_. R package, <URL:
-#> https://jhelvy.github.io/cbcTools/>.
+#>   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
+#>   Conjoint Survey Experiments_. R package,
+#>   <https://jhelvy.github.io/cbcTools/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 

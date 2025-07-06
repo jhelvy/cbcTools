@@ -1,938 +1,1123 @@
-#' Make a choice-based conjoint survey design
+#' Generate survey designs for choice experiments (Updated Implementation)
 #'
-#' This function creates a data frame containing a choice-based conjoint survey
-#' design where each row is an alternative. Generate a variety of survey
-#' designs, including full factorial designs, orthogonal designs, and Bayesian
-#' D-efficient designs as well as designs with "no choice" options and "labeled"
-#' (also known as "alternative specific") designs.
+#' This function creates experimental designs for choice-based conjoint experiments
+#' using multiple design approaches including optimization and frequency-based methods.
 #'
-#' @keywords experiment design mnl mxl mixed logit logitr idefix DoE.base
-#' @param profiles A data frame in which each row is a possible profile. This
-#'   can be generated using the `cbc_profiles()` function.
-#' @param n_resp Number of survey respondents.
-#' @param n_alts Number of alternatives per choice question.
-#' @param n_q Number of questions per respondent.
-#' @param n_blocks Number of blocks used in Orthogonal or Bayesian D-efficient
-#'   designs. Max allowable is one block per respondent. Defaults to `1`,
-#'   meaning every respondent sees the same choice set.
-#' @param n_draws Number of draws used in simulating the prior distribution used
-#'   in Bayesian D-efficient designs. Defaults to `50`.
-#' @param n_start A numeric value indicating the number of random start designs
-#'   to use in obtaining a Bayesian D-efficient design. The default is `5`.
-#'   Increasing `n_start` can result in a more efficient design at the expense
-#'   of increased computational time.
-#' @param no_choice Include a "no choice" option in the choice sets? Defaults to
-#'   `FALSE`. If `TRUE`, the total number of alternatives per question will be
-#'   one more than the provided `n_alts` argument.
-#' @param label The name of the variable to use in a "labeled" design (also
-#'   called an "alternative-specific design") such that each set of alternatives
-#'   contains one of each of the levels in the `label` attribute. Currently not
-#'   compatible with Bayesian D-efficient designs. If used, the `n_alts`
-#'   argument will be ignored as its value is defined by the unique number of
-#'   levels in the `label` variable. Defaults to `NULL`.
-#' @param method Choose the design method to use: `"random"`, `"full"`,
-#'   `"orthogonal"`, `"dopt"`, `"CEA"`, or `"Modfed"`. Defaults to `"random"`.
-#'   See details below for complete description of each method.
-#' @param priors A list of one or more assumed prior parameters used to generate
-#'   a Bayesian D-efficient design. Defaults to `NULL`
-#' @param prior_no_choice Prior utility value for the "no choice" alternative.
-#'   Only required if `no_choice = TRUE`. Defaults to `NULL`.
-#' @param probs If `TRUE`, for Bayesian D-efficient designs the resulting design
-#'   includes average predicted probabilities for each alternative in each
-#'   choice set given the sample from the prior preference distribution.
-#'   Defaults to `FALSE`.'
-#' @param keep_d_eff If `TRUE`, for D-optimal designs (`method = "dopt"`) the
-#'   returned object will be a list containing the design and the D-efficiency
-#'   score. Defaults to `FALSE`.
-#' @param keep_db_error If `TRUE`, for Bayesian D-efficient designs the
-#'   returned object will be a list containing the design and the DB-error
-#'   score. Defaults to `FALSE`.
-#' @param max_iter A numeric value indicating the maximum number allowed
-#'   iterations when searching for a Bayesian D-efficient design. The default is
-#'   50.
-#' @param parallel Logical value indicating whether computations should be done
-#'   over multiple cores. The default is `FALSE`.
-#' @details The `method` argument determines the design method used. Options
-#'   are:
+#' @param profiles A data frame of class `cbc_profiles` created using `cbc_profiles()`
+#' @param method Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"
+#' @param priors A `cbc_priors` object created by `cbc_priors()`, or NULL for random/shortcut designs
+#' @param n_alts Number of alternatives per choice question
+#' @param n_q Number of questions per respondent (or per block)
+#' @param n_resp Number of respondents (for random/shortcut designs) or 1 (for optimized designs that get repeated)
+#' @param n_blocks Number of blocks in the design. Defaults to 1
+#' @param n_cores Number of cores to use for parallel processing in the design search.
+#' Defaults to NULL, in which case it is set to the number of available cores minus 1.
+#' @param no_choice Include a "no choice" option? Defaults to FALSE
+#' @param label The name of the variable to use in a "labeled" design. Defaults to NULL
+#' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (optimized methods only)
+#' @param randomize_alts Randomize alternative order within questions? Defaults to TRUE (optimized methods only)
+#' @param remove_dominant Remove choice sets with dominant alternatives? Defaults to FALSE
+#' @param dominance_types Types of dominance to check: "total" and/or "partial"
+#' @param dominance_threshold Threshold for total dominance detection. Defaults to 0.8
+#' @param max_dominance_attempts Maximum attempts to replace dominant choice sets. Defaults to 50.
+#' @param max_iter Maximum iterations for optimized designs. Defaults to 50
+#' @param n_start Number of random starts for optimized designs. Defaults to 5
 #'
-#' - `"random"`
-#' - `"full"`
-#' - `"orthogonal"`
-#' - `"dopt"`
-#' - `"CEA"`
-#' - `"Modfed"`
+#' @details
+#' ## Design Methods
 #'
-#'   All methods ensure that the two following criteria are met:
+#' The `method` argument determines the design approach used:
 #'
-#'   1. No two profiles are the same within any one choice set.
-#'   2. No two choice sets are the same within any one respondent.
+#' - `"random"`: Creates designs by randomly sampling profiles for each respondent independently
+#' - `"stochastic"`: Stochastic profile swapping with D-error optimization (first improvement found)
+#' - `"modfed"`: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
+#' - `"cea"`: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
+#' - `"shortcut"`: Frequency-based greedy algorithm that balances attribute level usage
 #'
-#'   The table below summarizes method compatibility with other design options,
-#'   including the ability to include a "no choice" option, the creation of a
-#'   "labeled" design (also called a "alternative-specific" design), the use
-#'   of restricted profile, and the use of blocking.
+#' ## Method Compatibility
 #'
-#'   Method | Include "no choice"? | Labeled designs? | Restricted profiles? | Blocking?
-#'   ---|---|---|---|---
-#'   `"random"`     | Yes | Yes | Yes | No
-#'   `"full"`       | Yes | Yes | Yes | Yes
-#'   `"orthogonal"` | Yes | No  | No  | Yes
-#'   `"dopt"`       | Yes | No  | Yes | Yes
-#'   `"CEA"`        | Yes | No  | No  | Yes
-#'   `"Modfed"`     | Yes | No  | Yes | Yes
+#' The table below summarizes method compatibility with design features:
 #'
-#'   The `"random"` method (the default) creates a design where choice sets are
-#'   created by randomly sampling from the full set of `profiles` *with
-#'   *replacement. This means that few (if any) respondents will see the same
-#'   sets of choice sets. This method is less efficient than other approaches
-#'   and may lead to a deficient experiment in smaller sample sizes, though it
-#'   guarantees equal ability to estimate main and interaction effects.
+#' | Method       | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Interactions? | Dominance removal? |
+#' |--------------|------------|------------------|---------------------|-----------|---------------|-------------------|
+#' | "random"     | Yes        | Yes              | Yes                 | No        | Yes           | Yes               |
+#' | "shortcut"   | Yes        | Yes              | Yes                 | No        | No            | Yes               |
+#' | "minoverlap" | Yes        | Yes              | Yes                 | No        | No            | Yes               |
+#' | "balanced"   | Yes        | Yes              | Yes                 | No        | No            | Yes               |
+#' | "stochastic" | Yes        | Yes              | Yes                 | Yes       | Yes           | Yes               |
+#' | "modfed"     | Yes        | Yes              | Yes                 | Yes       | Yes           | Yes               |
+#' | "cea"        | Yes        | Yes              | No                  | Yes       | Yes           | Yes               |
 #'
-#'   The `"full"` method for ("full factorial") creates a design where choice
-#'   sets are created by randomly sampling from the full set of `profiles`
-#'   *without replacement*. The choice sets are then repeated to meet the
-#'   desired number of survey respondents (determined by `n_resp`). If blocking
-#'   is used, choice set blocks are created using mutually exclusive subsets of
-#'   `profiles` within each block. This method produces a design with similar
-#'   performance with that of the `"random"` method, except the choice sets are
-#'   repeated and thus there will be many more opportunities for different
-#'   respondents to see the same choice sets. This method is less efficient than
-#'   other approaches and may lead to a deficient experiment in smaller sample
-#'   sizes, though it guarantees equal ability to estimate main and interaction
-#'   effects. For more information about blocking with full factorial designs,
-#'   see `?DoE.base::fac.design` as well as the JSS article on the {DoE.base}
-#'   package (Grömping, 2018).
+#' ## Design Quality Assurance
 #'
-#'   The `"orthogonal"` method creates a design where an orthogonal array from
-#'   the full set of `profiles` is found and then choice sets are created by
-#'   randomly sampling from this orthogonal array *without replacement*. The
-#'   choice sets are then repeated to meet the desired number of survey
-#'   respondents (determined by `n_resp`). If blocking is used, choice set
-#'   blocks are created using mutually exclusive subsets of the orthogonal array
-#'   within each block. For cases where an orthogonal array cannot be found, a
-#'   full factorial design is used. This approach is also sometimes called a
-#'   "main effects" design since orthogonal arrays focus the information on the
-#'   main effects at the expense of information about interaction effects. For
-#'   more information about orthogonal designs, see `?DoE.base::oa.design` as
-#'   well as the JSS article on the {DoE.base} package (Grömping, 2018).
+#' All methods ensure the following criteria are met:
 #'
-#'   The `"dopt"` method creates a "D-optimal" design where an array from
-#'   `profiles` is found that maximizes the D-efficiency of a linear model
-#'   using the Federov algorithm, with the total number of unique choice sets
-#'   determined by `n_q*n_blocks`. Choice sets are then created by randomly
-#'   sampling from this array *without replacement*. The choice sets are then
-#'   repeated to meet the desired number of survey respondents (determined by
-#'   `n_resp`). If blocking is used, choice set blocks are created from the
-#'   D-optimal array. For more information about the underlying algorithm
-#'   for this method, see `?AlgDesign::optFederov`.
+#' 1. No duplicate profiles within any choice set
+#' 2. No duplicate choice sets within any respondent
+#' 3. If `remove_dominant = TRUE`, choice sets with dominant alternatives are eliminated (optimization methods only)
 #'
-#'   The `"CEA"` and `"Modfed"` methods use the specified `priors` to create a
-#'   Bayesian D-efficient design for the choice sets, with the total number of
-#'   unique choice sets determined by `n_q*n_blocks`. The choice sets are then
-#'   repeated to meet the desired number of survey respondents (determined by
-#'   `n_resp`). If `"CEA"` or `"Modfed"` is used without specifying `priors`, a
-#'   prior of all `0`s will be used and a warning message stating this will be
-#'   shown. In the opposite case, if `priors` are specified but neither Bayesian
-#'   method is used, the `"CEA"` method will be used and a warning stating this
-#'   will be shown. Restricted sets of `profiles` can only be used with
-#'   `"Modfed"`. For more details on Bayesian D-efficient designs, see
-#'   `?idefix::CEA` and `?idefix::Modfed` as well as the JSS article on the
-#'   {idefix} package (Traets et al, 2020).
-#' @references Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41
-#' \doi{10.18637/jss.v085.i05}
+#' ## Method Details
 #'
-#'   Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
-#' \doi{10.18637/jss.v096.i03}
+#' ### Random Method
+#' Creates designs where each respondent sees completely independent, randomly generated choice sets.
 #'
-#' Wheeler B (2022)._AlgDesign: Algorithmic Experimental Design. R package version 1.2.1,
-#' \href{https://CRAN.R-project.org/package=AlgDesign}{https://CRAN.R-project.org/package=AlgDesign}.
-#' @return The returned `design` data frame contains a choice-based conjoint
-#' survey design where each row is an alternative. It includes the following
-#' columns:
+#' ### D-Error Optimization Methods (stochastic, modfed, cea)
+#' These methods minimize D-error to create statistically efficient designs:
+#' - **Stochastic**: Random profile sampling with first improvement acceptance
+#' - **Modfed**: Exhaustive profile testing for best improvement (slower but thorough)
+#' - **CEA**: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
 #'
-#' - `profileID`: Identifies the profile in `profiles`.
-#' - `respID`: Identifies each survey respondent.
-#' - `qID`: Identifies the choice question answered by the respondent.
-#' - `altID`:Identifies the alternative in any one choice observation.
-#' - `obsID`: Identifies each unique choice observation across all respondents.
-#' - `blockID`: If blocking is used, identifies each unique block.
+#' ### Shortcut Method
+#' Uses a frequency-based greedy algorithm that:
+#' - Tracks attribute level usage within questions and across the overall design
+#' - Selects profiles with least frequently used attribute levels
+#' - Provides good level balance without requiring priors or D-error calculations
+#' - Fast execution suitable for large designs
+#'
+#' @return A `cbc_design` object containing the experimental design
 #' @export
-#' @examples
-#' library(cbcTools)
-#'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make a survey by randomly sampling from all possible profiles
-#' # (This is the default setting where method = 'random')
-#' design_random <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 100, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
-#' )
-#'
-#' # Make a survey using a full factorial design and include a "no choice" option
-#' design_full <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 100, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6,   # Number of questions per respondent
-#'   method   = 'full', # Change this to use a different method, e.g. 'orthogonal', or 'dopt'
-#'   no_choice = TRUE
-#' )
-#'
-#' # Make a survey by randomly sampling from all possible profiles
-#' # with each level of the "type" attribute appearing as an alternative
-#' design_random_labeled <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 100, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6,   # Number of questions per respondent
-#'   label    = "type"
-#' )
-#'
-#' # Make a Bayesian D-efficient design with a prior model specified
-#' # Note that by speed can be improved by setting parallel = TRUE
-#' design_bayesian <- cbc_design(
-#'     profiles  = profiles,
-#'     n_resp    = 100, # Number of respondents
-#'     n_alts    = 3,   # Number of alternatives per question
-#'     n_q       = 6,   # Number of questions per respondent
-#'     n_start   = 1,   # Defaults to 5, set to 1 here for a quick example
-#'     priors = list(
-#'         price     = -0.1,
-#'         type      = c(0.1, 0.2),
-#'         freshness = c(0.1, 0.2)
-#'     ),
-#'     method = "CEA",
-#'     parallel = FALSE
-#' )
 cbc_design <- function(
-  profiles,
-  n_resp,
-  n_alts,
-  n_q,
-  n_blocks = 1,
-  n_draws = 50,
-  n_start = 5,
-  no_choice = FALSE,
-  label = NULL,
-  method = "random",
-  priors = NULL,
-  prior_no_choice = NULL,
-  probs = FALSE,
-  keep_d_eff = FALSE,
-  keep_db_error = FALSE,
-  max_iter = 50,
-  parallel = FALSE
-) {
-  method <- check_design_method(method, priors)
-  profiles_restricted <- nrow(expand.grid(get_profile_list(profiles))) > nrow(profiles)
-  check_inputs_design(
     profiles,
-    n_resp,
+    method = "random",
+    priors = NULL,
     n_alts,
     n_q,
+    n_resp = 100,
+    n_blocks = 1,
+    n_cores = NULL,
+    no_choice = FALSE,
+    label = NULL,
+    randomize_questions = TRUE,
+    randomize_alts = TRUE,
+    remove_dominant = FALSE,
+    dominance_types = c("total", "partial"),
+    dominance_threshold = 0.8,
+    max_dominance_attempts = 50,
+    max_iter = 50,
+    n_start = 5
+) {
+    time_start <- Sys.time()
+
+    # Validate inputs
+    validate_design_inputs(
+        profiles,
+        method,
+        priors,
+        n_alts,
+        n_q,
+        n_resp,
+        n_blocks,
+        no_choice,
+        label,
+        randomize_questions,
+        randomize_alts,
+        remove_dominant,
+        dominance_types,
+        dominance_threshold,
+        max_dominance_attempts
+    )
+
+    # Override randomize_alts for labeled designs
+    if (!is.null(label) && randomize_alts) {
+        message(
+            "Note: randomize_alts set to FALSE for labeled designs to preserve label structure"
+        )
+        randomize_alts <- FALSE
+    }
+
+    # Set up the optimization environment
+    opt_env <- setup_optimization_environment(
+        profiles,
+        method,
+        time_start,
+        n_alts,
+        n_q,
+        n_resp,
+        n_blocks,
+        n_cores,
+        n_start,
+        max_iter,
+        priors,
+        no_choice,
+        label,
+        remove_dominant,
+        dominance_types,
+        dominance_threshold,
+        max_dominance_attempts,
+        randomize_questions,
+        randomize_alts
+    )
+
+    if (method %in% get_design_methods_other()) {
+        # Override any provided blocks - these methods always use 1 block
+        if (n_blocks != 1) {
+            message(
+                "For '",
+                method,
+                "' designs, n_blocks is ignored and set to 1"
+            )
+            n_blocks <- 1
+        }
+        if (method == "random") {
+            design_result <- generate_random_design(opt_env)
+        } else {
+            design_result <- generate_greedy_design(opt_env)
+        }
+        final_design <- construct_final_design(
+            design_result$design_matrix,
+            opt_env
+        )
+    } else if (method %in% c("stochastic", "modfed", "cea")) {
+        # Optimized designs: create optimized base design, then repeat across respondents
+        design_result <- generate_optimized_design(opt_env)
+        design_matrix <- design_result$design_matrix
+
+        # Convert base design to full design
+        base_design <- construct_final_design(design_matrix, opt_env)
+
+        # Repeat and randomize across respondents
+        final_design <- repeat_design_across_respondents(base_design, opt_env)
+    }
+
+    # Add metadata and return
+    final <- finalize_design_object(final_design, design_result, opt_env)
+
+    return(final)
+}
+
+# Set up the optimization environment with pre-computed utilities and proper factor alignment
+setup_optimization_environment <- function(
+    profiles,
+    method,
+    time_start,
+    n_alts,
+    n_q,
+    n_resp,
     n_blocks,
-    n_draws,
+    n_cores,
     n_start,
+    max_iter,
+    priors,
     no_choice,
     label,
-    method,
-    priors,
-    prior_no_choice,
-    probs,
-    keep_d_eff,
-    keep_db_error,
-    max_iter,
-    parallel,
-    profiles_restricted
-  )
-  profiles <- as.data.frame(profiles) # tibbles break things
-  if (method == 'random') {
-    design <- make_design_random(
-      profiles, n_resp, n_alts, n_q, no_choice, label
-    )
-  } else if (method == 'full') {
-    design <- make_design_full(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-    )
-  } else if (method == 'orthogonal') {
-    design <- make_design_orthogonal(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice
-    )
-  } else if (method == 'dopt') {
-    design <- make_design_dopt(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
-    )
-  } else {
-    design <- make_design_bayesian(
-      profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
-      label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
-      parallel, profiles_restricted
-    )
-  }
-  design <- reorder_cols(design)
-  row.names(design) <- NULL
-  return(design)
-}
+    remove_dominant,
+    dominance_types,
+    dominance_threshold,
+    max_dominance_attempts,
+    randomize_questions,
+    randomize_alts
+) {
+    # Get attribute names (excluding profileID)
+    attr_names <- setdiff(names(profiles), "profileID")
 
-# General helpers ----
+    # Check if we have interactions
+    has_interactions <- !is.null(priors) &&
+        !is.null(priors$interactions) &&
+        length(priors$interactions) > 0
 
-get_profile_list <- function(profiles) {
-  profile_lvls <- profiles[, 2:ncol(profiles)]
-  varnames <- names(profile_lvls)
-  type_ids <- get_type_ids(profiles)
-  profile_list <- list()
-  for (i in seq_len(ncol(profile_lvls))) {
-    if (type_ids$discrete[i]) {
-      profile_list[[i]] <- levels(profile_lvls[,i])
+    # Align factor levels with priors BEFORE encoding
+    profiles_aligned <- align_profiles_with_priors(profiles, priors, attr_names)
+
+    # Get random parameters for encoding
+    randPars <- get_rand_pars(priors)
+
+    # ALWAYS create the main X_matrix (without interactions) for D-error calculation
+    X_matrix <- logitr::recodeData(profiles_aligned, attr_names, randPars)$X
+
+    # Create separate interaction-augmented matrix for utility calculations if needed
+    X_matrix_utility <- X_matrix
+    if (has_interactions) {
+        var_names_with_interactions <- c(
+            attr_names,
+            build_interaction_terms(priors$interactions)
+        )
+        X_matrix_utility <- logitr::recodeData(
+            profiles_aligned,
+            var_names_with_interactions,
+            randPars
+        )$X
+    }
+
+    # Defaults
+    is_bayesian <- FALSE
+    n_draws <- NULL
+    partial_utilities <- NULL
+    exp_utilities_draws <- NULL
+    exp_utilities <- NULL
+    label_constraints <- NULL
+    has_priors <- !is.null(priors)
+
+    # Compute utilities if we have priors
+    if (has_priors) {
+        if (!is.null(priors$par_draws)) {
+            is_bayesian <- TRUE
+        }
+
+        # Handle no_choice parameter extraction
+        if (no_choice) {
+            no_choice_index <- which(names(priors$pars) == "no_choice")
+            exp_no_choice <- exp(priors$pars[no_choice_index])
+            # Extract priors parameters (including interactions) excluding no_choice
+            priors_pars <- priors$pars[-no_choice_index]
+        } else {
+            priors_pars <- priors$pars
+        }
+
+        # Validate parameter dimensions if we have interactions
+        if (has_interactions) {
+            expected_params <- ncol(X_matrix_utility)
+            actual_params <- length(priors_pars)
+            if (expected_params != actual_params) {
+                stop(sprintf(
+                    "Parameter dimension mismatch: Utility matrix expects %d parameters but priors provides %d. Check interaction specifications.",
+                    expected_params,
+                    actual_params
+                ))
+            }
+        }
+
+        # Compute utilities for each profile using the interaction-aware matrix
+        if (is_bayesian) {
+            # Use draws for Bayesian calculation if exist
+            n_draws <- nrow(priors$par_draws)
+
+            # Handle no_choice draws
+            if (no_choice) {
+                exp_no_choice_draws <- exp(priors$par_draws[, no_choice_index])
+                priors_par_draws <- priors$par_draws[, -no_choice_index]
+            } else {
+                priors_par_draws <- priors$par_draws
+            }
+
+            # Bayesian case with parameter draws (including interactions)
+            exp_utilities_draws <- array(dim = c(nrow(profiles), n_draws))
+
+            for (i in 1:n_draws) {
+                utilities_i <- X_matrix_utility %*% priors_par_draws[i, ]
+                exp_utilities_draws[, i] <- exp(utilities_i)
+            }
+            if (no_choice) {
+                exp_utilities_draws <- rbind(
+                    exp_utilities_draws,
+                    exp_no_choice_draws
+                )
+            }
+        } else {
+            # Fixed parameters case - use interaction-aware matrix for utilities
+            utilities <- X_matrix_utility %*% priors_pars
+            exp_utilities <- exp(utilities)
+            if (no_choice) {
+                exp_utilities <- rbind(exp_utilities, exp_no_choice)
+            }
+        }
+
+        # Pre-compute partial utilities for dominance checking if needed
+        if (remove_dominant && "partial" %in% dominance_types) {
+            if (has_interactions) {
+                # Use interaction-aware partial utilities computation
+                partial_utilities <- compute_partial_utilities_with_interactions(
+                    X_matrix_utility,
+                    priors
+                )
+            } else {
+                partial_utilities <- compute_partial_utilities(X_matrix, priors)
+            }
+        }
     } else {
-      profile_list[[i]] <- unique(profile_lvls[,i])
+        # No priors - equal probabilities
+        exp_utilities <- rep(1, nrow(profiles))
+
+        # Handle no-choice with no priors
+        if (no_choice) {
+            # Default no-choice utility of 0 (exp(0) = 1)
+            exp_utilities <- c(exp_utilities, 1)
+        }
     }
-  }
-  names(profile_list) <- varnames
-  return(profile_list)
-}
 
-get_type_ids <- function(profiles) {
-  types <- get_col_types(profiles[, 2:ncol(profiles)])
-  ids <- list()
-  ids$discrete <- types %in% c("factor", "character")
-  ids$continuous <- !ids$discrete
-  return(ids)
-}
-
-join_profiles <- function(design, profiles) {
-
-  # Preserve row order
-
-  design$row_order <- seq(nrow(design))
-
-  # Before joining profiles, ensure that all the data types are the same
-  # as in profiles, otherwise join won't work properly
-
-  type_ids <- get_type_ids(profiles)
-
-  # Convert numeric columns to actual numbers
-  for (id in which(type_ids$continuous)) {
-    design[,id] <- as.numeric(as.character(design[,id]))
-  }
-
-  # Convert character types to factors and set same levels as profiles
-  for (id in which(type_ids$discrete)) {
-    design[,id] <- factor(design[,id], levels = levels(profiles[,id+1]))
-  }
-
-  # Join on profileIDs, then reorder to retain design order
-  varnames <- names(profiles[, 2:ncol(profiles)])
-  design <- merge(design, profiles, by = varnames, all.x = TRUE, sort = FALSE)
-  design <- design[order(design$row_order),]
-  design$row_order <- NULL
-  if ('blockID' %in% names(design)) { varnames <- c(varnames, 'blockID') }
-  design <- design[c('profileID', varnames)]
-  return(design)
-}
-
-add_metadata <- function(design, n_resp, n_alts, n_q) {
-  design$respID <- rep(seq(n_resp), each = n_alts * n_q)
-  design$qID    <- rep(rep(seq(n_q), each = n_alts), n_resp)
-  design$altID  <- rep(seq(n_alts), n_resp * n_q)
-  design$obsID  <- rep(seq(n_resp * n_q), each = n_alts)
-  return(design)
-}
-
-get_dup_obs <- function(design, n_alts) {
-  # Identify duplicate profiles for each observation (each choice set)
-  counts <- tapply(
-    design$profileID, design$obsID,
-    FUN = function(x) length(unique(x))
-  )
-  dup_ids <- which(counts != n_alts)
-  dup_rows <- which(design$obsID %in% dup_ids)
-  return(dup_rows)
-}
-
-get_dup_resp <- function(design, n_resp, n_q) {
-  # Identify duplicate choice sets for each respondent
-  dup_ids <- unlist(lapply(
-    1:n_resp,
-    function(x) dup_obs_by_resp(design[which(design$respID == x),])
-  ))
-  dup_rows <- which(design$obsID %in% dup_ids)
-  return(dup_rows)
-}
-
-dup_obs_by_resp <- function(df) {
-  profiles_list <- tapply(
-    df$profileID, df$obsID,
-    FUN = function(x) sort(x)
-  )
-  # Convert vector list to a data frame to check for duplicates
-  dupe_df <- do.call(rbind, profiles_list)
-  dup_ids <- which(duplicated(dupe_df))
-  if (length(dup_ids) > 0) {
-    return(as.numeric(names(dup_ids)))
-  }
-  return(NULL)
-}
-
-add_no_choice <- function(design, n_alts) {
-  # Must dummy code categorical variables to include an outside good
-  design <- dummy_code(design)
-  # Create outside good rows
-  design_og <- design[which(design$altID == 1), ]
-  design_og[,!names(design_og) %in% c("respID", "qID", "altID", "obsID")] <- 0
-  design_og$altID <- n_alts + 1
-  design_og$no_choice <- 1
-  # Insert outside good rows into design
-  design$no_choice <- 0
-  design <- rbind(design, design_og)
-  design <- design[order(design$obsID), ]
-  return(design)
-}
-
-dummy_code <- function(design) {
-  types <- get_col_types(design)
-  nonnumeric <- names(types[!types %in% c("integer", "numeric")])
-  if (length(nonnumeric) > 0) {
-    design <- fastDummies::dummy_cols(design, nonnumeric)
-    design[, nonnumeric] <- NULL
-  }
-  return(design)
-}
-
-get_col_types <- function(data) {
-  types <- lapply(data, class)
-  test <- function(x) { x[1] }
-  return(unlist(lapply(types, test)))
-}
-
-reorder_cols <- function(design) {
-  metaNames <- c("profileID", "respID", "qID", "altID", "obsID")
-  if ('blockID' %in% names(design)) { metaNames <- c(metaNames, 'blockID') }
-  varNames <- setdiff(names(design), metaNames)
-  design <- as.data.frame(design)[, c(metaNames, varNames)]
-  return(design)
-}
-
-# Choice sets ----
-
-make_random_sets <- function(profiles, n_alts) {
-  n_q <- nrow(profiles)
-  design <- sample_random_sets(profiles, n_alts, n_q)
-  # Replace rows with duplicated profiles in each obsID or
-  # duplicated choice sets in each respID
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp = 1, n_q)
-  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    design <- sample_random_sets(profiles, n_alts, n_q)
-    dup_rows_obs <- get_dup_obs(design, n_alts)
-    dup_rows_resp <- get_dup_resp(design, n_resp = 1, n_q)
-  }
-  return(design)
-}
-
-make_random_sets_by_block <- function(profiles, n_alts, n_blocks) {
-  # Make choice sets for each set of profileIDs
-  profiles <- split(profiles, profiles$blockID)
-  choice_sets <- list()
-  for (i in 1:n_blocks) {
-    choice_sets[[i]] <- make_random_sets(profiles[[i]], n_alts)
-  }
-  choice_sets <- do.call(rbind, choice_sets)
-  return(choice_sets)
-}
-
-sample_random_sets <- function(profiles, n_alts, n_q) {
-  # Make a randomized copy of the profiles for each alternative
-  sets <- lapply(seq(n_alts), function(x) profiles[order(stats::runif(n_q)),])
-  sets <- lapply(sets, function(x) {
-    x$order <- seq(nrow(x))
-    return(x)
-  })
-  sets <- do.call(rbind, sets)
-  sets <- sets[order(sets$order),]
-  sets <- add_metadata(sets, n_resp = 1, n_alts, n_q)
-  sets$order <- NULL
-  return(sets)
-}
-
-repeat_sets <- function(choice_sets, n_resp, n_alts, n_q, n_blocks) {
-  # Repeat choice sets to match number of respondents
-  if (n_blocks > 1) {
-    choice_sets <- split(choice_sets, choice_sets$blockID)
-    n_resp_block <- ceiling(n_resp / n_blocks)
-    n_reps <- ceiling(n_resp_block / (nrow(choice_sets[[1]]) / n_alts / n_q))
-    design <- list()
-    for (i in seq_len(n_blocks)) {
-      set <- choice_sets[[i]]
-      temp <- set[rep(seq_len(nrow(set)), n_reps), ]
-      design[[i]] <- temp[1:(n_resp_block*n_q*n_alts), ]
+    # Set up label constraints if specified
+    if (!is.null(label)) {
+        label_constraints <- setup_label_constraints(profiles, label, n_alts)
     }
-    design <- do.call(rbind, design)
-  } else {
-    design <- choice_sets[rep(seq_len(nrow(choice_sets)), n_resp), ]
-  }
-  design <- design[1:(n_resp*n_q*n_alts), ]
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  return(design)
-}
 
-# Random Design ----
-
-# Sample from profiles with replacement to create randomized choice sets
-
-make_design_random <- function(
-  profiles, n_resp, n_alts, n_q, no_choice, label
-) {
-  if (is.null(label)) {
-    design <- design_rand_sample(profiles, n_resp, n_alts, n_q)
-  } else {
-    design <- design_rand_sample_label(profiles, n_resp, n_alts, n_q, label)
-  }
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  return(design)
-}
-
-design_rand_sample <- function(profiles, n_resp, n_alts, n_q) {
-  design <- sample_profiles(profiles, size = n_resp * n_alts * n_q)
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  # Replace rows with duplicated profiles in each obsID or
-  # duplicated choice sets in each respID
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
-  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
-    # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
-    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
-    new_rows <- sample_profiles(profiles, size = length(dup_rows))
-    design[dup_rows, 1:ncol(new_rows)] <- new_rows
-    # Recalculate duplicates
-    dup_rows_obs <- get_dup_obs(design, n_alts)
-    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
-  }
-  return(design)
-}
-
-design_rand_sample_label <- function(profiles, n_resp, n_alts, n_q, label) {
-  n_alts <- override_label_alts(profiles, label, n_alts)
-  # Randomize rows by label
-  labels <- split(profiles, profiles[label])
-  design <- sample_profiles_by_group(labels, size = n_resp * n_q)
-  # Replace rows with duplicated profiles in each obsID or
-  # duplicated choice sets in each respID
-  design <- add_metadata(design, n_resp, n_alts, n_q)
-  dup_rows_obs <- get_dup_obs(design, n_alts)
-  dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
-  while ((length(dup_rows_obs) > 0) | (length(dup_rows_resp) > 0)) {
-    # cat('Number dupe rows by obs:', length(dup_rows_obs), '\n')
-    # cat('Number dupe rows by resp:', length(dup_rows_resp), '\n')
-    dup_rows <- unique(c(dup_rows_obs, dup_rows_resp))
-    new_rows <- sample_profiles_by_group(labels, size = length(dup_rows) / n_alts)
-    design[dup_rows, 1:ncol(new_rows)] <- new_rows
-    # Recalculate duplicates
-    dup_rows_obs <- get_dup_obs(design, n_alts)
-    dup_rows_resp <- get_dup_resp(design, n_resp, n_q)
-  }
-  return(design)
-}
-
-sample_profiles <- function(profiles, size) {
-  return(profiles[sample(
-    x = seq_len(nrow(profiles)), size = size, replace = TRUE), ]
-  )
-}
-
-sample_profiles_by_group <- function(labels, size) {
-  design <- lapply(labels, function(x) sample_profiles(x, size = size))
-  design <- lapply(design, function(x) add_label_id(x))
-  design <- do.call(rbind, design)
-  design <- design[order(design$labelID), ]
-  design$labelID <- NULL
-  return(design)
-}
-
-add_label_id <- function(design) {
-  design$labelID <- seq(nrow(design))
-  return(design)
-}
-
-override_label_alts <- function(profiles, label, n_alts) {
-  n_levels <- length(unique(profiles[, label]))
-  if (n_levels != n_alts) {
-    warning(
-      "The supplied 'n_alts' argument is being ignored and set to ", n_levels,
-      " to match the number of unique levels in the ", label,
-      " variable.\n"
-    )
-    # Over-ride user-provided n_alts as it is determined by the label
-    n_alts <- n_levels
-  }
-  return(n_alts)
-}
-
-# Full Factorial Design ----
-
-# Arrange copies of the full set of profiles into choice sets by sampling
-# without replacement
-
-make_design_full <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-) {
-  if (!is.null(label)) {
-    return(make_design_full_labeled(
-      profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-    ))
-  }
-  if (n_blocks > 1) {
-    # Make blocks
-    design <- suppressMessages(as.data.frame(DoE.base::fac.design(
-        factor.names = get_profile_list(profiles),
+    # Setup n parameter
+    n <- list(
+        q = n_q,
+        alts = n_alts,
+        resp = n_resp,
         blocks = n_blocks,
-        block.name = "blockID"
-    )))
-    # Make blockID a number, then join on profileIDs
-    design$blockID <- as.numeric(as.character(design$blockID))
-    design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
-    profiles <- join_profiles(design, profiles)
-    # Create random choice sets within each block
-    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
-  } else {
-    choice_sets <- make_random_sets(profiles, n_alts)
-  }
-  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  return(design)
+        start = n_start,
+        cores = set_num_cores(n_cores),
+        questions = ifelse(method == 'random', n_q * n_resp, n_q * n_blocks),
+        params = ncol(X_matrix), # Use main matrix for parameter count
+        draws = n_draws,
+        profiles = nrow(profiles),
+        max_iter = max_iter,
+        max_attempts = max_dominance_attempts
+    )
+
+    # Precompute all ID vectors
+    n_alts_total <- ifelse(no_choice, n_alts + 1, n_alts)
+    n$alts_total <- n_alts_total
+    reps <- rep(n_alts_total, n$questions)
+    respID <- rep(1:n_resp, each = n_alts_total * n_q)
+    obsID_partials <- rep(1:n$questions, each = n_alts)
+    obsID <- rep(1:n$questions, each = n_alts_total)
+    altID <- rep(1:n_alts_total, n$questions)
+
+    return(list(
+        profiles = profiles_aligned,
+        priors = priors,
+        method = method,
+        time_start = time_start,
+        has_priors = has_priors,
+        has_interactions = has_interactions,
+        attr_names = attr_names,
+        exp_utilities = exp_utilities,
+        exp_utilities_draws = exp_utilities_draws,
+        partial_utilities = partial_utilities,
+        X_matrix = X_matrix, # Main matrix for D-error calculations
+        X_matrix_utility = X_matrix_utility, # Interaction-aware matrix for utilities
+        no_choice = no_choice,
+        label = label,
+        label_constraints = label_constraints,
+        is_bayesian = is_bayesian,
+        n = n,
+        reps = reps,
+        respID = respID,
+        obsID = obsID,
+        obsID_partials = obsID_partials,
+        altID = altID,
+        remove_dominant = remove_dominant,
+        dominance_types = dominance_types,
+        dominance_threshold = dominance_threshold,
+        available_profile_ids = profiles$profileID,
+        randomize_questions = randomize_questions,
+        randomize_alts = randomize_alts
+    ))
 }
 
-make_design_full_labeled <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, label
-) {
-  n_alts <- override_label_alts(profiles, label, n_alts)
-  labels <- unique(profiles[,label])
-  profiles_orig <- profiles
-  # Remove the label column from profiles
-  profiles[label] <- NULL
-  profiles$profileID <- NULL
-  profiles <- profiles[!duplicated(profiles),]
-  profiles$profileID <- seq(nrow(profiles))
-  profiles <- profiles[c(
-    'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
-  if (n_blocks > 1) {
-    # Make blocks
-    design <- suppressMessages(as.data.frame(DoE.base::fac.design(
-      factor.names = get_profile_list(profiles),
-      blocks = n_blocks,
-      block.name = "blockID"
-    )))
-    # Make blockID a number, then join on profileIDs
-    design$blockID <- as.numeric(as.character(design$blockID))
-    design <- design[,c(names(profiles)[2:ncol(profiles)], "blockID")]
-    profiles <- join_profiles(design, profiles)
-    # Create random choice sets within each block
-    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
-  } else {
-    choice_sets <- make_random_sets(profiles, n_alts)
-  }
-  # Add label attribute and original profileIDs
-  choice_sets[label] <- rep(labels, nrow(choice_sets) / length(labels))
-  choice_sets$profileID <- NULL
-  choice_sets <- merge(choice_sets, profiles_orig, all.x = TRUE, sort = FALSE)
-  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  return(design)
+build_interaction_terms <- function(interactions) {
+    # For logitr, we only need to specify the general interaction terms
+    # like "price*type". logitr will automatically create all the
+    # specific level interactions like "price:typeGala"
+
+    unique_pairs <- unique(sapply(interactions, function(int) {
+        paste(sort(c(int$attr1, int$attr2)), collapse = "*")
+    }))
+
+    return(unique_pairs)
 }
 
-# Orthogonal Design ----
-
-make_design_orthogonal <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice
-) {
-    # First obtain the orthogonal array
-    oa <- suppressMessages(as.data.frame(DoE.base::oa.design(
-      factor.names = get_profile_list(profiles)
-    )))
-    if (nrow(oa) == nrow(profiles)) {
-      message("No orthogonal array found; using full factorial for design")
-    } else {
-      message(
-        "Orthogonal array found; using ", nrow(oa), " out of ",
-        nrow(profiles), " profiles for design"
-      )
-    }
-    oa <- join_profiles(oa, profiles)
-    if (n_blocks > 1) {
-      q_per_resp <- nrow(oa) / n_blocks
-      if (q_per_resp %% 1 != 0) {
-        stop(
-          'The number of blocks used cannot be evenly divided into the ',
-          'orthogonal array. Use a different number for "n_blocks" that ',
-          'is as factor of ', nrow(oa)
-        )
-      }
-      if (q_per_resp < n_q) {
-        stop(
-          'The orthogonal array cannot be divided into ', n_blocks,
-          ' blocks such that each respondent sees ', n_q,
-          ' questions. Either decrease "n_blocks" or increase "n_q".'
-        )
-      }
-      oa$blockID <- rep(seq(n_blocks), each = q_per_resp)
-      # Create random choice sets within each block
-      choice_sets <- make_random_sets_by_block(oa, n_alts, n_blocks)
-    } else {
-      choice_sets <- make_random_sets(oa, n_alts)
-    }
-    design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-    if (no_choice) {
-      warning(
-        'Using a "no choice" option with orthogonal designs may damage the ',
-        'orthogonality properties.'
-      )
-      design <- add_no_choice(design, n_alts)
-    }
-    return(design)
-}
-
-# D-optimal Design ----
-
-make_design_dopt <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, no_choice, keep_d_eff
-) {
-  # First obtain the d-optimal array
-  des <- AlgDesign::optFederov(~., profiles[,2:length(profiles)], n_q*n_blocks)
-  d_eff <- des$Ge
-  profiles <- merge(des$design, profiles, all.x = TRUE)
-  profiles <- profiles[c(
-    'profileID', names(profiles)[which(names(profiles) != 'profileID')])]
-  if (n_blocks > 1) {
-    profiles$blockID <- rep(seq(n_blocks), each = nrow(profiles) / n_blocks)
-    choice_sets <- make_random_sets_by_block(profiles, n_alts, n_blocks)
-  } else {
-    choice_sets <- make_random_sets(profiles, n_alts)
-  }
-  design <- repeat_sets(choice_sets, n_resp, n_alts, n_q, n_blocks)
-  if (no_choice) {
-    design <- add_no_choice(design, n_alts)
-  }
-  # Print D-efficiency
-  message("D-optimal design found with D-efficiency of ", round(d_eff, 5))
-
-  # Return list containing the design and DB error if keep_d_eff = TRUE
-  if (keep_d_eff) {
-    return(list(design = design, d_eff = d_eff))
-  }
-  return(design)
-}
-
-# Bayesian D-efficient Design ----
-
-make_design_bayesian <- function(
-    profiles, n_resp, n_alts, n_q, n_blocks, n_draws, n_start, no_choice,
-    label, method, priors, prior_no_choice, probs, keep_db_error, max_iter,
-    parallel, profiles_restricted
-) {
-    # Set up levels and coding
-    profile_list <- get_profile_list(profiles)
-    type_ids <- get_type_ids(profiles)
-    lvl.names <- unname(profile_list)
-    lvls <- unname(unlist(lapply(lvl.names, function(x) length(x))))
-    coding <- rep("C", length(lvls))
-    c.lvls <- NULL
-    if (any(type_ids$continuous)) {
-        c.lvls <- lvl.names[type_ids$continuous]
-    }
-    # lvl.names must be all characters for decoding process
-    lvl.names <- lapply(lvl.names, function(x) as.character(x))
-    if (any(type_ids$discrete)) {
-        coding[type_ids$discrete] <- "D"
-    }
-    no_choice_alt <- NULL
-    alt_cte <- rep(0, n_alts)
-    if (no_choice) {
-        n_alts <- n_alts + 1
-        alt_cte <- c(alt_cte, 1)
-        no_choice_alt <- n_alts
-    }
-
-    # Setup priors
-    profile_lvls <- profiles[, 2:ncol(profiles)]
-    varnames <- names(profile_lvls)
+align_profiles_with_priors <- function(profiles, priors, attr_names) {
     if (is.null(priors)) {
-        # No priors specified, so use all 0s
-        warning(
-            'Since the ', method, ' method is used but no priors were ',
-            'specified, a zero prior will be used (all coefficients set to 0)'
-        )
-        priors <- lapply(profile_list, function(x) rep(0, length(x) - 1))
-        priors[type_ids$continuous] <- 0
-    }
-    # Make sure order of priors matches order of attributes in profiles
-    mu <- unlist(priors[varnames])
-    if (no_choice) {
-        mu <- c(prior_no_choice, mu)
-    }
-    sigma <- diag(length(mu))
-    par_draws <- MASS::mvrnorm(n = n_draws, mu = mu, Sigma = sigma)
-    n_alt_cte <- sum(alt_cte)
-    if (n_alt_cte >= 1) {
-        par_draws <- list(
-            par_draws[, 1:n_alt_cte],
-            par_draws[, (n_alt_cte + 1):ncol(par_draws)])
+        return(profiles) # No alignment needed
     }
 
-    # Make the design
-    if (profiles_restricted & (method == "CEA")) {
-      # "CEA" method only works with unrestricted profile set
-      method <- "Modfed"
-      warning(
-        'The "CEA" algorithm requires the use of an unrestricted set of ',
-        'profiles, so "Modfed" is being used instead.\n'
-      )
+    profiles_aligned <- profiles
+
+    for (attr in attr_names) {
+        if (attr %in% names(profiles) && attr %in% names(priors$attrs)) {
+            attr_info <- priors$attrs[[attr]]
+
+            # Only process categorical variables
+            if (!attr_info$continuous) {
+                values <- profiles[[attr]]
+
+                # Determine the intended level order from priors
+                if (!is.null(names(attr_info$mean))) {
+                    # Named priors: use the names to determine order
+                    coef_levels <- names(attr_info$mean)
+                    all_unique_values <- unique(values)
+
+                    # Reference level is the one not in the coefficient names
+                    ref_level <- setdiff(all_unique_values, coef_levels)
+                    if (length(ref_level) != 1) {
+                        stop(sprintf(
+                            "Cannot determine reference level for attribute '%s'. ",
+                            "Named priors should specify all levels except one.",
+                            attr
+                        ))
+                    }
+
+                    # Order: reference level first, then coefficient levels
+                    level_order <- c(ref_level, coef_levels)
+                } else {
+                    # Unnamed priors: use natural order, first level is reference
+                    if (is.factor(values)) {
+                        level_order <- levels(values)
+                    } else {
+                        level_order <- unique(values)
+                    }
+
+                    # Validate that we have the right number of priors
+                    expected_coefs <- length(level_order) - 1
+                    actual_coefs <- length(attr_info$mean)
+                    if (expected_coefs != actual_coefs) {
+                        stop(sprintf(
+                            "Attribute '%s' has %d levels but %d prior values provided. ",
+                            "Expected %d values (one less than number of levels).",
+                            attr,
+                            length(level_order),
+                            actual_coefs,
+                            expected_coefs
+                        ))
+                    }
+                }
+
+                # Set as factor with proper level order
+                profiles_aligned[[attr]] <- factor(values, levels = level_order)
+            }
+        }
     }
-    if (method == "CEA") {
-        D <- idefix::CEA(
-            lvls = lvls,
-            coding = coding,
-            par.draws = par_draws,
-            c.lvls = c.lvls,
-            n.alts = n_alts,
-            n.sets = n_q*n_blocks,
-            no.choice = no_choice,
-            n.start = n_start,
-            alt.cte = alt_cte,
-            parallel = parallel
-        )
+
+    return(profiles_aligned)
+}
+
+# Generate a random design using profileID sampling with matrix operations
+generate_random_design <- function(opt_env) {
+    # Start with a completely random design matrix
+    design_matrix <- generate_initial_random_matrix(opt_env)
+
+    # Iteratively fix problems
+    attempts <- 0
+    max_attempts <- opt_env$n$max_attempts
+    while (attempts < max_attempts) {
+        attempts <- attempts + 1
+
+        # Find all problematic questions
+        problem_questions <- find_problematic_questions(design_matrix, opt_env)
+
+        if (length(problem_questions) == 0) {
+            break # Design is valid
+        }
+
+        # Replace problematic questions
+        for (q in problem_questions) {
+            design_matrix[q, ] <- sample_question_profiles(opt_env)
+        }
+    }
+
+    # Find all remaining problematic questions (if any)
+    if (length(find_problematic_questions(design_matrix, opt_env)) > 0) {
+        warning(sprintf(
+            "Could not generate fully valid design after %d attempts",
+            max_attempts
+        ))
+    }
+
+    return(list(
+        design_matrix = design_matrix,
+        total_attempts = attempts
+    ))
+}
+
+# Generate initial random design matrix
+generate_initial_random_matrix <- function(
+    opt_env,
+    n_questions = NULL,
+    n_alts = NULL
+) {
+    n <- opt_env$n
+    if (is.null(n_questions)) {
+        n_questions <- n$questions
+    }
+    if (is.null(n_alts)) {
+        n_alts <- n$alts
+    }
+    design_matrix <- matrix(0, nrow = n_questions, ncol = n_alts)
+
+    if (!is.null(opt_env$label_constraints)) {
+        # Labeled design: sample one from each label group for each question
+        for (q in 1:n_questions) {
+            design_matrix[q, ] <- sample_labeled_profiles(opt_env)
+        }
     } else {
-        D <- idefix::Modfed(
-            cand.set = defineCandidateSet(
-              lvls, coding, c.lvls, profile_lvls, type_ids, profiles_restricted
-            ),
-            par.draws = par_draws,
-            n.alts = n_alts,
-            n.sets = n_q*n_blocks,
-            no.choice = no_choice,
-            n.start = n_start,
-            alt.cte = alt_cte,
-            parallel = parallel
-        )
+        # Regular design: sample without replacement for each question
+        for (q in 1:n_questions) {
+            design_matrix[q, ] <- sample(
+                opt_env$available_profile_ids,
+                n$alts,
+                replace = FALSE
+            )
+        }
     }
 
-    # Decode the design
-    design_raw <- idefix::Decode(
-        des = D$design,
-        n.alts = n_alts,
-        alt.cte = alt_cte,
-        lvl.names = lvl.names,
-        c.lvls = c.lvls,
-        coding = coding,
-        no.choice = no_choice_alt
+    return(design_matrix)
+}
+
+# Find all questions that have problems
+find_problematic_questions <- function(design_matrix, opt_env) {
+    n <- opt_env$n
+    problematic <- logical(n$questions)
+
+    # Check for within-question duplicates
+    problematic <- check_problem_question_dupes(
+        design_matrix,
+        opt_env,
+        problematic
     )
 
-    # Join on profileIDs to design
-    design <- design_raw$design
-    names(design) <- varnames
-    design <- join_profiles(design, profiles)
+    # Check for duplicate questions within each respondent
+    problematic <- check_problem_resp_dupes(design_matrix, opt_env, problematic)
 
-    if (no_choice) {
-      design <- add_no_choice_bayesian(design, n_alts, varnames[type_ids$discrete])
+    # Check for dominance if required
+    problematic <- check_problem_dominance(design_matrix, opt_env, problematic)
+
+    return(which(problematic))
+}
+
+check_problem_question_dupes <- function(design_matrix, opt_env, problematic) {
+    for (q in 1:opt_env$n$questions) {
+        question_profiles <- design_matrix[q, ]
+        if (length(unique(question_profiles)) != length(question_profiles)) {
+            problematic[q] <- TRUE
+        }
+    }
+    return(problematic)
+}
+
+check_problem_resp_dupes <- function(design_matrix, opt_env, problematic) {
+    n <- opt_env$n
+    n_iter <- opt_env$n$blocks
+    if (opt_env$method == 'random') {
+        n_iter <- opt_env$n$resp
+    }
+    for (resp in 1:n_iter) {
+        # Get question indices for this respondent
+        resp_start <- (resp - 1) * n$q + 1
+        resp_end <- resp * n$q
+        resp_questions <- resp_start:resp_end
+
+        # Check for duplicates within this respondent's questions
+        for (i in 1:length(resp_questions)) {
+            q1 <- resp_questions[i]
+            if (problematic[q1]) {
+                next
+            } # Already marked as problematic
+
+            current_sorted <- sort(design_matrix[q1, ])
+
+            for (j in 1:length(resp_questions)) {
+                if (i == j) {
+                    next
+                } # Don't compare question to itself
+
+                q2 <- resp_questions[j]
+                other_sorted <- sort(design_matrix[q2, ])
+
+                if (identical(current_sorted, other_sorted)) {
+                    problematic[q1] <- TRUE
+                    break
+                }
+            }
+        }
+    }
+    return(problematic)
+}
+
+check_problem_dominance <- function(design_matrix, opt_env, problematic) {
+    if (opt_env$remove_dominant) {
+        # Total dominance check
+        if ("total" %in% opt_env$dominance_types) {
+            total_bad <- get_total_bad(design_matrix, opt_env)
+            problematic[total_bad] <- TRUE
+        }
+
+        # Partial dominance check
+        if ("partial" %in% opt_env$dominance_types) {
+            partial_bad <- get_partial_bad(design_matrix, opt_env)
+            problematic[partial_bad] <- TRUE
+        }
+    }
+    return(problematic)
+}
+
+get_total_bad <- function(design_matrix, opt_env) {
+    probs <- get_probs(design_matrix, opt_env)
+    if (opt_env$is_bayesian) {
+        # here probs is a matrix of prob draws
+        probs <- rowMeans(probs)
+    }
+    total_bad <- opt_env$obsID[which(probs > opt_env$dominance_threshold)]
+    return(total_bad)
+}
+
+get_partial_bad <- function(design_matrix, opt_env) {
+    design_vector <- get_design_vector(design_matrix)
+    partials <- opt_env$partial_utilities[design_vector, ]
+    partial_bad <- find_dominant_rows_by_group(partials, opt_env$obsID_partials)
+    return(opt_env$obsID_partials[partial_bad])
+}
+
+# Function to find dominant rows within groups
+find_dominant_rows_by_group <- function(partials_matrix, group_ids) {
+    # Split row indices by group
+    group_splits <- split(1:nrow(partials_matrix), group_ids)
+
+    # Find dominant rows within each group
+    dominant_indices <- c()
+
+    for (group_rows in group_splits) {
+        if (length(group_rows) > 1) {
+            # Only check if group has multiple rows
+            # Extract submatrix for this group
+            group_matrix <- partials_matrix[group_rows, , drop = FALSE]
+
+            # Find dominant rows within this group
+            local_dominant <- find_best_rows(group_matrix)
+
+            # Convert local indices back to global indices
+            if (length(local_dominant) > 0) {
+                global_dominant <- group_rows[local_dominant]
+                dominant_indices <- c(dominant_indices, global_dominant)
+            }
+        }
     }
 
-    if (probs) {
-      design$probs <- as.vector(t(D$probs))
+    return(sort(dominant_indices))
+}
+
+find_best_rows <- function(mat) {
+    # Check if each row has the maximum value in every column
+    row_indices <- 1:nrow(mat)
+    best_rows <- row_indices[apply(mat, 1, function(row) {
+        all(sapply(1:ncol(mat), function(col) row[col] == max(mat[, col])))
+    })]
+
+    return(best_rows)
+}
+
+# Sample profileIDs for a single question
+sample_question_profiles <- function(opt_env) {
+    n_alts <- opt_env$n$alts
+    if (!is.null(opt_env$label_constraints)) {
+        # Labeled design: sample one from each label group
+        return(sample_labeled_profiles(opt_env))
+    } else {
+        # Regular design: sample without replacement from all available profiles
+        return(sample(opt_env$available_profile_ids, n_alts, replace = FALSE))
+    }
+}
+
+# Sample profiles for labeled design
+sample_labeled_profiles <- function(opt_env) {
+    label_constraints <- opt_env$label_constraints
+    n_alts <- opt_env$n$alts
+    if (length(label_constraints$groups) != n_alts) {
+        stop("Number of alternatives must match number of label groups")
+    }
+    profiles <- numeric(n_alts)
+    for (i in 1:n_alts) {
+        group_profiles <- label_constraints$groups[[i]]
+        profiles[i] <- sample(group_profiles, 1)
+    }
+    return(profiles)
+}
+
+# Convert profileID design matrix to full design data frame using existing encoded matrix
+construct_final_design <- function(design_matrix, opt_env) {
+    n <- opt_env$n
+    if (opt_env$no_choice) {
+        design_matrix <- design_matrix_no_choice(design_matrix, opt_env)
     }
 
-    design$blockID <- rep(seq(n_blocks), each = n_alts*n_q)
+    # Initialize design data frame
+    design <- data.frame(profileID = as.vector(t(design_matrix)))
+    if (opt_env$method %in% get_design_methods_other()) {
+        design <- add_metadata_random(design, n$resp, n$alts_total, n$q)
+        id_cols <- c("profileID", "respID", "qID", "altID", "obsID")
+    } else {
+        design <- add_metadata_other(design, n$blocks, n$alts_total, n$q)
+        id_cols <- c("profileID", "blockID", "qID", "altID", "obsID")
+    }
 
-    # Repeat design to match number of respondents
-    design <- repeat_sets(design, n_resp, n_alts, n_q, n_blocks)
+    # Create lookup table from the MAIN X_matrix (without interactions for the final design)
+    X_df <- as.data.frame(opt_env$X_matrix) # This is the main matrix
+    X_df$profileID <- opt_env$profiles$profileID
 
-    # Print DB error
-    message(
-        "Bayesian D-efficient design found with DB-error of ",
-        round(D$error, 5)
+    # Handle no-choice option if present
+    if (opt_env$no_choice) {
+        # Add no-choice row (all parameters = 0)
+        no_choice_row <- as.data.frame(matrix(
+            0,
+            nrow = 1,
+            ncol = ncol(opt_env$X_matrix)
+        ))
+        names(no_choice_row) <- names(X_df)[1:ncol(opt_env$X_matrix)]
+        no_choice_row$profileID <- n$profiles + 1
+        no_choice_row$no_choice <- 1 # Add no_choice indicator
+
+        # Add no_choice column to regular profiles (set to 0)
+        X_df$no_choice <- 0
+
+        # Combine
+        X_df <- rbind(X_df, no_choice_row)
+    }
+
+    # Join design with encoded attributes (main effects only, no interactions in final design)
+    design <- merge(design, X_df, by = "profileID", sort = FALSE)
+
+    # Reorder columns and rows
+    attr_cols <- setdiff(names(design), id_cols)
+    design <- design[, c(id_cols, attr_cols)]
+    design <- design[order(design$obsID, design$altID), ]
+    row.names(design) <- NULL
+
+    # Store categorical structure for potential decoding
+    categorical_structure <- get_categorical_structure_from_profiles(
+        opt_env$profiles,
+        opt_env$attr_names
     )
-
-    # Return list containing the design and DB error if keep_db_error = TRUE
-    if (keep_db_error) {
-        return(list(design = design, db_err = D$error))
-    }
+    attr(design, "categorical_structure") <- categorical_structure
+    attr(design, "is_dummy_coded") <- TRUE
 
     return(design)
 }
 
-defineCandidateSet <- function(
-    lvls, coding, c.lvls, profile_lvls, type_ids, profiles_restricted
-) {
-  # Make candidate set with profiles, assuming non-restricted
-  cand_set <- idefix::Profiles(
-    lvls = lvls,
-    coding = coding,
-    c.lvls = c.lvls
-  )
-  if (!profiles_restricted) { return(cand_set) }
-
-  # If restricted, need to manually dummy-code profiles to avoid
-  # including restricted profiles
-  cand_set_res <- fastDummies::dummy_cols(
-    profile_lvls,
-    select_columns = names(profile_lvls)[type_ids$discrete],
-    remove_first_dummy = TRUE,
-    remove_selected_columns = TRUE
-  )
-  name_order <- names(profile_lvls)
-  names_coded <- names(cand_set_res)
-  cols <- c()
-  for (i in seq_len(length(coding))) {
-    if (coding[i] == "C") {
-      name_match <- name_order[i]
-    } else {
-      name_match <- names_coded[grepl(paste0(name_order[i], "_"), names_coded)]
-    }
-    cols <- c(cols, name_match)
-  }
-  cand_set_res <- cand_set_res[,cols]
-  names(cand_set_res) <- colnames(cand_set)
-  cand_set_res <- as.matrix(cand_set_res)
-  row.names(cand_set_res) <- seq(nrow(cand_set_res))
-  return(cand_set_res)
+add_metadata_random <- function(design, n_resp, n_alts, n_q) {
+    design$respID <- rep(seq(n_resp), each = n_alts * n_q)
+    design$qID <- rep(rep(seq(n_q), each = n_alts), n_resp)
+    design$altID <- rep(seq(n_alts), n_resp * n_q)
+    design$obsID <- rep(seq(n_resp * n_q), each = n_alts)
+    return(design)
 }
 
-add_no_choice_bayesian <- function(design, n_alts, varnames_discrete) {
-  # First dummy code categorical variables
-  design$obsID <- rep(seq(nrow(design) / n_alts), each = n_alts)
-  design$altID <- rep(seq(n_alts), nrow(design) / n_alts)
-  design <- design[which(design$altID != n_alts), ]
-  design <- fastDummies::dummy_cols(
-    design,
-    select_columns = varnames_discrete,
-    remove_first_dummy = TRUE
-  )
-  design <- design[,which(! names(design) %in% varnames_discrete)]
-  design$no_choice <- 0
-  # Insert dummy-coded outside good rows
-  design_og <- design[which(design$altID == 1), ]
-  design_og$altID <- n_alts
-  design_og$profileID <- 0
-  design_og[,
-            which(! names(design_og) %in% c('profileID', 'altID', 'obsID'))] <- 0
-  design_og$no_choice <- 1
-  design <- rbind(design, design_og)
-  design <- design[order(design$obsID, design$altID), ]
-  design[,c('altID', 'obsID')] <- NULL
-  return(design)
+add_metadata_other <- function(design, n_block, n_alts, n_q) {
+    design$blockID <- rep(seq(n_block), each = n_alts * n_q)
+    design$qID <- rep(rep(seq(n_q), each = n_alts), n_block)
+    design$altID <- rep(seq(n_alts), n_block * n_q)
+    design$obsID <- rep(seq(n_block * n_q), each = n_alts)
+    return(design)
+}
+
+# Get categorical structure information from original profiles
+get_categorical_structure_from_profiles <- function(profiles, attr_names) {
+    categorical_info <- list()
+
+    for (attr in attr_names) {
+        if (attr %in% names(profiles)) {
+            values <- profiles[[attr]]
+            if (!is.numeric(values)) {
+                # This is a categorical variable
+                if (is.factor(values)) {
+                    levels_order <- levels(values)
+                } else {
+                    levels_order <- unique(values)
+                }
+
+                categorical_info[[attr]] <- list(
+                    is_categorical = TRUE,
+                    levels = levels_order,
+                    reference_level = levels_order[1] # First level is reference
+                )
+            } else {
+                # Numeric variable
+                categorical_info[[attr]] <- list(
+                    is_categorical = FALSE
+                )
+            }
+        }
+    }
+
+    return(categorical_info)
+}
+
+compute_design_efficiency_metrics <- function(design) {
+    # Balance metrics
+    balance_result <- compute_balance_metrics_internal(design)
+
+    # Overlap metrics
+    overlap_result <- compute_overlap_metrics_internal(design)
+
+    return(list(
+        balance_score = balance_result$overall_balance,
+        balance_details = balance_result$balance_metrics,
+        overlap_score = overlap_result$overall_overlap,
+        overlap_details = overlap_result$overlap_metrics,
+        profiles_used = length(unique(design$profileID[design$profileID != 0])),
+        profiles_available = max(design$profileID, na.rm = TRUE)
+    ))
+}
+
+# Internal function for balance computation
+compute_balance_metrics_internal <- function(design) {
+    # Get attribute columns
+    atts <- setdiff(
+        names(design),
+        c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+    )
+
+    # Get counts of each individual attribute
+    counts <- lapply(atts, function(attr) table(design[[attr]]))
+    names(counts) <- atts
+
+    # Calculate balance metrics for each attribute
+    balance_metrics <- calculate_balance_metrics(counts)
+
+    # Calculate overall balance score
+    overall_balance <- mean(sapply(balance_metrics, function(x) {
+        x$balance_score
+    }))
+
+    return(list(
+        individual_counts = counts,
+        balance_metrics = balance_metrics,
+        overall_balance = overall_balance
+    ))
+}
+
+# Internal function for overlap computation
+compute_overlap_metrics_internal <- function(design) {
+    # Get attribute columns
+    atts <- setdiff(
+        names(design),
+        c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+    )
+
+    # Calculate overlap for each attribute
+    overlap_counts <- lapply(atts, function(attr) {
+        get_att_overlap_counts(attr, design)
+    })
+    names(overlap_counts) <- atts
+
+    # Calculate overlap metrics
+    overlap_metrics <- calculate_overlap_metrics(overlap_counts, design)
+
+    # Calculate overall overlap score (average of complete overlap rates)
+    overall_overlap <- mean(sapply(overlap_metrics, function(x) {
+        x$complete_overlap_rate
+    }))
+
+    return(list(
+        overlap_counts = overlap_counts,
+        overlap_metrics = overlap_metrics,
+        overall_overlap = overall_overlap
+    ))
+}
+
+# Finalize the design object with metadata including both D-errors
+finalize_design_object <- function(design, design_result, opt_env) {
+    method <- opt_env$method
+
+    # Update profileID to 0 for no_choice (if present)
+    if (opt_env$no_choice) {
+        maxID <- max(design$profileID)
+        design$profileID[which(design$profileID == maxID)] <- 0
+    }
+
+    # Store the design matrix for later use in cbc_choices
+    # This ensures exact consistency between design optimization and choice simulation
+    attr(design, "design_matrix") <- design_result$design_matrix
+
+    # Build design_params list
+    n <- opt_env$n
+    design_params <- list(
+        method = method,
+        n_q = n$q,
+        n_alts = n$alts,
+        n_alts_total = n$alts_total,
+        n_resp = n$resp,
+        n_blocks = n$blocks,
+        no_choice = opt_env$no_choice,
+        label = opt_env$label,
+        randomize_questions = if (method == "random") {
+            NA
+        } else {
+            opt_env$randomize_questions
+        },
+        randomize_alts = if (method == "random") NA else opt_env$randomize_alts,
+        created_at = Sys.time(),
+        has_interactions = opt_env$has_interactions,
+        n_interactions = if (opt_env$has_interactions) {
+            length(opt_env$priors$interactions)
+        } else {
+            0
+        },
+        remove_dominant = opt_env$remove_dominant,
+        dominance_types = if (opt_env$remove_dominant) {
+            opt_env$dominance_types
+        } else {
+            NULL
+        },
+        dummy_coded = TRUE
+    )
+
+    # Add D-error information (both null and prior-based)
+
+    if (method %in% c("stochastic", "modfed", "cea")) {
+        # For optimized designs, compute D-errors
+
+        # Always compute null D-error (no priors, equal probabilities)
+        design_params$d_error_null <- compute_design_d_error_null(
+            design_result$design_matrix,
+            opt_env
+        )
+
+        # Compute prior-based D-error if priors are available
+        design_params$d_error_prior <- NULL
+        if (opt_env$has_priors) {
+            design_params$d_error_prior <- compute_design_d_error(
+                design_result$design_matrix,
+                opt_env
+            )
+        }
+    }
+
+    # Pre-compute efficiency metrics
+    efficiency_metrics <- compute_design_efficiency_metrics(design)
+
+    # Store metadata including the optimization environment
+    # This allows cbc_choices to recreate the exact same utility calculations
+    attr(design, "profiles") <- opt_env$profiles
+    attr(design, "priors") <- opt_env$priors
+    attr(design, "optimization_environment") <- list(
+        has_interactions = opt_env$has_interactions,
+        attr_names = opt_env$attr_names,
+        no_choice = opt_env$no_choice,
+        available_profile_ids = opt_env$available_profile_ids,
+        # Store the utility matrices for reuse
+        X_matrix = opt_env$X_matrix,
+        X_matrix_utility = opt_env$X_matrix_utility,
+        exp_utilities = opt_env$exp_utilities,
+        exp_utilities_draws = opt_env$exp_utilities_draws,
+        is_bayesian = opt_env$is_bayesian
+    )
+
+    time_stop <- Sys.time()
+    design_params$time_elapsed_sec <- as.numeric(time_stop - opt_env$time_start)
+    attr(design, "design_params") <- design_params
+
+    # Calculate summary statistics
+    n_profiles_used <- length(unique(design$profileID[design$profileID != 0]))
+    if (opt_env$no_choice) {
+        n_profiles_used <- n_profiles_used - 1
+    }
+
+    attr(design, "design_summary") <- list(
+        n_profiles_available = n$profiles,
+        n_profiles_used = n_profiles_used,
+        profile_usage_rate = n_profiles_used / n$profiles,
+        n_choice_sets = n$blocks * n$q * n$resp,
+        optimization_attempts = design_result$total_attempts,
+        efficiency = efficiency_metrics
+    )
+
+    class(design) <- c("cbc_design", "data.frame")
+    return(design)
+}
+
+# Helper functions ----
+
+# Get random parameters from priors object
+get_rand_pars <- function(priors) {
+    if (is.null(priors)) {
+        return(NULL)
+    }
+
+    # Extract random parameter names from priors structure
+    random_attrs <- names(which(sapply(priors$attrs, function(x) x$random)))
+    if (length(random_attrs) == 0) {
+        return(NULL)
+    }
+
+    # Return in format expected by logitr::recodeData
+    rand_pars <- list()
+    for (attr in random_attrs) {
+        rand_pars[[attr]] <- priors$attrs[[attr]]$dist
+    }
+
+    return(rand_pars)
+}
+
+compute_partial_utilities_with_interactions <- function(X_matrix, priors) {
+    n_profiles <- nrow(X_matrix)
+
+    # Extract parameters excluding no_choice if present
+    if (priors$has_no_choice) {
+        no_choice_index <- which(names(priors$pars) == "no_choice")
+        pars_without_no_choice <- priors$pars[-no_choice_index]
+    } else {
+        pars_without_no_choice <- priors$pars
+    }
+
+    # Compute mean partial utility across par draws if exist
+    par_draws <- priors$par_draws
+    if (!is.null(par_draws)) {
+        # For Bayesian case, exclude no_choice from draws too
+        if (priors$has_no_choice) {
+            par_draws_without_no_choice <- par_draws[, -no_choice_index]
+        } else {
+            par_draws_without_no_choice <- par_draws
+        }
+
+        n_draws <- nrow(par_draws_without_no_choice)
+        pars <- par_draws_without_no_choice[1, ]
+        partials <- compute_partial_utility_single(X_matrix, pars, n_profiles)
+        for (i in 2:n_draws) {
+            pars <- par_draws_without_no_choice[i, ]
+            partials <- partials +
+                compute_partial_utility_single(X_matrix, pars, n_profiles)
+        }
+        return(partials / n_draws)
+    }
+    # Otherwise compute partial utility using priors (now including interactions)
+    return(compute_partial_utility_single(
+        X_matrix,
+        pars_without_no_choice,
+        n_profiles
+    ))
+}
+
+# Compute partial utilities for dominance checking
+compute_partial_utilities <- function(X_matrix, priors) {
+    n_profiles <- nrow(X_matrix)
+
+    # Compute mean partial utility across par draws if exist
+    par_draws <- priors$par_draws
+    n_draws <- nrow(par_draws)
+    if (!is.null(par_draws)) {
+        pars <- par_draws[1, ]
+        partials <- compute_partial_utility_single(X_matrix, pars, n_profiles)
+        for (i in 2:n_draws) {
+            pars <- par_draws[i, ]
+            partials <- partials +
+                compute_partial_utility_single(X_matrix, pars, n_profiles)
+        }
+        return(partials / n_draws)
+    }
+    # Otherwise just compute direct partial utility using prior pars
+    return(compute_partial_utility_single(X_matrix, priors$pars, n_profiles))
+}
+
+compute_partial_utility_single <- function(X_matrix, pars, n_profiles) {
+    par_mat <- matrix(
+        rep(pars, n_profiles),
+        nrow = n_profiles,
+        byrow = TRUE
+    )
+    return(X_matrix * par_mat)
+}
+
+# Set up label constraints for labeled designs
+setup_label_constraints <- function(profiles, label, n_alts) {
+    # Split profiles by label values
+    label_values <- unique(profiles[[label]])
+
+    if (length(label_values) != n_alts) {
+        stop(sprintf(
+            "Number of label values (%d) must match n_alts (%d)",
+            length(label_values),
+            n_alts
+        ))
+    }
+
+    groups <- list()
+    for (i in seq_along(label_values)) {
+        groups[[i]] <- profiles$profileID[profiles[[label]] == label_values[i]]
+    }
+
+    return(list(
+        values = label_values,
+        groups = groups
+    ))
 }

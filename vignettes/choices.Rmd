@@ -1,0 +1,328 @@
+---
+title: "Simulating Choices"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulating Choices}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+  \usepackage{xcolor}
+  \usepackage{bbding}
+bibliography: "`r here::here('vignettes', 'library.bib')`"
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.retina = 3,
+  comment = "#>"
+)
+
+set.seed(123)
+```
+
+Choice simulation converts experimental designs into realistic choice data by predicting how respondents would answer choice questions. This is essential for testing designs, conducting power analyses, and validating experimental assumptions before data collection. This article shows how to use `cbc_choices()` to simulate choice patterns.
+
+Before starting, let's define some basic profiles and a basic random design to work with:
+
+```{r}
+library(cbcTools)
+
+profiles <- cbc_profiles(
+  price = c(1, 1.5, 2, 2.5, 3),
+  type = c('Fuji', 'Gala', 'Honeycrisp'),
+  freshness = c('Poor', 'Average', 'Excellent')
+)
+
+design <- cbc_design(
+  profiles = profiles,
+  method = "random",
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100
+)
+
+design
+```
+
+# Choice Simulation Approaches
+
+`cbc_choices()` supports two simulation approaches:
+
+1. **Random simulation**: Each alternative has equal probability of being chosen
+2. **Utility-based simulation**: Choice probabilities based on multinomial logit model with specified priors
+
+## Random Choices
+
+Without priors, choices are simulated randomly with equal probabilities:
+
+```{r}
+# Random choice simulation (default)
+choices_random <- cbc_choices(design)
+
+head(choices_random)
+
+# Check choice distribution
+table(choices_random$choice, choices_random$altID)
+```
+
+Random simulation is useful for:
+
+- Quick testing of design structure
+- Conservative power analysis (worst-case scenario)
+- Baseline comparisons
+
+## Utility-Based Choices
+
+With priors, choices follow realistic utility-based patterns:
+
+```{r}
+# Create priors for utility-based simulation
+priors <- cbc_priors(
+  profiles = profiles,
+  price = -0.25, # Negative preference for higher prices
+  type = c(0.5, 1), # Gala and Honeycrisp preferred over Fuji
+  freshness = c(0.6, 1.2) # Average and Excellent preferred over Poor
+)
+
+# Utility-based choice simulation
+choices_utility <- cbc_choices(design, priors = priors)
+
+head(choices_utility)
+```
+
+## Choice Data Format
+
+The simulated choice data includes all design columns plus a `choice` column:
+
+```{r}
+head(choices_utility)
+```
+
+# Advanced Simulation Options
+
+## Designs with No-Choice
+
+For designs with no-choice options, specify no-choice priors:
+
+```{r}
+# Create design with no-choice option
+design_nochoice <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  no_choice = TRUE,
+  method = "random"
+)
+
+# Create priors including no-choice utility
+priors_nochoice <- cbc_priors(
+  profiles = profiles,
+  price = -0.25,
+  type = c(0.5, 1.0),
+  freshness = c(0.6, 1.2),
+  no_choice = -0.5 # Negative = no-choice less attractive
+)
+
+# Simulate choices
+choices_nochoice <- cbc_choices(
+  design_nochoice,
+  priors = priors_nochoice
+)
+
+# Examine no-choice rates
+nochoice_rate <- mean(choices_nochoice$choice[choices_nochoice$no_choice == 1])
+cat("No-choice selection rate:", round(nochoice_rate * 100, 1), "%\n")
+```
+
+## Random Parameters (Mixed Logit)
+
+Simulate heterogeneous preferences using random parameters:
+
+```{r}
+# Create priors with random parameters
+priors_random <- cbc_priors(
+  profiles = profiles,
+  price = rand_spec(dist = "n", mean = -0.1, sd = 0.05),
+  type = rand_spec(dist = "n", mean = c(0.1, 0.2), sd = c(0.05, 0.1)),
+  freshness = c(0.1, 0.2), # Keep some parameters fixed
+  n_draws = 100
+)
+
+# Simulate choices with preference heterogeneity
+choices_mixed <- cbc_choices(design, priors = priors_random)
+```
+
+## Interaction Effects
+
+Include interaction effects in choice simulation:
+
+```{r}
+# Create priors with interactions
+priors_interactions <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c("Fuji" = 0.5, "Gala" = 1),
+  freshness = c("Average" = 0.6, "Excellent" = 1.2),
+  interactions = list(
+    # Price sensitivity varies by apple type
+    int_spec(
+      between = c("price", "type"),
+      with_level = "Fuji",
+      value = 0.5
+    ),
+    int_spec(
+      between = c("price", "type"),
+      with_level = "Gala",
+      value = 0.2
+    )
+  )
+)
+
+# Simulate choices with interaction effects
+choices_interactions <- cbc_choices(
+  design,
+  priors = priors_interactions
+)
+```
+
+# Validating Choice Patterns
+
+## Overall Choice Frequencies
+
+Based on the priors used, we expect:
+
+- **Lower prices preferred** (negative price coefficient)
+- **Honeycrisp > Gala > Fuji** (type coefficients: 0.2 > 0.1 > 0)
+- **Excellent > Average > Poor** (freshness coefficients: 0.2 > 0.1 > 0)
+
+Examine aggregate choice patterns to validate simulation:
+
+```{r}
+# Decode the choice data first to get categorical variables
+choices_decoded <- cbc_decode(choices_utility)
+
+# Aggregate attribute choices across all respondents
+choices <- choices_decoded
+
+# Price choices
+price_choices <- aggregate(choice ~ price, data = choices, sum)
+price_choices$prop <- price_choices$choice / sum(price_choices$choice)
+print(price_choices)
+
+# Type choices
+type_choices <- aggregate(choice ~ type, data = choices, sum)
+type_choices$prop <- type_choices$choice / sum(type_choices$choice)
+print(type_choices)
+
+# Freshness choices
+freshness_choices <- aggregate(choice ~ freshness, data = choices, sum)
+freshness_choices$prop <- freshness_choices$choice /
+  sum(freshness_choices$choice)
+print(freshness_choices)
+```
+
+## Respondent Heterogeneity
+
+For random parameter models, examine variation across respondents:
+
+```{r}
+# Create dataset with only chosen alternatives
+chosen_alts <- choices_mixed[choices_mixed$choice == 1, ]
+
+# Mean attribute levels chosen by each respondent
+resp_means <- aggregate(
+  cbind(
+    price,
+    typeGala,
+    typeHoneycrisp,
+    freshnessAverage,
+    freshnessExcellent
+  ) ~
+    respID,
+  data = chosen_alts,
+  mean
+)
+
+# Look at variation across respondents
+cat("Price variation across respondents:\n")
+cat("Mean:", round(mean(resp_means$price), 2), "\n")
+cat("SD:", round(sd(resp_means$price), 2), "\n")
+
+cat("\nHoneycrisp choice rate variation:\n")
+cat("Mean:", round(mean(resp_means$typeHoneycrisp), 2), "\n")
+cat("SD:", round(sd(resp_means$typeHoneycrisp), 2), "\n")
+```
+
+# Design Consistency
+
+## Using Consistent Priors
+
+For D-optimal designs created with priors, use the same priors for choice simulation:
+
+```{r}
+# Create D-optimal design with priors
+design_optimal <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  priors = priors,
+  method = "stochastic"
+)
+
+# Use SAME priors for choice simulation
+choices_consistent <- cbc_choices(
+  design_optimal,
+  priors = priors
+)
+```
+
+## Prior Consistency Warnings
+
+cbcTools warns when different priors are used:
+
+```{r}
+# Create different priors
+different_priors <- cbc_priors(
+  profiles = profiles,
+  price = -0.2, # Different from design optimization
+  type = c(0.2, 0.4),
+  freshness = c(0.2, 0.4)
+)
+
+# This will generate a warning about inconsistent priors
+choices_inconsistent <- cbc_choices(
+  design_optimal,
+  priors = different_priors
+)
+```
+
+# Best Practices
+
+## Prior Specification
+
+- **Use realistic priors**: Base on literature, pilot studies, or expert judgment
+- **Match design priors**: Use same priors for design optimization and choice simulation  
+- **Test multiple scenarios**: Simulate under optimistic and conservative assumptions
+- **Include heterogeneity**: Use random parameters when appropriate
+
+## Validation Steps
+
+1. **Check choice counts**: Verify one choice per question
+2. **Examine patterns**: Ensure choices align with prior expectations
+3. **Test extremes**: Simulate with very strong/weak preferences
+4. **Compare methods**: Test different simulation approaches
+
+# Next Steps
+
+After simulating choices:
+
+1. **Conduct power analysis** using `cbc_power()` to determine sample size requirements
+2. **Compare designs** by simulating choices for different design methods
+3. **Validate assumptions** by checking if simulated patterns match expectations
+4. **Refine priors** based on simulation results before data collection
+
+For details on power analysis, see the [Power Analysis](power.Rmd) vignette.

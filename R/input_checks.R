@@ -1,3 +1,17 @@
+get_type_ids <- function(profiles) {
+  types <- get_col_types(profiles[, 2:ncol(profiles)])
+  ids <- list()
+  ids$discrete <- types %in% c("factor", "character")
+  ids$continuous <- !ids$discrete
+  return(ids)
+}
+
+get_col_types <- function(data) {
+  types <- lapply(data, class)
+  test <- function(x) { x[1] }
+  return(unlist(lapply(types, test)))
+}
+
 check_inputs_profiles <- function(levels) {
   for (i in 1:length(levels)) {
     check_vector <- !is.vector(levels[[i]])
@@ -11,138 +25,193 @@ check_inputs_profiles <- function(levels) {
   }
 }
 
-check_inputs_restrict <- function(profiles) {
-  # Check if profiles is a data frame
-  if (!is.data.frame(profiles)) {
-    stop('The "profiles" argument must be a data frame.')
-  }
-
-  # Check if profiles has been created by the cbc_profiles function
-  if (!"profileID" %in% colnames(profiles)) {
-    stop(
-      'The "profiles" data frame must be created using the "cbc_profiles()"',
-      'function and contain the "profileID" variable.'
-    )
-  }
-}
-
-check_design_method <- function(method, priors) {
-
-  # Check that an appropriate method is used
-
-  if (! method %in% c(
-    'random', 'full', 'orthogonal', 'dopt', 'CEA', 'Modfed'
-  )) {
-    stop(
-      'The "method" argument must be set to "random", "full", ',
-      '"orthogonal", "dopt", "CEA", or "Modfed"'
-    )
-  }
-
-  # Check that a Bayesian method is used if priors are used
-
-  if (!is.null(priors)) {
-    if (!method_is_bayesian(method)) {
-      # Set method to 'CEA' if priors are specified and
-      # user didn't specify an appropriate method.
-      warning(
-        'Since "priors" are specified, the "method" must be either "CEA" ',
-        'or "Modfed". The specified "method" is being ignored and set to ',
-        '"CEA"\n'
-      )
-      method <- 'CEA'
+validate_profiles <- function(profiles) {
+    if (!inherits(profiles, "cbc_profiles")) {
+        stop("profiles must be a cbc_profiles object created by cbc_profiles()")
     }
-  }
-
-  return(method)
 }
 
-check_inputs_design <- function(
-    profiles,
-    n_resp,
-    n_alts,
-    n_q,
-    n_blocks,
-    n_draws,
-    n_start,
-    no_choice,
-    label,
-    method,
-    priors,
-    prior_no_choice,
-    probs,
-    keep_d_eff,
-    keep_db_error,
-    max_iter,
-    parallel,
-    profiles_restricted
+validate_design <- function(design) {
+    if (!inherits(design, "cbc_design")) {
+        stop("profiles must be a cbc_design object created by cbc_design()")
+    }
+}
+
+# Validate correlations list
+validate_correlations <- function(correlations) {
+    if (!is.list(correlations)) {
+        stop("correlations must be a list of correlation specifications created by cor_spec()")
+    }
+    if (!all(sapply(correlations, inherits, "cbc_correlation"))) {
+        stop("all correlations must be created using cor_spec()")
+    }
+}
+
+# Helper function to create a simple hash of profiles structure
+digest_profiles <- function(profiles) {
+    # Create a simple hash based on attribute info and structure
+    attr_info <- attr(profiles, "attribute_info")
+    structure_string <- paste(
+        names(attr_info),
+        sapply(attr_info, function(x) paste(x$type, x$n_levels, collapse = "_")),
+        collapse = "|"
+    )
+    # Use a simple hash - in production you might want digest::digest()
+    abs(sum(utf8ToInt(structure_string)))
+}
+
+# Validate that priors are compatible with profiles
+validate_priors <- function(priors, profiles, no_choice) {
+    if (is.null(priors)) { return(TRUE) }
+    if (no_choice) {
+        if (! "no_choice" %in% names(priors$pars)) {
+            stop(
+                "Since 'no_choice = TRUE', you must provide a 'no_choice' ",
+                "value with cbc_priors()"
+            )
+        }
+    }
+    if (!inherits(priors, "cbc_priors")) {
+        stop("priors must be a cbc_priors object created by cbc_priors()")
+    }
+    if (!inherits(profiles, "cbc_profiles")) {
+        stop("profiles must be a cbc_profiles object created by cbc_profiles()")
+    }
+
+    priors_meta <- priors$profiles_metadata
+    current_hash <- digest_profiles(profiles)
+
+    # Check if profiles structure has changed
+    if (priors_meta$profile_hash != current_hash) {
+        current_attr_info <- attr(profiles, "attribute_info")
+
+        # More detailed comparison
+        if (!identical(priors_meta$attribute_info, current_attr_info)) {
+            warning(
+                "Priors were created for different profile attributes or levels. ",
+                "Consider recreating priors with cbc_priors().",
+                call. = FALSE
+            )
+        } else if (priors_meta$n_profiles != nrow(profiles)) {
+            message(
+                "Priors were created for profiles with ", priors_meta$n_profiles,
+                " rows, but current profiles have ", nrow(profiles), " rows. ",
+                "This is typically fine if you've applied restrictions."
+            )
+        }
+    }
+}
+
+# Validate that priors are compatible with profiles
+validate_priors_profiles <- function(priors, profiles) {
+    if (!inherits(priors, "cbc_priors")) {
+        stop("priors must be a cbc_priors object created by cbc_priors()")
+    }
+    if (!inherits(profiles, "cbc_profiles")) {
+        stop("profiles must be a cbc_profiles object created by cbc_profiles()")
+    }
+
+    priors_meta <- priors$profiles_metadata
+    current_hash <- digest_profiles(profiles)
+
+    # Check if profiles structure has changed
+    if (priors_meta$profile_hash != current_hash) {
+        current_attr_info <- attr(profiles, "attribute_info")
+
+        if (!identical(priors_meta$attribute_info, current_attr_info)) {
+            warning(
+                "Priors were created for different profile attributes or levels. ",
+                "Consider recreating priors with cbc_priors().",
+                call. = FALSE
+            )
+        } else if (priors_meta$n_profiles != nrow(profiles)) {
+            message(
+                "Priors were created for profiles with ", priors_meta$n_profiles,
+                " rows, but current profiles have ", nrow(profiles), " rows. ",
+                "This is typically fine if you've applied restrictions."
+            )
+        }
+    }
+
+    invisible(TRUE)
+}
+
+# Validates all inputs to ensure they meet requirements for design generation
+validate_design_inputs <- function(
+    profiles, method, priors, n_alts, n_q, n_resp, n_blocks,
+    no_choice, label, randomize_questions, randomize_alts,
+    remove_dominant, dominance_types, dominance_threshold,
+    max_dominance_attempts
 ) {
 
-    # Checks on blocking
+    # Validate profiles
+    validate_profiles(profiles)
 
-    if (n_blocks < 1) {
-      stop('n_blocks must be greater than or equal to 1')
+    if (nrow(profiles) == 0) {
+        stop("profiles must contain at least one profile")
     }
 
-    if (n_blocks > n_resp) {
-      stop("Maximum allowable number of blocks is one block per respondent")
+    # Validate method
+    valid_methods <- get_design_methods_all()
+    if (!method %in% valid_methods) {
+        stop("method must be one of: ", paste(valid_methods, collapse = ", "))
     }
 
-    if ((n_blocks > 1) & (method == 'random')) {
-      stop(
-        'The "random" method cannot use blocking. Either change the design ',
-        'method or set "n_blocks = 1"'
-      )
-      if ((method == 'full') & profiles_restricted) {
-        stop(
-          'The "full" method cannot use restricted profiles when blocking ',
-          'is used. Either set "n_blocks" to 1 or use an unrestricted ',
-          'set of profiles'
-        )
-      }
+    # CEA-specific validation: requires full factorial profiles
+    if (method == "cea") {
+        validate_cea_profiles(profiles)
     }
 
-    # Checks on labeled designs
-
-    if (!is.null(label)) {
-      if (!method %in% c('random', 'full')) {
-        stop(
-          'Labeled designs are currently only supported with the "random" or ',
-          '"full" method.'
-        )
-      }
+    # Validate priors
+    if (!is.null(priors) && !inherits(priors, "cbc_priors")) {
+        stop("priors must be a cbc_priors object created by cbc_priors() or NULL")
     }
 
-    # Check on restricted profile sets
+    # Validate numeric inputs
+    if (!is.numeric(n_alts) || n_alts < 2) {
+        stop("n_alts must be a numeric value >= 2")
+    }
 
-    if (profiles_restricted) {
-      if (!method %in% c('random', 'full', 'dopt', 'Modfed')) {
-        stop(
-          'Restricted profile sets can only be used with the "random", "full" ',
-          '"dopt", or "Modfed" methods'
-        )
-      }
+    if (!is.numeric(n_q) || n_q < 1) {
+        stop("n_q must be a numeric value >= 1")
+    }
+
+    if (!is.numeric(n_resp) || n_resp < 1) {
+        stop("n_resp must be a numeric value >= 1")
+    }
+
+    if (!is.numeric(n_blocks) || n_blocks < 1) {
+        stop("n_blocks must be a numeric value >= 1")
+    }
+
+    # Method-specific validation
+    if (method == "random") {
+        if (n_resp == 1) {
+            warning("For random designs with n_resp = 1, consider using an optimized method for better efficiency")
+        }
+    } else if (method %in% c("stochastic", "modfed", "cea")) {
+        if (n_blocks == 1) {
+            message(sprintf(
+                "%s design will be optimized into 1 design block, then allocated across %d respondents",
+                tools::toTitleCase(method), n_resp
+            ))
+        }
+        if (n_blocks > 1) {
+            message(sprintf(
+                "%s design will be optimized into %d design blocks, then allocated across %d respondents",
+                tools::toTitleCase(method), n_blocks, n_resp
+            ))
+        }
     }
 
     # Check that priors are appropriate if specified
 
     if (!is.null(priors)) {
 
-      # If using a Bayesian D-efficient design with a no choice option,
-      # user must specify a value for prior_no_choice
-
-      if (no_choice & is.null(prior_no_choice)) {
-        stop(
-          'If "no_choice = TRUE" with the "CEA" or "Modfed" method, you must ',
-          'specify the prior utility for the "no choice" option using ',
-          '"prior_no_choice"'
-        )
-      }
-
         # Check that prior names aren't missing
-        prior_names <- names(priors)
-        profile_lvls <- profiles[,2:ncol(profiles)]
-        missing <- setdiff(names(profile_lvls), prior_names)
+        prior_names <- names(priors$attrs)
+        profile_attrs <- get_var_names(profiles)
+        missing <- setdiff(profile_attrs, prior_names)
         if (length(missing) > 0) {
             stop(
                 '"priors" is missing the following variables: \n\n',
@@ -153,17 +222,23 @@ check_inputs_design <- function(
         # Check that prior levels aren't missing
         type_ids <- get_type_ids(profiles)
         for (id in which(type_ids$discrete)) {
-            n_lvls <- length(unique(profile_lvls[,id])) - 1
-            if (length(priors[[id]]) != n_lvls) {
+            col_index <- id + 1
+            attr <- names(profiles)[col_index]
+            n_lvls <- length(unique(profiles[,col_index])) - 1
+            prior_means <- priors$attrs[[attr]]$mean
+            if (length(prior_means) != n_lvls) {
                 stop(
                     'Invalid number of values provided in "priors" for the "',
-                    prior_names[id], '" attribute. Please provide ', n_lvls,
+                    attr, '" attribute. Please provide ', n_lvls,
                     ' values'
                 )
             }
         }
         for (id in which(type_ids$continuous)) {
-            if (length(priors[[id]]) != 1) {
+            col_index <- id + 1
+            attr <- names(profiles)[col_index]
+            prior_means <- priors$attrs[[attr]]$mean
+            if (length(prior_means) != 1) {
                 stop(
                     'Invalid number of values provided in "priors" for the "',
                     prior_names[id], '" attribute. Please provide 1 value'
@@ -172,38 +247,180 @@ check_inputs_design <- function(
         }
     }
 
-    # Check that the number of alternatives per observation is larger than
-    # the number of unique profiles
+    # Check feasibility constraints
     if (n_alts > nrow(profiles)) {
-      stop(
-        'The number of alternatives per observation, specified by "n_alts", ',
-        "is larger than the number of unique profiles. Either decrease ",
-        '"n_alts" to be less than ', nrow(profiles), " or add more ",
-        "attributes / levels to increase the number of profiles."
-      )
+        stop(sprintf(
+            "n_alts (%d) cannot be larger than the number of available profiles (%d)",
+            n_alts, nrow(profiles)
+        ))
+    }
+
+    # Validate label constraints
+    if (!is.null(label)) {
+        if (!label %in% names(profiles)) {
+            stop(sprintf("label variable '%s' not found in profiles", label))
+        }
+
+        n_label_levels <- length(unique(profiles[[label]]))
+        if (n_label_levels != n_alts) {
+            stop(sprintf(
+                "For labeled designs, number of label levels (%d) must equal n_alts (%d)",
+                n_label_levels, n_alts
+            ))
+        }
+    }
+
+    # Validate dominance parameters
+    if (remove_dominant) {
+        if (is.null(priors)) {
+            stop("remove_dominant = TRUE requires priors to be specified")
+        }
+
+        valid_dominance_types <- c("total", "partial")
+        if (!all(dominance_types %in% valid_dominance_types)) {
+            stop(sprintf(
+                "dominance_types must be one or more of: %s",
+                paste(valid_dominance_types, collapse = ", ")
+            ))
+        }
+
+        if (!is.numeric(dominance_threshold) || dominance_threshold <= 0 || dominance_threshold >= 1) {
+            stop("dominance_threshold must be a numeric value between 0 and 1")
+        }
+
+        if (!is.numeric(max_dominance_attempts) || max_dominance_attempts < 1) {
+            stop("max_dominance_attempts must be a numeric value >= 1")
+        }
+    }
+
+    # Check for sufficient combinations
+    if (method == "random") {
+        if (!is.null(label)) {
+            # For labeled designs, check each label group has enough profiles
+            label_counts <- table(profiles[[label]])
+            min_label_count <- min(label_counts)
+
+            if (min_label_count < n_q) {
+                warning(sprintf(
+                    "Label group with fewest profiles (%d) has fewer profiles than questions per respondent (%d). May have difficulty generating unique questions.",
+                    min_label_count, n_q
+                ))
+            }
+        } else {
+            # For random designs, only check n_q (each respondent independent)
+            max_possible_questions <- choose(nrow(profiles), n_alts)
+
+            if (n_q > max_possible_questions) {
+                stop(sprintf(
+                    "Requested %d questions per respondent but only %d unique combinations possible with %d profiles and %d alternatives per question",
+                    n_q, max_possible_questions, nrow(profiles), n_alts
+                ))
+            }
+        }
+
+    } else {
+        # For non-random designs, check n_q * n_blocks (base design size)
+        max_possible_questions <- choose(nrow(profiles), n_alts)
+        base_design_questions <- n_q * n_blocks
+
+        if (base_design_questions > max_possible_questions) {
+            stop(sprintf(
+                "Requested %d questions in base design but only %d unique combinations possible with %d profiles and %d alternatives per question",
+                base_design_questions, max_possible_questions, nrow(profiles), n_alts
+            ))
+        }
+    }
+
+    # Validate no-choice with priors
+    if (no_choice && !is.null(priors) && !priors$has_no_choice) {
+        stop("no_choice = TRUE requires priors to include a no_choice parameter. Use cbc_priors(..., no_choice = value)")
+    }
+    if (!is.null(priors) && priors$has_no_choice) {
+        if (!no_choice) {
+            stop("Since priors has a no_choice value, must set no_choice = TRUE in cbc_design()")
+        }
     }
 
     # Check that number of questions per respondents is larger than the
     # unique number of choice sets
     if (n_q > floor(nrow(profiles) / n_alts)) {
-        # The first if statement is because the next one only matters with a
-        # small number of profiles, so most cases where n is large the next
-        # if statement isn't necessary. If the number of profiles is too large,
-        # the next if statement will error because R integers have a maximum
-        # value of 2^31 - 1. See this issue:
-        # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
-        n <- nrow(profiles)
-        k <- n_alts
-        ncomb <- choose(n, k) # More robust
-        # ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
-        if (n_q > ncomb) {
-          stop(
-            'The number of questions per respondent, specified by "n_q", ',
-            "is larger than the number of unique sets of choice sets. ",
-            'You can correct this by decreasing "n_q" to be less than ',
-            ncomb, ', decreasing "n_alts", or add more attributes / levels ',
-            "to increase the number of choice set combinations."
-          )
+      # The first if statement is because the next one only matters with a
+      # small number of profiles, so most cases where n is large the next
+      # if statement isn't necessary. If the number of profiles is too large,
+      # the next if statement will error because R integers have a maximum
+      # value of 2^31 - 1. See this issue:
+      # https://github.com/jhelvy/cbcTools/issues/10#issuecomment-1535454495
+      n <- nrow(profiles)
+      k <- n_alts
+      ncomb <- choose(n, k) # More robust
+      # ncomb <- factorial(n) / (factorial(k)*(factorial(n-k)))
+      if (n_q > ncomb) {
+        stop(
+          'The number of questions per respondent, specified by "n_q", ',
+          "is larger than the number of unique sets of choice sets. ",
+          'You can correct this by decreasing "n_q" to be less than ',
+          ncomb, ', decreasing "n_alts", or add more attributes / levels ',
+          "to increase the number of choice set combinations."
+        )
+      }
+    }
+
+    invisible(TRUE)
+}
+
+# CEA validation function
+validate_cea_profiles <- function(profiles) {
+    # Check if profiles appear to be restricted (not full factorial)
+
+    # Get attribute info
+    attr_info <- attr(profiles, "attribute_info")
+    if (is.null(attr_info)) {
+        # If no metadata, try to infer from the data
+        attr_names <- setdiff(names(profiles), "profileID")
+        total_combinations <- 1
+
+        for (attr in attr_names) {
+            n_levels <- length(unique(profiles[[attr]]))
+            total_combinations <- total_combinations * n_levels
+        }
+
+        if (nrow(profiles) < total_combinations) {
+            stop(sprintf(
+                "CEA method requires full factorial profiles (all possible attribute combinations). ",
+                "Expected %d profiles but found %d. ",
+                "CEA cannot optimize when some attribute combinations are missing. ",
+                "Consider using 'stochastic' or 'modfed' methods instead, or use unrestricted profiles.",
+                total_combinations, nrow(profiles)
+            ))
+        }
+    } else {
+        # Use metadata if available
+        total_removed <- attr(profiles, "total_removed") %||% 0
+        restrictions_applied <- attr(profiles, "restrictions_applied")
+
+        if (total_removed > 0 || (!is.null(restrictions_applied) && length(restrictions_applied) > 0)) {
+            stop(
+                "CEA method requires full factorial profiles (all possible attribute combinations). ",
+                "The provided profiles have restrictions applied, which means some attribute ",
+                "combinations are missing. CEA cannot optimize when some combinations are unavailable. ",
+                "Consider using 'stochastic' or 'modfed' methods instead, or use unrestricted profiles."
+            )
+        }
+
+        # Double-check by calculating expected combinations
+        total_combinations <- 1
+        for (attr_name in names(attr_info)) {
+            total_combinations <- total_combinations * attr_info[[attr_name]]$n_levels
+        }
+
+        if (nrow(profiles) < total_combinations) {
+            stop(sprintf(
+                "CEA method requires full factorial profiles. Expected %d profiles but found %d. ",
+                "Some attribute combinations appear to be missing.",
+                total_combinations, nrow(profiles)
+            ))
         }
     }
+
+    invisible(TRUE)
 }

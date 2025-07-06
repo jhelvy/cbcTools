@@ -2,275 +2,138 @@
 % Please edit documentation in R/design.R
 \name{cbc_design}
 \alias{cbc_design}
-\title{Make a choice-based conjoint survey design}
+\title{Generate survey designs for choice experiments (Updated Implementation)}
 \usage{
 cbc_design(
   profiles,
-  n_resp,
-  n_alts,
-  n_q,
-  n_blocks = 1,
-  n_draws = 50,
-  n_start = 5,
-  no_choice = FALSE,
-  label = NULL,
   method = "random",
   priors = NULL,
-  prior_no_choice = NULL,
-  probs = FALSE,
-  keep_d_eff = FALSE,
-  keep_db_error = FALSE,
+  n_alts,
+  n_q,
+  n_resp = 100,
+  n_blocks = 1,
+  n_cores = NULL,
+  no_choice = FALSE,
+  label = NULL,
+  randomize_questions = TRUE,
+  randomize_alts = TRUE,
+  remove_dominant = FALSE,
+  dominance_types = c("total", "partial"),
+  dominance_threshold = 0.8,
+  max_dominance_attempts = 50,
   max_iter = 50,
-  parallel = FALSE
+  n_start = 5
 )
 }
 \arguments{
-\item{profiles}{A data frame in which each row is a possible profile. This
-can be generated using the \code{cbc_profiles()} function.}
+\item{profiles}{A data frame of class \code{cbc_profiles} created using \code{cbc_profiles()}}
 
-\item{n_resp}{Number of survey respondents.}
+\item{method}{Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"}
 
-\item{n_alts}{Number of alternatives per choice question.}
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or NULL for random/shortcut designs}
 
-\item{n_q}{Number of questions per respondent.}
+\item{n_alts}{Number of alternatives per choice question}
 
-\item{n_blocks}{Number of blocks used in Orthogonal or Bayesian D-efficient
-designs. Max allowable is one block per respondent. Defaults to \code{1},
-meaning every respondent sees the same choice set.}
+\item{n_q}{Number of questions per respondent (or per block)}
 
-\item{n_draws}{Number of draws used in simulating the prior distribution used
-in Bayesian D-efficient designs. Defaults to \code{50}.}
+\item{n_resp}{Number of respondents (for random/shortcut designs) or 1 (for optimized designs that get repeated)}
 
-\item{n_start}{A numeric value indicating the number of random start designs
-to use in obtaining a Bayesian D-efficient design. The default is \code{5}.
-Increasing \code{n_start} can result in a more efficient design at the expense
-of increased computational time.}
+\item{n_blocks}{Number of blocks in the design. Defaults to 1}
 
-\item{no_choice}{Include a "no choice" option in the choice sets? Defaults to
-\code{FALSE}. If \code{TRUE}, the total number of alternatives per question will be
-one more than the provided \code{n_alts} argument.}
+\item{n_cores}{Number of cores to use for parallel processing in the design search.
+Defaults to NULL, in which case it is set to the number of available cores minus 1.}
 
-\item{label}{The name of the variable to use in a "labeled" design (also
-called an "alternative-specific design") such that each set of alternatives
-contains one of each of the levels in the \code{label} attribute. Currently not
-compatible with Bayesian D-efficient designs. If used, the \code{n_alts}
-argument will be ignored as its value is defined by the unique number of
-levels in the \code{label} variable. Defaults to \code{NULL}.}
+\item{no_choice}{Include a "no choice" option? Defaults to FALSE}
 
-\item{method}{Choose the design method to use: \code{"random"}, \code{"full"},
-\code{"orthogonal"}, \code{"dopt"}, \code{"CEA"}, or \code{"Modfed"}. Defaults to \code{"random"}.
-See details below for complete description of each method.}
+\item{label}{The name of the variable to use in a "labeled" design. Defaults to NULL}
 
-\item{priors}{A list of one or more assumed prior parameters used to generate
-a Bayesian D-efficient design. Defaults to \code{NULL}}
+\item{randomize_questions}{Randomize question order for each respondent? Defaults to TRUE (optimized methods only)}
 
-\item{prior_no_choice}{Prior utility value for the "no choice" alternative.
-Only required if \code{no_choice = TRUE}. Defaults to \code{NULL}.}
+\item{randomize_alts}{Randomize alternative order within questions? Defaults to TRUE (optimized methods only)}
 
-\item{probs}{If \code{TRUE}, for Bayesian D-efficient designs the resulting design
-includes average predicted probabilities for each alternative in each
-choice set given the sample from the prior preference distribution.
-Defaults to \code{FALSE}.'}
+\item{remove_dominant}{Remove choice sets with dominant alternatives? Defaults to FALSE}
 
-\item{keep_d_eff}{If \code{TRUE}, for D-optimal designs (\code{method = "dopt"}) the
-returned object will be a list containing the design and the D-efficiency
-score. Defaults to \code{FALSE}.}
+\item{dominance_types}{Types of dominance to check: "total" and/or "partial"}
 
-\item{keep_db_error}{If \code{TRUE}, for Bayesian D-efficient designs the
-returned object will be a list containing the design and the DB-error
-score. Defaults to \code{FALSE}.}
+\item{dominance_threshold}{Threshold for total dominance detection. Defaults to 0.8}
 
-\item{max_iter}{A numeric value indicating the maximum number allowed
-iterations when searching for a Bayesian D-efficient design. The default is
-50.}
+\item{max_dominance_attempts}{Maximum attempts to replace dominant choice sets. Defaults to 50.}
 
-\item{parallel}{Logical value indicating whether computations should be done
-over multiple cores. The default is \code{FALSE}.}
+\item{max_iter}{Maximum iterations for optimized designs. Defaults to 50}
+
+\item{n_start}{Number of random starts for optimized designs. Defaults to 5}
 }
 \value{
-The returned \code{design} data frame contains a choice-based conjoint
-survey design where each row is an alternative. It includes the following
-columns:
-\itemize{
-\item \code{profileID}: Identifies the profile in \code{profiles}.
-\item \code{respID}: Identifies each survey respondent.
-\item \code{qID}: Identifies the choice question answered by the respondent.
-\item \code{altID}:Identifies the alternative in any one choice observation.
-\item \code{obsID}: Identifies each unique choice observation across all respondents.
-\item \code{blockID}: If blocking is used, identifies each unique block.
-}
+A \code{cbc_design} object containing the experimental design
 }
 \description{
-This function creates a data frame containing a choice-based conjoint survey
-design where each row is an alternative. Generate a variety of survey
-designs, including full factorial designs, orthogonal designs, and Bayesian
-D-efficient designs as well as designs with "no choice" options and "labeled"
-(also known as "alternative specific") designs.
+This function creates experimental designs for choice-based conjoint experiments
+using multiple design approaches including optimization and frequency-based methods.
 }
 \details{
-The \code{method} argument determines the design method used. Options
-are:
+\subsection{Design Methods}{
+
+The \code{method} argument determines the design approach used:
 \itemize{
-\item \code{"random"}
-\item \code{"full"}
-\item \code{"orthogonal"}
-\item \code{"dopt"}
-\item \code{"CEA"}
-\item \code{"Modfed"}
+\item \code{"random"}: Creates designs by randomly sampling profiles for each respondent independently
+\item \code{"stochastic"}: Stochastic profile swapping with D-error optimization (first improvement found)
+\item \code{"modfed"}: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
+\item \code{"cea"}: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
+\item \code{"shortcut"}: Frequency-based greedy algorithm that balances attribute level usage
+}
+}
 
-All methods ensure that the two following criteria are met:
+\subsection{Method Compatibility}{
+
+The table below summarizes method compatibility with design features:\tabular{lllllll}{
+   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Interactions? \tab Dominance removal? \cr
+   "random" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \cr
+   "shortcut" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "minoverlap" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "balanced" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "stochastic" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
+   "modfed" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
+   "cea" \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+}
+
+}
+
+\subsection{Design Quality Assurance}{
+
+All methods ensure the following criteria are met:
 \enumerate{
-\item No two profiles are the same within any one choice set.
-\item No two choice sets are the same within any one respondent.
-}
-
-The table below summarizes method compatibility with other design options,
-including the ability to include a "no choice" option, the creation of a
-"labeled" design (also called a "alternative-specific" design), the use
-of restricted profile, and the use of blocking.\tabular{lllll}{
-   Method \tab Include "no choice"? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \cr
-   \code{"random"} \tab Yes \tab Yes \tab Yes \tab No \cr
-   \code{"full"} \tab Yes \tab Yes \tab Yes \tab Yes \cr
-   \code{"orthogonal"} \tab Yes \tab No \tab No \tab Yes \cr
-   \code{"dopt"} \tab Yes \tab No \tab Yes \tab Yes \cr
-   \code{"CEA"} \tab Yes \tab No \tab No \tab Yes \cr
-   \code{"Modfed"} \tab Yes \tab No \tab Yes \tab Yes \cr
-}
-
-
-The \code{"random"} method (the default) creates a design where choice sets are
-created by randomly sampling from the full set of \code{profiles} *with
-*replacement. This means that few (if any) respondents will see the same
-sets of choice sets. This method is less efficient than other approaches
-and may lead to a deficient experiment in smaller sample sizes, though it
-guarantees equal ability to estimate main and interaction effects.
-
-The \code{"full"} method for ("full factorial") creates a design where choice
-sets are created by randomly sampling from the full set of \code{profiles}
-\emph{without replacement}. The choice sets are then repeated to meet the
-desired number of survey respondents (determined by \code{n_resp}). If blocking
-is used, choice set blocks are created using mutually exclusive subsets of
-\code{profiles} within each block. This method produces a design with similar
-performance with that of the \code{"random"} method, except the choice sets are
-repeated and thus there will be many more opportunities for different
-respondents to see the same choice sets. This method is less efficient than
-other approaches and may lead to a deficient experiment in smaller sample
-sizes, though it guarantees equal ability to estimate main and interaction
-effects. For more information about blocking with full factorial designs,
-see \code{?DoE.base::fac.design} as well as the JSS article on the {DoE.base}
-package (Grömping, 2018).
-
-The \code{"orthogonal"} method creates a design where an orthogonal array from
-the full set of \code{profiles} is found and then choice sets are created by
-randomly sampling from this orthogonal array \emph{without replacement}. The
-choice sets are then repeated to meet the desired number of survey
-respondents (determined by \code{n_resp}). If blocking is used, choice set
-blocks are created using mutually exclusive subsets of the orthogonal array
-within each block. For cases where an orthogonal array cannot be found, a
-full factorial design is used. This approach is also sometimes called a
-"main effects" design since orthogonal arrays focus the information on the
-main effects at the expense of information about interaction effects. For
-more information about orthogonal designs, see \code{?DoE.base::oa.design} as
-well as the JSS article on the {DoE.base} package (Grömping, 2018).
-
-The \code{"dopt"} method creates a "D-optimal" design where an array from
-\code{profiles} is found that maximizes the D-efficiency of a linear model
-using the Federov algorithm, with the total number of unique choice sets
-determined by \code{n_q*n_blocks}. Choice sets are then created by randomly
-sampling from this array \emph{without replacement}. The choice sets are then
-repeated to meet the desired number of survey respondents (determined by
-\code{n_resp}). If blocking is used, choice set blocks are created from the
-D-optimal array. For more information about the underlying algorithm
-for this method, see \code{?AlgDesign::optFederov}.
-
-The \code{"CEA"} and \code{"Modfed"} methods use the specified \code{priors} to create a
-Bayesian D-efficient design for the choice sets, with the total number of
-unique choice sets determined by \code{n_q*n_blocks}. The choice sets are then
-repeated to meet the desired number of survey respondents (determined by
-\code{n_resp}). If \code{"CEA"} or \code{"Modfed"} is used without specifying \code{priors}, a
-prior of all \code{0}s will be used and a warning message stating this will be
-shown. In the opposite case, if \code{priors} are specified but neither Bayesian
-method is used, the \code{"CEA"} method will be used and a warning stating this
-will be shown. Restricted sets of \code{profiles} can only be used with
-\code{"Modfed"}. For more details on Bayesian D-efficient designs, see
-\code{?idefix::CEA} and \code{?idefix::Modfed} as well as the JSS article on the
-{idefix} package (Traets et al, 2020).
+\item No duplicate profiles within any choice set
+\item No duplicate choice sets within any respondent
+\item If \code{remove_dominant = TRUE}, choice sets with dominant alternatives are eliminated (optimization methods only)
 }
 }
-\examples{
-library(cbcTools)
 
-# A simple conjoint experiment about apples
+\subsection{Method Details}{
+\subsection{Random Method}{
 
-# Generate all possible profiles
-profiles <- cbc_profiles(
-  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  type      = c("Fuji", "Gala", "Honeycrisp"),
-  freshness = c('Poor', 'Average', 'Excellent')
-)
-
-# Make a survey by randomly sampling from all possible profiles
-# (This is the default setting where method = 'random')
-design_random <- cbc_design(
-  profiles = profiles,
-  n_resp   = 100, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6    # Number of questions per respondent
-)
-
-# Make a survey using a full factorial design and include a "no choice" option
-design_full <- cbc_design(
-  profiles = profiles,
-  n_resp   = 100, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6,   # Number of questions per respondent
-  method   = 'full', # Change this to use a different method, e.g. 'orthogonal', or 'dopt'
-  no_choice = TRUE
-)
-
-# Make a survey by randomly sampling from all possible profiles
-# with each level of the "type" attribute appearing as an alternative
-design_random_labeled <- cbc_design(
-  profiles = profiles,
-  n_resp   = 100, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6,   # Number of questions per respondent
-  label    = "type"
-)
-
-# Make a Bayesian D-efficient design with a prior model specified
-# Note that by speed can be improved by setting parallel = TRUE
-design_bayesian <- cbc_design(
-    profiles  = profiles,
-    n_resp    = 100, # Number of respondents
-    n_alts    = 3,   # Number of alternatives per question
-    n_q       = 6,   # Number of questions per respondent
-    n_start   = 1,   # Defaults to 5, set to 1 here for a quick example
-    priors = list(
-        price     = -0.1,
-        type      = c(0.1, 0.2),
-        freshness = c(0.1, 0.2)
-    ),
-    method = "CEA",
-    parallel = FALSE
-)
+Creates designs where each respondent sees completely independent, randomly generated choice sets.
 }
-\references{
-Grömping, U. (2018). R Package DoE.base for Factorial Experiments. Journal of Statistical Software, 85(5), 1–41
-\doi{10.18637/jss.v085.i05}
 
-Traets, F., Sanchez, D. G., & Vandebroek, M. (2020). Generating Optimal Designs for Discrete Choice Experiments in R: The idefix Package. Journal of Statistical Software, 96(3), 1–41,
-\doi{10.18637/jss.v096.i03}
+\subsection{D-Error Optimization Methods (stochastic, modfed, cea)}{
 
-Wheeler B (2022)._AlgDesign: Algorithmic Experimental Design. R package version 1.2.1,
-\href{https://CRAN.R-project.org/package=AlgDesign}{https://CRAN.R-project.org/package=AlgDesign}.
+These methods minimize D-error to create statistically efficient designs:
+\itemize{
+\item \strong{Stochastic}: Random profile sampling with first improvement acceptance
+\item \strong{Modfed}: Exhaustive profile testing for best improvement (slower but thorough)
+\item \strong{CEA}: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
 }
-\keyword{DoE.base}
-\keyword{design}
-\keyword{experiment}
-\keyword{idefix}
-\keyword{logit}
-\keyword{logitr}
-\keyword{mixed}
-\keyword{mnl}
-\keyword{mxl}
+}
+
+\subsection{Shortcut Method}{
+
+Uses a frequency-based greedy algorithm that:
+\itemize{
+\item Tracks attribute level usage within questions and across the overall design
+\item Selects profiles with least frequently used attribute levels
+\item Provides good level balance without requiring priors or D-error calculations
+\item Fast execution suitable for large designs
+}
+}
+
+}
+}

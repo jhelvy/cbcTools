@@ -4,99 +4,50 @@
 \alias{cbc_choices}
 \title{Simulate choices for a survey design}
 \usage{
-cbc_choices(design, obsID = "obsID", priors = NULL, n_draws = 100)
+cbc_choices(design, priors = NULL)
 }
 \arguments{
-\item{design}{A data frame of a survey design.}
+\item{design}{A \code{cbc_design} object created by \code{cbc_design()}}
 
-\item{obsID}{The name of the column in \code{design} that identifies each choice
-observation. Defaults to \code{"obsID"}.}
-
-\item{priors}{A list of one or more prior parameters that define a prior
-(assumed) utility model used to simulate choices for the \code{survey} data frame.
-If \code{NULL} (the default), choices will be randomly assigned.}
-
-\item{n_draws}{The number of Halton draws to use for simulated choices
-for mixed logit models. Defaults to \code{100}.}
+\item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or \code{NULL}
+(default) for random choices.}
 }
 \value{
-Returns the \code{design} data frame with an additional \code{choice} column
+Returns the input design with an additional \code{choice} column
 identifying the simulated choices.
 }
 \description{
 Simulate choices for a survey design, either randomly or according to a
-utility model defined by user-provided prior parameters. All choices are
-simulated using the 'logitr' package. For more details see the JSS article
-on the 'logitr' package (Helveston, 2023).
+utility model defined by user-provided prior parameters. When priors are
+provided, choices are simulated using the same probability computation
+framework as used in cbc_design() for consistency.
 }
 \examples{
 library(cbcTools)
 
-# A simple conjoint experiment about apples
-
-# Generate all possible profiles
+# Create profiles and design
 profiles <- cbc_profiles(
-  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  type      = c("Fuji", "Gala", "Honeycrisp"),
-  freshness = c('Poor', 'Average', 'Excellent')
+  price = c(1, 2, 3),
+  type = c("A", "B", "C"),
+  quality = c("Low", "High")
 )
 
-# Make a survey design from all possible profiles
-# (This is the default setting where method = 'full' for "full factorial")
 design <- cbc_design(
   profiles = profiles,
-  n_resp   = 300, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6    # Number of questions per respondent
+  n_alts = 2,
+  n_q = 4
 )
 
-# Simulate random choices
-data <- cbc_choices(
-  design = design,
-  obsID  = "obsID"
+# Simulate random choices (default)
+choices_random <- cbc_choices(design)
+
+# Create priors and simulate utility-based choices
+priors <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c(0.5, 0.2),  # vs reference level
+  quality = 0.3
 )
 
-# Simulate choices according to a prior utility model
-data <- cbc_choices(
-  design = design,
-  obsID = "obsID",
-  priors = list(
-    price     = 0.1,
-    type      = c(0.1, 0.2),
-    freshness = c(0.1, 0.2)
-  )
-)
-
-# Simulate choices according to a prior model with interactions
-data <- cbc_choices(
-  design = design,
-  obsID = "obsID",
-  priors = list(
-    price     = 0.1,
-    type      = c(0.1, 0.2),
-    freshness = c(0.1, 0.2),
-    `price*type` = c(0.1, 0.5)
-  )
-)
-
-# Simulate choices according to a prior utility model with random parameters
-data <- cbc_choices(
-  design = design,
-  obsID = "obsID",
-  priors = list(
-    price = 0.1,
-    type = randN(mean = c(0.1, 0.2), sd = c(1, 2)),
-    freshness = c(0.1, 0.2)
-  )
-)
+choices_utility <- cbc_choices(design, priors = priors)
 }
-\references{
-Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
-\doi{10.18637/jss.v105.i10}
-}
-\keyword{logit}
-\keyword{logitr}
-\keyword{mixed}
-\keyword{mnl}
-\keyword{mxl}
-\keyword{simulation}

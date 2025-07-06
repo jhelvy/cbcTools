@@ -2,137 +2,92 @@
 % Please edit documentation in R/power.R
 \name{cbc_power}
 \alias{cbc_power}
-\title{Estimate the same model on different size subsets of data}
+\title{Estimate power analysis for choice experiment designs}
 \usage{
 cbc_power(
   data,
-  outcome,
-  obsID,
-  pars,
+  outcome = "choice",
+  obsID = "obsID",
+  pars = NULL,
   randPars = NULL,
-  nbreaks = 10,
-  n_q = 1,
-  return_models = FALSE,
+  n_breaks = 10,
+  n_q = NULL,
   panelID = NULL,
-  clusterID = NULL,
-  robust = FALSE,
-  predict = FALSE,
+  alpha = 0.05,
+  return_models = FALSE,
   n_cores = NULL,
   ...
 )
 }
 \arguments{
-\item{data}{The data, formatted as a \code{data.frame} object.}
+\item{data}{A data frame containing choice data. Can be a \code{cbc_choices} object
+or any data frame with the required columns.}
 
-\item{outcome}{The name of the column that identifies the outcome variable,
-which should be coded with a \code{1} for \code{TRUE} and \code{0} for \code{FALSE}.}
+\item{outcome}{Name of the outcome variable column (1 for chosen, 0 for not).
+Defaults to "choice".}
 
-\item{obsID}{The name of the column that identifies each observation.}
+\item{obsID}{Name of the observation ID column. Defaults to "obsID".}
 
-\item{pars}{The names of the parameters to be estimated in the model.
-Must be the same as the column names in the \code{data} argument.}
+\item{pars}{Names of the parameters to estimate. If NULL (default), will
+auto-detect from column names for \code{cbc_choices} objects.}
 
-\item{randPars}{A named vector whose names are the random parameters and
-values the distribution: \code{'n'} for normal or \code{'ln'} for log-normal.
-Defaults to \code{NULL}.}
+\item{randPars}{Named vector of random parameters and their distributions
+('n' for normal, 'ln' for log-normal). Defaults to NULL.}
 
-\item{nbreaks}{The number of different sample size groups.}
+\item{n_breaks}{Number of sample size groups to test. Defaults to 10.}
 
-\item{n_q}{Number of questions per respondent. Defaults to \code{1} if not
-specified.}
+\item{n_q}{Number of questions per respondent. Auto-detected for \code{cbc_choices}
+objects if not specified.}
 
-\item{return_models}{If \code{TRUE}, a list of all estimated models is returned.
-This can be useful if you want to extract other outputs from each model,
-such as the variance-covariance matrix, etc. Defaults to \code{FALSE}.}
+\item{panelID}{Name of the panel ID column for panel data. Auto-detected
+as "respID" for multi-respondent \code{cbc_choices} objects.}
 
-\item{panelID}{The name of the column that identifies the individual (for
-panel data where multiple observations are recorded for each individual).
-Defaults to \code{NULL}.}
+\item{alpha}{Significance level for power calculations. Defaults to 0.05.}
 
-\item{clusterID}{The name of the column that identifies the cluster
-groups to be used in model estimation. Defaults to \code{NULL}.}
+\item{return_models}{If TRUE, includes full model objects in returned list.
+Defaults to FALSE.}
 
-\item{robust}{Determines whether or not a robust covariance matrix is
-estimated. Defaults to \code{FALSE}. Specification of a \code{clusterID} will override
-the user setting and set this to `TRUE' (a warning will be displayed in this
-case). Replicates the functionality of Stata's cmcmmixlogit.}
+\item{n_cores}{Number of cores for parallel processing. Defaults to
+\code{parallel::detectCores() - 1}.}
 
-\item{predict}{If \code{TRUE}, predicted probabilities, fitted values, and
-residuals are also included in the returned model objects. Defaults to
-\code{FALSE}.}
-
-\item{n_cores}{The number of cores to use for parallel processing.
-Set to \code{1} to run serially Defaults to \code{NULL}, in which case the number of
-cores is set to \code{parallel::detectCores() - 1}. Max cores allowed is capped
-at \code{parallel::detectCores()}.}
-
-\item{...}{Other arguments that are passed to \code{logitr::logitr()} for model
-estimation. See the {logitr} documentation for details about other
-available arguments.}
+\item{...}{Additional arguments passed to \code{logitr::logitr()}.}
 }
 \value{
-Returns a data frame of estimated model coefficients and standard
-errors for the same model estimated on subsets of the \code{data} with increasing
-sample sizes.
+A \code{cbc_power} object containing:
+\itemize{
+\item \code{power_summary}: Data frame with sample sizes, coefficients, estimates,
+standard errors, t-statistics, and power
+\item \code{models}: List of estimated models (if \code{return_models = TRUE})
+\item \code{sample_sizes}: Vector of sample sizes tested
+\item \code{n_breaks}: Number of breaks used
+\item \code{alpha}: Significance level used
+}
 }
 \description{
-This function estimates the same model multiple times using different size
-subsets of a set of choice data and then returns a data frame of the
-estimated model coefficients and standard errors for each sample size. This
-is useful for determining the required sample size for obtaining a desired
-level of statistical power on each coefficient. The number of models to
-estimate is set by the \code{nbreaks} argument, which breaks up the data into
-groups of increasing sample sizes. All models are estimated models using
-the 'logitr' package. For more details see the JSS article on the 'logitr'
-package (Helveston, 2023).
+This function estimates the same model multiple times using different sample
+sizes to assess statistical power. It returns both the estimated models and
+a summary of coefficient estimates, standard errors, and power statistics.
 }
 \examples{
 library(cbcTools)
 
-# A simple conjoint experiment about apples
-
-# Generate all possible profiles
+# Create profiles and design
 profiles <- cbc_profiles(
-  price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-  type      = c("Fuji", "Gala", "Honeycrisp"),
-  freshness = c('Poor', 'Average', 'Excellent')
+  price = c(1, 2, 3),
+  type = c("A", "B", "C"),
+  quality = c("Low", "High")
 )
 
-# Make a survey design from all possible profiles
-# (This is the default setting where method = 'full' for "full factorial")
-design <- cbc_design(
-  profiles = profiles,
-  n_resp   = 300, # Number of respondents
-  n_alts   = 3,   # Number of alternatives per question
-  n_q      = 6    # Number of questions per respondent
-)
+design <- cbc_design(profiles, n_alts = 2, n_q = 6)
 
-# Simulate random choices
-data <- cbc_choices(
-  design = design,
-  obsID  = "obsID"
-)
+# Simulate choices
+priors <- cbc_priors(profiles, price = -0.1, type = c(0.5, 0.2), quality = 0.3)
+choices <- cbc_choices(design, priors)
 
-# Conduct a power analysis
-power <- cbc_power(
-  data    = data,
-  pars    = c("price", "type", "freshness"),
-  outcome = "choice",
-  obsID   = "obsID",
-  nbreaks = 10,
-  n_q     = 6,
-  n_cores = 2
-)
+# Run power analysis
+power_results <- cbc_power(choices, n_breaks = 8)
+
+# View results
+print(power_results)
+plot(power_results)
 }
-\references{
-Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
-\doi{10.18637/jss.v105.i10}
-}
-\keyword{logit}
-\keyword{logitr}
-\keyword{mixed}
-\keyword{mnl}
-\keyword{mxl}
-\keyword{power}
-\keyword{sample}
-\keyword{size}

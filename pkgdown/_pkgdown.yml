@@ -1,18 +1,21 @@
 url: https://jhelvy.github.io/cbcTools/
 
 home:
-  title: Tools For Designing Choice-Based Conjoint Survey Experiments.
+  title: Tools For Designing Choice-Based Conjoint Survey Experiments
 
 template:
-  params:
-    bootswatch: cosmo
+  bootstrap: 5
+  light-switch: false
+  bslib:
+    bootswatch: morph
+    border-radius: 0.5rem
   opengraph:
     image:
       src: https://jhelvy.github.io/cbcTools/reference/figures/logo.png
       alt: "Logo for the cbcTools package"
-    twitter:
-      creator: "@JohnHelveston"
-      card: summary
+  twitter:
+    creator: "@jphelveston"
+    card: summary
 
 navbar:
   title: "cbcTools"
@@ -21,36 +24,66 @@ navbar:
       href: index.html
     - text: "Reference"
       href: reference/index.html
-    - text: "Usage"
-      href: articles/usage.html
+    - text: "Getting Started"
+      href: articles/getting-started.html
+    - text: "Articles"
+      menu:
+        - text: "Generating Profiles"
+          href: articles/profiles.html
+        - text: "Specifying Priors"
+          href: articles/priors.html
+        - text: "Generating Designs"
+          href: articles/design.html
+        - text: "Computing D-Error"
+          href: articles/d_error.html
+        - text: "Simulating Choices"
+          href: articles/choices.html
+        - text: "Power Analysis"
+          href: articles/power.html
     - text: "Changelog"
       href: news/index.html
 
 reference:
-- title: "Design"
-  desc: "Functions for generating survey designs."
+- title: "Profiles"
+  desc: "Functions for generating attribute profiles."
   contents:
   - cbc_profiles
   - cbc_restrict
+- title: "Priors"
+  desc: "Functions for generating prior (assumed) coefficients."
+  contents:
+  - cbc_priors
+  - rand_spec
+  - cor_spec
+  - int_spec
+- title: "Design"
+  desc: "Functions for generating and comparing survey designs."
+  contents:
   - cbc_design
+  - cbc_compare
 - title: "Inspect"
   desc: "Functions for inspecting survey designs."
   contents:
-  - cbc_balance
-  - cbc_overlap
+  - cbc_inspect
+  - cbc_decode
 - title: "Simulate Choice"
   desc: "Functions for simulating choices."
   contents:
   - cbc_choices
-  - randN
-  - randLN
 - title: "Power Analysis"
-  desc: "Functions for conducting a power analysis."
+  desc: "Functions for conducting power analysis."
   contents:
   - cbc_power
   - plot_compare_power
 - title: "Methods"
-  desc: "Various methods."
+  desc: "Various S3 methods."
   contents:
-  - print.cbc_models
-  - plot.cbc_errors
+  - print.cbc_profiles
+  - print.cbc_priors
+  - print.cbc_design
+  - print.cbc_choices
+  - print.cbc_power
+  - plot.cbc_power
+  - summary.cbc_power
+  - print.cbc_inspection
+  - print.cbc_comparison

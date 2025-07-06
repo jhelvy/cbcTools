@@ -1,0 +1,165 @@
+---
+title: "Computing D-error in Choice Experiments"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Computing D-error in Choice Experiments}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+
+set.seed(123)
+
+library(cbcTools)
+```
+
+## What is D-error?
+
+D-error is a measure of how good or bad a design is at extracting information from respondents in a choice experiment. A design with a **low D-error** is better than a design with a **high D-error**, provided that both designs are for the same experiment. Comparing D-error between designs for different experiments is meaningless.
+
+When generating designs using D-optimal methods in `cbc_design()`, several of the methods (`"stochastic"`, `"modfed"`, `"cea"`) use an algorithm that minimizes D-error to find efficient experimental designs. The specific type of D-error computed depends on the prior assumptions you provide.
+
+> Note: A "D-optimal" design is not necessarily the best design for your experiment. These designs optimize information about the "main effects" of interest, at the expence of information about interactions. If you feel interactions may be important, consider using a different design method or consider including interactions in your priors.
+
+## Types of D-error
+
+### Prior Parameter Assumptions
+
+When computing D-error, a prior assumption about the respondent parameters needs to be made:
+
+- $D_0$-error assumes that all parameters are zero — i.e., respondents have no preference for any of the attribute levels
+- $D_p$-error assumes that all respondent parameters are equal to a fixed parameter vector  
+- $D_B$-error assumes that respondent parameters are distributed according to a probability distribution (typically multivariate normal)
+
+### How cbcTools Chooses D-error Type
+
+In `cbc_design()` with D-optimal methods (`"stochastic"`, `"modfed"`, `"cea"`), the type of D-error minimized depends on your prior specifications:
+
+1. **No priors provided** (`priors = NULL`) → Uses $D_0$-error
+2. **Fixed parameters** (using `cbc_priors()` with fixed values) → Uses $D_p$-error
+3. **Random parameters** (using `cbc_priors()` with `rand_spec()`) → Uses $D_B$-error
+
+## Working Example
+
+Let's work through the mathematical steps of D-error computation using the same example from the literature.
+
+### The Design
+
+Consider this simple 3-attribute, 2-alternative choice experiment:
+
+| Version | Task | Question | Alternative | Attribute 1 | Attribute 2 | Attribute 3 |
+|---------|------|----------|-------------|-------------|-------------|-------------|
+| 1       | 1    | 1        | 1           | 1           | 2           | 1           |
+| 1       | 1    | 1        | 2           | 2           | 1           | 2           |
+| 1       | 2    | 2        | 1           | 1           | 2           | 2           |
+| 1       | 2    | 2        | 2           | 2           | 1           | 1           |
+| 1       | 3    | 3        | 1           | 2           | 2           | 1           |
+| 1       | 3    | 3        | 2           | 1           | 1           | 2           |
+
+### Step 1: Encode the Design
+
+The first step is to encode the design using dummy coding. For each 2-level attribute, we create one dummy variable (comparing level 2 vs. level 1 as reference). This gives us:
+
+**Question 1:**
+$$X_1 = \begin{pmatrix}
+0 & 1 & 0 \\
+1 & 0 & 1
+\end{pmatrix}$$
+
+**Question 2:**
+$$X_2 = \begin{pmatrix}
+0 & 1 & 1 \\
+1 & 0 & 0
+\end{pmatrix}$$
+
+**Question 3:**
+$$X_3 = \begin{pmatrix}
+1 & 1 & 0 \\
+0 & 0 & 1
+\end{pmatrix}$$
+
+## Computing $D_p$-error (Fixed Parameters)
+
+For $D_p$-error, we assume specific parameter values: $\boldsymbol{\beta} = [0.5, -0.5, 0.8]$.
+
+### Step 2: Compute Choice Probabilities
+
+Using the multinomial logit formula:
+
+$$P_{iq} = \frac{\exp(X_{iq} \boldsymbol{\beta})}{\sum_{j=1}^{J} \exp(X_{jq} \boldsymbol{\beta})}$$
+
+For Question 1:
+- Utility Alt1: $U_1 = 0 \times 0.5 + 1 \times (-0.5) + 0 \times 0.8 = -0.5$
+- Utility Alt2: $U_2 = 1 \times 0.5 + 0 \times (-0.5) + 1 \times 0.8 = 1.3$
+- $P_{11} = \frac{e^{-0.5}}{e^{-0.5} + e^{1.3}} = 0.143$
+- $P_{21} = \frac{e^{1.3}}{e^{-0.5} + e^{1.3}} = 0.857$
+
+Similar calculations for Questions 2 and 3 give us the choice probabilities for each alternative in each question.
+
+### Step 3: Compute Fisher Information Matrix
+
+The Fisher information matrix for each choice set uses the formula:
+
+$$I_q = X_q^T \left( \text{diag}(\mathbf{P_q}) - \mathbf{P_q} \mathbf{P_q}^T \right) X_q$$
+
+where $\mathbf{P_q}$ is the vector of choice probabilities for choice set $q$, and $\text{diag}(\mathbf{P_q})$ creates a diagonal matrix from this vector.
+
+The total information matrix is:
+$$I = \sum_{q=1}^{Q} I_q$$
+
+### Step 4: Compute $D_p$-error
+
+The $D_p$-error is calculated as:
+
+$$D_p\text{-error} = (\det(I))^{-1/K}$$
+
+where $K = 3$ is the number of parameters.
+
+## Computing $D_0$-error (No Priors)
+
+$D_0$-error is a special case where $\boldsymbol{\beta} = [0, 0, 0]$, making all alternatives equally likely.
+
+When all parameters are zero:
+- All utilities = 0
+- All choice probabilities = $\frac{1}{J}$ where $J$ is the number of alternatives
+
+For our 2-alternative case: $P_{iq} = 0.5$ for all alternatives.
+
+The information matrix calculation follows the same formula, but with equal probabilities. This simplifies the calculation considerably since:
+
+$$\text{diag}(\mathbf{P_q}) - \mathbf{P_q} \mathbf{P_q}^T = \text{diag}(0.5, 0.5) - \begin{pmatrix} 0.25 & 0.25 \\ 0.25 & 0.25 \end{pmatrix} = \begin{pmatrix} 0.25 & -0.25 \\ -0.25 & 0.25 \end{pmatrix}$$
+
+## Computing $D_B$-error (Random Parameters)
+
+$D_B$-error assumes parameters follow a probability distribution. For example, if we assume:
+
+$$\boldsymbol{\beta} \sim N\left([0.5, -0.5, 0.8], \text{diag}([0.5^2, 0.5^2, 0.5^2])\right)$$
+
+The computation involves:
+
+1. **Draw parameter samples** from the distribution (e.g., $R = 1000$ draws)
+2. **Compute $D_p$-error** for each parameter draw $\boldsymbol{\beta}^{(r)}$
+3. **Average the results** to get $D_B$-error
+
+$$D_B\text{-error} = \frac{1}{R} \sum_{r=1}^{R} D_p\text{-error}(\boldsymbol{\beta}^{(r)})$$
+
+| Draw | Parameter 1 | Parameter 2 | Parameter 3 | $D_p$-error |
+|------|-------------|-------------|-------------|-------------|
+| 1    | 0.25        | -0.73       | 0.67        | 1.45        |
+| 2    | 1.14        | -0.67       | 0.67        | 1.90        |
+| 3    | 0.69        | -0.50       | 1.23        | 1.92        |
+| ...  | ...         | ...         | ...         | ...         |
+| 1000 | 1.15        | -1.67       | 0.57        | 2.82        |
+
+**$D_B$-error = mean of all $D_p$-errors = 1.90**
+
+---
+
+> Note: The example used in this article is inspired by [this article](https://www.displayr.com/how-to-compute-d-error-for-a-choice-experiment/) on displayr.com.

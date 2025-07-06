@@ -11,7 +11,8 @@ cbc_profiles(...)
 e.g. \code{price = c(1, 2, 3)}. Separate each vector by a comma.}
 }
 \value{
-A data frame of all possible combinations of attribute levels.
+A data frame of all possible combinations of attribute levels with
+class \code{cbc_profiles}.
 }
 \description{
 This function creates a data frame of of all possible combinations of

@@ -1,0 +1,434 @@
+---
+title: "Generating Designs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Generating Designs}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+  \usepackage{xcolor}
+  \usepackage{bbding}
+bibliography: "`r here::here('vignettes', 'library.bib')`"
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.retina = 3,
+  comment = "#>"
+)
+
+set.seed(123)
+```
+
+Once you have a set of profiles and (optionally) priors, you can generate a choice-based conjoint (CBC) survey design using the `cbc_design()` function. This article covers all the design methods available, their features, and how to customize designs for specific research needs.
+
+Before starting, let's define some basic profiles and priors to work with:
+
+```{r}
+library(cbcTools)
+
+profiles <- cbc_profiles(
+  price = c(1, 1.5, 2, 2.5, 3),
+  type = c('Fuji', 'Gala', 'Honeycrisp'),
+  freshness = c('Poor', 'Average', 'Excellent')
+)
+
+priors <- cbc_priors(
+  profiles = profiles,
+  price = -0.25,
+  type = c('Gala' = 0.5, 'Honeycrisp' = 1.0),
+  freshness = c('Average' = 0.6, 'Excellent' = 1.2)
+)
+```
+
+# Design Basics
+
+The `cbc_design()` function generates a data frame with an encoded experiment design formatted as one row per alternative. Choice questions are defined by sets of rows with the same `obsID`. Let's start with a simple example (a random design):
+
+```{r}
+design <- cbc_design(
+  profiles = profiles,
+  n_alts = 2, # Alternatives per question
+  n_q = 6, # Questions per respondent
+  n_resp = 100 # Number of respondents
+)
+
+design
+```
+
+## Understanding the Design Structure
+
+The design data frame contains several types of columns that help organize the experiment:
+
+### ID Columns
+
+These columns identify the structure of your experiment:
+
+- **`profileID`**: Unique identifier for each profile (combination of attribute levels), that corresponds to the IDs in `profiles`
+- **`respID`**: Respondent ID (1 to `n_resp`)
+- **`qID`**: Question number within each respondent (1 to `n_q`)
+- **`altID`**: Alternative number within each question (1 to `n_alts`)
+- **`obsID`**: Unique identifier for each choice question across all respondents
+
+### Attribute Columns
+
+The remaining columns represent your experimental attributes. By default, categorical attributes are **dummy-coded**. In dummy coding, **continuous attributes** (like `price`) appear as-is, but **categorical attributes** (like `type` and `freshness`) are split into multiple binary columns. 
+
+For example, for `type`, we have the following columns:
+
+  - `typeGala` = 1 if type is "Gala", 0 otherwise
+  - `typeHoneycrisp` = 1 if type is "Honeycrisp", 0 otherwise
+
+Here the reference level ("Fuji") is represented when both dummy variables equal 0.
+
+### Converting to Categorical Format
+
+If you prefer to see categorical variables in their original format, use `cbc_decode()`:
+
+```{r}
+design_decoded <- cbc_decode(design)
+design_decoded
+```
+
+The decoded version shows:
+
+- `type` as a categorical variable with levels "Fuji", "Gala", "Honeycrisp"
+- `freshness` as a categorical variable with levels "Poor", "Average", "Excellent"
+- `price` remains unchanged (continuous variables don't need decoding)
+
+Both forms of the design (dummy-coded and categorical) are convenient for different purposes, though they are otherwise equivalent.
+
+# Design Methods 
+
+The `cbc_design()` function supports several design generation methods, each with different strengths and use cases:
+
+## Method Comparison Table
+
+| Method       | Speed | Efficiency | No Choice | Labeled | Restrictions | Blocking | Interactions |
+|--------------|-------|------------|-----------|---------|--------------|----------|--------------|
+| `"random"`   | Fast  | Low        | ✓         | ✓       | ✓            | ✗        | ✓            |
+| `"shortcut"` | Fast  | Medium     | ✓         | ✓       | ✓            | ✗        | ✗            |
+| `"minoverlap"` | Fast | Medium   | ✓         | ✓       | ✓            | ✗        | ✗            |
+| `"balanced"` | Fast  | Medium     | ✓         | ✓       | ✓            | ✗        | ✗            |
+| `"stochastic"` | Slow | High     | ✓         | ✓       | ✓            | ✓        | ✓            |
+| `"modfed"`   | Slow  | High       | ✓         | ✓       | ✓            | ✓        | ✓            |
+| `"cea"`      | Slow  | High       | ✓         | ✓       | ✗           | ✓        | ✓            |
+
+All design methods ensure:
+
+1. **No duplicate profiles** within any choice set
+2. **No duplicate choice sets** within any respondent
+3. **Dominance removal** (if enabled) eliminates choice sets with dominant alternatives (requires priors)
+
+## `"random"` Method
+
+The `"random"` method is the default and creates designs by randomly sampling profiles for each respondent independently. This ensures maximum diversity but may be less statistically efficient.
+
+```{r}
+design_random <- cbc_design(
+  profiles = profiles,
+  method = "random",
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100
+)
+
+# Quick inspection
+cbc_inspect(design_random, sections = "structure")
+```
+
+**When to use:**
+
+- Large sample sizes where efficiency matters less
+- Want maximum diversity across respondents
+- No strong prior assumptions about parameters
+- Uncertain whether interactions might be important
+- Quick prototyping or testing
+
+## Frequency-Based Methods
+
+The `"shortcut"`, `"minoverlap"`, and `"balanced"` methods use greedy algorithms to balance attribute level frequencies and minimize overlap. While they prioritize different metrics, they often can result in similar solutions. Each method has a different objective:
+
+- The `"shortcut"` method balances attribute level frequencies while avoiding duplicate profiles within questions.
+- The `"minoverlap"` method prioritizes minimizing attribute overlap within choice questions.
+- The `"balanced"` method optimizes both frequency balance and pairwise attribute interactions.
+
+```{r}
+design_shortcut <- cbc_design(
+  profiles = profiles,
+  method = "shortcut",
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100
+)
+
+design_minoverlap <- cbc_design(
+  profiles = profiles,
+  method = "minoverlap",
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100
+)
+
+design_balanced <- cbc_design(
+  profiles = profiles,
+  method = "balanced",
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100
+)
+```
+
+## D-Optimal Methods
+
+These methods minimize D-error to create statistically efficient designs. They require more computation but produce higher-quality designs, especially with good priors. Each method has a different approach:
+
+- The `"stochastic"` method uses random profile swapping to minimize the d-error, accepting the first improvement found. This is a faster algorithm as a compromise between speed and exhaustiveness.
+- The `"modfed"` (Modified Fedorov) method exhaustively tests all possible profile swaps for each position. It is slower than other methods though more thorough.
+- The `"cea"` (Coordinate Exchange Algorithm) method optimizes attribute-by-attribute, testing all possible levels for each attribute. It is faster than `"modfed"`, though requires all possible profiles and cannot accept restricted profile sets.
+
+Unlike the previous methods, these methods identify a single d-optimal design and then repeat that design across each respondent. In contrast, the other methods create a unique design for each respondent.
+
+For the examples below, we have `n_start = 1`, meaning it will only run one design search (which is faster), but you may want to run a longer search by increasing `n_start`. The best design across all starts is chosen.
+
+```{r}
+design_stochastic <- cbc_design(
+  profiles = profiles,
+  method = "stochastic",
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  priors = priors,
+  n_start = 1 # Number of random starting points
+)
+
+design_modfed <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  priors = priors,
+  method = "modfed",
+  n_start = 1
+)
+
+design_cea <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  priors = priors,
+  method = "cea",
+  n_start = 1
+)
+```
+
+Notice also that in the examples above we provided the `priors` to each design. This will optimize the design around these assumed priors by minimizing the $D_p$-error. If you are uncertain what the true parameters are, you can omit the `priors` argument and the algorithms will minimize the $D_0$-error. See the [Computing D-error](d_error.html) page for more details on how these errors are computed.
+
+# Comparing Designs
+
+You can compare the results of different designs using the `cbc_compare()` function. This provides a comprehensive overview of differences in structure as well as common metrics such as D-error, overlap, and balance.
+
+```{r}
+cbc_compare(
+  "Random" = design_random,
+  "Shortcut" = design_shortcut,
+  "Min Overlap" = design_minoverlap,
+  "Balanced" = design_balanced,
+  "Stochastic" = design_stochastic,
+  "Modfed" = design_modfed,
+  "CEA" = design_cea
+)
+```
+
+# Design Features
+
+## No-Choice Option
+
+Add a "no-choice" alternative to allow respondents to opt out by including the argument `no_choice = TRUE`. If you are using priors in your design (optional), then you must also provide a `no_choice` value in your priors:
+
+```{r}
+# For D-optimal methods, must include no_choice in priors
+priors_nochoice <- cbc_priors(
+  profiles = profiles,
+  price = -0.1,
+  type = c(0.1, 0.2),
+  freshness = c(0.1, 0.2),
+  no_choice = -0.5 # Negative value makes no-choice less attractive
+)
+
+design_nochoice <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  no_choice = TRUE,
+  priors = priors_nochoice,
+  method = "stochastic"
+)
+
+head(design_nochoice)
+```
+
+> Note: Designs with no-choice options must be dummy-coded and cannot be converted back to categorical format.
+
+## Labeled Designs
+
+Create "labeled" or "alternative-specific" designs where one attribute serves as a label using the `label` argument:
+
+```{r}
+design_labeled <- cbc_design(
+  profiles = profiles,
+  n_alts = 3, # Will be overridden to match number of type levels
+  n_q = 6,
+  n_resp = 100,
+  label = "type", # Use 'type' attribute as labels
+  method = "random"
+)
+
+head(design_labeled)
+```
+
+## Blocking
+
+For D-optimal methods, create multiple design blocks to reduce respondent burden:
+
+```{r}
+design_blocked <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  n_blocks = 2, # Create 2 different design blocks
+  priors = priors,
+  method = "stochastic"
+)
+
+# Check block allocation
+table(design_blocked$blockID)
+```
+
+## Dominance Removal
+
+Remove choice sets where one alternative dominates others based on parameter preferences. There are two forms of dominance removal:
+
+1. **Total dominance**: Occurs when one alternative has such a high predicted choice probability (based on the prior coefficients) that it would be chosen by virtually all respondents. This creates choice sets with little information value since the outcome is predetermined. The `dominance_threshold` parameter controls this - alternatives with choice probabilities above this threshold (e.g., 0.8 = 80%) are considered dominant.
+2. **Partial dominance**: Occurs when one alternative is superior to all others across every individual attribute component of the utility function (again, based on prior coefficients). For example, if Alternative A has higher partial utilities than Alternative B for every single attribute (price, type, freshness), then A partially dominates B regardless of the overall choice probability. This type of dominance is detected by comparing the attribute-level contributions to utility.
+
+Both forms of dominance create unrealistic choice scenarios that provide less information about respondent preferences, so removing them generally improves design quality.
+
+```{r}
+design_no_dominance <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  priors = priors,
+  method = "stochastic",
+  remove_dominant = TRUE,
+  dominance_types = c("total", "partial"),
+  dominance_threshold = 0.8
+)
+```
+
+## Interactions
+
+Include interaction effects in D-optimal designs by specifying them in your prior model. Interactions capture how the effect of one attribute depends on the level of another attribute. The design optimization then accounts for these interaction terms when minimizing D-error.
+
+Interactions are specified via the priors defined by `cbc_priors()`. For example:
+
+```{r}
+# Create priors with interactions
+priors_interactions <- cbc_priors(
+  profiles = profiles,
+  price = -0.25,
+  type = c("Fuji" = 0.5, "Gala" = 1.0),
+  freshness = c(0.6, 1.2),
+  interactions = list(
+    # Price is less negative (less price sensitive) for Fuji apples
+    int_spec(
+      between = c("price", "type"),
+      with_level = "Fuji",
+      value = 0.5
+    ),
+    # Price is slightly less negative for Gala apples
+    int_spec(
+      between = c("price", "type"),
+      with_level = "Gala",
+      value = 0.2
+    )
+    # Honeycrisp uses reference level (no additional interaction term)
+  )
+)
+
+design_interactions <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 6,
+  n_resp = 100,
+  priors = priors_interactions,
+  method = "stochastic"
+)
+```
+
+When you include interactions in the prior model, the design optimization:
+
+1. **Accounts for interaction parameters** when computing choice probabilities
+2. **Optimizes profile combinations** that provide information about both main effects AND interactions
+3. **Creates choice sets** that help distinguish between different interaction effects
+
+This leads to more efficient designs when interaction effects truly exist in your population, but can reduce efficiency for estimating main effects if interactions are misspecified or don't actually exist.
+
+See the [Specifying Priors](priors.html) article for more details and options on defining priors with interactions.
+
+# Comprehensive Design Inspection
+
+Use `cbc_inspect()` for detailed design analysis:
+
+```{r}
+# Detailed inspection of the stochastic design
+cbc_inspect(
+  design_stochastic,
+  sections = "all"
+)
+```
+
+## Customizing Optimization
+
+The `cbc_design()` function offers many customization options:
+
+```{r eval=FALSE}
+# Advanced stochastic design with custom settings
+design_advanced <- cbc_design(
+  profiles = profiles,
+  n_alts = 2,
+  n_q = 8,
+  n_resp = 300,
+  n_blocks = 2,
+  priors = priors,
+  method = "stochastic",
+  n_start = 10, # More starting points for better optimization
+  max_iter = 100, # More iterations per start
+  n_cores = 4, # Parallel processing
+  remove_dominant = TRUE,
+  dominance_threshold = 0.9,
+  randomize_questions = TRUE,
+  randomize_alts = TRUE
+)
+```
+
+# Next Steps
+
+After generating your design:
+
+1. **Inspect the design** using `cbc_inspect()` to understand its properties
+2. **Simulate choices** using `cbc_choices()` to test the design
+3. **Conduct power analysis** using `cbc_power()` to determine sample size requirements
+4. **Compare alternatives** using `cbc_compare()` to choose the best design
+
+For more details on these next steps, see:
+
+- The [Simulating Choices](choices.html) vignette
+- The [Power Analysis](power.html) vignette

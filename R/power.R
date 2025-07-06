@@ -1,319 +1,366 @@
-#' Estimate the same model on different size subsets of data
+#' Estimate power analysis for choice experiment designs
 #'
-#' This function estimates the same model multiple times using different size
-#' subsets of a set of choice data and then returns a data frame of the
-#' estimated model coefficients and standard errors for each sample size. This
-#' is useful for determining the required sample size for obtaining a desired
-#' level of statistical power on each coefficient. The number of models to
-#' estimate is set by the `nbreaks` argument, which breaks up the data into
-#' groups of increasing sample sizes. All models are estimated models using
-#' the 'logitr' package. For more details see the JSS article on the 'logitr'
-#' package (Helveston, 2023).
-#' @keywords logitr mnl mxl mixed logit sample size power
+#' This function estimates the same model multiple times using different sample
+#' sizes to assess statistical power. It returns both the estimated models and
+#' a summary of coefficient estimates, standard errors, and power statistics.
 #'
-#' @param data The data, formatted as a `data.frame` object.
-#' @param outcome The name of the column that identifies the outcome variable,
-#' which should be coded with a `1` for `TRUE` and `0` for `FALSE`.
-#' @param obsID The name of the column that identifies each observation.
-#' @param pars The names of the parameters to be estimated in the model.
-#' Must be the same as the column names in the `data` argument.
-#' @param randPars A named vector whose names are the random parameters and
-#' values the distribution: `'n'` for normal or `'ln'` for log-normal.
-#' Defaults to `NULL`.
-#' @param nbreaks The number of different sample size groups.
-#' @param n_q Number of questions per respondent. Defaults to `1` if not
-#' specified.
-#' @param return_models If `TRUE`, a list of all estimated models is returned.
-#' This can be useful if you want to extract other outputs from each model,
-#' such as the variance-covariance matrix, etc. Defaults to `FALSE`.
-#' @param panelID The name of the column that identifies the individual (for
-#' panel data where multiple observations are recorded for each individual).
-#' Defaults to `NULL`.
-#' @param clusterID The name of the column that identifies the cluster
-#' groups to be used in model estimation. Defaults to `NULL`.
-#' @param robust Determines whether or not a robust covariance matrix is
-#' estimated. Defaults to `FALSE`. Specification of a `clusterID` will override
-#' the user setting and set this to `TRUE' (a warning will be displayed in this
-#' case). Replicates the functionality of Stata's cmcmmixlogit.
-#' @param predict If `TRUE`, predicted probabilities, fitted values, and
-#' residuals are also included in the returned model objects. Defaults to
-#' `FALSE`.
-#' @param n_cores The number of cores to use for parallel processing.
-#' Set to `1` to run serially Defaults to `NULL`, in which case the number of
-#' cores is set to `parallel::detectCores() - 1`. Max cores allowed is capped
-#' at `parallel::detectCores()`.
-#' @param ... Other arguments that are passed to `logitr::logitr()` for model
-#' estimation. See the {logitr} documentation for details about other
-#' available arguments.
-#' @references
-#' Helveston, J. P. (2023). logitr: Fast Estimation of Multinomial and Mixed Logit Models with Preference Space and Willingness-to-Pay Space Utility Parameterizations. Journal of Statistical Software, 105(10), 1–37,
-#' \doi{10.18637/jss.v105.i10}
-#' @return Returns a data frame of estimated model coefficients and standard
-#' errors for the same model estimated on subsets of the `data` with increasing
-#' sample sizes.
+#' @param data A data frame containing choice data. Can be a `cbc_choices` object
+#'   or any data frame with the required columns.
+#' @param outcome Name of the outcome variable column (1 for chosen, 0 for not).
+#'   Defaults to "choice".
+#' @param obsID Name of the observation ID column. Defaults to "obsID".
+#' @param pars Names of the parameters to estimate. If NULL (default), will
+#'   auto-detect from column names for `cbc_choices` objects.
+#' @param randPars Named vector of random parameters and their distributions
+#'   ('n' for normal, 'ln' for log-normal). Defaults to NULL.
+#' @param n_breaks Number of sample size groups to test. Defaults to 10.
+#' @param n_q Number of questions per respondent. Auto-detected for `cbc_choices`
+#'   objects if not specified.
+#' @param panelID Name of the panel ID column for panel data. Auto-detected
+#'   as "respID" for multi-respondent `cbc_choices` objects.
+#' @param alpha Significance level for power calculations. Defaults to 0.05.
+#' @param return_models If TRUE, includes full model objects in returned list.
+#'   Defaults to FALSE.
+#' @param n_cores Number of cores for parallel processing. Defaults to
+#'   `parallel::detectCores() - 1`.
+#' @param ... Additional arguments passed to `logitr::logitr()`.
+#'
+#' @return A `cbc_power` object containing:
+#'   - `power_summary`: Data frame with sample sizes, coefficients, estimates,
+#'     standard errors, t-statistics, and power
+#'   - `models`: List of estimated models (if `return_models = TRUE`)
+#'   - `sample_sizes`: Vector of sample sizes tested
+#'   - `n_breaks`: Number of breaks used
+#'   - `alpha`: Significance level used
+#'
 #' @export
 #' @examples
 #' library(cbcTools)
 #'
-#' # A simple conjoint experiment about apples
-#'
-#' # Generate all possible profiles
+#' # Create profiles and design
 #' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
+#'   price = c(1, 2, 3),
+#'   type = c("A", "B", "C"),
+#'   quality = c("Low", "High")
 #' )
 #'
-#' # Make a survey design from all possible profiles
-#' # (This is the default setting where method = 'full' for "full factorial")
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp   = 300, # Number of respondents
-#'   n_alts   = 3,   # Number of alternatives per question
-#'   n_q      = 6    # Number of questions per respondent
-#' )
+#' design <- cbc_design(profiles, n_alts = 2, n_q = 6)
 #'
-#' # Simulate random choices
-#' data <- cbc_choices(
-#'   design = design,
-#'   obsID  = "obsID"
-#' )
+#' # Simulate choices
+#' priors <- cbc_priors(profiles, price = -0.1, type = c(0.5, 0.2), quality = 0.3)
+#' choices <- cbc_choices(design, priors)
 #'
-#' # Conduct a power analysis
-#' power <- cbc_power(
-#'   data    = data,
-#'   pars    = c("price", "type", "freshness"),
-#'   outcome = "choice",
-#'   obsID   = "obsID",
-#'   nbreaks = 10,
-#'   n_q     = 6,
-#'   n_cores = 2
-#' )
+#' # Run power analysis
+#' power_results <- cbc_power(choices, n_breaks = 8)
+#'
+#' # View results
+#' print(power_results)
+#' plot(power_results)
 cbc_power <- function(
-  data,
-  outcome,
-  obsID,
-  pars,
-  randPars  = NULL,
-  nbreaks = 10,
-  n_q = 1,
-  return_models = FALSE,
-  panelID   = NULL,
-  clusterID = NULL,
-  robust    = FALSE,
-  predict   = FALSE,
-  n_cores   = NULL,
-  ...
+        data,
+        outcome = "choice",
+        obsID = "obsID",
+        pars = NULL,
+        randPars = NULL,
+        n_breaks = 10,
+        n_q = NULL,
+        panelID = NULL,
+        alpha = 0.05,
+        return_models = FALSE,
+        n_cores = NULL,
+        ...
 ) {
-    n_cores <- set_num_cores(n_cores)
-    dataList <- make_data_list(data, obsID, nbreaks, n_q)
-    if (n_cores == 1) {
-      message("Estimating models...")
-      suppressMessages(suppressWarnings(
-        models <- lapply(
-          dataList,
-          logitr::logitr,
-          outcome   = outcome,
-          obsID     = obsID,
-          pars      = pars,
-          randPars  = randPars,
-          panelID   = panelID,
-          clusterID = clusterID,
-          robust    = robust,
-          predict   = predict,
-          ... = ...
-        )
-      ))
-    } else {
-      message("Estimating models using ", n_cores, " cores...")
-      if (Sys.info()[['sysname']] == 'Windows') {
-        cl <- parallel::makeCluster(n_cores, "PSOCK")
-        suppressMessages(suppressWarnings(
-          models <- parallel::parLapply(
-            cl = cl,
-            dataList,
-            logitr::logitr,
-            outcome   = outcome,
-            obsID     = obsID,
-            pars      = pars,
-            randPars  = randPars,
-            panelID   = panelID,
-            clusterID = clusterID,
-            robust    = robust,
-            predict   = predict,
-            ... = ...
-          )
-        ))
-        parallel::stopCluster(cl)
-      } else {
-        suppressMessages(suppressWarnings(
-          models <- parallel::mclapply(
-            dataList,
-            logitr::logitr,
-            outcome   = outcome,
-            obsID     = obsID,
-            pars      = pars,
-            randPars  = randPars,
-            panelID   = panelID,
-            clusterID = clusterID,
-            robust    = robust,
-            predict   = predict,
-            ... = ...,
-            mc.cores = n_cores
-          )
-        ))
-      }
+
+    # Validate inputs
+    if (!is.data.frame(data)) {
+        stop("data must be a data frame")
     }
-    message("done!")
-    # Add sample size to each model
-    sizes <- names(models)
-    for (i in seq_len(length(models))) {
-      models[[i]]$sampleSize <- as.numeric(sizes[i])
+
+    # Auto-detect parameters for cbc_choices objects
+    if (inherits(data, "cbc_choices")) {
+        if (is.null(pars)) {
+            all_vars <- get_var_names(data)
+            pars <- setdiff(all_vars, outcome)
+            if (length(pars) == 0) {
+                stop("Could not auto-detect parameters. Please specify 'pars' argument.")
+            }
+            message("Auto-detected parameters: ", paste(pars, collapse = ", "))
+        }
+
+        if (is.null(n_q) && "qID" %in% names(data)) {
+            n_q <- max(data$qID, na.rm = TRUE)
+        }
+
+        if (is.null(panelID) && "respID" %in% names(data)) {
+            n_resp <- max(data$respID, na.rm = TRUE)
+            if (n_resp > 1) {
+                panelID <- "respID"
+                message("Using 'respID' as panelID for panel data estimation.")
+            }
+        }
     }
+
+    # Set defaults
+    if (is.null(n_q)) n_q <- 1
+    if (is.null(n_cores)) n_cores <- set_num_cores(NULL)
+
+    # Validate required columns exist
+    required_cols <- c(outcome, obsID, pars)
+    missing_cols <- setdiff(required_cols, names(data))
+    if (length(missing_cols) > 0) {
+        stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
+    }
+
+    # Create sample size groups
+    max_obs <- max(data[[obsID]], na.rm = TRUE)
+    sample_sizes <- create_sample_sizes(max_obs, n_q, n_breaks)
+
+    # Create data subsets
+    data_list <- create_data_subsets(data, obsID, sample_sizes, n_q)
+
+    # Estimate models
+    message("Estimating models using ", min(n_cores, length(data_list)), " cores...")
+    models <- estimate_models_parallel(
+        data_list, outcome, obsID, pars, randPars, panelID, n_cores, ...
+    )
+    message("Model estimation complete!")
+
+    # Extract power summary
+    power_summary <- extract_power_summary(models, sample_sizes, alpha)
+
+    # Create return object
+    result <- list(
+        power_summary = power_summary,
+        sample_sizes = sample_sizes,
+        n_breaks = n_breaks,
+        alpha = alpha,
+        choice_info = attr(data, "choice_info")
+    )
+
     if (return_models) {
-      class(models) <- c("cbc_models", "list")
-      return(models)
+        result$models <- models
     }
-    errors <- extract_errors(models)
-    class(errors) <- c("cbc_errors", "data.frame")
-    return(errors)
+
+    class(result) <- c("cbc_power", "list")
+    return(result)
 }
 
-set_num_cores <- function(n_cores) {
-  cores_available <- parallel::detectCores()
-  max_cores <- cores_available - 1
-  # CRAN checks limits you to 2 cores, see this SO issue:
-  # https://stackoverflow.com/questions/50571325/r-cran-check-fail-when-using-parallel-functions
-  chk <- tolower(Sys.getenv("_R_CHECK_LIMIT_CORES_", ""))
-  if (nzchar(chk) && (chk != "false")) {
-    # use 2 cores in CRAN/Travis/AppVeyor
-    return(2L)
-  }
-  if (is.null(n_cores)) {
-    return(max_cores)
-  } else if (!is.numeric(n_cores)) {
-    warning(
-      "Non-numeric value provided for n_cores...setting n_cores to ",
-      max_cores
-    )
-    return(max_cores)
-  } else if (n_cores > cores_available) {
-    warning(
-      "Cannot use ", n_cores, " cores because your machine only has ",
-      cores_available, " available...setting n_cores to ", max_cores
-    )
-    return(max_cores)
-  }
-  return(n_cores)
+# Helper Functions ----
+
+create_sample_sizes <- function(max_obs, n_q, n_breaks) {
+    min_obs <- ceiling(max_obs / n_breaks)
+    obs_sequence <- ceiling(seq(min_obs, max_obs, length.out = n_breaks))
+    sample_sizes <- round(obs_sequence / n_q)
+    return(unique(sample_sizes))  # Remove duplicates
 }
 
-make_data_list <- function(data, obsID, nbreaks, n_q) {
-    maxObs <- max(data[obsID])
-    nObs <- ceiling(seq(ceiling(maxObs/nbreaks), maxObs, length.out = nbreaks))
-    dataList <- list()
-    for (i in 1:nbreaks) {
-      temp <- data[which(data[,obsID] %in% seq(nObs[i])),]
-      temp$sampleSize <- round(nObs[i] / n_q)
-      dataList[[i]] <- temp
+create_data_subsets <- function(data, obsID, sample_sizes, n_q) {
+    data_list <- list()
+
+    for (i in seq_along(sample_sizes)) {
+        sample_size <- sample_sizes[i]
+        max_obs_for_size <- sample_size * n_q
+
+        subset_data <- data[data[[obsID]] <= max_obs_for_size, ]
+        subset_data$sample_size <- sample_size
+
+        data_list[[i]] <- subset_data
     }
-    sampleSizes <- unlist(lapply(dataList, function(x) unique(x$sampleSize)))
-    names(dataList) <- sampleSizes
-    return(dataList)
+
+    names(data_list) <- as.character(sample_sizes)
+    return(data_list)
 }
 
-extract_errors <- function(models) {
-    sampleSize <- unlist(lapply(models, function(x) x$sampleSize))
-    est <- lapply(models, function(x) stats::coef(x))
-    se <- lapply(models, function(x) logitr::se(x))
-    names <- lapply(est, names)
-    results <- data.frame(
-        sampleSize = rep(sampleSize, each = length(est[[1]])),
-        coef = do.call(c, names),
-        est = do.call(c, est),
-        se = do.call(c, se)
-    )
-    row.names(results) <- NULL
-    return(results)
+estimate_models_parallel <- function(data_list, outcome, obsID, pars, randPars, panelID, n_cores, ...) {
+    n_cores <- min(n_cores, length(data_list))
+
+    if (n_cores == 1) {
+        models <- estimate_models_sequential(data_list, outcome, obsID, pars, randPars, panelID, ...)
+    } else {
+        models <- estimate_models_parallel_internal(data_list, outcome, obsID, pars, randPars, panelID, n_cores, ...)
+    }
+
+    return(models)
 }
 
-#' Plot a comparison of different design powers
-#'
-#' This function creates a ggplot2 object comparing the power curves of
-#' different designs. Each design is color coded and each facet (sub plot)
-#' is a model coefficient.
-#' @param ... Any number of data frame containing power results obtained from
-#' the `cbc_power()` function, separated by commas.
-#' @return A plot comparing the power curves of different designs.
-#' @importFrom ggplot2 ggplot aes geom_hline geom_point expand_limits theme_bw
-#' theme element_blank labs facet_wrap
-#' @importFrom rlang .data
+estimate_models_sequential <- function(data_list, outcome, obsID, pars, randPars, panelID, ...) {
+    models <- list()
+
+    for (i in seq_along(data_list)) {
+        tryCatch({
+            models[[i]] <- logitr::logitr(
+                data = data_list[[i]],
+                outcome = outcome,
+                obsID = obsID,
+                pars = pars,
+                randPars = randPars,
+                panelID = panelID,
+                ...
+            )
+            models[[i]]$sample_size <- unique(data_list[[i]]$sample_size)
+        }, error = function(e) {
+            warning("Model ", i, " failed to converge: ", e$message)
+            models[[i]] <<- NULL
+        })
+    }
+
+    # Remove failed models
+    models <- models[!sapply(models, is.null)]
+    names(models) <- sapply(models, function(x) as.character(x$sample_size))
+
+    return(models)
+}
+
+estimate_models_parallel_internal <- function(data_list, outcome, obsID, pars, randPars, panelID, n_cores, ...) {
+
+    estimate_single_model <- function(data_subset) {
+        tryCatch({
+            model <- logitr::logitr(
+                data = data_subset,
+                outcome = outcome,
+                obsID = obsID,
+                pars = pars,
+                randPars = randPars,
+                panelID = panelID,
+                ...
+            )
+            model$sample_size <- unique(data_subset$sample_size)
+            return(model)
+        }, error = function(e) {
+            return(NULL)
+        })
+    }
+
+    if (Sys.info()[['sysname']] == 'Windows') {
+        cl <- parallel::makeCluster(n_cores, "PSOCK")
+        on.exit(parallel::stopCluster(cl))
+
+        suppressMessages(suppressWarnings({
+            models <- parallel::parLapply(cl, data_list, estimate_single_model)
+        }))
+    } else {
+        suppressMessages(suppressWarnings({
+            models <- parallel::mclapply(data_list, estimate_single_model, mc.cores = n_cores)
+        }))
+    }
+
+    # Remove failed models
+    models <- models[!sapply(models, is.null)]
+    names(models) <- sapply(models, function(x) as.character(x$sample_size))
+
+    return(models)
+}
+
+extract_power_summary <- function(models, sample_sizes, alpha) {
+    if (length(models) == 0) {
+        stop("No models successfully estimated")
+    }
+
+    # Extract coefficient information from each model
+    results_list <- list()
+
+    for (i in seq_along(models)) {
+        model <- models[[i]]
+        sample_size <- model$sample_size
+
+        coefficients <- stats::coef(model)
+        std_errors <- logitr::se(model)
+
+        # Calculate t-statistics and power
+        t_stats <- abs(coefficients / std_errors)
+        critical_value <- stats::qt(1 - alpha/2, df = Inf)  # Using normal approximation
+        power <- stats::pnorm(t_stats - critical_value) + stats::pnorm(-t_stats - critical_value)
+
+        # Create data frame for this model
+        model_results <- data.frame(
+            sample_size = sample_size,
+            parameter = names(coefficients),
+            estimate = as.numeric(coefficients),
+            std_error = as.numeric(std_errors),
+            t_statistic = as.numeric(t_stats),
+            power = as.numeric(power),
+            stringsAsFactors = FALSE
+        )
+
+        results_list[[i]] <- model_results
+    }
+
+    # Combine all results
+    power_summary <- do.call(rbind, results_list)
+    rownames(power_summary) <- NULL
+
+    return(power_summary)
+}
+
+#' Compare power across multiple designs
+#' @param ... Named cbc_power objects to compare
+#' @param type Type of plot: "power" for power curves or "se" for standard error curves
+#' @param power_threshold Power threshold for horizontal reference line (only for power plots). Defaults to 0.8
+#' @return A ggplot object comparing power curves
 #' @export
-#' @examples
-#' \dontrun{
-#' library(cbcTools)
-#'
-#' # Generate all possible profiles
-#' profiles <- cbc_profiles(
-#'   price     = c(1, 1.5, 2, 2.5, 3),
-#'   type      = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c('Poor', 'Average', 'Excellent')
-#' )
-#'
-#' # Make designs to compare: full factorial vs bayesian d-efficient
-#' design_random <- cbc_design(
-#'   profiles = profiles,
-#'   n_resp = 100, n_alts = 3, n_q = 6
-#' )
-#' # Same priors will be used in bayesian design and simulated choices
-#' priors <- list(
-#'   price     = -0.1,
-#'   type      = c(0.1, 0.2),
-#'   freshness = c(0.1, 0.2)
-#' )
-#' design_bayesian <- cbc_design(
-#'   profiles  = profiles,
-#'   n_resp = 100, n_alts = 3, n_q = 6, n_start = 1, method = "CEA",
-#'   priors = priors, parallel = FALSE
-#' )
-#'
-#' # Obtain power for each design by simulating choices
-#' power_random <- design_random |>
-#' cbc_choices(obsID = "obsID", priors = priors) |>
-#'   cbc_power(
-#'     pars = c("price", "type", "freshness"),
-#'     outcome = "choice", obsID = "obsID", nbreaks = 5, n_q = 6, n_cores = 2
-#'   )
-#' power_bayesian <- design_bayesian |>
-#'   cbc_choices(obsID = "obsID", priors = priors) |>
-#'   cbc_power(
-#'     pars = c("price", "type", "freshness"),
-#'     outcome = "choice", obsID = "obsID", nbreaks = 5, n_q = 6, n_cores = 2
-#'   )
-#'
-#' # Compare power of each design
-#' plot_compare_power(power_bayesian, power_random)
-#' }
-plot_compare_power <- function(...) {
-  power <- list(...)
-  design_names <- unlist(lapply(as.list(match.call())[-1], deparse))
-  names(power) <- design_names
-  for (i in 1:length(power)) {
-    power[[i]]$design <- names(power)[i]
-  }
-  power <- do.call(rbind, power)
-  ggplot2::ggplot(power) +
-    geom_hline(yintercept = 0.05, color = "red", linetype = 2) +
-    geom_point(
-      aes(x = .data$sampleSize, y = .data$se, color = .data$design),
-      size = 1.8
-    ) +
-    facet_wrap(~.data$coef) +
-    expand_limits(y = 0) +
-    theme_bw(base_size = 14) +
-    theme(panel.grid.minor = element_blank()) +
-    labs(
-      color = "Design",
-      x = "Sample size",
-      y = "Standard error"
-    )
+plot_compare_power <- function(..., type = "power", power_threshold = 0.8) {
+
+    power <- design <- std_error <- sample_size <- NULL
+
+    if (!requireNamespace("ggplot2", quietly = TRUE)) {
+        stop("Package 'ggplot2' is required for plotting. Please install it with install.packages('ggplot2')")
+    }
+
+    if (!type %in% c("power", "se")) {
+        stop("type must be 'power' or 'se'")
+    }
+
+    power_objects <- list(...)
+
+    if (length(power_objects) < 2) {
+        stop("Need at least 2 power objects to compare")
+    }
+
+    # Get names from the call
+    object_names <- as.character(substitute(list(...)))[-1]
+    if (is.null(names(power_objects))) {
+        names(power_objects) <- object_names
+    }
+
+    # Combine data
+    combined_data <- list()
+    for (i in seq_along(power_objects)) {
+        obj_data <- power_objects[[i]]$power_summary
+        obj_data$design <- names(power_objects)[i]
+        combined_data[[i]] <- obj_data
+    }
+
+    plot_data <- do.call(rbind, combined_data)
+
+    # Create comparison plot
+    if (type == "power") {
+        p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = sample_size, y = power)) +
+            ggplot2::geom_hline(yintercept = power_threshold, color = "red", linetype = "dashed", alpha = 0.7) +
+            ggplot2::geom_line(ggplot2::aes(color = design), linewidth = 1) +
+            ggplot2::geom_point(ggplot2::aes(color = design), size = 2) +
+            ggplot2::facet_wrap(~ parameter) +
+            ggplot2::theme_bw() +
+            ggplot2::labs(
+                x = "Sample Size (number of respondents)",
+                y = "Statistical Power",
+                title = "Power Comparison Across Designs",
+                subtitle = sprintf("Dashed line shows %.0f%% power threshold", power_threshold * 100),
+                color = "Design"
+            ) +
+            ggplot2::ylim(0, 1)
+    } else {
+        p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = sample_size, y = std_error)) +
+            ggplot2::geom_line(ggplot2::aes(color = design), linewidth = 1) +
+            ggplot2::geom_point(ggplot2::aes(color = design), size = 2) +
+            ggplot2::facet_wrap(~ parameter) +
+            ggplot2::theme_bw() +
+            ggplot2::labs(
+                x = "Sample Size (number of respondents)",
+                y = "Standard Error",
+                title = "Standard Error Comparison Across Designs",
+                color = "Design"
+            )
+    }
+
+    return(p)
 }
