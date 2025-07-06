@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
   fig.retina = 3,
   comment = "#>"
 )
+
+set.seed(123)
 ```
 
 Choice simulation converts experimental designs into realistic choice data by predicting how respondents would answer choice questions. This is essential for testing designs, conducting power analyses, and validating experimental assumptions before data collection. This article shows how to use `cbc_choices()` to simulate choice patterns.

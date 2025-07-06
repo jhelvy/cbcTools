@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
   fig.retina = 3,
   comment = "#>"
 )
+
+set.seed(123)
 ```
 
 The first step in designing an experiment is to define the attributes and levels for your experiment and then generate all of the `profiles` of each possible combination of those attributes and levels. 

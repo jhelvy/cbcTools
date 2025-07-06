@@ -193,13 +193,13 @@ validate_design_inputs <- function(
         if (n_blocks == 1) {
             message(sprintf(
                 "%s design will be optimized into 1 design block, then allocated across %d respondents",
-                stringr::str_to_title(method), n_resp
+                tools::toTitleCase(method), n_resp
             ))
         }
         if (n_blocks > 1) {
             message(sprintf(
                 "%s design will be optimized into %d design blocks, then allocated across %d respondents",
-                stringr::str_to_title(method), n_blocks, n_resp
+                tools::toTitleCase(method), n_blocks, n_resp
             ))
         }
     }

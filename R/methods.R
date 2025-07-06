@@ -748,6 +748,8 @@ print.cbc_power <- function(x, ...) {
 #' @export
 plot.cbc_power <- function(x, type = "power", power_threshold = 0.8, ...) {
 
+    sample_size <- power <- parameter <- std_error <- NULL
+
     if (!requireNamespace("ggplot2", quietly = TRUE)) {
         stop("Package 'ggplot2' is required for plotting. Please install it with install.packages('ggplot2')")
     }

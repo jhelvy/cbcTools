@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
   fig.retina = 3,
   comment = "#>"
 )
+
+set.seed(123)
 ```
 
 Prior specifications define your assumptions about respondent preferences before collecting data. These priors serve two key purposes in **cbcTools**: optimizing experimental designs (for D-optimal methods) and simulating choices. This article shows how to create and work with prior specifications using `cbc_priors()`.

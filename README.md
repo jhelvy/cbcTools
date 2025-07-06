@@ -11,14 +11,18 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
-This package provides functions for designing surveys and conducting
-power analyses for choice-based conjoint survey experiments in R. Each
-function in the package begins with `cbc_` and supports a step in the
-following process for designing and analyzing surveys:
+This package provides functions for generating and inspecting survey
+designs for choice-based conjoint survey experiments in R. Each function
+in the package begins with `cbc_` and supports a step in the following
+process for designing and analyzing survey experiments:
 
-![](man/figures/program_diagram.png)
+![](man/figures/flowchart.png)
 
-# Installation
+After installing the package, got to the [Getting
+Started](https://jhelvy.github.io/cbcTools/articles/getting-started.html)
+page to learn how to use the package.
+
+## Installation
 
 You can install the latest version of {cbcTools} from CRAN:
 
@@ -40,14 +44,14 @@ Load the package with:
 library(cbcTools)
 ```
 
-# Author, Version, and License Information
+## Author, Version, and License Information
 
 - Author: *John Paul Helveston* <https://www.jhelvy.com/>
 - Date First Written: *October 23, 2020*
 - License:
   [MIT](https://github.com/jhelvy/cbcTools/blob/master/LICENSE.md)
 
-# Citation Information
+## Citation Information
 
 If you use this package for in a publication, I would greatly appreciate
 it if you cited it - you can get the citation by typing

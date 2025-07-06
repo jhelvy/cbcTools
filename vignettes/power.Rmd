@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
   fig.retina = 3,
   comment = "#>"
 )
+
+set.seed(123)
 ```
 
 Power analysis determines the sample size needed to reliably detect effects of a given magnitude in your choice experiment. By simulating choice data and estimating models at different sample sizes, you can identify the minimum number of respondents needed to achieve your desired level of statistical precision. This article shows how to conduct power analyses using `cbc_power()`.
@@ -195,17 +197,17 @@ The `power_summary` data frame contains:
 Plot power curves to visualize the relationship between sample size and precision:
 
 ```{r}
-# Plot standard error curves
-plot(
-  power_basic,
-  type = "se"
-)
-
 # Plot power curves
 plot(
   power_basic,
   type = "power",
   power_threshold = 0.9
+)
+
+# Plot standard error curves
+plot(
+  power_basic,
+  type = "se"
 )
 ```
 
@@ -220,6 +222,7 @@ summary(
 ```
 
 From these results, you can determine:
+
 - Which parameters need the largest samples
 - Whether your planned sample size is adequate
 - How much precision improves with additional respondents

@@ -262,7 +262,7 @@ initialize_frequency_tracker <- function(attr_names, profiles) {
 
     for (attr in attr_names) {
         levels <- unique(profiles[[attr]])
-        freq_tracker[[attr]] <- setNames(rep(0, length(levels)), levels)
+        freq_tracker[[attr]] <- stats::setNames(rep(0, length(levels)), levels)
     }
 
     return(freq_tracker)
@@ -324,7 +324,7 @@ initialize_pairwise_tracker <- function(attr_names, profiles) {
                 sep = "_&_"
             )
 
-            pairs_tracker[[pair_name]] <- setNames(
+            pairs_tracker[[pair_name]] <- stats::setNames(
                 rep(0, length(comb_names)),
                 comb_names
             )
@@ -383,7 +383,7 @@ initialize_overlap_tracker <- function(attr_names, profiles) {
     for (attr in attr_names) {
         levels <- unique(profiles[[attr]])
         # Track how many times each level appears in the same question
-        overlap_tracker[[attr]] <- setNames(rep(0, length(levels)), levels)
+        overlap_tracker[[attr]] <- stats::setNames(rep(0, length(levels)), levels)
     }
 
     return(overlap_tracker)

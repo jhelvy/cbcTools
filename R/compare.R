@@ -5,7 +5,7 @@
 #' Useful for evaluating different design methods or parameter settings.
 #'
 #' @param ... Any number of `cbc_design` objects to compare, separated by commas.
-#'   Can be named for clearer output (e.g., `random = design1, sequential = design2`).
+#'   Can be named for clearer output (e.g., `random = design1, stochastic = design2`).
 #' @param metrics Character vector specifying which metrics to compare.
 #'   Options: "structure", "efficiency", "balance", "overlap", or "all" (default).
 #'   Can specify multiple: `c("efficiency", "balance")`
@@ -33,19 +33,19 @@
 #'   n_alts = 2, n_q = 4
 #' )
 #'
-#' design_sequential <- cbc_design(
+#' design_stochastic <- cbc_design(
 #'   profiles = profiles,
-#'   method = "sequential",
+#'   method = "stochastic",
 #'   n_alts = 2, n_q = 4
 #' )
 #'
 #' # Compare designs
-#' cbc_compare(design_random, design_sequential)
+#' cbc_compare(design_random, design_stochastic)
 #'
 #' # Named comparison with specific metrics
 #' cbc_compare(
 #'   Random = design_random,
-#'   Sequential = design_sequential,
+#'   Stochastic = design_stochastic,
 #'   metrics = c("efficiency", "balance"),
 #'   sort_by = "d_error"
 #' )

@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
   fig.retina = 3,
   comment = "#>"
 )
+
+set.seed(123)
 ```
 
 Once you have a set of profiles and (optionally) priors, you can generate a choice-based conjoint (CBC) survey design using the `cbc_design()` function. This article covers all the design methods available, their features, and how to customize designs for specific research needs.
@@ -41,7 +43,7 @@ priors <- cbc_priors(
 )
 ```
 
-# Using `cbc_design()`
+# Design Basics
 
 The `cbc_design()` function generates a data frame with an encoded experiment design formatted as one row per alternative. Choice questions are defined by sets of rows with the same `obsID`. Let's start with a simple example (a random design):
 
@@ -225,7 +227,7 @@ design_cea <- cbc_design(
 
 Notice also that in the examples above we provided the `priors` to each design. This will optimize the design around these assumed priors by minimizing the $D_p$-error. If you are uncertain what the true parameters are, you can omit the `priors` argument and the algorithms will minimize the $D_0$-error. See the [Computing D-error](d_error.html) page for more details on how these errors are computed.
 
-# Comparing designs
+# Comparing Designs
 
 You can compare the results of different designs using the `cbc_compare()` function. This provides a comprehensive overview of differences in structure as well as common metrics such as D-error, overlap, and balance.
 

@@ -300,6 +300,8 @@ extract_power_summary <- function(models, sample_sizes, alpha) {
 #' @export
 plot_compare_power <- function(..., type = "power", power_threshold = 0.8) {
 
+    power <- design <- std_error <- sample_size <- NULL
+
     if (!requireNamespace("ggplot2", quietly = TRUE)) {
         stop("Package 'ggplot2' is required for plotting. Please install it with install.packages('ggplot2')")
     }

@@ -19,6 +19,8 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
+set.seed(123)
+
 library(cbcTools)
 ```
 
