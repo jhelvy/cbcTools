@@ -138,7 +138,7 @@ Key things to look for:
 - **Overlap**: Lower scores indicate less attribute overlap within questions
 - **Profile usage**: Higher percentages indicate better use of available profiles
 
-See the [Inspect](inspect.html) article for more details and options on inspecting and comparing different experiment designs. 
+See the [`cbc_inspect`](https://jhelvy.github.io/cbcTools/reference/cbc_inspect.html) for more details.
 
 ## Step 5: Simulate Choices
 
