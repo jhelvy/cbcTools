@@ -36,8 +36,8 @@ navbar:
           href: articles/priors.html
         - text: "Generating Designs"
           href: articles/design.html
-        # - text: "Computing D-Error"
-        #   href: articles/d_error.html
+        - text: "Computing D-Error"
+          href: articles/d_error.html
         # - text: "Simulating Choices"
         #   href: articles/choices.html
         # - text: "Power Analysis"
