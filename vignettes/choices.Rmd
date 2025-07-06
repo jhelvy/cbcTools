@@ -97,8 +97,8 @@ With priors, choices follow realistic utility-based patterns:
 priors <- cbc_priors(
   profiles = profiles,
   price = -0.1,           # Negative preference for higher prices
-  type = c(0.1, 0.2),     # Gala and Honeycrisp preferred over Fuji
-  freshness = c(0.1, 0.2) # Average and Excellent preferred over Poor
+  type = c(0.5, 1),     # Gala and Honeycrisp preferred over Fuji
+  freshness = c(0.5, 1) # Average and Excellent preferred over Poor
 )
 
 # Utility-based choice simulation
@@ -156,7 +156,7 @@ choices_decoded <- cbc_decode(choices_utility)
 
 # Choices for first respondent
 resp1_choices <- choices_decoded[choices_decoded$respID == 1, ]
-resp1_summary <- resp1_choices[resp1_choices$choice == 1, c("qID", "altID", "price", "type", "freshness")]
+resp1_summary <- resp1_choices[resp1_choices$choice == 1, ]
 print(resp1_summary)
 
 # Count choices by attribute levels
@@ -230,8 +230,8 @@ Include interaction effects in choice simulation:
 priors_interactions <- cbc_priors(
   profiles = profiles,
   price = -0.1,
-  type = c(0.1, 0.2),
-  freshness = c(0.1, 0.2),
+  type = c("Fuji" = 0.5, "Gala" = 1),
+  freshness = c("Average" = 0.5, "Excellent" = 1),
   interactions = list(
     # Price sensitivity varies by apple type
     int_spec(between = c("price", "type"), with_level = "Fuji", value = 0.05),
@@ -253,8 +253,11 @@ choices_interactions <- cbc_choices(design, priors = priors_interactions)
 Examine aggregate choice patterns to validate simulation:
 
 ```{r}
+# Decode the choice data first to get categorical variables
+choices_decoded <- cbc_decode(choices_utility)
+
 # Aggregate attribute choices across all respondents
-choices <- choices_utility
+choices <- choices_decoded
 
 # Price choices
 price_choices <- aggregate(choice ~ price, data = choices, sum)
@@ -301,68 +304,6 @@ cat("Mean:", round(mean(resp_means$typeHoneycrisp), 2), "\n")
 cat("SD:", round(sd(resp_means$typeHoneycrisp), 2), "\n")
 ```
 
-# Choice Simulation Diagnostics
-
-## Consistency Checks
-
-Verify simulation produces sensible results:
-
-```{r}
-# Function to check choice simulation quality
-check_simulation <- function(choices, priors) {
-  
-  # 1. Check all questions have exactly one choice
-  choices_per_q <- aggregate(choice ~ obsID, data = choices, sum)
-  all_ones <- all(choices_per_q$choice == 1)
-  
-  # 2. Check choice rates align with prior expectations
-  if (!is.null(priors)) {
-    # Price should be negatively associated with choice probability
-    price_cor <- cor(choices$price[choices$choice == 1], rep(1, sum(choices$choice)))
-    
-    # Higher utility attributes should be chosen more often
-    # (This is a simplified check - full validation would be more complex)
-  }
-  
-  # 3. Check for reasonable variation
-  choice_variation <- var(aggregate(choice ~ respID + qID, data = choices, sum)$choice)
-  
-  cat("Simulation diagnostics:\n")
-  cat("- All questions have exactly one choice:", all_ones, "\n")
-  cat("- Choice variation (should be 0):", choice_variation, "\n")
-  
-  if (!all_ones || choice_variation != 0) {
-    warning("Simulation may have issues - check design and priors")
-  }
-}
-
-check_simulation(choices_utility, priors)
-```
-
-## Comparing Simulation Methods
-
-Compare different simulation approaches:
-
-```{r}
-# Create multiple simulations
-sims <- list(
-  random = cbc_choices(design),
-  utility = cbc_choices(design, priors = priors),
-  mixed = cbc_choices(design, priors = priors_random)
-)
-
-# Compare choice patterns
-for (sim_name in names(sims)) {
-  sim_data <- sims[[sim_name]]
-  chosen <- sim_data[sim_data$choice == 1, ]
-  
-  cat("\n", sim_name, "simulation:\n")
-  cat("Mean price chosen:", round(mean(chosen$price), 2), "\n")
-  cat("Honeycrisp choice rate:", round(mean(chosen$typeHoneycrisp), 2), "\n")
-  cat("Excellent choice rate:", round(mean(chosen$freshnessExcellent), 2), "\n")
-}
-```
-
 # Design Consistency
 
 ## Using Consistent Priors
@@ -404,59 +345,6 @@ different_priors <- cbc_priors(
 choices_inconsistent <- cbc_choices(design_optimal, priors = different_priors)
 ```
 
-# Practical Applications
-
-## Power Analysis Preparation
-
-Choice simulation is the key step before power analysis:
-
-```{r eval=FALSE}
-# Typical workflow for power analysis
-design <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 500, method = "stochastic", priors = priors)
-choices <- cbc_choices(design, priors = priors)
-power_results <- cbc_power(choices, pars = c("price", "type", "freshness"))
-```
-
-## Scenario Testing
-
-Test designs under different preference scenarios:
-
-```{r eval=FALSE}
-# Scenario 1: Strong price sensitivity
-priors_price_sensitive <- cbc_priors(profiles, price = -0.3, type = c(0.1, 0.2), freshness = c(0.1, 0.2))
-
-# Scenario 2: Weak price sensitivity  
-priors_price_insensitive <- cbc_priors(profiles, price = -0.05, type = c(0.1, 0.2), freshness = c(0.1, 0.2))
-
-# Test design performance under both scenarios
-choices_scenario1 <- cbc_choices(design, priors = priors_price_sensitive)
-choices_scenario2 <- cbc_choices(design, priors = priors_price_insensitive)
-
-# Compare power under different scenarios
-power_scenario1 <- cbc_power(choices_scenario1, pars = c("price", "type", "freshness"))
-power_scenario2 <- cbc_power(choices_scenario2, pars = c("price", "type", "freshness"))
-```
-
-## Design Comparison
-
-Use consistent simulation to compare design methods:
-
-```{r eval=FALSE}
-# Create designs with different methods
-design_random <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 200, method = "random")
-design_optimal <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 200, method = "stochastic", priors = priors)
-
-# Simulate choices with same priors
-choices_random <- cbc_choices(design_random, priors = priors)
-choices_optimal <- cbc_choices(design_optimal, priors = priors)
-
-# Compare power
-power_random <- cbc_power(choices_random, pars = c("price", "type", "freshness"))
-power_optimal <- cbc_power(choices_optimal, pars = c("price", "type", "freshness"))
-
-# Optimal design should show better power (lower standard errors)
-```
-
 # Best Practices
 
 ## Prior Specification
@@ -472,22 +360,6 @@ power_optimal <- cbc_power(choices_optimal, pars = c("price", "type", "freshness
 2. **Examine patterns**: Ensure choices align with prior expectations
 3. **Test extremes**: Simulate with very strong/weak preferences
 4. **Compare methods**: Test different simulation approaches
-
-## Common Issues
-
-```{r eval=FALSE}
-# Issue 1: No choices made (all probabilities too low)
-# Solution: Check prior magnitudes and signs
-
-# Issue 2: Unrealistic choice patterns  
-# Solution: Validate priors against theory/literature
-
-# Issue 3: Inconsistent warnings
-# Solution: Use same priors for design and simulation
-
-# Issue 4: Insufficient variation
-# Solution: Include random parameters or reduce prior certainty
-```
 
 # Next Steps
 

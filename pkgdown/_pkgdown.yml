@@ -57,12 +57,12 @@ reference:
   desc: "Functions for generating and comparing survey designs."
   contents:
   - cbc_design
-  - cbc_decode_design
   - cbc_compare
 - title: "Inspect"
   desc: "Functions for inspecting survey designs."
   contents:
   - cbc_inspect
+  - cbc_decode
 - title: "Simulate Choice"
   desc: "Functions for simulating choices."
   contents:

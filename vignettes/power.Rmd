@@ -83,26 +83,115 @@ Power analysis in `cbc_power()` focuses on **precision** (standard errors) rathe
 
 ## Simple Power Analysis
 
-Start with a basic power analysis using default settings:
+Start with a basic power analysis using auto-detection of parameters:
 
 ```{r}
-# Basic power analysis
+# Basic power analysis with auto-detected parameters
 power_basic <- cbc_power(
   data = choices,
-  pars = c("price", "type", "freshness"),
   outcome = "choice",
   obsID = "obsID",
   n_q = 6,
   n_breaks = 10
 )
 
-head(power_basic)
-tail(power_basic)
+# View the power analysis object
+power_basic
+
+# Access the detailed results data frame
+head(power_basic$power_summary)
+tail(power_basic$power_summary)
+```
+
+## Parameter Specification Options
+
+### Auto-Detection (Recommended)
+
+By default, `cbc_power()` automatically detects all attribute parameters from your choice data:
+
+```{r}
+# Auto-detection works with dummy-coded data
+power_auto <- cbc_power(
+  data = choices,
+  outcome = "choice", 
+  obsID = "obsID",
+  n_q = 6,
+  n_breaks = 8
+)
+
+# Shows all parameters: price, typeGala, typeHoneycrisp, freshnessAverage, freshnessExcellent
+```
+
+### Specify Dummy-Coded Parameters
+
+You can explicitly specify which dummy-coded parameters to include:
+
+```{r}
+# Focus on specific dummy-coded parameters
+power_specific <- cbc_power(
+  data = choices,
+  pars = c("price", "typeHoneycrisp", "freshnessExcellent"),  # Specific dummy variables
+  outcome = "choice",
+  obsID = "obsID",
+  n_q = 6,
+  n_breaks = 8
+)
+```
+
+### Use Decoded Data with Attribute Names
+
+For easier interpretation, decode the choice data first to use original attribute names:
+
+```{r}
+# Decode choice data to get back categorical variables
+choices_decoded <- cbc_decode(choices)
+
+# Now you can use attribute names instead of dummy variables
+power_decoded <- cbc_power(
+  data = choices_decoded,
+  pars = c("price", "type", "freshness"),  # Original attribute names
+  outcome = "choice",
+  obsID = "obsID", 
+  n_q = 6,
+  n_breaks = 8
+)
+
+# Note: This approach estimates effects differently - 
+# it treats categorical variables as factors rather than separate dummy variables
+```
+
+### When to Use Each Approach
+
+- **Auto-detection**: Best for comprehensive power analysis of all effects
+- **Dummy-coded specification**: When you want to focus on specific levels of categorical variables
+- **Decoded data**: When you want power analysis at the attribute level rather than level-specific effects, or for easier interpretation
+
+```{r}
+# Compare the different approaches
+cat("Auto-detected parameters:\n")
+unique_params_auto <- unique(power_auto$power_summary$parameter)
+cat(paste(unique_params_auto, collapse = ", "), "\n\n")
+
+cat("Specific dummy parameters:\n") 
+unique_params_specific <- unique(power_specific$power_summary$parameter)
+cat(paste(unique_params_specific, collapse = ", "), "\n\n")
+
+cat("Decoded attribute parameters:\n")
+unique_params_decoded <- unique(power_decoded$power_summary$parameter)
+cat(paste(unique_params_decoded, collapse = ", "), "\n")
 ```
 
 ## Understanding Power Results
 
-The power analysis returns a data frame with:
+The power analysis returns a list object with several components:
+
+- **`power_summary`**: Data frame with sample sizes, coefficients, estimates, standard errors, t-statistics, and power
+- **`sample_sizes`**: Vector of sample sizes tested  
+- **`n_breaks`**: Number of breaks used
+- **`alpha`**: Significance level used
+- **`choice_info`**: Information about the underlying choice simulation
+
+The `power_summary` data frame contains:
 
 - **sample_size**: Number of respondents in each analysis
 - **parameter**: Parameter name being estimated
@@ -119,7 +208,7 @@ Plot power curves to visualize the relationship between sample size and precisio
 # Plot standard error curves
 plot(power_basic, type = "se")
 
-# Plot power curves
+# Plot power curves  
 plot(power_basic, type = "power", power_threshold = 0.8)
 ```
 
@@ -128,6 +217,11 @@ plot(power_basic, type = "power", power_threshold = 0.8)
 ```{r}
 # Sample size requirements for 80% power
 summary(power_basic, power_threshold = 0.8)
+
+# You can also access specific components
+cat("Sample sizes tested:", paste(power_basic$sample_sizes, collapse = ", "), "\n")
+cat("Number of breaks:", power_basic$n_breaks, "\n")
+cat("Alpha level:", power_basic$alpha, "\n")
 ```
 
 From these results, you can determine:
@@ -139,23 +233,24 @@ From these results, you can determine:
 
 ## Custom Parameter Selection
 
-Focus power analysis on specific parameters of interest:
+Focus power analysis on specific parameters of interest using any of the approaches:
 
 ```{r}
-# Power analysis for price coefficient only
+# Power analysis for price coefficient only (dummy-coded)
 power_price <- cbc_power(
   data = choices,
   pars = "price",  # Focus on price parameter
   outcome = "choice",
-  obsID = "obsID",
+  obsID = "obsID", 
   n_q = 6,
   n_breaks = 8
 )
 
-# Power analysis for categorical attributes only
+# Power analysis for categorical attributes only (using decoded data)
+choices_decoded <- cbc_decode(choices)
 power_categorical <- cbc_power(
-  data = choices,
-  pars = c("type", "freshness"),
+  data = choices_decoded,
+  pars = c("type", "freshness"),  # Attribute-level analysis
   outcome = "choice",
   obsID = "obsID",
   n_q = 6,
@@ -171,7 +266,6 @@ Control the sample size increments tested:
 # More detailed power curve with more break points
 power_detailed <- cbc_power(
   data = choices,
-  pars = c("price", "type", "freshness"),
   outcome = "choice",
   obsID = "obsID",
   n_q = 6,
@@ -182,7 +276,6 @@ power_detailed <- cbc_power(
 small_sample_choices <- choices[choices$respID <= 200, ]
 power_small <- cbc_power(
   data = small_sample_choices,
-  pars = c("price", "type", "freshness"),
   outcome = "choice",
   obsID = "obsID",
   n_q = 6,
@@ -207,7 +300,7 @@ choices_mixed <- cbc_choices(design, priors = priors_random)
 
 # Power analysis for mixed logit model
 power_mixed <- cbc_power(
-  data = choices_mixed,
+  data = cbc_decode(choices_mixed),
   pars = c("price", "type", "freshness"),
   randPars = c(price = "n", type = "n"),  # Specify random parameters
   outcome = "choice",
@@ -218,7 +311,7 @@ power_mixed <- cbc_power(
 )
 
 # Mixed logit models generally require larger samples
-summary(power_mixed, power_threshold = 0.8)
+power_mixed
 ```
 
 # Comparing Design Performance
@@ -231,7 +324,7 @@ Compare power across different design methods:
 # Create designs with different methods
 design_random <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 400, method = "random")
 design_shortcut <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 400, method = "shortcut")
-design_optimal <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 400,
+design_optimal <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 400, 
                             priors = priors, method = "stochastic")
 
 # Simulate choices with same priors for fair comparison
@@ -240,12 +333,18 @@ choices_shortcut <- cbc_choices(design_shortcut, priors = priors)
 choices_optimal <- cbc_choices(design_optimal, priors = priors)
 
 # Conduct power analysis for each
-power_random <- cbc_power(choices_random, pars = c("price", "type", "freshness"),
-                         outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
-power_shortcut <- cbc_power(choices_shortcut, pars = c("price", "type", "freshness"),
-                           outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
-power_optimal <- cbc_power(choices_optimal, pars = c("price", "type", "freshness"),
-                          outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
+power_random <- cbc_power(
+  choices_random, 
+  outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8
+)
+power_shortcut <- cbc_power(
+  choices_shortcut, 
+  outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8
+)
+power_optimal <- cbc_power(
+  choices_optimal, 
+  outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8
+)
 
 # Compare power curves
 plot_compare_power(
@@ -266,16 +365,16 @@ design_standard <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 400)
 
 design_nochoice <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 400, no_choice = TRUE)
 
-priors_nochoice <- cbc_priors(profiles, price = -0.1, type = c(0.1, 0.2),
+priors_nochoice <- cbc_priors(profiles, price = -0.1, type = c(0.1, 0.2), 
                              freshness = c(0.1, 0.2), no_choice = -0.5)
 
 choices_standard <- cbc_choices(design_standard, priors = priors)
 choices_nochoice <- cbc_choices(design_nochoice, priors = priors_nochoice)
 
 # Compare power
-power_standard <- cbc_power(choices_standard, pars = c("price", "type", "freshness"),
+power_standard <- cbc_power(choices_standard, 
                            outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
-power_nochoice <- cbc_power(choices_nochoice, pars = c("price", "type", "freshness"),
+power_nochoice <- cbc_power(choices_nochoice, 
                            outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
 
 # No-choice typically reduces power for main effects
@@ -286,124 +385,7 @@ plot_compare_power(
 )
 ```
 
-# Practical Applications
-
-## Sample Size Planning
-
-Use power analysis for sample size determination:
-
-```{r}
-# Determine sample size for different precision targets
-power_results <- power_basic
-
-# Function to find required sample size for target standard error
-find_sample_size <- function(power_data, parameter, target_se) {
-  param_data <- power_data[power_data$parameter == parameter, ]
-  param_data <- param_data[order(param_data$sample_size), ]
-
-  # Find first sample size that achieves target
-  adequate <- param_data$std_error <= target_se
-  if (any(adequate)) {
-    return(min(param_data$sample_size[adequate]))
-  } else {
-    return(paste("Requires >", max(param_data$sample_size)))
-  }
-}
-
-# Sample size requirements for SE = 0.02
-cat("Sample sizes needed for standard error ≤ 0.02:\n")
-cat("Price:", find_sample_size(power_results, "price", 0.02), "\n")
-cat("Type (Gala):", find_sample_size(power_results, "typeGala", 0.02), "\n")
-cat("Type (Honeycrisp):", find_sample_size(power_results, "typeHoneycrisp", 0.02), "\n")
-cat("Freshness (Average):", find_sample_size(power_results, "freshnessAverage", 0.02), "\n")
-cat("Freshness (Excellent):", find_sample_size(power_results, "freshnessExcellent", 0.02), "\n")
-```
-
-## Budget Planning
-
-Translate sample size requirements into cost estimates:
-
-```{r}
-# Hypothetical cost structure
-cost_per_respondent <- 5  # $5 per complete response
-fixed_costs <- 2000       # $2000 setup costs
-
-calculate_budget <- function(n_respondents) {
-  total_cost <- fixed_costs + (n_respondents * cost_per_respondent)
-  return(total_cost)
-}
-
-# Budget estimates for different sample sizes
-sample_sizes <- c(100, 200, 300, 400, 500, 600)
-budgets <- sapply(sample_sizes, calculate_budget)
-
-budget_table <- data.frame(
-  sample_size = sample_sizes,
-  budget = budgets,
-  budget_formatted = paste("$", format(budgets, big.mark = ","), sep = "")
-)
-
-print(budget_table)
-```
-
-## Scenario Analysis
-
-Test power under different assumption scenarios:
-
-```{r}
-# Scenario 1: Conservative effect sizes
-priors_conservative <- cbc_priors(profiles, price = -0.05, type = c(0.05, 0.1), freshness = c(0.05, 0.1))
-choices_conservative <- cbc_choices(design, priors = priors_conservative)
-power_conservative <- cbc_power(choices_conservative, pars = c("price", "type", "freshness"),
-                               outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
-
-# Scenario 2: Optimistic effect sizes
-priors_optimistic <- cbc_priors(profiles, price = -0.2, type = c(0.2, 0.4), freshness = c(0.2, 0.4))
-choices_optimistic <- cbc_choices(design, priors = priors_optimistic)
-power_optimistic <- cbc_power(choices_optimistic, pars = c("price", "type", "freshness"),
-                             outcome = "choice", obsID = "obsID", n_q = 6, n_breaks = 8)
-
-# Compare scenarios
-plot_compare_power(
-  Conservative = power_conservative,
-  Baseline = power_basic,
-  Optimistic = power_optimistic,
-  type = "power"
-)
-```
-
 # Advanced Analysis
-
-## Complex Models
-
-Power analysis for models with interactions:
-
-```{r eval=FALSE}
-# Create data with interaction effects
-priors_interactions <- cbc_priors(
-  profiles = profiles,
-  price = -0.1,
-  type = c(0.1, 0.2),
-  freshness = c(0.1, 0.2),
-  interactions = list(
-    int_spec(between = c("price", "type"), with_level = "Fuji", value = 0.05)
-  )
-)
-
-choices_interactions <- cbc_choices(design, priors = priors_interactions)
-
-# Power analysis including interaction terms
-power_interactions <- cbc_power(
-  data = choices_interactions,
-  pars = c("price", "type", "freshness", "price:typeFuji"),  # Include interaction
-  outcome = "choice",
-  obsID = "obsID",
-  n_q = 6,
-  n_breaks = 10
-)
-
-# Interaction terms typically require larger samples
-```
 
 ## Returning Full Models
 
@@ -413,7 +395,6 @@ Access complete model objects for detailed analysis:
 # Return full models for additional analysis
 power_with_models <- cbc_power(
   data = choices,
-  pars = c("price", "type", "freshness"),
   outcome = "choice",
   obsID = "obsID",
   n_q = 6,
@@ -424,78 +405,8 @@ power_with_models <- cbc_power(
 # Examine largest model
 largest_model <- power_with_models$models[[length(power_with_models$models)]]
 summary(largest_model)
-
-# Extract additional model statistics
-cat("Log-likelihood:", logLik(largest_model), "\n")
-cat("AIC:", AIC(largest_model), "\n")
 ```
 
-# Interpretation Guidelines
-
-## Standard Error Benchmarks
-
-Common standard error targets for different research goals:
-
-```{r}
-# Interpretation guidelines
-interpretation_guide <- data.frame(
-  Research_Goal = c("Exploratory", "Confirmatory", "High Precision", "Publication"),
-  Target_SE = c("0.05-0.10", "0.03-0.05", "0.01-0.03", "0.02-0.04"),
-  Description = c(
-    "Initial exploration of effects",
-    "Testing specific hypotheses",
-    "Precise effect estimation",
-    "Academic publication standards"
-  )
-)
-
-print(interpretation_guide)
-```
-
-## Power Thresholds
-
-Standard power levels and their interpretations:
-
-```{r}
-# Power interpretation
-power_guide <- data.frame(
-  Power_Level = c("50%", "80%", "90%", "95%"),
-  Interpretation = c(
-    "Coin flip chance of detection",
-    "Standard social science threshold",
-    "High power for critical studies",
-    "Very high power (often overkill)"
-  ),
-  Use_Case = c(
-    "Not recommended",
-    "Most research applications",
-    "Important policy decisions",
-    "Safety-critical applications"
-  )
-)
-
-print(power_guide)
-```
-
-## Effect Size Context
-
-Put your power analysis in context of typical effect sizes:
-
-```{r}
-# Typical effect sizes in choice experiments
-effect_guide <- data.frame(
-  Effect_Type = c("Price", "Important Attribute", "Moderate Attribute", "Weak Attribute"),
-  Typical_Range = c("-0.1 to -0.5", "0.2 to 0.8", "0.05 to 0.2", "0.01 to 0.05"),
-  Examples = c(
-    "Price per unit",
-    "Brand, quality levels",
-    "Secondary features",
-    "Minor product details"
-  )
-)
-
-print(effect_guide)
-```
 
 # Best Practices
 
@@ -537,7 +448,7 @@ General guidance for different study types:
 recommendations <- data.frame(
   Study_Type = c(
     "Pilot/Exploratory",
-    "Academic Research",
+    "Academic Research", 
     "Market Research",
     "Policy Analysis",
     "Product Development"
@@ -546,7 +457,7 @@ recommendations <- data.frame(
   Typical_Range = c(
     "50-150",
     "200-800",
-    "300-1000",
+    "300-1000", 
     "500-2000",
     "200-600"
   ),
@@ -570,23 +481,25 @@ Check that your power analysis makes sense:
 
 ```{r}
 # Validation checks
-validate_power <- function(power_data) {
-
+validate_power <- function(power_object) {
+  power_data <- power_object$power_summary
+  
   # 1. Standard errors should decrease with sample size
   param_data <- power_data[power_data$parameter == "price", ]
+  param_data <- param_data[order(param_data$sample_size), ]
   se_decreasing <- all(diff(param_data$std_error) <= 0)
-
+  
   # 2. Power should increase with sample size (when power < 1)
   power_increasing <- all(diff(param_data$power) >= 0)
-
+  
   # 3. Estimates should be relatively stable
   est_stability <- sd(param_data$estimate) / mean(abs(param_data$estimate))
-
+  
   cat("Power analysis validation:\n")
   cat("- Standard errors decrease with sample size:", se_decreasing, "\n")
   cat("- Power increases with sample size:", power_increasing, "\n")
   cat("- Estimate stability (CV):", round(est_stability, 3), "\n")
-
+  
   if (!se_decreasing || !power_increasing) {
     warning("Power analysis may have issues - check data and parameters")
   }
@@ -603,22 +516,22 @@ Structure for reporting power analysis results:
 # Example reporting structure:
 
 # 1. Methods
-"Power analysis was conducted using simulated choice data based on
-[source of priors]. Choice data were simulated using a multinomial logit
-model with [describe priors]. Sample sizes from X to Y respondents were
+"Power analysis was conducted using simulated choice data based on 
+[source of priors]. Choice data were simulated using a multinomial logit 
+model with [describe priors]. Sample sizes from X to Y respondents were 
 tested in Z increments."
 
-# 2. Results
-"For 80% power to detect the assumed effect sizes, the following sample
+# 2. Results  
+"For 80% power to detect the assumed effect sizes, the following sample 
 sizes are required: [parameter]: N respondents, [parameter]: N respondents."
 
 # 3. Recommendations
-"Based on the power analysis and budget constraints, we recommend a sample
-size of N respondents, which provides [power level]% power for detecting
+"Based on the power analysis and budget constraints, we recommend a sample 
+size of N respondents, which provides [power level]% power for detecting 
 the smallest effect of interest."
 
 # 4. Sensitivity
-"Sensitivity analysis showed that if true effect sizes are [X]% smaller
+"Sensitivity analysis showed that if true effect sizes are [X]% smaller 
 than assumed, the required sample size would increase to N respondents."
 ```
 
@@ -627,7 +540,7 @@ than assumed, the required sample size would increase to N respondents."
 After completing power analysis:
 
 1. **Finalize sample size**: Choose based on power requirements and budget
-2. **Plan data collection**: Account for attrition and incomplete responses
+2. **Plan data collection**: Account for attrition and incomplete responses  
 3. **Document assumptions**: Record all priors and assumptions used
 4. **Prepare analysis plan**: Pre-specify models and analysis approach
 5. **Consider adaptive approaches**: Plan interim analyses if appropriate

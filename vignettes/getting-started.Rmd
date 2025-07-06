@@ -198,32 +198,22 @@ Determine if your sample size provides adequate statistical power:
 
 ```{r}
 # Conduct power analysis
-power_results <- cbc_power(
-  data = choices,
-  pars = c("price", "type", "freshness"),
-  outcome = "choice",
-  obsID = "obsID",
-  n_q = 6,
-  n_breaks = 10
-)
-
-# View results
-head(power_results)
-tail(power_results)
+power <- cbc_power(choices)
+power
 ```
 
 ### Visualize Power
 
 ```{r}
 # Plot power curves
-plot(power_results, type = "power", power_threshold = 0.8)
+plot(power, type = "power", power_threshold = 0.8)
 ```
 
 ### Sample Size Requirements
 
 ```{r}
 # Determine sample size for 80% power
-summary(power_results, power_threshold = 0.8)
+summary(power, power_threshold = 0.8)
 ```
 
 Based on these results, you can determine whether 300 respondents is adequate or if you need a larger sample.
@@ -268,18 +258,11 @@ cbc_inspect(design)
 choices <- cbc_choices(design, priors = priors)
 
 # 6. Assess power
-power_results <- cbc_power(
-  data = choices,
-  pars = c("price", "type", "freshness"),
-  outcome = "choice",
-  obsID = "obsID",
-  n_q = 6,
-  n_breaks = 10
-)
+power <- cbc_power(choices)
 
 # Visualize results
-plot(power_results)
-summary(power_results, power_threshold = 0.8)
+plot(power)
+summary(power, power_threshold = 0.8)
 ```
 
 # Using the Pipe Operator
@@ -301,13 +284,7 @@ cbc_design(
   method = "stochastic"
 ) |>
 cbc_choices(priors = priors) |>
-cbc_power(
-  pars = c("price", "type", "freshness"),
-  outcome = "choice",
-  obsID = "obsID",
-  n_q = 6,
-  n_breaks = 10
-) |>
+cbc_power() |>
 plot()
 ```
 
@@ -348,6 +325,7 @@ Create alternative-specific designs where one attribute serves as a label:
 # Labeled design using apple type as labels
 design_labeled <- cbc_design(
   profiles = profiles,
+  n_alts = 3,
   n_q = 6,
   n_resp = 300,
   label = "type",  # Each alternative shows a different apple type

@@ -206,12 +206,12 @@ Include interaction terms for D-optimal designs using `int_spec()`:
 priors_interactions <- cbc_priors(
   profiles = profiles,
   price = -0.1,
-  type = c(0.1, 0.2),
-  freshness = c(0.1, 0.2),
+  type = c("Fuji" = 0.1, "Honeycrisp" = 0.2),
+  freshness = c("Average" = 0.1, "Excellent" = 0.2),
   interactions = list(
     # Price sensitivity varies by apple type
     int_spec(between = c("price", "type"), with_level = "Fuji", value = 0.05),
-    int_spec(between = c("price", "type"), with_level = "Gala", value = 0.02),
+    int_spec(between = c("price", "type"), with_level = "Honeycrisp", value = 0.02),
     # Type preferences vary by freshness
     int_spec(between = c("type", "freshness"),
              level = "Honeycrisp", with_level = "Excellent", value = 0.15)
@@ -276,12 +276,13 @@ priors_bayesian <- cbc_priors(
 )
 
 # Inspect the parameter draws
+price_draws <- priors_bayesian$par_draws[, 1]
 cat("Parameter draws dimensions:", dim(priors_bayesian$par_draws), "\n")
-cat("Mean of price draws:", mean(priors_bayesian$par_draws[, "price"]), "\n")
-cat("SD of price draws:", sd(priors_bayesian$par_draws[, "price"]), "\n")
+cat("Mean of price draws:", mean(price_draws), "\n")
+cat("SD of price draws:", sd(price_draws), "\n")
 
 # Plot distribution of one parameter
-hist(priors_bayesian$par_draws[, "price"],
+hist(price_draws,
      main = "Distribution of Price Parameter Draws",
      xlab = "Price Coefficient")
 ```
@@ -344,40 +345,6 @@ priors_optimistic <- cbc_priors(
   type = rand_spec(dist = "n", mean = c(0.2, 0.4), sd = c(0.02, 0.02)),
   freshness = c(0.2, 0.4)
 )
-```
-
-## Sensitivity Analysis
-
-Test how sensitive your design is to different prior specifications:
-
-```{r}
-# Create multiple prior scenarios
-scenarios <- list(
-  conservative = priors_conservative,
-  moderate = priors_fixed,
-  optimistic = priors_optimistic
-)
-
-# Could use these to create designs and compare efficiency
-# (This would be part of a larger design comparison workflow)
-```
-
-## Prior Validation
-
-Check that your priors make sense:
-
-```{r}
-# Inspect prior structure
-priors <- priors_fixed
-cat("Attributes with priors:", names(priors$attrs), "\n")
-
-# Check coefficient signs
-for (attr in names(priors$attrs)) {
-  cat(attr, "- Mean:", priors$attrs[[attr]]$mean, "\n")
-}
-
-# Simulate some choice probabilities to check reasonableness
-# (This would typically be done with a small design)
 ```
 
 # Common Pitfalls
