@@ -4,119 +4,96 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tools For Designing Choice-Based Conjoint Survey Experiments. • cbcTools</title>
-<!-- favicons --><link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="apple-touch-icon.png">
-<link rel="apple-touch-icon" type="image/png" sizes="120x120" href="apple-touch-icon-120x120.png">
-<link rel="apple-touch-icon" type="image/png" sizes="76x76" href="apple-touch-icon-76x76.png">
-<link rel="apple-touch-icon" type="image/png" sizes="60x60" href="apple-touch-icon-60x60.png">
-<!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script><!-- Bootstrap --><link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/cosmo/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script><!-- bootstrap-toc --><link rel="stylesheet" href="bootstrap-toc.css">
-<script src="bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
-<!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="pkgdown.css" rel="stylesheet">
-<script src="pkgdown.js"></script><meta property="og:title" content="Tools For Designing Choice-Based Conjoint Survey Experiments.">
-<meta property="og:description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, full factorial designs, orthogonal designs, D-optimal designs, and Bayesian D-efficient designs as well as designs with "no choice" options and "labeled" (also known as "alternative specific") designs. Conveniently inspect the design balance and overlap, and simulate choice data for a survey design either randomly or according to a multinomial or mixed logit utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Full factorial and orthogonal designs are obtained using the DoE.base package (Grömping, 2018) &lt;doi:10.18637/jss.v085.i05&gt;. D-optimal designs are obtained using the AlgDesign package (Wheeler, 2022) &lt;https://CRAN.R-project.org/package=AlgDesign&gt;. Bayesian D-efficient designs are obtained using the idefix package (Traets et al, 2020) &lt;doi:10.18637/jss.v096.i03&gt;. Choice simulation and model estimation in power analyses are handled using the logitr package (Helveston, 2023) &lt;doi:10.18637/jss.v105.i10&gt;.'>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Tools For Designing Choice-Based Conjoint Survey Experiments • cbcTools</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" sizes="any" href="favicon.ico">
+<link rel="manifest" href="site.webmanifest">
+<script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Tools For Designing Choice-Based Conjoint Survey Experiments">
+<meta name="description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Choice simulation and model estimation in power analyses are handled using the logitr package (Helveston, 2023) &lt;doi:10.18637/jss.v105.i10&gt;.'>
+<meta property="og:description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Choice simulation and model estimation in power analyses are handled using the logitr package (Helveston, 2023) &lt;doi:10.18637/jss.v105.i10&gt;.'>
 <meta property="og:image" content="https://jhelvy.github.io/cbcTools/reference/figures/logo.png">
 <meta property="og:image:alt" content="Logo for the cbcTools package">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:creator" content="@JohnHelveston">
-<meta name="twitter:site" content="@JohnHelveston">
-<!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
-<script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]-->
 </head>
-<body data-spy="scroll" data-target="#toc">
-    
+<body>
+    <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
-    <div class="container template-home">
-      <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
-  <div class="container">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <span class="navbar-brand">
-        <a class="navbar-link" href="index.html">cbcTools</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.5.2</span>
-      </span>
-    </div>
 
-    <div id="navbar" class="navbar-collapse collapse">
-      <ul class="nav navbar-nav">
-<li>
-  <a href="index.html">
-    <span class="fa fa-home fa-lg"></span>
-     
-  </a>
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
+
+    <a class="navbar-brand me-2" href="index.html">cbcTools</a>
+
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0</small>
+
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div id="navbar" class="collapse navbar-collapse ms-3">
+      <ul class="navbar-nav me-auto">
+<li class="active nav-item"><a class="nav-link" href="index.html"><span class="fa fa-home fa-lg"></span></a></li>
+<li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="articles/getting-started.html">Getting Started</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/profiles.html">Generating Profiles</a></li>
+    <li><a class="dropdown-item" href="articles/priors.html">Specifying Priors</a></li>
+    <li><a class="dropdown-item" href="articles/design.html">Generating Designs</a></li>
+    <li><a class="dropdown-item" href="articles/d_error.html">Computing D-Error</a></li>
+    <li><a class="dropdown-item" href="articles/choices.html">Simulating Choices</a></li>
+    <li><a class="dropdown-item" href="articles/power.html">Power Analysis</a></li>
+  </ul>
 </li>
-<li>
-  <a href="reference/index.html">Reference</a>
-</li>
-<li>
-  <a href="articles/usage.html">Usage</a>
-</li>
-<li>
-  <a href="news/index.html">Changelog</a>
-</li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
-<ul class="nav navbar-nav navbar-right">
-<li>
-  <a href="https://github.com/jhelvy/cbcTools/" class="external-link">
-    <span class="fab fa-github fa-lg"></span>
-     
-  </a>
-</li>
+<ul class="navbar-nav">
+<li class="nav-item"><form class="form-inline" role="search">
+ <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
+</form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/jhelvy/cbcTools/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
-<!--/.nav-collapse -->
+
+
   </div>
-<!--/.container -->
-</div>
-<!--/.navbar -->
-
-      
-
-      </header><div class="row">
-  <div class="contents col-md-9">
-
-<div class="section level1">
-<div class="page-header"><h1 id="cbctools-">cbcTools <a href="https://jhelvy.github.io/cbcTools/"><img src="reference/figures/logo.png" align="right" style="height:139px;"></a>
+</nav><div class="container template-home">
+<div class="row">
+  <main id="main" class="col-md-9"><div class="section level1">
+<div class="page-header">
+<img src="logo.png" class="logo" alt=""><h1 id="cbctools-">cbcTools 
 <a class="anchor" aria-label="anchor" href="#cbctools-"></a>
-</h1></div>
+</h1>
+</div>
 <!-- badges: start -->
 
-<p>Functions for designing surveys and conducting power analyses for choice-based conjoint survey experiments in R. Each function in the package begins with <code>cbc_</code> and supports a step in the following process for designing and analyzing surveys:</p>
-<p><img src="reference/figures/program_diagram.png"></p>
-</div>
-<div class="section level1">
-<h1 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
-</h1>
-<p>View the <a href="https://jhelvy.github.io/cbcTools/articles/usage.html">usage</a> page for details on how to use <strong>cbcTools</strong>.</p>
-</div>
-<div class="section level1">
-<h1 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h1>
+<p>This package provides functions for generating and inspecting survey designs for choice-based conjoint survey experiments in R. Each function in the package begins with <code>cbc_</code> and supports a step in the following process for designing and analyzing survey experiments:</p>
+<p><img src="reference/figures/flowchart.png"></p>
+<p>After installing the package, got to the <a href="https://jhelvy.github.io/cbcTools/articles/getting-started.html">Getting Started</a> page to learn how to use the package.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <p>You can install the latest version of {cbcTools} from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"cbcTools"</span><span class="op">)</span></span></code></pre></div>
 <p>or you can install the development version of {cbcTools} from <a href="https://github.com/jhelvy/cbcTools" class="external-link">GitHub</a>:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"jhelvy/cbcTools"</span><span class="op">)</span></span></code></pre></div>
-<p>Load the library with:</p>
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu">pak</span><span class="op">(</span><span class="st">"jhelvy/cbcTools"</span><span class="op">)</span></span></code></pre></div>
+<p>Load the package with:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level1">
-<h1 id="author-version-and-license-information">Author, Version, and License Information<a class="anchor" aria-label="anchor" href="#author-version-and-license-information"></a>
-</h1>
+<div class="section level2">
+<h2 id="author-version-and-license-information">Author, Version, and License Information<a class="anchor" aria-label="anchor" href="#author-version-and-license-information"></a>
+</h2>
 <ul>
 <li>Author: <em>John Paul Helveston</em> <a href="https://www.jhelvy.com/" class="external-link uri">https://www.jhelvy.com/</a>
 </li>
@@ -126,18 +103,17 @@
 </li>
 </ul>
 </div>
-<div class="section level1">
-<h1 id="citation-information">Citation Information<a class="anchor" aria-label="anchor" href="#citation-information"></a>
-</h1>
+<div class="section level2">
+<h2 id="citation-information">Citation Information<a class="anchor" aria-label="anchor" href="#citation-information"></a>
+</h2>
 <p>If you use this package for in a publication, I would greatly appreciate it if you cited it - you can get the citation by typing <code>citation("cbcTools")</code> into R:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"cbcTools"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; To cite cbcTools in publications use:</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based</span></span>
-<span><span class="co">#&gt; Conjoint Survey Experiments_. R package, &lt;URL:</span></span>
-<span><span class="co">#&gt; https://jhelvy.github.io/cbcTools/&gt;.</span></span>
+<span><span class="co">#&gt;   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based</span></span>
+<span><span class="co">#&gt;   Conjoint Survey Experiments_. R package,</span></span>
+<span><span class="co">#&gt;   &lt;https://jhelvy.github.io/cbcTools/&gt;.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; A BibTeX entry for LaTeX users is</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -149,11 +125,8 @@
 <span><span class="co">#&gt;     url = {https://jhelvy.github.io/cbcTools/},</span></span>
 <span><span class="co">#&gt;   }</span></span></code></pre></div>
 </div>
-
-  </div>
-
-  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
-    <div class="links">
+</div>
+  </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
 <li><a href="https://cloud.r-project.org/package=cbcTools" class="external-link">View on CRAN</a></li>
@@ -181,7 +154,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>John Helveston <br><small class="roles"> Maintainer, author, copyright holder </small> <a href="https://orcid.org/0000-0002-2657-9191" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a> </li>
+<li>John Helveston <br><small class="roles"> Maintainer, author, copyright holder </small> <a href="https://orcid.org/0000-0002-2657-9191" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 </ul>
 </div>
 
@@ -189,31 +162,28 @@
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
 <li><a href="https://CRAN.R-project.org/package=cbcTools" class="external-link"><img src="https://www.r-pkg.org/badges/version/cbcTools" alt="CRAN status"></a></li>
-<li><a href="https://cran.r-project.org/package=cbcTools" class="external-link"><img src="http://cranlogs.r-pkg.org/badges/grand-total/cbcTools?color=blue"></a></li>
+<li><a href="https://cran.r-project.org/package=cbcTools" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/grand-total/cbcTools" alt="metacran downloads"></a></li>
 </ul>
 </div>
 
-  </div>
+  </aside>
 </div>
 
 
-      <footer><div class="copyright">
-  <p></p>
-<p>Developed by John Helveston.</p>
+    <footer><div class="pkgdown-footer-left">
+  <p>Developed by John Helveston.</p>
 </div>
 
-<div class="pkgdown">
-  <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
+<div class="pkgdown-footer-right">
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
 </div>
 
-      </footer>
+    </footer>
 </div>
 
-  
 
 
-  
+
 
   </body>
 </html>

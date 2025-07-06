@@ -1,66 +1,40 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/404.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/LICENSE-text.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/articles/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/articles/usage.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/authors.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/news/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_balance.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_choices.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_design.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_overlap.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_power.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_profiles.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/cbc_restrict.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/miscmethods.cbc_errors.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/miscmethods.cbc_models.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/plot_compare_power.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/randLN.html</loc>
-  </url>
-  <url>
-    <loc>https://jhelvy.github.io/cbcTools/reference/randN.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://jhelvy.github.io/cbcTools/404.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/LICENSE-text.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/LICENSE.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/choices.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/d_error.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/design.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/getting-started.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/power.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/priors.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/articles/profiles.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/authors.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/news/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_choices.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_compare.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_decode.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_design.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_inspect.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_power.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_priors.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_profiles.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cbc_restrict.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/cor_spec.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/index.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/int_spec.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/plot.cbc_power.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/plot_compare_power.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_choices.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_comparison.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_design.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_inspection.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_power.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_priors.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/print.cbc_profiles.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/rand_spec.html</loc></url>
+<url><loc>https://jhelvy.github.io/cbcTools/reference/summary.cbc_power.html</loc></url>
 </urlset>
+
