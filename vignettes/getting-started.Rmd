@@ -119,7 +119,7 @@ All design methods ensure:
 2. **No duplicate choice sets** within any respondent.
 3. **Dominance removal** (if enabled) eliminates choice sets with dominant alternatives.
 
-See the [Design](design.html) article for more details and options on generating experiment designs, such as including "no choice" options, using labeled designs, removing dominant options, and details about each design algorithm.
+See the [Generating Designs](design.html) article for more details and options on generating experiment designs, such as including "no choice" options, using labeled designs, removing dominant options, and details about each design algorithm.
 
 ## Step 4: Inspect Design
 

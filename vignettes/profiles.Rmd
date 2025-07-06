@@ -61,4 +61,4 @@ restricted_profiles <- cbc_restrict(
 dim(restricted_profiles)
 ```
 
-Once you have your profiles, you can use them to generate an experiment design with `cbc_design()`. See the [Design](design.html) article for more details.
+Once you have your profiles, you can use them to generate an experiment design with `cbc_design()`. See the [Generating Designs](design.html) article for more details.

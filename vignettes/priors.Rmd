@@ -382,5 +382,5 @@ priors_compatible <- cbc_priors(restricted_profiles, ...)
 
 Once created, priors are used in:
 
-1. **Design optimization**: Pass to `cbc_design()` for D-optimal methods. See the [Design](design.html) article for more details.
-2. **Choice simulation**: Pass to `cbc_choices()` for realistic choice patterns. See the [Choices](choices.html) article for more details.
+1. **Design optimization**: Pass to `cbc_design()` for D-optimal methods. See the [Generating Designs](design.html) article for more details.
+2. **Choice simulation**: Pass to `cbc_choices()` for realistic choice patterns. See the [Simulating Choices](choices.html) article for more details.

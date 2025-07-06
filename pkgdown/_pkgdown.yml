@@ -34,8 +34,8 @@ navbar:
           href: articles/profiles.html
         - text: "Specifying Priors"
           href: articles/priors.html
-        # - text: "Design Generation"
-        #   href: articles/design.html
+        - text: "Generating Designs"
+          href: articles/design.html
         # - text: "Computing D-Error"
         #   href: articles/d_error.html
         # - text: "Simulating Choices"
