@@ -18,159 +18,125 @@ knitr::opts_chunk$set(
   fig.retina = 3,
   comment = "#>"
 )
-```
 
-cbcTools provides a complete toolkit for designing and analyzing choice-based conjoint (CBC) experiments. This article walks through the entire workflow from defining attributes to determining sample size requirements, providing a quick start guide for new users and an overview of the package's capabilities.
-
-```{r}
 library(cbcTools)
 ```
 
+**cbcTools** provides a complete toolkit for designing and analyzing choice-based conjoint (CBC) experiments. This article walks through the entire workflow from defining attributes to creating and inspecting designs and determining sample size requirements, providing a quick start guide for new users and an overview of the package's capabilities. Other articles cover more details on each step.
+
 # The cbcTools Workflow
 
-The package supports a step-by-step process for choice experiment design and analysis:
+The package supports a step-by-step process for developing choice experiment designs:
 
 <center>
-<img src="https://jhelvy.github.io/cbcTools/reference/figures/program_diagram.png" width=100%>
+<img src="https://jhelvy.github.io/cbcTools/reference/figures/flowchart.png" width=100%>
 </center>
 
 Each step uses functions that begin with `cbc_` and builds on the previous step:
 
 1. **Generate Profiles** → `cbc_profiles()` - Define attributes and levels
-2. **Create Priors** → `cbc_priors()` - Specify preference assumptions
-3. **Generate Design** → `cbc_design()` - Create choice questions
+2. **Create Priors** → `cbc_priors()` - Specify prior preference assumptions (optional)
+3. **Generate Design** → `cbc_design()` - Create choice question design
 4. **Inspect Design** → `cbc_inspect()` - Evaluate design quality
 5. **Simulate Choices** → `cbc_choices()` - Generate realistic choice data
 6. **Assess Power** → `cbc_power()` - Determine sample size requirements
 
-Let's walk through each step with a complete example.
-
-# Example: Apple Choice Experiment
-
-Imagine we're designing a choice experiment to understand consumer preferences for apples. We want to study how **price**, **type**, and **freshness** influence purchase decisions.
+Let's walk through each step with a complete example. Imagine we're designing a choice experiment to understand consumer preferences for apples. We want to study how **price**, **type**, and **freshness** influence purchase decisions.
 
 ## Step 1: Generate Profiles
 
 Start by defining the attributes and levels for your experiment:
 
 ```{r}
-# Define attributes and their levels
 profiles <- cbc_profiles(
   price     = c(1.0, 1.5, 2.0, 2.5, 3.0),  # Price per pound ($)
   type      = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
-# View the profiles
-head(profiles)
-cat("Total profiles:", nrow(profiles))
+profiles
 ```
 
 This creates all possible combinations of attribute levels - our "universe" of possible products to include in choice questions.
 
-### Optional: Apply Restrictions
+See the [Profiles](profiles.html) article for more details and options on defining profiles, such as including restrictions. 
 
-If some combinations don't make sense, you can remove them:
+## Step 2: Specify Priors
 
-```{r}
-# Example: Remove unrealistic combinations
-profiles_restricted <- cbc_restrict(
-  profiles,
-  # Premium apples (Honeycrisp) rarely sold at lowest prices
-  type == "Honeycrisp" & price < 1.5
-)
-
-cat("Profiles after restrictions:", nrow(profiles_restricted))
-```
-
-For this example, we'll use the unrestricted profiles to keep things simple.
-
-## Step 2: Create Priors
-
-Specify your assumptions about consumer preferences based on theory, literature, or pilot studies:
+Specify your assumptions about consumer preferences based on theory, literature, or pilot studies. These can be used for generating designs that incorporate these expected preferences as well as simulating choices for a given design. 
 
 ```{r}
-# Create prior assumptions about preferences
 priors <- cbc_priors(
   profiles = profiles,
-  price = -0.1,           # Negative = people prefer lower prices
-  type = c(0.1, 0.2),     # Gala and Honeycrisp preferred over Fuji (reference)
-  freshness = c(0.1, 0.2) # Average and Excellent preferred over Poor (reference)
+  price = -0.25,           # Negative = people prefer lower prices
+  type = c(0.5, 1),     # Gala and Honeycrisp preferred over Fuji (reference)
+  freshness = c(0.6, 1.2) # Average and Excellent preferred over Poor (reference)
 )
 
-# View the priors
 priors
 ```
 
 ### Understanding Reference Levels
 
-For categorical attributes, cbcTools uses **dummy coding**:
+For categorical attributes, **the reference level is set by the first level defined in `cbc_profiles()`**, which in this case is `"Fuji"` for **Type** and `"Poor"` for **Freshness**. This would imply the following for the above set of priors:
+
 - **Type**: Fuji (reference), Gala (+0.1), Honeycrisp (+0.2)
 - **Freshness**: Poor (reference), Average (+0.1), Excellent (+0.2)
 
-This means Honeycrisp apples are most preferred, and Excellent freshness is most valued.
+See the [Priors](priors.html) article for more details and options on defining priors. 
 
-### Alternative: Random Parameters
+## Step 3: Generate Designs
 
-For more realistic preference heterogeneity, use random parameters:
-
-```{r}
-# Priors with preference heterogeneity
-priors_random <- cbc_priors(
-  profiles = profiles,
-  price = rand_spec(dist = "n", mean = -0.1, sd = 0.05),
-  type = rand_spec(dist = "n", mean = c(0.1, 0.2), sd = c(0.05, 0.1)),
-  freshness = c(0.1, 0.2)  # Keep some parameters fixed
-)
-```
-
-## Step 3: Generate Design
-
-Create the choice questions that respondents will see:
+Create the set of choice questions that respondents will see:
 
 ```{r}
-# Create experimental design
 design <- cbc_design(
   profiles = profiles,
-  n_alts = 2,       # 2 alternatives per choice question
-  n_q = 6,          # 6 questions per respondent
-  n_resp = 300,     # 300 respondents
-  priors = priors,  # Use our priors for optimization
-  method = "stochastic"  # D-optimal design method
+  method = "stochastic", # D-optimal design method
+  n_alts = 2,            # 2 alternatives per choice question
+  n_q = 6,               # 6 questions per respondent
+  n_resp = 300,          # 300 respondents
+  priors = priors        # Use our priors for optimization
+  
 )
 
-# View the design
-head(design)
-cat("Total choice observations:", nrow(design))
+design
 ```
 
-### Design Methods
+The design generated is sufficient for a full survey for `n_resp` respondents. **cbcTools** offers several design methods, each with their own trade-offs:
 
-cbcTools offers several design methods:
+- **`"random"`**: Random profiles for each respondent.
+- **`"shortcut"`**: Frequency-balanced, often results in minimal overlap within choice questions.
+- **`"minoverlap"`**: Prioritizes minimizing attribute overlap within choice questions.
+- **`"balanced"`**: Optimizes both frequency balance and pairwise attribute interactions.
+- **`"stochastic"`**: Minimizes D-error by randomly swapping profiles.
+- **`"modfed"`**: Minimizes D-error by swapping out all possible profiles (slower, more thorough).
+- **`"cea"`**: Minimizes D-error by attribute-by-attribute swapping.
 
-- **`"random"`**: Fast, good for large samples or exploratory studies
-- **`"shortcut"`**: Frequency-balanced, good general-purpose method
-- **`"stochastic"`**: D-optimal, best efficiency with good priors
-- **`"modfed"`**: D-optimal, thorough optimization (slower)
-- **`"cea"`**: D-optimal, attribute-by-attribute optimization
+All design methods ensure:
 
-For most applications, `"stochastic"` provides a good balance of efficiency and speed.
+1. **No duplicate profiles** within any choice set.
+2. **No duplicate choice sets** within any respondent.
+3. **Dominance removal** (if enabled) eliminates choice sets with dominant alternatives.
+
+See the [Design](design.html) article for more details and options on generating experiment designs, such as including "no choice" options, using labeled designs, removing dominant options, and details about each design algorithm.
 
 ## Step 4: Inspect Design
 
 Evaluate the quality and properties of your design:
 
 ```{r}
-# Comprehensive design inspection
-inspection <- cbc_inspect(design)
-print(inspection)
+cbc_inspect(design)
 ```
 
 Key things to look for:
+
 - **D-error**: Lower values indicate more efficient designs
 - **Balance**: Higher scores indicate better attribute level balance
 - **Overlap**: Lower scores indicate less attribute overlap within questions
 - **Profile usage**: Higher percentages indicate better use of available profiles
+
+See the [Inspect](inspect.html) article for more details and options on inspecting and comparing different experiment designs. 
 
 ## Step 5: Simulate Choices
 
@@ -180,294 +146,32 @@ Generate realistic choice data to test your design:
 # Simulate choices using our priors
 choices <- cbc_choices(design, priors = priors)
 
-# View simulated choice data
-head(choices)
-
-# Check choice patterns
-chosen_profiles <- choices[choices$choice == 1, ]
-cat("Average price chosen:", round(mean(chosen_profiles$price), 2), "\n")
-cat("Honeycrisp choice rate:", round(mean(chosen_profiles$typeHoneycrisp), 2), "\n")
-cat("Excellent freshness rate:", round(mean(chosen_profiles$freshnessExcellent), 2), "\n")
+choices
 ```
 
-The choice patterns should align with your priors - lower prices, preferred apple types, and better freshness should be chosen more often.
+The simulated choice patterns should align with your priors - lower prices, preferred apple types, and better freshness should be chosen more often. If priors are not provided, random choices with be made.
+
+See the [Simulating Choices](choices.html) article for more details and options on inspeciting and comparing different experiment designs.
 
 ## Step 6: Assess Power
 
-Determine if your sample size provides adequate statistical power:
+Determine if your sample size provides adequate statistical power. The `cbc_power()` function auto-determines the attributes in your design and estimates multiple logit models using incrementally increasing sample sizes to assess power:
 
 ```{r}
-# Conduct power analysis
 power <- cbc_power(choices)
 power
 ```
 
-### Visualize Power
+You can easily visualize the results as well using the `plot()` function:
 
 ```{r}
-# Plot power curves
-plot(power, type = "power", power_threshold = 0.8)
+plot(power, type = "power", power_threshold = 0.9)
 ```
 
-### Sample Size Requirements
+Finally, using the `summary()` function you can determine the exact size required to identify each attribute:
 
 ```{r}
-# Determine sample size for 80% power
-summary(power, power_threshold = 0.8)
+summary(power, power_threshold = 0.9)
 ```
 
-Based on these results, you can determine whether 300 respondents is adequate or if you need a larger sample.
-
-# Complete Workflow Example
-
-Here's the entire workflow in a single code block that you can adapt for your own studies:
-
-```{r eval=FALSE}
-# Complete cbcTools workflow
-library(cbcTools)
-
-# 1. Generate profiles
-profiles <- cbc_profiles(
-  price = c(1.0, 1.5, 2.0, 2.5, 3.0),
-  type = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Poor', 'Average', 'Excellent')
-)
-
-# 2. Create priors
-priors <- cbc_priors(
-  profiles = profiles,
-  price = -0.1,
-  type = c(0.1, 0.2),
-  freshness = c(0.1, 0.2)
-)
-
-# 3. Generate design
-design <- cbc_design(
-  profiles = profiles,
-  n_alts = 2,
-  n_q = 6,
-  n_resp = 300,
-  priors = priors,
-  method = "stochastic"
-)
-
-# 4. Inspect design
-cbc_inspect(design)
-
-# 5. Simulate choices
-choices <- cbc_choices(design, priors = priors)
-
-# 6. Assess power
-power <- cbc_power(choices)
-
-# Visualize results
-plot(power)
-summary(power, power_threshold = 0.8)
-```
-
-# Using the Pipe Operator
-
-For a streamlined workflow, you can pipe the functions together:
-
-```{r eval=FALSE}
-# Streamlined workflow using pipes
-cbc_profiles(
-  price = c(1.0, 1.5, 2.0, 2.5, 3.0),
-  type = c('Fuji', 'Gala', 'Honeycrisp'),
-  freshness = c('Poor', 'Average', 'Excellent')
-) |>
-cbc_design(
-  n_alts = 2,
-  n_q = 6,
-  n_resp = 300,
-  priors = priors,
-  method = "stochastic"
-) |>
-cbc_choices(priors = priors) |>
-cbc_power() |>
-plot()
-```
-
-# Common Design Features
-
-## No-Choice Option
-
-Add a "no-choice" alternative for more realistic choice scenarios:
-
-```{r}
-# Design with no-choice option
-priors_nochoice <- cbc_priors(
-  profiles = profiles,
-  price = -0.1,
-  type = c(0.1, 0.2),
-  freshness = c(0.1, 0.2),
-  no_choice = -0.5  # Utility of choosing neither alternative
-)
-
-design_nochoice <- cbc_design(
-  profiles = profiles,
-  n_alts = 2,
-  n_q = 6,
-  n_resp = 300,
-  no_choice = TRUE,
-  priors = priors_nochoice,
-  method = "stochastic"
-)
-
-head(design_nochoice)
-```
-
-## Labeled Designs
-
-Create alternative-specific designs where one attribute serves as a label:
-
-```{r}
-# Labeled design using apple type as labels
-design_labeled <- cbc_design(
-  profiles = profiles,
-  n_alts = 3,
-  n_q = 6,
-  n_resp = 300,
-  label = "type",  # Each alternative shows a different apple type
-  method = "random"
-)
-
-head(design_labeled)
-```
-
-## Blocking
-
-For large designs, use blocks to reduce respondent burden:
-
-```{r}
-# Blocked design
-design_blocked <- cbc_design(
-  profiles = profiles,
-  n_alts = 2,
-  n_q = 8,         # More questions per block
-  n_resp = 400,
-  n_blocks = 4,    # Divide into 4 blocks
-  priors = priors,
-  method = "stochastic"
-)
-
-# Check block allocation
-table(design_blocked$blockID)
-```
-
-# Comparing Different Approaches
-
-Compare multiple design strategies:
-
-```{r}
-# Create different designs
-design_random <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 200, method = "random")
-design_shortcut <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 200, method = "shortcut")
-design_optimal <- cbc_design(profiles, n_alts = 2, n_q = 6, n_resp = 200,
-                            priors = priors, method = "stochastic")
-
-# Compare design efficiency
-comparison <- cbc_compare(
-  Random = design_random,
-  Shortcut = design_shortcut,
-  Optimal = design_optimal,
-  sort_by = "d_error"
-)
-
-print(comparison)
-```
-
-# Best Practices
-
-## Starting Your Study
-
-1. **Literature review**: Research similar studies for realistic priors
-2. **Pilot testing**: Run small pilots to validate assumptions
-3. **Conservative planning**: Use pessimistic priors for sample size planning
-4. **Design comparison**: Test multiple design methods
-5. **Document assumptions**: Record all choices for reproducibility
-
-## Common Decisions
-
-### How many alternatives per question?
-- **2 alternatives**: Easier for respondents, requires more questions
-- **3-4 alternatives**: More realistic, more efficient, harder cognitively
-- **5+ alternatives**: Avoid - cognitive overload
-
-### How many questions per respondent?
-- **4-8 questions**: Good balance of information and respondent burden
-- **10+ questions**: Risk of fatigue effects
-- **<4 questions**: May not provide enough information per respondent
-
-### What sample size?
-- **Pilot studies**: 50-150 respondents
-- **Academic research**: 200-800 respondents
-- **Commercial research**: 300-1000+ respondents
-- Use power analysis to determine specific needs
-
-## Quality Checks
-
-Always verify your design:
-
-```{r eval=FALSE}
-# Check design quality
-cbc_inspect(design, sections = "all")
-
-# Validate choice simulation
-choices <- cbc_choices(design, priors = priors)
-summary(choices[choices$choice == 1, ])
-
-# Confirm adequate power
-power_results <- cbc_power(choices, pars = c("price", "type", "freshness"))
-summary(power_results, power_threshold = 0.8)
-```
-
-# Next Steps
-
-## Data Collection
-
-After finalizing your design:
-
-1. **Program survey**: Implement design in survey software
-2. **Pretest**: Run small pretest with real respondents
-3. **Launch study**: Collect data with planned sample size
-4. **Monitor quality**: Check for satisficing, speeders, etc.
-
-## Data Analysis
-
-Analyze collected data using choice modeling:
-
-```{r eval=FALSE}
-# Example analysis with logitr package
-library(logitr)
-
-# Estimate multinomial logit model
-model <- logitr(
-  data = your_collected_data,
-  outcome = "choice",
-  obsID = "obsID",
-  pars = c("price", "type", "freshness")
-)
-
-summary(model)
-```
-
-## Further Learning
-
-For more detailed information on each step:
-
-- **[Generating Profiles](profiles.html)**: Advanced profile creation and restrictions
-- **[Creating Priors](priors.html)**: Detailed prior specification including random parameters and interactions
-- **[Design Generation](design.html)**: Comprehensive guide to all design methods and features
-- **[Simulating Choices](choices.html)**: Advanced choice simulation techniques
-- **[Power Analysis](power.html)**: Detailed power analysis and sample size planning
-- **[Computing D-Error](d_error.html)**: Technical details on design efficiency calculation
-
-# Getting Help
-
-- **Package documentation**: `?cbc_design` or `help(cbc_design)`
-- **GitHub issues**: Report bugs or request features at https://github.com/jhelvy/cbcTools/issues
-- **Package website**: https://jhelvy.github.io/cbcTools/
-- **Citation**: `citation("cbcTools")` for citing the package in publications
-
-Happy experimenting! 🍎
+See the [Power](power.html) article for more details and options on conducting power analyses to better understand your experiment designs.

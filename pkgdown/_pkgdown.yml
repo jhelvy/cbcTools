@@ -27,16 +27,16 @@ navbar:
           href: articles/getting-started.html
         - text: "Generating Profiles"
           href: articles/profiles.html
-        - text: "Creating Priors"
-          href: articles/priors.html
-        - text: "Design Generation"
-          href: articles/design.html
-        - text: "Computing D-Error"
-          href: articles/d_error.html
-        - text: "Simulating Choices"
-          href: articles/choices.html
-        - text: "Power Analysis"
-          href: articles/power.html
+        # - text: "Creating Priors"
+        #   href: articles/priors.html
+        # - text: "Design Generation"
+        #   href: articles/design.html
+        # - text: "Computing D-Error"
+        #   href: articles/d_error.html
+        # - text: "Simulating Choices"
+        #   href: articles/choices.html
+        # - text: "Power Analysis"
+        #   href: articles/power.html
     - text: "Changelog"
       href: news/index.html
 

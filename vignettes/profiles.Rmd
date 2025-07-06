@@ -63,3 +63,25 @@ restricted_profiles <- cbc_restrict(
 dim(restricted_profiles)
 ```
 
+
+
+
+
+
+
+### Optional: Apply Restrictions
+
+If some combinations don't make sense, you can remove them. For example, premium apples (Honeycrisp) are rarely sold at lowest prices, so we can add that restriction with `cbc_restrict()`:
+
+```{r}
+# Example:
+profiles_restricted <- cbc_restrict(
+  profiles,
+  type == "Honeycrisp" & price < 1.5
+)
+
+profiles_restricted
+```
+
+For this example, we'll use the unrestricted profiles to keep things simple.
+
