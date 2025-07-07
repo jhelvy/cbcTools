@@ -120,8 +120,8 @@ decisions.</p>
 <p>Start by defining the attributes and levels for your experiment:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
-<span>  price     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">1.5</span>, <span class="fl">2.0</span>, <span class="fl">2.5</span>, <span class="fl">3.0</span><span class="op">)</span>,  <span class="co"># Price per pound ($)</span></span>
-<span>  type      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Fuji'</span>, <span class="st">'Gala'</span>, <span class="st">'Honeycrisp'</span><span class="op">)</span>,</span>
+<span>  price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.0</span>, <span class="fl">1.5</span>, <span class="fl">2.0</span>, <span class="fl">2.5</span>, <span class="fl">3.0</span><span class="op">)</span>, <span class="co"># Price per pound ($)</span></span>
+<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Fuji'</span>, <span class="st">'Gala'</span>, <span class="st">'Honeycrisp'</span><span class="op">)</span>,</span>
 <span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -158,8 +158,8 @@ choices for a given design.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_priors.html">cbc_priors</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
-<span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,          <span class="co"># Negative = people prefer lower prices</span></span>
-<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>,       <span class="co"># Gala and Honeycrisp preferred over Fuji (reference)</span></span>
+<span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>, <span class="co"># Negative = people prefer lower prices</span></span>
+<span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>, <span class="co"># Gala and Honeycrisp preferred over Fuji (reference)</span></span>
 <span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span>, <span class="fl">1.2</span><span class="op">)</span> <span class="co"># Average and Excellent preferred over Poor (reference)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -197,11 +197,11 @@ this case is <code>"Fuji"</code> for <strong>Type</strong> and
 following for the above set of priors:</p>
 <ul>
 <li>
-<strong>Type</strong>: Fuji (reference), Gala (+0.1), Honeycrisp
-(+0.2)</li>
+<strong>Type</strong>: Fuji (reference), Gala (+0.5), Honeycrisp
+(+1.0)</li>
 <li>
-<strong>Freshness</strong>: Poor (reference), Average (+0.1),
-Excellent (+0.2)</li>
+<strong>Freshness</strong>: Poor (reference), Average (+0.6),
+Excellent (+1.2)</li>
 </ul>
 <p>See the <a href="priors.html">Specifying Priors</a> article for more
 details and options on defining priors.</p>
@@ -210,42 +210,44 @@ details and options on defining priors.</p>
 <div class="section level3">
 <h3 id="step-3-generate-designs">Step 3: Generate Designs<a class="anchor" aria-label="anchor" href="#step-3-generate-designs"></a>
 </h3>
-<p>Create the set of choice questions that respondents will see:</p>
+<p>Create the set of choice questions that respondents will see. By
+default, all categorical variables are dummy-coded in the resulting
+design (you can convert the design back to categorical formatting with
+<code><a href="../reference/cbc_decode.html">cbc_decode()</a></code>):</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"stochastic"</span>, <span class="co"># D-optimal design method</span></span>
-<span>  n_alts <span class="op">=</span> <span class="fl">2</span>,            <span class="co"># 2 alternatives per choice question</span></span>
-<span>  n_q <span class="op">=</span> <span class="fl">6</span>,               <span class="co"># 6 questions per respondent</span></span>
-<span>  n_resp <span class="op">=</span> <span class="fl">300</span>,          <span class="co"># 300 respondents</span></span>
-<span>  priors <span class="op">=</span> <span class="va">priors</span>        <span class="co"># Use our priors for optimization</span></span>
-<span>  </span>
+<span>  method <span class="op">=</span> <span class="st">"stochastic"</span>, <span class="co"># D-optimal method</span></span>
+<span>  n_alts <span class="op">=</span> <span class="fl">3</span>, <span class="co"># 2 alternatives per choice question</span></span>
+<span>  n_q <span class="op">=</span> <span class="fl">6</span>, <span class="co"># 6 questions per respondent</span></span>
+<span>  n_resp <span class="op">=</span> <span class="fl">300</span>, <span class="co"># 300 respondents</span></span>
+<span>  priors <span class="op">=</span> <span class="va">priors</span> <span class="co"># Use our priors for optimization</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">design</span></span>
 <span><span class="co">#&gt; Design method: stochastic</span></span>
-<span><span class="co">#&gt; Structure: 300 respondents × 6 questions × 2 alternatives</span></span>
-<span><span class="co">#&gt; Profile usage: 11/45 (24.4%)</span></span>
-<span><span class="co">#&gt; D-error: 1.122150</span></span>
+<span><span class="co">#&gt; Structure: 300 respondents × 6 questions × 3 alternatives</span></span>
+<span><span class="co">#&gt; Profile usage: 14/45 (31.1%)</span></span>
+<span><span class="co">#&gt; D-error: 0.826791</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; 💡 Use cbc_inspect() for a more detailed summary</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows of design:</span></span>
 <span><span class="co">#&gt;   profileID blockID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        15       1      1   1     1     1     3        0              1</span></span>
-<span><span class="co">#&gt; 2        21       1      1   1     2     1     1        1              0</span></span>
-<span><span class="co">#&gt; 3        45       1      1   2     1     2     3        0              1</span></span>
-<span><span class="co">#&gt; 4        16       1      1   2     2     2     1        0              0</span></span>
-<span><span class="co">#&gt; 5        35       1      1   3     1     3     3        0              0</span></span>
-<span><span class="co">#&gt; 6         6       1      1   3     2     3     1        1              0</span></span>
+<span><span class="co">#&gt; 1         6       1      1   1     1     1   1.0        1              0</span></span>
+<span><span class="co">#&gt; 2        30       1      1   1     2     1   3.0        0              1</span></span>
+<span><span class="co">#&gt; 3         3       1      1   1     3     1   2.0        0              0</span></span>
+<span><span class="co">#&gt; 4        12       1      1   2     1     2   1.5        0              1</span></span>
+<span><span class="co">#&gt; 5        19       1      1   2     2     2   2.5        0              0</span></span>
+<span><span class="co">#&gt; 6        37       1      1   2     3     2   1.5        1              0</span></span>
 <span><span class="co">#&gt;   freshnessAverage freshnessExcellent</span></span>
 <span><span class="co">#&gt; 1                0                  0</span></span>
 <span><span class="co">#&gt; 2                1                  0</span></span>
-<span><span class="co">#&gt; 3                0                  1</span></span>
-<span><span class="co">#&gt; 4                1                  0</span></span>
-<span><span class="co">#&gt; 5                0                  1</span></span>
-<span><span class="co">#&gt; 6                0                  0</span></span>
-<span><span class="co">#&gt; ... and 3594 more rows</span></span></code></pre></div>
+<span><span class="co">#&gt; 3                0                  0</span></span>
+<span><span class="co">#&gt; 4                0                  0</span></span>
+<span><span class="co">#&gt; 5                1                  0</span></span>
+<span><span class="co">#&gt; 6                0                  1</span></span>
+<span><span class="co">#&gt; ... and 5394 more rows</span></span></code></pre></div>
 <p>The design generated is sufficient for a full survey for
 <code>n_resp</code> respondents. <strong>cbcTools</strong> offers
 several design methods, each with their own trade-offs:</p>
@@ -291,111 +293,8 @@ and details about each design algorithm.</p>
 <div class="section level3">
 <h3 id="step-4-inspect-design">Step 4: Inspect Design<a class="anchor" aria-label="anchor" href="#step-4-inspect-design"></a>
 </h3>
-<p>Evaluate the quality and properties of your design:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/cbc_inspect.html">cbc_inspect</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
-<span><span class="co">#&gt; DESIGN SUMMARY</span></span>
-<span><span class="co">#&gt; =========================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; STRUCTURE</span></span>
-<span><span class="co">#&gt; ================</span></span>
-<span><span class="co">#&gt; Method: stochastic</span></span>
-<span><span class="co">#&gt; Created: 2025-07-07 13:49:46</span></span>
-<span><span class="co">#&gt; Respondents: 300</span></span>
-<span><span class="co">#&gt; Questions per respondent: 6</span></span>
-<span><span class="co">#&gt; Alternatives per question: 2</span></span>
-<span><span class="co">#&gt; Total choice sets: 1800</span></span>
-<span><span class="co">#&gt; Profile usage: 11/45 (24.4%)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; SUMMARY METRICS</span></span>
-<span><span class="co">#&gt; =================</span></span>
-<span><span class="co">#&gt; D-error (with priors): 1.122150</span></span>
-<span><span class="co">#&gt; D-error (null model): 1.013255</span></span>
-<span><span class="co">#&gt; (Lower values indicate more efficient designs)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Overall balance score: 0.720 (higher is better)</span></span>
-<span><span class="co">#&gt; Overall overlap score: 0.200 (lower is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; VARIABLE ENCODING</span></span>
-<span><span class="co">#&gt; =================</span></span>
-<span><span class="co">#&gt; Format: Dummy-coded</span></span>
-<span><span class="co">#&gt; 💡 Use cbc_decode_design() to convert to categorical format</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ATTRIBUTE BALANCE</span></span>
-<span><span class="co">#&gt; =================</span></span>
-<span><span class="co">#&gt; Overall balance score: 0.720 (higher is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Individual attribute level counts:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; price:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    1  1.5  2.5    3 </span></span>
-<span><span class="co">#&gt; 1200  600  300 1500 </span></span>
-<span><span class="co">#&gt;   Balance score: 0.622 (higher is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; typeGala:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    0    1 </span></span>
-<span><span class="co">#&gt; 2100 1500 </span></span>
-<span><span class="co">#&gt;   Balance score: 0.809 (higher is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; typeHoneycrisp:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    0    1 </span></span>
-<span><span class="co">#&gt; 2400 1200 </span></span>
-<span><span class="co">#&gt;   Balance score: 0.680 (higher is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; freshnessAverage:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    0    1 </span></span>
-<span><span class="co">#&gt; 2100 1500 </span></span>
-<span><span class="co">#&gt;   Balance score: 0.809 (higher is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; freshnessExcellent:</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    0    1 </span></span>
-<span><span class="co">#&gt; 2400 1200 </span></span>
-<span><span class="co">#&gt;   Balance score: 0.680 (higher is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ATTRIBUTE OVERLAP</span></span>
-<span><span class="co">#&gt; =================</span></span>
-<span><span class="co">#&gt; Overall overlap score: 0.200 (lower is better)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Counts of attribute overlap:</span></span>
-<span><span class="co">#&gt; (# of questions with N unique levels)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; price: Continuous variable</span></span>
-<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
-<span><span class="co">#&gt;   1 (complete overlap):   0.0%  (0 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   2 (partial overlap):  100.0%  (1800 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   3 (partial overlap):    0.0%  (0 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   4 (no overlap):         0.0%  (0 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   Average unique levels per question: 2.00</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; typeGala: Continuous variable</span></span>
-<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
-<span><span class="co">#&gt;   1 (complete overlap):  16.7%  (300 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   2 (no overlap):        83.3%  (1500 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   Average unique levels per question: 1.83</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; typeHoneycrisp: Continuous variable</span></span>
-<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
-<span><span class="co">#&gt;   1 (complete overlap):  33.3%  (600 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   2 (no overlap):        66.7%  (1200 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   Average unique levels per question: 1.67</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; freshnessAverage: Continuous variable</span></span>
-<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
-<span><span class="co">#&gt;   1 (complete overlap):  16.7%  (300 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   2 (no overlap):        83.3%  (1500 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   Average unique levels per question: 1.83</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; freshnessExcellent: Continuous variable</span></span>
-<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
-<span><span class="co">#&gt;   1 (complete overlap):  33.3%  (600 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   2 (no overlap):        66.7%  (1200 / 1800 questions)</span></span>
-<span><span class="co">#&gt;   Average unique levels per question: 1.67</span></span></code></pre></div>
-<p>Key things to look for:</p>
+<p>Use the <code><a href="../reference/cbc_inspect.html">cbc_inspect()</a></code> function to evaluate the quality
+and properties of your design. Key things to look for:</p>
 <ul>
 <li>
 <strong>D-error</strong>: Lower values indicate more efficient
@@ -410,13 +309,121 @@ overlap within questions</li>
 <strong>Profile usage</strong>: Higher percentages indicate better
 use of available profiles</li>
 </ul>
-<p>See the <a href="https://jhelvy.github.io/cbcTools/reference/cbc_inspect.html"><code>cbc_inspect</code></a>
+<p>See <a href="https://jhelvy.github.io/cbcTools/reference/cbc_inspect.html"><code>cbc_inspect</code></a>
 for more details.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/cbc_inspect.html">cbc_inspect</a></span><span class="op">(</span><span class="va">design</span><span class="op">)</span></span>
+<span><span class="co">#&gt; DESIGN SUMMARY</span></span>
+<span><span class="co">#&gt; =========================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; STRUCTURE</span></span>
+<span><span class="co">#&gt; ================</span></span>
+<span><span class="co">#&gt; Method: stochastic</span></span>
+<span><span class="co">#&gt; Created: 2025-07-07 19:43:07</span></span>
+<span><span class="co">#&gt; Respondents: 300</span></span>
+<span><span class="co">#&gt; Questions per respondent: 6</span></span>
+<span><span class="co">#&gt; Alternatives per question: 3</span></span>
+<span><span class="co">#&gt; Total choice sets: 1800</span></span>
+<span><span class="co">#&gt; Profile usage: 14/45 (31.1%)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; SUMMARY METRICS</span></span>
+<span><span class="co">#&gt; =================</span></span>
+<span><span class="co">#&gt; D-error (with priors): 0.826791</span></span>
+<span><span class="co">#&gt; D-error (null model): 0.756001</span></span>
+<span><span class="co">#&gt; (Lower values indicate more efficient designs)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Overall balance score: 0.659 (higher is better)</span></span>
+<span><span class="co">#&gt; Overall overlap score: 0.067 (lower is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; VARIABLE ENCODING</span></span>
+<span><span class="co">#&gt; =================</span></span>
+<span><span class="co">#&gt; Format: Dummy-coded (type, freshness)</span></span>
+<span><span class="co">#&gt; 💡 Use cbc_decode_design() to convert to categorical format</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ATTRIBUTE BALANCE</span></span>
+<span><span class="co">#&gt; =================</span></span>
+<span><span class="co">#&gt; Overall balance score: 0.659 (higher is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Individual attribute level counts:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; price:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    1  1.5    2  2.5    3 </span></span>
+<span><span class="co">#&gt; 1500  600  300  300 2700 </span></span>
+<span><span class="co">#&gt;   Balance score: 0.512 (higher is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; typeGala:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    0    1 </span></span>
+<span><span class="co">#&gt; 3600 1800 </span></span>
+<span><span class="co">#&gt;   Balance score: 0.680 (higher is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; typeHoneycrisp:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    0    1 </span></span>
+<span><span class="co">#&gt; 3600 1800 </span></span>
+<span><span class="co">#&gt;   Balance score: 0.680 (higher is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; freshnessAverage:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    0    1 </span></span>
+<span><span class="co">#&gt; 3000 2400 </span></span>
+<span><span class="co">#&gt;   Balance score: 0.864 (higher is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; freshnessExcellent:</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    0    1 </span></span>
+<span><span class="co">#&gt; 4200 1200 </span></span>
+<span><span class="co">#&gt;   Balance score: 0.560 (higher is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ATTRIBUTE OVERLAP</span></span>
+<span><span class="co">#&gt; =================</span></span>
+<span><span class="co">#&gt; Overall overlap score: 0.067 (lower is better)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Counts of attribute overlap:</span></span>
+<span><span class="co">#&gt; (# of questions with N unique levels)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; price: Continuous variable</span></span>
+<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
+<span><span class="co">#&gt;   1 (complete overlap):   0.0%  (0 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   2 (partial overlap):   83.3%  (1500 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   3 (partial overlap):   16.7%  (300 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   4 (partial overlap):    0.0%  (0 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   5 (no overlap):         0.0%  (0 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   Average unique levels per question: 2.17</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; typeGala: Continuous variable</span></span>
+<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
+<span><span class="co">#&gt;   1 (complete overlap):   0.0%  (0 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   2 (no overlap):       100.0%  (1800 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   Average unique levels per question: 2.00</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; typeHoneycrisp: Continuous variable</span></span>
+<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
+<span><span class="co">#&gt;   1 (complete overlap):   0.0%  (0 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   2 (no overlap):       100.0%  (1800 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   Average unique levels per question: 2.00</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; freshnessAverage: Continuous variable</span></span>
+<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
+<span><span class="co">#&gt;   1 (complete overlap):   0.0%  (0 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   2 (no overlap):       100.0%  (1800 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   Average unique levels per question: 2.00</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; freshnessExcellent: Continuous variable</span></span>
+<span><span class="co">#&gt;   Questions by # unique levels:</span></span>
+<span><span class="co">#&gt;   1 (complete overlap):  33.3%  (600 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   2 (no overlap):        66.7%  (1200 / 1800 questions)</span></span>
+<span><span class="co">#&gt;   Average unique levels per question: 1.67</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="step-5-simulate-choices">Step 5: Simulate Choices<a class="anchor" aria-label="anchor" href="#step-5-simulate-choices"></a>
 </h3>
-<p>Generate realistic choice data to test your design:</p>
+<p>Generate realistic choice data to test your design with the
+<code><a href="../reference/cbc_choices.html">cbc_choices()</a></code> function. By default, random choices are
+made, but if you provide priors with the <code>priors</code> argument,
+choices will be made according to the utility model defined by your
+priors:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulate choices using our priors</span></span>
 <span><span class="va">choices</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_choices.html">cbc_choices</a></span><span class="op">(</span><span class="va">design</span>, priors <span class="op">=</span> <span class="va">priors</span><span class="op">)</span></span>
@@ -425,39 +432,62 @@ for more details.</p>
 <span><span class="co">#&gt; CBC Choice Data</span></span>
 <span><span class="co">#&gt; ===============</span></span>
 <span><span class="co">#&gt; Observations: 1800 choice tasks</span></span>
-<span><span class="co">#&gt; Alternatives per task: 2</span></span>
+<span><span class="co">#&gt; Alternatives per task: 3</span></span>
 <span><span class="co">#&gt; Respondents: 300</span></span>
 <span><span class="co">#&gt; Questions per respondent: 6</span></span>
 <span><span class="co">#&gt; Total choices made: 1800</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: utility_based</span></span>
-<span><span class="co">#&gt; Original design D-error: 1.122150</span></span>
+<span><span class="co">#&gt; Original design D-error: 0.826791</span></span>
 <span><span class="co">#&gt; Priors: Used for utility-based simulation</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-07-07 13:49:47</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-07-07 19:43:08</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
-<span><span class="co">#&gt;   Alt 1: 52.0% (936 choices)</span></span>
-<span><span class="co">#&gt;   Alt 2: 48.0% (864 choices)</span></span>
+<span><span class="co">#&gt;   Alt 1: 32.0% (576 choices)</span></span>
+<span><span class="co">#&gt;   Alt 2: 34.4% (619 choices)</span></span>
+<span><span class="co">#&gt;   Alt 3: 33.6% (605 choices)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows:</span></span>
 <span><span class="co">#&gt;   profileID blockID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        15       1      1   1     1     1     3        0              1</span></span>
-<span><span class="co">#&gt; 2        21       1      1   1     2     1     1        1              0</span></span>
-<span><span class="co">#&gt; 3        45       1      1   2     1     2     3        0              1</span></span>
-<span><span class="co">#&gt; 4        16       1      1   2     2     2     1        0              0</span></span>
-<span><span class="co">#&gt; 5        35       1      1   3     1     3     3        0              0</span></span>
-<span><span class="co">#&gt; 6         6       1      1   3     2     3     1        1              0</span></span>
+<span><span class="co">#&gt; 1         6       1      1   1     1     1   1.0        1              0</span></span>
+<span><span class="co">#&gt; 2        30       1      1   1     2     1   3.0        0              1</span></span>
+<span><span class="co">#&gt; 3         3       1      1   1     3     1   2.0        0              0</span></span>
+<span><span class="co">#&gt; 4        12       1      1   2     1     2   1.5        0              1</span></span>
+<span><span class="co">#&gt; 5        19       1      1   2     2     2   2.5        0              0</span></span>
+<span><span class="co">#&gt; 6        37       1      1   2     3     2   1.5        1              0</span></span>
 <span><span class="co">#&gt;   freshnessAverage freshnessExcellent choice</span></span>
 <span><span class="co">#&gt; 1                0                  0      0</span></span>
 <span><span class="co">#&gt; 2                1                  0      1</span></span>
-<span><span class="co">#&gt; 3                0                  1      1</span></span>
-<span><span class="co">#&gt; 4                1                  0      0</span></span>
-<span><span class="co">#&gt; 5                0                  1      0</span></span>
-<span><span class="co">#&gt; 6                0                  0      1</span></span>
-<span><span class="co">#&gt; ... and 3594 more rows</span></span></code></pre></div>
-<p>The simulated choice patterns should align with your priors - lower
-prices, preferred apple types, and better freshness should be chosen
-more often. If priors are not provided, random choices with be made.</p>
+<span><span class="co">#&gt; 3                0                  0      0</span></span>
+<span><span class="co">#&gt; 4                0                  0      0</span></span>
+<span><span class="co">#&gt; 5                1                  0      0</span></span>
+<span><span class="co">#&gt; 6                0                  1      1</span></span>
+<span><span class="co">#&gt; ... and 5394 more rows</span></span></code></pre></div>
+<p>Taking a look at some quick summaries, you can see that the simulated
+choice patterns align with our priors - lower prices, preferred apple
+types, and better freshness should be chosen more often (not always for
+all levels though as there is some level of randomness involved). To do
+this, it’s often easier to work with the design with categorical coding
+instead of dummy coding:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">choices_cat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="va">choices</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Filter for the chosen rows only</span></span>
+<span><span class="va">choices_cat</span> <span class="op">&lt;-</span> <span class="va">choices_cat</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">choices_cat</span><span class="op">$</span><span class="va">choice</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>, <span class="op">]</span></span>
+<span></span>
+<span><span class="co"># Counts of choices made for each attribute level</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">choices_cat</span><span class="op">$</span><span class="va">price</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   1 1.5   2 2.5   3 </span></span>
+<span><span class="co">#&gt; 605 256  52  44 843</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">choices_cat</span><span class="op">$</span><span class="va">type</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;       Fuji       Gala Honeycrisp </span></span>
+<span><span class="co">#&gt;        478        545        777</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">choices_cat</span><span class="op">$</span><span class="va">freshness</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;      Poor   Average Excellent </span></span>
+<span><span class="co">#&gt;       450       764       586</span></span></code></pre></div>
 <p>See the <a href="choices.html">Simulating Choices</a> article for
 more details and options on inspeciting and comparing different
 experiment designs.</p>
@@ -469,7 +499,7 @@ experiment designs.</p>
 The <code><a href="../reference/cbc_power.html">cbc_power()</a></code> function auto-determines the attributes in
 your design and estimates multiple logit models using incrementally
 increasing sample sizes to assess power:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">power</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span><span class="va">choices</span><span class="op">)</span></span>
 <span><span class="va">power</span></span>
 <span><span class="co">#&gt; CBC Power Analysis Results</span></span>
@@ -482,61 +512,61 @@ increasing sample sizes to assess power:</p>
 <span><span class="co">#&gt; Power summary (probability of detecting true effect):</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; n = 30:</span></span>
-<span><span class="co">#&gt;   price       : Power = 0.738, SE = 0.1261</span></span>
-<span><span class="co">#&gt;   typeGala    : Power = 0.068, SE = 0.2677</span></span>
-<span><span class="co">#&gt;   typeHoneycrisp: Power = 0.624, SE = 0.3303</span></span>
-<span><span class="co">#&gt;   freshnessAverage: Power = 0.052, SE = 0.2356</span></span>
-<span><span class="co">#&gt;   freshnessExcellent: Power = 0.509, SE = 0.3337</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.1016</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 0.525, SE = 0.2372</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.2477</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 0.783, SE = 0.2196</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 0.986, SE = 0.2321</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; n = 90:</span></span>
-<span><span class="co">#&gt;   price       : Power = 0.998, SE = 0.0724</span></span>
-<span><span class="co">#&gt;   typeGala    : Power = 0.400, SE = 0.1559</span></span>
-<span><span class="co">#&gt;   typeHoneycrisp: Power = 0.998, SE = 0.1933</span></span>
-<span><span class="co">#&gt;   freshnessAverage: Power = 0.969, SE = 0.1414</span></span>
-<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1961</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0544</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 0.939, SE = 0.1259</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.1284</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.1228</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1346</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; n = 180:</span></span>
-<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0501</span></span>
-<span><span class="co">#&gt;   typeGala    : Power = 0.941, SE = 0.1104</span></span>
-<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.1377</span></span>
-<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0994</span></span>
-<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1383</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0380</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 0.997, SE = 0.0876</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0888</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0861</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0953</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; n = 240:</span></span>
-<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0436</span></span>
-<span><span class="co">#&gt;   typeGala    : Power = 0.995, SE = 0.0969</span></span>
-<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.1209</span></span>
-<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0864</span></span>
-<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1211</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0327</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 0.999, SE = 0.0758</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0764</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0743</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0825</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; n = 300:</span></span>
-<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0392</span></span>
-<span><span class="co">#&gt;   typeGala    : Power = 1.000, SE = 0.0867</span></span>
-<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.1079</span></span>
-<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0777</span></span>
-<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1088</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0293</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 1.000, SE = 0.0680</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0686</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0666</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0740</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Use plot() to visualize power curves.</span></span>
 <span><span class="co">#&gt; Use summary() for detailed power analysis.</span></span></code></pre></div>
 <p>You can easily visualize the results as well using the
 <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> function:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">power</span>, type <span class="op">=</span> <span class="st">"power"</span>, power_threshold <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span></code></pre></div>
-<p><img src="getting-started_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
+<p><img src="getting-started_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 <p>Finally, using the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> function you can determine
 the exact size required to identify each attribute:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">power</span>, power_threshold <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CBC Power Analysis Summary</span></span>
 <span><span class="co">#&gt; ===========================</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Sample size requirements for 90% power:</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; price          : n &gt;= 90 (achieves 99.8% power, SE = 0.0724)</span></span>
-<span><span class="co">#&gt; typeGala       : n &gt;= 180 (achieves 94.1% power, SE = 0.1104)</span></span>
-<span><span class="co">#&gt; typeHoneycrisp : n &gt;= 90 (achieves 99.8% power, SE = 0.1933)</span></span>
-<span><span class="co">#&gt; freshnessAverage: n &gt;= 90 (achieves 96.9% power, SE = 0.1414)</span></span>
-<span><span class="co">#&gt; freshnessExcellent: n &gt;= 60 (achieves 96.2% power, SE = 0.2356)</span></span></code></pre></div>
+<span><span class="co">#&gt; price          : n &gt;= 30 (achieves 100.0% power, SE = 0.1016)</span></span>
+<span><span class="co">#&gt; typeGala       : n &gt;= 90 (achieves 93.9% power, SE = 0.1259)</span></span>
+<span><span class="co">#&gt; typeHoneycrisp : n &gt;= 30 (achieves 100.0% power, SE = 0.2477)</span></span>
+<span><span class="co">#&gt; freshnessAverage: n &gt;= 60 (achieves 99.8% power, SE = 0.1535)</span></span>
+<span><span class="co">#&gt; freshnessExcellent: n &gt;= 30 (achieves 98.6% power, SE = 0.2321)</span></span></code></pre></div>
 <p>See the <a href="power.html">Power</a> article for more details and
 options on conducting power analyses to better understand your
 experiment designs.</p>
