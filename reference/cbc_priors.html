@@ -21,8 +21,7 @@ interaction terms between fixed parameters."><meta property="og:image" content="
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../index.html"><span class="fa fa-home fa-lg"></span></a></li>
-<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../articles/getting-started.html">Getting Started</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
@@ -34,9 +33,7 @@ interaction terms between fixed parameters."><meta property="og:image" content="
     <li><a class="dropdown-item" href="../articles/power.html">Power Analysis</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
-      </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
- <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/jhelvy/cbcTools/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+      </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/jhelvy/cbcTools/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -173,35 +170,40 @@ no-choice utility.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create profiles for examples</span></span></span>
 <span class="r-in"><span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">5</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Poor"</span>, <span class="st">"Average"</span>, <span class="st">"Excellent"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Fuji'</span>, <span class="st">'Gala'</span>, <span class="st">'Honeycrisp'</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'Poor'</span>, <span class="st">'Average'</span>, <span class="st">'Excellent'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example 1: Simple fixed priors</span></span></span>
 <span class="r-in"><span><span class="va">priors_fixed</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>,           <span class="co"># Continuous: negative price sensitivity</span></span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.2</span><span class="op">)</span>,     <span class="co"># Categorical: unnamed vector (vs "Fuji" reference)</span></span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.5</span>, <span class="fl">0.3</span><span class="op">)</span> <span class="co"># Categorical: unnamed vector (vs "Poor" reference)</span></span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>, <span class="co"># Negative = prefer lower prices</span></span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>, <span class="co"># "Fuji" is reference level</span></span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span>, <span class="fl">1.2</span><span class="op">)</span> <span class="co"># "Poor" reference level</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example 2: Named categorical priors (more explicit)</span></span></span>
 <span class="r-in"><span><span class="va">priors_named</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>,</span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gala"</span> <span class="op">=</span> <span class="fl">0.5</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>,  <span class="co"># "Fuji" is reference</span></span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.3</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span>  <span class="co"># "Poor" is reference</span></span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gala"</span> <span class="op">=</span> <span class="fl">0.5</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span>,  <span class="co"># "Fuji" is reference</span></span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.6</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">1.2</span><span class="op">)</span>  <span class="co"># "Poor" is reference</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Example 3: Mixed fixed and random parameters</span></span></span>
-<span class="r-in"><span><span class="va">priors_mixed</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="co"># Example 3: Random parameters - normal distributions for "price" and "freshness"</span></span></span>
+<span class="r-in"><span><span class="va">priors_random</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>, sd <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span>,  <span class="co"># Random price sensitivity</span></span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.2</span><span class="op">)</span>,                         <span class="co"># Fixed type preferences</span></span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span>                      <span class="co"># Random freshness preferences</span></span></span>
-<span class="r-in"><span>    mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.3</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    sd <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.2</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    dist <span class="op">=</span> <span class="st">"n"</span>,</span></span>
+<span class="r-in"><span>    mean <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,</span></span>
+<span class="r-in"><span>    sd <span class="op">=</span> <span class="fl">0.1</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    dist <span class="op">=</span> <span class="st">"n"</span>,</span></span>
+<span class="r-in"><span>    mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span>, <span class="fl">1.2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    sd <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.1</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -209,61 +211,80 @@ no-choice utility.</p>
 <span class="r-in"><span><span class="va">priors_correlated</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
 <span class="r-in"><span>  price <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    dist <span class="op">=</span> <span class="st">"n"</span>,</span></span>
 <span class="r-in"><span>    mean <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>,</span></span>
 <span class="r-in"><span>    sd <span class="op">=</span> <span class="fl">0.05</span>,</span></span>
 <span class="r-in"><span>    correlations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>      <span class="fu"><a href="cor_spec.html">cor_spec</a></span><span class="op">(</span>with <span class="op">=</span> <span class="st">"freshness"</span>, with_level <span class="op">=</span> <span class="st">"Excellent"</span>, value <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="cor_spec.html">cor_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>        with <span class="op">=</span> <span class="st">"type"</span>,</span></span>
+<span class="r-in"><span>        with_level <span class="op">=</span> <span class="st">"Honeycrisp"</span>,</span></span>
+<span class="r-in"><span>        value <span class="op">=</span> <span class="fl">0.3</span></span></span>
+<span class="r-in"><span>      <span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.3</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    sd <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.2</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    dist <span class="op">=</span> <span class="st">"n"</span>,</span></span>
+<span class="r-in"><span>    mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gala"</span> <span class="op">=</span> <span class="fl">0.1</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    sd <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gala"</span> <span class="op">=</span> <span class="fl">0.05</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Example 5: Including no-choice option</span></span></span>
-<span class="r-in"><span><span class="va">priors_no_choice</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>,</span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.8</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  no_choice <span class="op">=</span> <span class="op">-</span><span class="fl">1.5</span>  <span class="co"># Fixed no-choice utility</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Example 6: With interaction terms</span></span></span>
+<span class="r-in"><span><span class="co"># Example 5: With interaction terms</span></span></span>
 <span class="r-in"><span><span class="va">priors_interactions</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>,</span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gala"</span> <span class="op">=</span> <span class="fl">0.5</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.3</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span> <span class="op">=</span> <span class="fl">0.5</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.6</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">1.2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  interactions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="co"># Price sensitivity differs by apple type</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="int_spec.html">int_spec</a></span><span class="op">(</span>between <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"price"</span>, <span class="st">"type"</span><span class="op">)</span>, with_level <span class="op">=</span> <span class="st">"Honeycrisp"</span>, value <span class="op">=</span> <span class="op">-</span><span class="fl">0.05</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="co"># Type preferences interact with freshness</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="int_spec.html">int_spec</a></span><span class="op">(</span>between <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"type"</span>, <span class="st">"freshness"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>             level <span class="op">=</span> <span class="st">"Gala"</span>, with_level <span class="op">=</span> <span class="st">"Excellent"</span>, value <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="co"># Price sensitivity varies by apple type</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="int_spec.html">int_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      between <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"price"</span>, <span class="st">"type"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      with_level <span class="op">=</span> <span class="st">"Fuji"</span>,</span></span>
+<span class="r-in"><span>      value <span class="op">=</span> <span class="fl">0.1</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="int_spec.html">int_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      between <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"price"</span>, <span class="st">"type"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      with_level <span class="op">=</span> <span class="st">"Honeycrisp"</span>,</span></span>
+<span class="r-in"><span>      value <span class="op">=</span> <span class="fl">0.2</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="co"># Type preferences vary by freshness</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="int_spec.html">int_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      between <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"type"</span>, <span class="st">"freshness"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      level <span class="op">=</span> <span class="st">"Honeycrisp"</span>,</span></span>
+<span class="r-in"><span>      with_level <span class="op">=</span> <span class="st">"Excellent"</span>,</span></span>
+<span class="r-in"><span>      value <span class="op">=</span> <span class="fl">0.3</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Example 7: Random no-choice with different distributions</span></span></span>
-<span class="r-in"><span><span class="va">priors_random_nochoice</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="co"># Example 6: Including no-choice option</span></span></span>
+<span class="r-in"><span><span class="va">priors_nochoice_fixed</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  price <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="op">-</span><span class="fl">0.1</span>, sd <span class="op">=</span> <span class="fl">0.05</span>, dist <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.8</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  no_choice <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span>mean <span class="op">=</span> <span class="op">-</span><span class="fl">1.5</span>, sd <span class="op">=</span> <span class="fl">0.5</span>, dist <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span>, <span class="fl">1.2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  no_choice <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span> <span class="co"># Negative values make no-choice less attractive</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Example 7: Random no-choice</span></span></span>
+<span class="r-in"><span><span class="va">priors_nochoice_random</span> <span class="op">&lt;-</span> <span class="fu">cbc_priors</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>  price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,</span></span>
+<span class="r-in"><span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.6</span>, <span class="fl">1.2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  no_choice <span class="op">=</span> <span class="fu"><a href="rand_spec.html">rand_spec</a></span><span class="op">(</span>dist <span class="op">=</span> <span class="st">"n"</span>, mean <span class="op">=</span> <span class="op">-</span><span class="fl">0.5</span>, sd <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># View the priors</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">priors_fixed</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">priors_fixed</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> CBC Prior Specifications:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Continuous variable</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Levels: 1, 2, 3, 4, 5 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Levels: 1, 1.5, 2, 2.5, 3 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Fixed parameter</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Coefficient: -0.1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Coefficient: -0.25</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Categorical variable</span>
@@ -271,25 +292,25 @@ no-choice utility.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference level: Fuji</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Fixed parameter</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Gala: 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Honeycrisp: 0.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Honeycrisp: 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Categorical variable</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Levels: Poor, Average, Excellent </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference level: Poor</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Fixed parameter</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Average: -0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Excellent: 0.3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Average: 0.6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Excellent: 1.2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">priors_mixed</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">priors_random</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> CBC Prior Specifications:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Continuous variable</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Levels: 1, 2, 3, 4, 5 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Levels: 1, 1.5, 2, 2.5, 3 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Random - Normal distribution</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Mean: -0.1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     SD:   0.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Mean: -0.25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     SD:   0.1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> type:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Categorical variable</span>
@@ -297,7 +318,7 @@ no-choice utility.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference level: Fuji</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Fixed parameter</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Gala: 0.5</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Honeycrisp: 0.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Honeycrisp: 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshness:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Categorical variable</span>
@@ -305,38 +326,17 @@ no-choice utility.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Reference level: Poor</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Random - Normal distribution</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Average:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       Mean: 0.3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       SD:   0.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Mean: 0.6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       SD:   0.1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Excellent:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       Mean: 0.8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       SD:   0.3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Mean: 1.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       SD:   0.1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlation Matrix:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                    price freshnessAverage freshnessExcellent</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> price                  1                0                  0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshnessAverage       0                1                  0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> freshnessExcellent     0                0                  1</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Use priors in design generation</span></span></span>
-<span class="r-in"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_design.html">cbc_design</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
-<span class="r-in"><span>  n_alts <span class="op">=</span> <span class="fl">2</span>,</span></span>
-<span class="r-in"><span>  n_q <span class="op">=</span> <span class="fl">8</span>,</span></span>
-<span class="r-in"><span>  priors <span class="op">=</span> <span class="va">priors_mixed</span>,</span></span>
-<span class="r-in"><span>  method <span class="op">=</span> <span class="st">"stochastic"</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Stochastic design will be optimized into 1 design block, then allocated across 100 respondents</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Running 5 design searches using 3 cores...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> D-error results from all starts:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 1: 0.581115   (Best)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 4: 0.653613 </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 2: 0.661509 </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 3: 0.669253 </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 5: 0.687565 </span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Use priors in choice simulation</span></span></span>
-<span class="r-in"><span><span class="va">choices</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_choices.html">cbc_choices</a></span><span class="op">(</span><span class="va">design</span>, priors <span class="op">=</span> <span class="va">priors_mixed</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
