@@ -41,7 +41,6 @@
 #'
 #' choices_utility <- cbc_choices(design, priors = priors)
 cbc_choices <- function(design, priors = NULL) {
-
     # Validate input
     if (!inherits(design, "cbc_design")) {
         stop("design must be a cbc_design object created by cbc_design()")
@@ -67,12 +66,25 @@ cbc_choices <- function(design, priors = NULL) {
         priors_used <- TRUE
     }
 
+    # Preserve encoding attributes
+    attr(result, "is_dummy_coded") <- attr(design, "is_dummy_coded")
+    attr(result, "categorical_structure") <- attr(
+        design,
+        "categorical_structure"
+    )
+
     # Add choice simulation metadata
     design_params <- attr(design, "design_params")
     attr(result, "choice_info") <- list(
         simulation_method = simulation_method,
-        d_error = design_params$d_error_prior %||% design_params$d_error_null %||% NA,
-        n_respondents = if ("respID" %in% names(result)) max(result$respID, na.rm = TRUE) else 1,
+        d_error = design_params$d_error_prior %||%
+            design_params$d_error_null %||%
+            NA,
+        n_respondents = if ("respID" %in% names(result)) {
+            max(result$respID, na.rm = TRUE)
+        } else {
+            1
+        },
         priors_used = priors_used,
         simulated_at = Sys.time()
     )
@@ -117,7 +129,10 @@ check_priors_consistency <- function(choice_priors, design) {
         }
 
         # Also check parameter draws if both have them
-        if (!is.null(choice_priors$par_draws) && !is.null(design_priors$par_draws)) {
+        if (
+            !is.null(choice_priors$par_draws) &&
+                !is.null(design_priors$par_draws)
+        ) {
             if (!identical(choice_priors$par_draws, design_priors$par_draws)) {
                 warning(
                     "Different parameter draws used for choice simulation than for design optimization.",
@@ -130,36 +145,37 @@ check_priors_consistency <- function(choice_priors, design) {
 
 # Simulate utility-based choices using design infrastructure
 simulate_utility_based_choices <- function(design, priors) {
-
     # Extract information from design object
     design_params <- attr(design, "design_params")
     profiles <- attr(design, "profiles")
 
     if (is.null(profiles)) {
-        stop("Design object missing required profile information for choice simulation")
+        stop(
+            "Design object missing required profile information for choice simulation"
+        )
     }
 
     # Create optimization environment using the existing function
     opt_env <- setup_optimization_environment(
         profiles = profiles,
-        method = "random",            # Hard-code this so that the obsID vectors are correct
-        time_start = Sys.time(),      # Not important for choice simulation
+        method = "random", # Hard-code this so that the obsID vectors are correct
+        time_start = Sys.time(), # Not important for choice simulation
         n_alts = design_params$n_alts,
         n_q = design_params$n_q,
         n_resp = design_params$n_resp,
         n_blocks = design_params$n_blocks,
-        n_cores = 1,                  # Not used for choice simulation
-        n_start = 1,                  # Not used for choice simulation
-        max_iter = 1,                 # Not used for choice simulation
-        priors = priors,              # The new priors for choice simulation
+        n_cores = 1, # Not used for choice simulation
+        n_start = 1, # Not used for choice simulation
+        max_iter = 1, # Not used for choice simulation
+        priors = priors, # The new priors for choice simulation
         no_choice = design_params$no_choice,
         label = design_params$label,
-        remove_dominant = FALSE,      # Not needed for choice simulation
-        dominance_types = NULL,       # Not needed for choice simulation
-        dominance_threshold = 0.8,    # Not needed for choice simulation
-        max_dominance_attempts = 1,   # Not needed for choice simulation
-        randomize_questions = TRUE,   # Not used for choice simulation
-        randomize_alts = TRUE         # Not used for choice simulation
+        remove_dominant = FALSE, # Not needed for choice simulation
+        dominance_types = NULL, # Not needed for choice simulation
+        dominance_threshold = 0.8, # Not needed for choice simulation
+        max_dominance_attempts = 1, # Not needed for choice simulation
+        randomize_questions = TRUE, # Not used for choice simulation
+        randomize_alts = TRUE # Not used for choice simulation
     )
 
     # Get design matrix from the design object
@@ -182,7 +198,6 @@ simulate_utility_based_choices <- function(design, priors) {
 
 # Get design matrix from design object (use stored matrix if available)
 get_design_matrix_from_design_object <- function(design, opt_env) {
-
     # Get the regular profiles (excluding no-choice if present)
     regular_design <- design
     if (opt_env$no_choice) {
@@ -199,12 +214,15 @@ get_design_matrix_from_design_object <- function(design, opt_env) {
     # Fill matrix from profileID data
     for (obs in 1:n_questions) {
         obs_rows <- regular_design[regular_design$obsID == obs, ]
-        obs_rows <- obs_rows[order(obs_rows$altID), ]  # Ensure proper order
+        obs_rows <- obs_rows[order(obs_rows$altID), ] # Ensure proper order
 
         if (nrow(obs_rows) == n_alts) {
             design_matrix[obs, ] <- obs_rows$profileID
         } else {
-            stop(sprintf("Inconsistent number of alternatives in observation %d", obs))
+            stop(sprintf(
+                "Inconsistent number of alternatives in observation %d",
+                obs
+            ))
         }
     }
 
@@ -223,7 +241,7 @@ simulate_choices_from_probabilities <- function(probs, obsID) {
         obs_probs <- probs[obs_rows]
 
         # Normalize probabilities (in case of numerical issues)
-        obs_probs <- pmax(obs_probs, 1e-10)  # Avoid zero probabilities
+        obs_probs <- pmax(obs_probs, 1e-10) # Avoid zero probabilities
         obs_probs <- obs_probs / sum(obs_probs)
 
         # Sample one alternative based on probabilities

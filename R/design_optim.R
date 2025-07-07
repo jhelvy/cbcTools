@@ -1,10 +1,15 @@
 # D-optimal designs ----
 
 generate_optimized_design <- function(opt_env) {
-
     # Set up parallel processing
     n <- opt_env$n
-    message("Running ", n$start, " design searches using ", n$cores, " cores...")
+    message(
+        "Running ",
+        n$start,
+        " design searches using ",
+        n$cores,
+        " cores..."
+    )
 
     # Create list of different random starting designs (base designs only)
     start_designs <- lapply(1:n$start, function(i) {
@@ -15,10 +20,16 @@ generate_optimized_design <- function(opt_env) {
     if (Sys.info()[['sysname']] == 'Windows') {
         cl <- parallel::makeCluster(n$cores, "PSOCK")
         # Export necessary functions to cluster
-        parallel::clusterExport(cl, c(
-            "optimize_design", "sample_question_profiles",
-            "compute_design_d_error", "find_problematic_questions"
-        ), envir = environment())
+        parallel::clusterExport(
+            cl,
+            c(
+                "optimize_design",
+                "sample_question_profiles",
+                "compute_design_d_error",
+                "find_problematic_questions"
+            ),
+            envir = environment()
+        )
 
         results <- suppressMessages(suppressWarnings(
             parallel::parLapply(
@@ -60,7 +71,7 @@ generate_optimized_design <- function(opt_env) {
             "Start %d: %.6f %s",
             results[[idx]]$start_number,
             sorted_results[i],
-            if(idx == best_index) "  (Best)" else ""
+            if (idx == best_index) "  (Best)" else ""
         ))
     }
 
@@ -83,7 +94,6 @@ optimize_design <- function(design_matrix, opt_env) {
 
 # Stochastic optimization (keep improving until no improvement found)
 optimize_design_stochastic <- function(design_matrix, opt_env) {
-
     # Compute initial D-error
     current_d_error <- compute_design_d_error(design_matrix, opt_env)
 
@@ -97,17 +107,21 @@ optimize_design_stochastic <- function(design_matrix, opt_env) {
         # Try improving each position in the design
         for (q in 1:n$questions) {
             for (alt in 1:n$alts) {
-
                 current_profile <- design_matrix[q, alt]
 
                 # Get eligible profiles for this position
                 if (!is.null(opt_env$label_constraints)) {
                     # For labeled designs, only consider profiles from the correct label group
                     label_group_index <- alt
-                    if (label_group_index <= length(opt_env$label_constraints$groups)) {
-                        eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
+                    if (
+                        label_group_index <=
+                            length(opt_env$label_constraints$groups)
+                    ) {
+                        eligible_profiles <- opt_env$label_constraints$groups[[
+                            label_group_index
+                        ]]
                     } else {
-                        next  # Skip if label group doesn't exist
+                        next # Skip if label group doesn't exist
                     }
                 } else {
                     # Regular design: consider all profiles
@@ -115,18 +129,29 @@ optimize_design_stochastic <- function(design_matrix, opt_env) {
                 }
 
                 # Remove current profile from candidates
-                candidate_profiles <- setdiff(eligible_profiles, current_profile)
-                if (length(candidate_profiles) == 0) next
+                candidate_profiles <- setdiff(
+                    eligible_profiles,
+                    current_profile
+                )
+                if (length(candidate_profiles) == 0) {
+                    next
+                }
 
                 # Keep trying random profiles until we find one that doesn't improve
                 attempted_profiles <- c()
                 position_improved <- FALSE
 
-                while (length(attempted_profiles) < length(candidate_profiles)) {
-
+                while (
+                    length(attempted_profiles) < length(candidate_profiles)
+                ) {
                     # Sample a new profile we haven't tried yet
-                    remaining_candidates <- setdiff(candidate_profiles, attempted_profiles)
-                    if (length(remaining_candidates) == 0) break
+                    remaining_candidates <- setdiff(
+                        candidate_profiles,
+                        attempted_profiles
+                    )
+                    if (length(remaining_candidates) == 0) {
+                        break
+                    }
 
                     new_profile <- sample(remaining_candidates, 1)
                     attempted_profiles <- c(attempted_profiles, new_profile)
@@ -136,10 +161,13 @@ optimize_design_stochastic <- function(design_matrix, opt_env) {
                     test_design[q, alt] <- new_profile
 
                     # Check all constraints
-                    problem_questions <- find_problematic_questions(test_design, opt_env)
+                    problem_questions <- find_problematic_questions(
+                        test_design,
+                        opt_env
+                    )
                     if (length(problem_questions) > 0) {
                         if (q %in% problem_questions) {
-                            next  # Try next candidate - this doesn't count as "no improvement"
+                            next # Try next candidate - this doesn't count as "no improvement"
                         }
                     }
 
@@ -178,7 +206,6 @@ optimize_design_stochastic <- function(design_matrix, opt_env) {
 
 # Modified Fedorov optimization (exhaustive profile swapping)
 optimize_design_modfed <- function(design_matrix, opt_env) {
-
     # Compute initial D-error
     current_d_error <- compute_design_d_error(design_matrix, opt_env)
 
@@ -191,7 +218,6 @@ optimize_design_modfed <- function(design_matrix, opt_env) {
         # Try improving each position in the design
         for (q in 1:n$questions) {
             for (alt in 1:n$alts) {
-
                 current_profile <- design_matrix[q, alt]
                 best_profile <- current_profile
                 best_d_error <- current_d_error
@@ -200,10 +226,15 @@ optimize_design_modfed <- function(design_matrix, opt_env) {
                 if (!is.null(opt_env$label_constraints)) {
                     # For labeled designs, only consider profiles from the correct label group
                     label_group_index <- alt
-                    if (label_group_index <= length(opt_env$label_constraints$groups)) {
-                        eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
+                    if (
+                        label_group_index <=
+                            length(opt_env$label_constraints$groups)
+                    ) {
+                        eligible_profiles <- opt_env$label_constraints$groups[[
+                            label_group_index
+                        ]]
                     } else {
-                        next  # Skip if label group doesn't exist
+                        next # Skip if label group doesn't exist
                     }
                 } else {
                     # Regular design: consider all profiles
@@ -212,15 +243,19 @@ optimize_design_modfed <- function(design_matrix, opt_env) {
 
                 # Try ALL eligible profiles for this position (exhaustive search)
                 for (new_profile in eligible_profiles) {
-
-                    if (new_profile == current_profile) next
+                    if (new_profile == current_profile) {
+                        next
+                    }
 
                     # Create test design
                     test_design <- design_matrix
                     test_design[q, alt] <- new_profile
 
                     # Check all constraints
-                    problem_questions <- find_problematic_questions(test_design, opt_env)
+                    problem_questions <- find_problematic_questions(
+                        test_design,
+                        opt_env
+                    )
                     if (length(problem_questions) > 0) {
                         if (q %in% problem_questions) {
                             next
@@ -262,7 +297,6 @@ optimize_design_modfed <- function(design_matrix, opt_env) {
 
 # Coordinate Exchange Algorithm optimization (attribute-by-attribute)
 optimize_design_cea <- function(design_matrix, opt_env) {
-
     # Compute initial D-error
     current_d_error <- compute_design_d_error(design_matrix, opt_env)
 
@@ -275,7 +309,6 @@ optimize_design_cea <- function(design_matrix, opt_env) {
         # Try improving each position in the design
         for (q in 1:n$questions) {
             for (alt in 1:n$alts) {
-
                 current_profile <- design_matrix[q, alt]
                 best_profile <- current_profile
                 best_d_error <- current_d_error
@@ -287,18 +320,29 @@ optimize_design_cea <- function(design_matrix, opt_env) {
                     for (level in attr_levels) {
                         # Find profile that matches current profile except for this attribute
                         candidate_profile <- find_profile_with_attribute_change(
-                            current_profile, attr, level, opt_env
+                            current_profile,
+                            attr,
+                            level,
+                            opt_env
                         )
 
-                        if (is.null(candidate_profile) || candidate_profile == current_profile) {
+                        if (
+                            is.null(candidate_profile) ||
+                                candidate_profile == current_profile
+                        ) {
                             next
                         }
 
                         # Check label constraints
                         if (!is.null(opt_env$label_constraints)) {
                             label_group_index <- alt
-                            if (label_group_index <= length(opt_env$label_constraints$groups)) {
-                                eligible_profiles <- opt_env$label_constraints$groups[[label_group_index]]
+                            if (
+                                label_group_index <=
+                                    length(opt_env$label_constraints$groups)
+                            ) {
+                                eligible_profiles <- opt_env$label_constraints$groups[[
+                                    label_group_index
+                                ]]
                                 if (!candidate_profile %in% eligible_profiles) {
                                     next
                                 }
@@ -310,7 +354,10 @@ optimize_design_cea <- function(design_matrix, opt_env) {
                         test_design[q, alt] <- candidate_profile
 
                         # Check all constraints
-                        problem_questions <- find_problematic_questions(test_design, opt_env)
+                        problem_questions <- find_problematic_questions(
+                            test_design,
+                            opt_env
+                        )
                         if (length(problem_questions) > 0) {
                             if (q %in% problem_questions) {
                                 next
@@ -318,7 +365,10 @@ optimize_design_cea <- function(design_matrix, opt_env) {
                         }
 
                         # Compute D-error for test design
-                        test_d_error <- compute_design_d_error(test_design, opt_env)
+                        test_d_error <- compute_design_d_error(
+                            test_design,
+                            opt_env
+                        )
 
                         # Accept if improvement
                         if (test_d_error < best_d_error) {
@@ -363,12 +413,19 @@ get_attribute_levels <- function(attr, opt_env) {
 }
 
 # Find a profile that matches the current profile except for one attribute
-find_profile_with_attribute_change <- function(current_profile_id, attr, new_level, opt_env) {
+find_profile_with_attribute_change <- function(
+    current_profile_id,
+    attr,
+    new_level,
+    opt_env
+) {
     profiles <- opt_env$profiles
 
     # Get current profile
     current_profile_row <- profiles[profiles$profileID == current_profile_id, ]
-    if (nrow(current_profile_row) == 0) return(NULL)
+    if (nrow(current_profile_row) == 0) {
+        return(NULL)
+    }
 
     # Create target profile (change only the specified attribute)
     target_profile <- current_profile_row
@@ -388,17 +445,24 @@ find_profile_with_attribute_change <- function(current_profile_id, attr, new_lev
         }
     }
 
-    return(NULL)  # No matching profile found
+    return(NULL) # No matching profile found
 }
 
 # Repeat base design across respondents with block allocation (Fixed)
 # Used for optimized designs to take the base design and repeat it
 # across multiple respondents with proper block allocation and optional randomization
+# Fix for repeat_design_across_respondents function in design.R
+# Add attribute preservation at the beginning and end of the function
+
 repeat_design_across_respondents <- function(base_design, opt_env) {
     n <- opt_env$n
     if (n$resp == 1) {
-        return(base_design)  # No need to repeat
+        return(base_design) # No need to repeat
     }
+
+    # {reserve important attributes from base design
+    is_dummy_coded_attr <- attr(base_design, "is_dummy_coded")
+    categorical_structure_attr <- attr(base_design, "categorical_structure")
 
     # For multi-block designs, allocate respondents to blocks
     if (n$blocks > 1) {
@@ -422,13 +486,22 @@ repeat_design_across_respondents <- function(base_design, opt_env) {
 
                 # Randomize question order if requested
                 if (opt_env$randomize_questions) {
-                    resp_design <- randomize_question_order(resp_design, n$q, n$alts_total)
+                    resp_design <- randomize_question_order(
+                        resp_design,
+                        n$q,
+                        n$alts_total
+                    )
                 }
 
                 # Randomize alternative order if requested
                 if (opt_env$randomize_alts) {
                     # Pass the original n_alts (excluding no-choice)
-                    resp_design <- randomize_alternative_order(resp_design, opt_env$no_choice, n$q, n$alts)
+                    resp_design <- randomize_alternative_order(
+                        resp_design,
+                        opt_env$no_choice,
+                        n$q,
+                        n$alts
+                    )
                 }
 
                 full_design_list[[resp_counter]] <- resp_design
@@ -445,13 +518,22 @@ repeat_design_across_respondents <- function(base_design, opt_env) {
 
             # Randomize question order if requested
             if (opt_env$randomize_questions) {
-                resp_design <- randomize_question_order(resp_design, n$q, n$alts_total)
+                resp_design <- randomize_question_order(
+                    resp_design,
+                    n$q,
+                    n$alts_total
+                )
             }
 
             # Randomize alternative order if requested
             if (opt_env$randomize_alts) {
                 # Pass the original n_alts (excluding no-choice)
-                resp_design <- randomize_alternative_order(resp_design, opt_env$no_choice, n$q, n$alts)
+                resp_design <- randomize_alternative_order(
+                    resp_design,
+                    opt_env$no_choice,
+                    n$q,
+                    n$alts
+                )
             }
 
             full_design_list[[resp]] <- resp_design
@@ -462,7 +544,9 @@ repeat_design_across_respondents <- function(base_design, opt_env) {
     full_design <- do.call(rbind, full_design_list)
 
     # Now re-sort for potentially randomized row order
-    full_design <- full_design[order(full_design$respID, full_design$qID, full_design$altID), ]
+    full_design <- full_design[
+        order(full_design$respID, full_design$qID, full_design$altID),
+    ]
     row.names(full_design) <- NULL
 
     # Regenerate IDs based on current (potentially randomized) row order
@@ -470,7 +554,11 @@ repeat_design_across_respondents <- function(base_design, opt_env) {
     full_design$obsID <- rep(1:total_questions, each = n$alts_total)
 
     # Reorder columns
-    full_design <- full_design[,c(get_id_names(), get_var_names(full_design))]
+    full_design <- full_design[, c(get_id_names(), get_var_names(full_design))]
+
+    # Restore important attributes to the final design
+    attr(full_design, "is_dummy_coded") <- is_dummy_coded_attr
+    attr(full_design, "categorical_structure") <- categorical_structure_attr
 
     return(full_design)
 }
@@ -495,7 +583,6 @@ allocate_respondents_to_blocks <- function(n_resp, n_blocks) {
 
 # Randomize question order within a respondent's design
 randomize_question_order <- function(resp_design, n_q, n_alts) {
-
     # Create new random question order
     new_q_order <- sample(1:n_q)
 
@@ -513,7 +600,6 @@ randomize_question_order <- function(resp_design, n_q, n_alts) {
 
 # Randomize alternative order within questions (Fixed for no-choice)
 randomize_alternative_order <- function(resp_design, no_choice, n_q, n_alts) {
-
     # For each question, randomize alternative order
     for (q in 1:n_q) {
         q_rows <- which(resp_design$qID == q)
@@ -544,7 +630,6 @@ randomize_alternative_order <- function(resp_design, no_choice, n_q, n_alts) {
 }
 
 get_design_matrix_from_survey <- function(survey_design, opt_env) {
-
     # Get regular (non-no-choice) rows
     if (opt_env$no_choice) {
         regular_rows <- survey_design[survey_design$profileID != 0, ]
@@ -561,7 +646,7 @@ get_design_matrix_from_survey <- function(survey_design, opt_env) {
 
     for (i in seq_along(unique_obs)) {
         obs_data <- regular_rows[regular_rows$obsID == unique_obs[i], ]
-        obs_data <- obs_data[order(obs_data$altID), ]  # Ensure proper order
+        obs_data <- obs_data[order(obs_data$altID), ] # Ensure proper order
         design_matrix[i, ] <- obs_data$profileID[1:n_alts]
     }
 

@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
-set.seed(123)
+set.seed(1234)
 
 library(cbcTools)
 ```
@@ -51,8 +51,8 @@ Start by defining the attributes and levels for your experiment:
 
 ```{r}
 profiles <- cbc_profiles(
-  price     = c(1.0, 1.5, 2.0, 2.5, 3.0),  # Price per pound ($)
-  type      = c('Fuji', 'Gala', 'Honeycrisp'),
+  price = c(1.0, 1.5, 2.0, 2.5, 3.0), # Price per pound ($)
+  type = c('Fuji', 'Gala', 'Honeycrisp'),
   freshness = c('Poor', 'Average', 'Excellent')
 )
 
@@ -70,8 +70,8 @@ Specify your assumptions about consumer preferences based on theory, literature,
 ```{r}
 priors <- cbc_priors(
   profiles = profiles,
-  price = -0.25,          # Negative = people prefer lower prices
-  type = c(0.5, 1),       # Gala and Honeycrisp preferred over Fuji (reference)
+  price = -0.25, # Negative = people prefer lower prices
+  type = c(0.5, 1), # Gala and Honeycrisp preferred over Fuji (reference)
   freshness = c(0.6, 1.2) # Average and Excellent preferred over Poor (reference)
 )
 
@@ -82,24 +82,23 @@ priors
 
 For categorical attributes, **the reference level is set by the first level defined in `cbc_profiles()`**, which in this case is `"Fuji"` for **Type** and `"Poor"` for **Freshness**. This would imply the following for the above set of priors:
 
-- **Type**: Fuji (reference), Gala (+0.1), Honeycrisp (+0.2)
-- **Freshness**: Poor (reference), Average (+0.1), Excellent (+0.2)
+- **Type**: Fuji (reference), Gala (+0.5), Honeycrisp (+1.0)
+- **Freshness**: Poor (reference), Average (+0.6), Excellent (+1.2)
 
 See the [Specifying Priors](priors.html) article for more details and options on defining priors.
 
 ## Step 3: Generate Designs
 
-Create the set of choice questions that respondents will see:
+Create the set of choice questions that respondents will see. By default, all categorical variables are dummy-coded in the resulting design (you can convert the design back to categorical formatting with `cbc_decode()`):
 
 ```{r}
 design <- cbc_design(
   profiles = profiles,
-  method = "stochastic", # D-optimal design method
-  n_alts = 2,            # 2 alternatives per choice question
-  n_q = 6,               # 6 questions per respondent
-  n_resp = 300,          # 300 respondents
-  priors = priors        # Use our priors for optimization
-  
+  method = "stochastic", # D-optimal method
+  n_alts = 3, # 2 alternatives per choice question
+  n_q = 6, # 6 questions per respondent
+  n_resp = 300, # 300 respondents
+  priors = priors # Use our priors for optimization
 )
 
 design
@@ -125,24 +124,22 @@ See the [Generating Designs](design.html) article for more details and options o
 
 ## Step 4: Inspect Design
 
-Evaluate the quality and properties of your design:
-
-```{r}
-cbc_inspect(design)
-```
-
-Key things to look for:
+Use the `cbc_inspect()` function to evaluate the quality and properties of your design. Key things to look for:
 
 - **D-error**: Lower values indicate more efficient designs
 - **Balance**: Higher scores indicate better attribute level balance
 - **Overlap**: Lower scores indicate less attribute overlap within questions
 - **Profile usage**: Higher percentages indicate better use of available profiles
 
-See the [`cbc_inspect`](https://jhelvy.github.io/cbcTools/reference/cbc_inspect.html) for more details.
+See [`cbc_inspect`](https://jhelvy.github.io/cbcTools/reference/cbc_inspect.html) for more details.
+
+```{r}
+cbc_inspect(design)
+```
 
 ## Step 5: Simulate Choices
 
-Generate realistic choice data to test your design:
+Generate realistic choice data to test your design with the `cbc_choices()` function. By default, random choices are made, but if you provide priors with the `priors` argument, choices will be made according to the utility model defined by your priors:
 
 ```{r}
 # Simulate choices using our priors
@@ -151,7 +148,19 @@ choices <- cbc_choices(design, priors = priors)
 choices
 ```
 
-The simulated choice patterns should align with your priors - lower prices, preferred apple types, and better freshness should be chosen more often. If priors are not provided, random choices with be made.
+Taking a look at some quick summaries, you can see that the simulated choice patterns align with our priors - lower prices, preferred apple types, and better freshness should be chosen more often (not always for all levels though as there is some level of randomness involved). To do this, it's often easier to work with the design with categorical coding instead of dummy coding: 
+
+```{r}
+choices_cat <- cbc_decode(choices)
+
+# Filter for the chosen rows only
+choices_cat <- choices_cat[which(choices_cat$choice == 1), ]
+
+# Counts of choices made for each attribute level
+table(choices_cat$price)
+table(choices_cat$type)
+table(choices_cat$freshness)
+```
 
 See the [Simulating Choices](choices.html) article for more details and options on inspeciting and comparing different experiment designs.
 

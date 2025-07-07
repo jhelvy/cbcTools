@@ -22,6 +22,8 @@ knitr::opts_chunk$set(
 set.seed(123)
 ```
 
+# Generating all possible profiles
+
 The first step in designing an experiment is to define the attributes and levels for your experiment and then generate all of the `profiles` of each possible combination of those attributes and levels. 
 
 For example, let's say you're designing a conjoint experiment about apples and you want to include `price`, `type`, and `freshness` as attributes. You can obtain all of the possible profiles for these attributes using the `cbc_profiles()` function:
@@ -38,7 +40,7 @@ profiles <- cbc_profiles(
 profiles
 ```
 
-## Restricted profiles 
+# Restricted profiles
 
 Depending on the context of your survey, you may wish to eliminate some profiles before designing your conjoint survey (e.g., some profile combinations may be illogical or unrealistic). 
 

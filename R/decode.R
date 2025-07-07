@@ -37,7 +37,9 @@
 cbc_decode <- function(data) {
     # Check input class
     if (!inherits(data, c("cbc_design", "cbc_choices"))) {
-        stop("Input must be a cbc_design or cbc_choices object created by cbc_design() or cbc_choices()")
+        stop(
+            "Input must be a cbc_design or cbc_choices object created by cbc_design() or cbc_choices()"
+        )
     }
 
     # Check if data has no-choice option
