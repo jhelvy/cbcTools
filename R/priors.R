@@ -76,35 +76,40 @@
 #'
 #' # Create profiles for examples
 #' profiles <- cbc_profiles(
-#'   price = c(1, 2, 3, 4, 5),
-#'   type = c("Fuji", "Gala", "Honeycrisp"),
-#'   freshness = c("Poor", "Average", "Excellent")
+#'   price = c(1, 1.5, 2, 2.5, 3),
+#'   type = c('Fuji', 'Gala', 'Honeycrisp'),
+#'   freshness = c('Poor', 'Average', 'Excellent')
 #' )
 #'
 #' # Example 1: Simple fixed priors
 #' priors_fixed <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.1,           # Continuous: negative price sensitivity
-#'   type = c(0.5, 0.2),     # Categorical: unnamed vector (vs "Fuji" reference)
-#'   freshness = c(-0.5, 0.3) # Categorical: unnamed vector (vs "Poor" reference)
+#'   price = -0.25, # Negative = prefer lower prices
+#'   type = c(0.5, 1.0), # "Fuji" is reference level
+#'   freshness = c(0.6, 1.2) # "Poor" reference level
 #' )
 #'
 #' # Example 2: Named categorical priors (more explicit)
 #' priors_named <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.1,
-#'   type = c("Gala" = 0.5, "Honeycrisp" = 0.2),  # "Fuji" is reference
-#'   freshness = c("Average" = 0.3, "Excellent" = 0.8)  # "Poor" is reference
+#'   price = -0.25,
+#'   type = c("Gala" = 0.5, "Honeycrisp" = 1.0),  # "Fuji" is reference
+#'   freshness = c("Average" = 0.6, "Excellent" = 1.2)  # "Poor" is reference
 #' )
 #'
-#' # Example 3: Mixed fixed and random parameters
-#' priors_mixed <- cbc_priors(
+#' # Example 3: Random parameters - normal distributions for "price" and "freshness"
+#' priors_random <- cbc_priors(
 #'   profiles = profiles,
-#'   price = rand_spec(mean = -0.1, sd = 0.05),  # Random price sensitivity
-#'   type = c(0.5, 0.2),                         # Fixed type preferences
-#'   freshness = rand_spec(                      # Random freshness preferences
-#'     mean = c("Average" = 0.3, "Excellent" = 0.8),
-#'     sd = c("Average" = 0.2, "Excellent" = 0.3)
+#'   price = rand_spec(
+#'     dist = "n",
+#'     mean = -0.25,
+#'     sd = 0.1
+#'   ),
+#'   type = c(0.5, 1.0),
+#'   freshness = rand_spec(
+#'     dist = "n",
+#'     mean = c(0.6, 1.2),
+#'     sd = c(0.1, 0.1)
 #'   )
 #' )
 #'
@@ -112,68 +117,74 @@
 #' priors_correlated <- cbc_priors(
 #'   profiles = profiles,
 #'   price = rand_spec(
+#'     dist = "n",
 #'     mean = -0.1,
 #'     sd = 0.05,
 #'     correlations = list(
-#'       cor_spec(with = "freshness", with_level = "Excellent", value = 0.3)
+#'       cor_spec(
+#'         with = "type",
+#'         with_level = "Honeycrisp",
+#'         value = 0.3
+#'       )
 #'     )
 #'   ),
-#'   type = c(0.5, 0.2),
-#'   freshness = rand_spec(
-#'     mean = c("Average" = 0.3, "Excellent" = 0.8),
-#'     sd = c("Average" = 0.2, "Excellent" = 0.3)
-#'   )
+#'   type = rand_spec(
+#'     dist = "n",
+#'     mean = c("Gala" = 0.1, "Honeycrisp" = 0.2),
+#'     sd = c("Gala" = 0.05, "Honeycrisp" = 0.1)
+#'   ),
+#'   freshness = c(0.1, 0.2)
 #' )
 #'
-#' # Example 5: Including no-choice option
-#' priors_no_choice <- cbc_priors(
-#'   profiles = profiles,
-#'   price = -0.1,
-#'   type = c(0.5, 0.2),
-#'   freshness = c(0.3, 0.8),
-#'   no_choice = -1.5  # Fixed no-choice utility
-#' )
-#'
-#' # Example 6: With interaction terms
+#' # Example 5: With interaction terms
 #' priors_interactions <- cbc_priors(
 #'   profiles = profiles,
-#'   price = -0.1,
-#'   type = c("Gala" = 0.5, "Honeycrisp" = 0.2),
-#'   freshness = c("Average" = 0.3, "Excellent" = 0.8),
+#'   price = -0.25,
+#'   type = c("Fuji" = 0.5, "Honeycrisp" = 1.0),
+#'   freshness = c("Average" = 0.6, "Excellent" = 1.2),
 #'   interactions = list(
-#'     # Price sensitivity differs by apple type
-#'     int_spec(between = c("price", "type"), with_level = "Honeycrisp", value = -0.05),
-#'     # Type preferences interact with freshness
-#'     int_spec(between = c("type", "freshness"),
-#'              level = "Gala", with_level = "Excellent", value = 0.2)
+#'     # Price sensitivity varies by apple type
+#'     int_spec(
+#'       between = c("price", "type"),
+#'       with_level = "Fuji",
+#'       value = 0.1
+#'     ),
+#'     int_spec(
+#'       between = c("price", "type"),
+#'       with_level = "Honeycrisp",
+#'       value = 0.2
+#'     ),
+#'     # Type preferences vary by freshness
+#'     int_spec(
+#'       between = c("type", "freshness"),
+#'       level = "Honeycrisp",
+#'       with_level = "Excellent",
+#'       value = 0.3
+#'     )
 #'   )
 #' )
 #'
-#' # Example 7: Random no-choice with different distributions
-#' priors_random_nochoice <- cbc_priors(
+#' # Example 6: Including no-choice option
+#' priors_nochoice_fixed <- cbc_priors(
 #'   profiles = profiles,
-#'   price = rand_spec(mean = -0.1, sd = 0.05, dist = "n"),
-#'   type = c(0.5, 0.2),
-#'   freshness = c(0.3, 0.8),
-#'   no_choice = rand_spec(mean = -1.5, sd = 0.5, dist = "n")
+#'   price = -0.25,
+#'   type = c(0.5, 1.0),
+#'   freshness = c(0.6, 1.2),
+#'   no_choice = -0.5 # Negative values make no-choice less attractive
+#' )
+#'
+#' # Example 7: Random no-choice
+#' priors_nochoice_random <- cbc_priors(
+#'   profiles = profiles,
+#'   price = -0.25,
+#'   type = c(0.5, 1.0),
+#'   freshness = c(0.6, 1.2),
+#'   no_choice = rand_spec(dist = "n", mean = -0.5, sd = 0.2)
 #' )
 #'
 #' # View the priors
-#' print(priors_fixed)
-#' print(priors_mixed)
-#'
-#' # Use priors in design generation
-#' design <- cbc_design(
-#'   profiles = profiles,
-#'   n_alts = 2,
-#'   n_q = 8,
-#'   priors = priors_mixed,
-#'   method = "stochastic"
-#' )
-#'
-#' # Use priors in choice simulation
-#' choices <- cbc_choices(design, priors = priors_mixed)
-#' @export
+#' priors_fixed
+#' priors_random
 cbc_priors <- function(
     profiles,
     no_choice = NULL,
