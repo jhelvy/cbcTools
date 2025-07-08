@@ -22,6 +22,7 @@
 #' @param max_dominance_attempts Maximum attempts to replace dominant choice sets. Defaults to 50.
 #' @param max_iter Maximum iterations for optimized designs. Defaults to 50
 #' @param n_start Number of random starts for optimized designs. Defaults to 5
+#' @param include_probs Include predicted probabilities in resulting design? Requires `priors`. Defaults to `FALSE`
 #'
 #' @details
 #' ## Design Methods
@@ -94,7 +95,8 @@ cbc_design <- function(
     dominance_threshold = 0.8,
     max_dominance_attempts = 50,
     max_iter = 50,
-    n_start = 5
+    n_start = 5,
+    include_probs = FALSE
 ) {
     time_start <- Sys.time()
 
@@ -114,16 +116,9 @@ cbc_design <- function(
         remove_dominant,
         dominance_types,
         dominance_threshold,
-        max_dominance_attempts
+        max_dominance_attempts,
+        include_probs
     )
-
-    # Override randomize_alts for labeled designs
-    if (!is.null(label) && randomize_alts) {
-        message(
-            "Note: randomize_alts set to FALSE for labeled designs to preserve label structure"
-        )
-        randomize_alts <- FALSE
-    }
 
     # Set up the optimization environment
     opt_env <- setup_optimization_environment(
@@ -145,42 +140,24 @@ cbc_design <- function(
         dominance_threshold,
         max_dominance_attempts,
         randomize_questions,
-        randomize_alts
+        randomize_alts,
+        include_probs
     )
 
-    if (method %in% get_design_methods_other()) {
-        # Override any provided blocks - these methods always use 1 block
-        if (n_blocks != 1) {
-            message(
-                "For '",
-                method,
-                "' designs, n_blocks is ignored and set to 1"
-            )
-            n_blocks <- 1
-        }
-        if (method == "random") {
-            design_result <- generate_random_design(opt_env)
-        } else {
-            design_result <- generate_greedy_design(opt_env)
-        }
-        final_design <- construct_final_design(
-            design_result$design_matrix,
-            opt_env
-        )
-    } else if (method %in% c("stochastic", "modfed", "cea")) {
-        # Optimized designs: create optimized base design, then repeat across respondents
-        design_result <- generate_optimized_design(opt_env)
-        design_matrix <- design_result$design_matrix
+    design_result <- generate_design(opt_env)
 
-        # Convert base design to full design
-        base_design <- construct_final_design(design_matrix, opt_env)
-
-        # Repeat and randomize across respondents
-        final_design <- repeat_design_across_respondents(base_design, opt_env)
-    }
+    # Construct the final design as a dummy-coded data frame
+    final_design <- construct_final_design(
+        design_result$design_matrix,
+        opt_env
+    )
 
     # Add metadata and return
-    final <- finalize_design_object(final_design, design_result, opt_env)
+    final <- finalize_design_object(
+        final_design,
+        design_result,
+        opt_env
+    )
 
     return(final)
 }
@@ -205,8 +182,36 @@ setup_optimization_environment <- function(
     dominance_threshold,
     max_dominance_attempts,
     randomize_questions,
-    randomize_alts
+    randomize_alts,
+    include_probs
 ) {
+    # Method logic vars
+    method_random <- method == "random"
+    method_greedy <- method %in% get_methods_greedy()
+    method_optimal <- method %in% get_methods_optimal()
+
+    # OVERRIDES
+
+    # Override randomize_alts for labeled designs
+    if (!is.null(label) && randomize_alts) {
+        message(
+            "Note: randomize_alts set to FALSE for labeled designs to preserve label structure"
+        )
+        randomize_alts <- FALSE
+    }
+
+    if (!method_optimal) {
+        # Blocks only apply to D-optimal designs
+        if (n_blocks != 1) {
+            message(
+                "For '",
+                method,
+                "' designs, n_blocks is ignored and set to 1"
+            )
+            n_blocks <- 1
+        }
+    }
+
     # Get attribute names (excluding profileID)
     attr_names <- setdiff(names(profiles), "profileID")
 
@@ -347,7 +352,11 @@ setup_optimization_environment <- function(
         blocks = n_blocks,
         start = n_start,
         cores = set_num_cores(n_cores),
-        questions = ifelse(method == 'random', n_q * n_resp, n_q * n_blocks),
+        questions = ifelse(
+            method %in% get_methods_optimal(),
+            n_q * n_blocks,
+            n_q * n_resp
+        ),
         params = ncol(X_matrix), # Use main matrix for parameter count
         draws = n_draws,
         profiles = nrow(profiles),
@@ -368,6 +377,10 @@ setup_optimization_environment <- function(
         profiles = profiles_aligned,
         priors = priors,
         method = method,
+        # Store method-specific logic vars
+        method_random = method_random,
+        method_greedy = method_greedy,
+        method_optimal = method_optimal,
         time_start = time_start,
         has_priors = has_priors,
         has_interactions = has_interactions,
@@ -392,7 +405,8 @@ setup_optimization_environment <- function(
         dominance_threshold = dominance_threshold,
         available_profile_ids = profiles$profileID,
         randomize_questions = randomize_questions,
-        randomize_alts = randomize_alts
+        randomize_alts = randomize_alts,
+        include_probs = include_probs
     ))
 }
 
@@ -471,6 +485,15 @@ align_profiles_with_priors <- function(profiles, priors, attr_names) {
     }
 
     return(profiles_aligned)
+}
+
+generate_design <- function(opt_env) {
+    if (opt_env$method_random) {
+        return(generate_random_design(opt_env))
+    } else if (opt_env$method_greedy) {
+        return(generate_greedy_design(opt_env))
+    }
+    return(generate_optimized_design(opt_env))
 }
 
 # Generate a random design using profileID sampling with matrix operations
@@ -723,11 +746,11 @@ construct_final_design <- function(design_matrix, opt_env) {
 
     # Initialize design data frame
     design <- data.frame(profileID = as.vector(t(design_matrix)))
-    if (opt_env$method %in% get_design_methods_other()) {
-        design <- add_metadata_random(design, n$resp, n$alts_total, n$q)
+    if (!opt_env$method_optimal) {
+        design <- add_metadata(design, n$resp, n$alts_total, n$q)
         id_cols <- c("profileID", "respID", "qID", "altID", "obsID")
     } else {
-        design <- add_metadata_other(design, n$blocks, n$alts_total, n$q)
+        design <- add_metadata_optimal(design, n$blocks, n$alts_total, n$q)
         id_cols <- c("profileID", "blockID", "qID", "altID", "obsID")
     }
 
@@ -763,6 +786,11 @@ construct_final_design <- function(design_matrix, opt_env) {
     design <- design[order(design$obsID, design$altID), ]
     row.names(design) <- NULL
 
+    # Compute and add probabilities if desired
+    if (opt_env$include_probs) {
+        design$prob <- get_probs(design_matrix, opt_env)
+    }
+
     # Store categorical structure for potential decoding
     categorical_structure <- get_categorical_structure_from_profiles(
         opt_env$profiles,
@@ -771,10 +799,15 @@ construct_final_design <- function(design_matrix, opt_env) {
     attr(design, "categorical_structure") <- categorical_structure
     attr(design, "is_dummy_coded") <- TRUE
 
+    if (opt_env$method_optimal) {
+        # Repeat and randomize across respondents
+        design <- repeat_design_across_respondents(design, opt_env)
+    }
+
     return(design)
 }
 
-add_metadata_random <- function(design, n_resp, n_alts, n_q) {
+add_metadata <- function(design, n_resp, n_alts, n_q) {
     design$respID <- rep(seq(n_resp), each = n_alts * n_q)
     design$qID <- rep(rep(seq(n_q), each = n_alts), n_resp)
     design$altID <- rep(seq(n_alts), n_resp * n_q)
@@ -782,7 +815,7 @@ add_metadata_random <- function(design, n_resp, n_alts, n_q) {
     return(design)
 }
 
-add_metadata_other <- function(design, n_block, n_alts, n_q) {
+add_metadata_optimal <- function(design, n_block, n_alts, n_q) {
     design$blockID <- rep(seq(n_block), each = n_alts * n_q)
     design$qID <- rep(rep(seq(n_q), each = n_alts), n_block)
     design$altID <- rep(seq(n_alts), n_block * n_q)
@@ -944,7 +977,7 @@ finalize_design_object <- function(design, design_result, opt_env) {
 
     # Add D-error information (both null and prior-based)
 
-    if (method %in% c("stochastic", "modfed", "cea")) {
+    if (opt_env$method_optimal) {
         # For optimized designs, compute D-errors
 
         # Always compute null D-error (no priors, equal probabilities)

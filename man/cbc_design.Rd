@@ -22,7 +22,8 @@ cbc_design(
   dominance_threshold = 0.8,
   max_dominance_attempts = 50,
   max_iter = 50,
-  n_start = 5
+  n_start = 5,
+  include_probs = FALSE
 )
 }
 \arguments{
@@ -62,6 +63,8 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 \item{max_iter}{Maximum iterations for optimized designs. Defaults to 50}
 
 \item{n_start}{Number of random starts for optimized designs. Defaults to 5}
+
+\item{include_probs}{Include predicted probabilities in resulting design? Requires \code{priors}. Defaults to \code{FALSE}}
 }
 \value{
 A \code{cbc_design} object containing the experimental design
