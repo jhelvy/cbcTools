@@ -2,15 +2,18 @@
 
 # cbcTools 0.6.0
 
-- Major revisions made to `cbc_design()` function.
-  - New `"efficient"` method added for obtaining D-efficient designs.
-  - Old methods removed: `"full"`, `"orthogonal"`, `"dopt"`, `"CEA"`, and `"Modfed"`. Now there are only `"random"` and `"efficient"` designs
-  - Bayesian D-efficient designs are now created by setting `method = "efficient"` and a set of priors with a diagonal or full covariance matrix.
-  - New `randomize = TRUE` argument in `cbc_design()` to randomize the order of questions and alternatives across respondents, addresses #29.
-- New `cbc_d_error()` function added to obtain the D-error of a given design.
-- New `cbc_priors()` function for defining a variety of prior model coefficients.
-- Coefficients for levels of an attribute in cbc_priors can be named vectors, addressing #24.
-- New `cbc_levels()` function for viewing a summary of the levels in a design.
+- Major overhaul of the package with breaking changes.
+- New function, `cbc_priors()``. This allows users to specify a set of priors according to a wide variety of model specifications, including random parameters (with or without correlated heterogeneity), interactions, and "no choice" options. These priors can then be used to create designs and simulate choices.
+- Coefficients for levels of an attribute in `cbc_priors()` can be named vectors, addressing #24.
+- Major overhaul of the `cbc_design()` function, with entirely new algorithms for searching for designs
+  - One is "random", three are frequency-based ("greedy") algorithms, and three more are d-error minimizing algorithms.
+  - Old methods removed: `"full"`, `"orthogonal"`, `"dopt"`, `"CEA"`, and `"Modfed"`
+  - Bayesian D-efficient designs are now created based on the priors provided. With random parameters in the priors, a Bayesian D-efficient design will be created.
+  - New support for removing dominant alternatives from designs.
+  - New support for randomizing the order of questions and alternatives across respondents, addresses #29.
+  - New `cbc_inspect()` function for comprehensively inspecting designs.
+  - New `cbc_compare()` function for comparing designs.
+  - New functionality in `cbc_power()` for computing visualizing power analyses.
 
 # cbcTools 0.5.2
 
