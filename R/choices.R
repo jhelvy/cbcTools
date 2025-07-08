@@ -175,7 +175,8 @@ simulate_utility_based_choices <- function(design, priors) {
         dominance_threshold = 0.8, # Not needed for choice simulation
         max_dominance_attempts = 1, # Not needed for choice simulation
         randomize_questions = TRUE, # Not used for choice simulation
-        randomize_alts = TRUE # Not used for choice simulation
+        randomize_alts = TRUE, # Not used for choice simulation
+        include_probs = FALSE # Not used for choice simulation
     )
 
     # Get design matrix from the design object
