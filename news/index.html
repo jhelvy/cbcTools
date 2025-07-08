@@ -44,16 +44,20 @@
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.6.0" id="cbctools-060">cbcTools 0.6.0<a class="anchor" aria-label="anchor" href="#cbctools-060"></a></h2>
-<ul><li>Major revisions made to <code><a href="../reference/cbc_design.html">cbc_design()</a></code> function.
-<ul><li>New <code>"efficient"</code> method added for obtaining D-efficient designs.</li>
-<li>Old methods removed: <code>"full"</code>, <code>"orthogonal"</code>, <code>"dopt"</code>, <code>"CEA"</code>, and <code>"Modfed"</code>. Now there are only <code>"random"</code> and <code>"efficient"</code> designs</li>
-<li>Bayesian D-efficient designs are now created by setting <code>method = "efficient"</code> and a set of priors with a diagonal or full covariance matrix.</li>
-<li>New <code>randomize = TRUE</code> argument in <code><a href="../reference/cbc_design.html">cbc_design()</a></code> to randomize the order of questions and alternatives across respondents, addresses <a href="https://github.com/jhelvy/cbcTools/issues/29" class="external-link">#29</a>.</li>
+<ul><li>Major overhaul of the package with breaking changes.</li>
+<li>New function, `cbc_priors()``. This allows users to specify a set of priors according to a wide variety of model specifications, including random parameters (with or without correlated heterogeneity), interactions, and “no choice” options. These priors can then be used to create designs and simulate choices.</li>
+<li>Coefficients for levels of an attribute in <code><a href="../reference/cbc_priors.html">cbc_priors()</a></code> can be named vectors, addressing <a href="https://github.com/jhelvy/cbcTools/issues/24" class="external-link">#24</a>.</li>
+<li>Major overhaul of the <code><a href="../reference/cbc_design.html">cbc_design()</a></code> function, with entirely new algorithms for searching for designs
+<ul><li>One is “random”, three are frequency-based (“greedy”) algorithms, and three more are d-error minimizing algorithms.</li>
+<li>Old methods removed: <code>"full"</code>, <code>"orthogonal"</code>, <code>"dopt"</code>, <code>"CEA"</code>, and <code>"Modfed"</code>
+</li>
+<li>Bayesian D-efficient designs are now created based on the priors provided. With random parameters in the priors, a Bayesian D-efficient design will be created.</li>
+<li>New support for removing dominant alternatives from designs.</li>
+<li>New support for randomizing the order of questions and alternatives across respondents, addresses <a href="https://github.com/jhelvy/cbcTools/issues/29" class="external-link">#29</a>.</li>
+<li>New <code><a href="../reference/cbc_inspect.html">cbc_inspect()</a></code> function for comprehensively inspecting designs.</li>
+<li>New <code><a href="../reference/cbc_compare.html">cbc_compare()</a></code> function for comparing designs.</li>
+<li>New functionality in <code><a href="../reference/cbc_power.html">cbc_power()</a></code> for computing visualizing power analyses.</li>
 </ul></li>
-<li>New <code>cbc_d_error()</code> function added to obtain the D-error of a given design.</li>
-<li>New <code><a href="../reference/cbc_priors.html">cbc_priors()</a></code> function for defining a variety of prior model coefficients.</li>
-<li>Coefficients for levels of an attribute in cbc_priors can be named vectors, addressing <a href="https://github.com/jhelvy/cbcTools/issues/24" class="external-link">#24</a>.</li>
-<li>New <code>cbc_levels()</code> function for viewing a summary of the levels in a design.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.2" id="cbctools-052">cbcTools 0.5.2<a class="anchor" aria-label="anchor" href="#cbctools-052"></a></h2>
