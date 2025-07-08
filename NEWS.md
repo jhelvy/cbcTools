@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.6.1
+
+- Added `include_probs` argument to `cbc_design()`, which includes predicted choice probabilities in the returned design data frame if `include_probs = TRUE`. Defaults to `FALSE`.
+
 # cbcTools 0.6.0
 
 - Major overhaul of the package with breaking changes.
