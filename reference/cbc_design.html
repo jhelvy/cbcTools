@@ -67,7 +67,8 @@ using multiple design approaches including optimization and frequency-based meth
 <span>  dominance_threshold <span class="op">=</span> <span class="fl">0.8</span>,</span>
 <span>  max_dominance_attempts <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  n_start <span class="op">=</span> <span class="fl">5</span></span>
+<span>  n_start <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  include_probs <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -146,6 +147,10 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 
 <dt id="arg-n-start">n_start<a class="anchor" aria-label="anchor" href="#arg-n-start"></a></dt>
 <dd><p>Number of random starts for optimized designs. Defaults to 5</p></dd>
+
+
+<dt id="arg-include-probs">include_probs<a class="anchor" aria-label="anchor" href="#arg-include-probs"></a></dt>
+<dd><p>Include predicted probabilities in resulting design? Requires <code>priors</code>. Defaults to <code>FALSE</code></p></dd>
 
 </dl></div>
     <div class="section level2">
