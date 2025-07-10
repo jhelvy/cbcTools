@@ -196,8 +196,7 @@ The `power_summary` data frame contains:
 
 Plot power curves to visualize the relationship between sample size and precision:
 
-```{r}
-#| fig.alt = "Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters."
+```{r, fig.alt = "Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters."}
 
 # Plot power curves
 plot(
@@ -207,8 +206,7 @@ plot(
 )
 ```
 
-```{r}
-#| fig.alt = "Standard error chart showing decreasing standard errors as sample size increases from 100 to 600 respondents for 5 parameters. All parameters show the expected decline in standard error with larger samples, with price having consistently lower standard errors than the freshness and type parameters."
+```{r, fig.alt = "Standard error chart showing decreasing standard errors as sample size increases from 100 to 600 respondents for 5 parameters. All parameters show the expected decline in standard error with larger samples, with price having consistently lower standard errors than the freshness and type parameters."}
 
 # Plot standard error curves
 plot(
@@ -335,8 +333,7 @@ power_optimal <- cbc_power(
 )
 ```
 
-```{r}
-#| fig.alt = "Power comparison across three experimental designs (Optimal, Random, Shortcut) shown in separate panels for 5 parameters. Each panel shows power curves with an 80% power threshold line. The Shortcut design generally performs best, followed by Optimal, then Random designs. Some parameters like freshnessExcellent and typeHoneycrisp achieve high power quickly across all designs, while others like typeGala show more variation between design methods."
+```{r, fig.alt = "Power comparison across three experimental designs (Optimal, Random, Shortcut) shown in separate panels for 5 parameters. Each panel shows power curves with an 80% power threshold line. The Shortcut design generally performs best, followed by Optimal, then Random designs. Some parameters like freshnessExcellent and typeHoneycrisp achieve high power quickly across all designs, while others like typeGala show more variation between design methods."}
 
 # Compare power curves
 plot_compare_power(

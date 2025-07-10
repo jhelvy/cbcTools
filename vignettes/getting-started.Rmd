@@ -175,8 +175,7 @@ power
 
 You can easily visualize the results as well using the `plot()` function:
 
-```{r}
-#| fig.alt = "Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters."
+```{r, fig.alt = "Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters."}
 
 plot(power, type = "power", power_threshold = 0.9)
 ```

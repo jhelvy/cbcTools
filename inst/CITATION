@@ -1,5 +1,5 @@
 bibentry(bibtype = "Manual",
-  title        = "{cbcTools}: Design and Evaluate Choice-Based Conjoint Survey Experiments",
+  title        = "{cbcTools}: Design and Analyze Choice-Based Conjoint Experiments",
   author       = person(given = c("John", "Paul"), family = "Helveston", email = "john.helveston@gmail.com"),
   year         = "2023",
   note     = "R package",
