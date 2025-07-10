@@ -1,5 +1,5 @@
 Package: cbcTools
-Title: Choice-Based Conjoint Experiment Design Generation and Power Evaluation in R
+Title: Choice-Based Conjoint Experiment Design Generation and Power Evaluation
 Version: 0.6.1
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
@@ -8,7 +8,7 @@ Authors@R: c(
            role    = c("cre", "aut", "cph"),
            email   = "john.helveston@gmail.com",
            comment = c(ORCID = "0000-0002-2657-9191")))
-Description: Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Choice simulation and model estimation in power analyses are handled using the 'logitr' package <doi:10.18637/jss.v105.i10>.
+Description: Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Bayesian D-efficient designs using the 'cea' and 'modfed' methods are obtained using the 'idefix' package by Traets et al (2020) <doi:10.18637/jss.v096.i03>. Choice simulation and model estimation in power analyses are handled using the 'logitr' package by Helveston (2023) <doi:10.18637/jss.v105.i10>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
