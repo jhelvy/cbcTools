@@ -4,7 +4,7 @@
 #' using multiple design approaches including optimization and frequency-based methods.
 #'
 #' @param profiles A data frame of class `cbc_profiles` created using `cbc_profiles()`
-#' @param method Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"
+#' @param method Choose the design method: "random", "shortcut", "minoverlap", "balanced", "stochastic", "modfed", or "cea". Defaults to "random"
 #' @param priors A `cbc_priors` object created by `cbc_priors()`, or NULL for random/shortcut designs
 #' @param n_alts Number of alternatives per choice question
 #' @param n_q Number of questions per respondent (or per block)
@@ -23,8 +23,8 @@
 #' @param max_iter Maximum iterations for optimized designs. Defaults to 50
 #' @param n_start Number of random starts for optimized designs. Defaults to 5
 #' @param include_probs Include predicted probabilities in resulting design? Requires `priors`. Defaults to `FALSE`
-#' @param use_idefix If `TRUE`, the idefix package will be used to find optimal designs, which is faster.
-#' Only valid with `"cea"` and `"modfed"` methods. Defaults to `TRUE`.
+#' @param use_idefix If `TRUE` (the default), the idefix package will be used to find optimal designs, which is faster.
+#' Only valid with `"cea"` and `"modfed"` methods.
 #'
 #' @details
 #' ## Design Methods
@@ -32,10 +32,12 @@
 #' The `method` argument determines the design approach used:
 #'
 #' - `"random"`: Creates designs by randomly sampling profiles for each respondent independently
+#' - `"shortcut"`: Frequency-based greedy algorithm that balances attribute level usage
+#' - `"minoverlap"`: Greedy algorithm that minimizes attribute overlap within choice sets
+#' - `"balanced"`: Greedy algorithm that maximizes overall attribute balance across the design
 #' - `"stochastic"`: Stochastic profile swapping with D-error optimization (first improvement found)
 #' - `"modfed"`: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
 #' - `"cea"`: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
-#' - `"shortcut"`: Frequency-based greedy algorithm that balances attribute level usage
 #'
 #' ## Method Compatibility
 #'
@@ -62,21 +64,24 @@
 #' ## Method Details
 #'
 #' ### Random Method
+#'
 #' Creates designs where each respondent sees completely independent, randomly generated choice sets.
 #'
+#' ### Greedy Methods (shortcut, minoverlap, balanced)
+#'
+#' These methods use frequency-based algorithms that make locally optimal choices:
+#' - **Shortcut**: Balances attribute level usage within questions and across the overall design
+#' - **Minoverlap**: Minimizes attribute overlap within choice sets while allowing some overlap for balance
+#' - **Balanced**: Maximizes overall attribute balance, prioritizing level distribution over overlap reduction
+#'
+#' These methods provide good level balance without requiring priors or D-error calculations and offer fast execution suitable for large designs.
+#'
 #' ### D-Error Optimization Methods (stochastic, modfed, cea)
+#'
 #' These methods minimize D-error to create statistically efficient designs:
 #' - **Stochastic**: Random profile sampling with first improvement acceptance
 #' - **Modfed**: Exhaustive profile testing for best improvement (slower but thorough)
 #' - **CEA**: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
-#'
-#' ### Shortcut Method
-#'
-#' Uses a frequency-based greedy algorithm that:
-#' - Tracks attribute level usage within questions and across the overall design
-#' - Selects profiles with least frequently used attribute levels
-#' - Provides good level balance without requiring priors or D-error calculations
-#' - Fast execution suitable for large designs
 #'
 #' ## idefix Integration
 #'
@@ -86,10 +91,11 @@
 #' problems. The idefix package must be installed separately.
 #'
 #' Key benefits of idefix integration:
-#''
+#'
 #' - Faster optimization algorithms with C++ implementation
 #' - Better handling of large candidate sets
 #' - Optimized parallel processing
+#' - Advanced blocking capabilities for multi-block designs
 #'
 #' @return A `cbc_design` object containing the experimental design
 #' @export
