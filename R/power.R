@@ -200,7 +200,7 @@ estimate_models_sequential <- function(data_list, outcome, obsID, pars, randPars
             models[[i]]$sample_size <- unique(data_list[[i]]$sample_size)
         }, error = function(e) {
             warning("Model ", i, " failed to converge: ", e$message)
-            models[[i]] <<- NULL
+            models[[i]] <- NULL
         })
     }
 

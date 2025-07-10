@@ -1032,19 +1032,6 @@ get_correlation_parameter_names <- function(attr, level, attrs) {
     }
 }
 
-# Set correlation values in matrix
-set_correlation_values <- function(cor_mat, rows, cols, value) {
-    for (row in rows) {
-        for (col in cols) {
-            if (row != col) {
-                # Don't set correlation with self
-                cor_mat[row, col] <<- value
-                cor_mat[col, row] <<- value
-            }
-        }
-    }
-}
-
 # Generate parameter draws for Bayesian analysis
 generate_parameter_draws <- function(
     codedParNames,
