@@ -150,9 +150,9 @@ These methods minimize D-error to create statistically efficient designs:
 \subsection{idefix Integration}{
 
 When \code{use_idefix = TRUE} (the default), the function leverages the highly optimized
-algorithms from the idefix package for CEA and Modfed design generation.
+algorithms from the idefix package for 'cea' and 'modfed' design generation methods.
 This can provide significant speed improvements, especially for larger
-problems. The idefix package must be installed separately.
+problems.
 
 Key benefits of idefix integration:
 \itemize{

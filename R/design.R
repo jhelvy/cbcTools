@@ -86,9 +86,9 @@
 #' ## idefix Integration
 #'
 #' When `use_idefix = TRUE` (the default), the function leverages the highly optimized
-#' algorithms from the idefix package for CEA and Modfed design generation.
+#' algorithms from the idefix package for 'cea' and 'modfed' design generation methods.
 #' This can provide significant speed improvements, especially for larger
-#' problems. The idefix package must be installed separately.
+#' problems.
 #'
 #' Key benefits of idefix integration:
 #'
@@ -122,6 +122,11 @@ cbc_design <- function(
     use_idefix = TRUE
 ) {
     time_start <- Sys.time()
+
+    # Override use_idefix if method doesn't support it
+    if (use_idefix && !method %in% c("cea", "modfed")) {
+        use_idefix <- FALSE
+    }
 
     # Validate inputs
     validate_design_inputs(
