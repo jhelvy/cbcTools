@@ -999,39 +999,6 @@ get_attribute_parameter_names <- function(attr, attrs) {
     }
 }
 
-# Determine which matrix indices should be correlated
-determine_correlation_indices <- function(attr1, attr2, cor, attrs) {
-    rows <- get_correlation_parameter_names(attr1, cor$level, attrs)
-    cols <- get_correlation_parameter_names(attr2, cor$with_level, attrs)
-    return(list(rows = rows, cols = cols))
-}
-
-# Get parameter names for correlation (handles continuous vs categorical)
-get_correlation_parameter_names <- function(attr, level, attrs) {
-    if (attrs[[attr]]$continuous) {
-        if (!is.null(level)) {
-            stop(sprintf(
-                "Cannot specify level for continuous attribute '%s'",
-                attr
-            ))
-        }
-        return(attr)
-    } else {
-        if (!is.null(level)) {
-            if (!level %in% names(attrs[[attr]]$mean)) {
-                stop(sprintf(
-                    "Invalid level '%s' for attribute '%s'",
-                    level,
-                    attr
-                ))
-            }
-            return(paste0(attr, ".", level))
-        } else {
-            return(paste0(attr, ".", names(attrs[[attr]]$mean)))
-        }
-    }
-}
-
 # Generate parameter draws for Bayesian analysis
 generate_parameter_draws <- function(
     codedParNames,
@@ -1498,56 +1465,4 @@ matches_interaction_spec <- function(param_name, param_parts, int_spec, attrs) {
     }
 
     return(FALSE)
-}
-
-# Get all possible interaction parameter names that logitr might create
-get_expected_interaction_params <- function(interactions, attrs) {
-    if (is.null(interactions)) {
-        return(character(0))
-    }
-
-    expected_params <- c()
-
-    for (int in interactions) {
-        attr1 <- int$attr1
-        attr2 <- int$attr2
-
-        # Generate all possible parameter names for this interaction
-        if (attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
-            # continuous * continuous: one parameter
-            expected_params <- c(
-                expected_params,
-                paste0(attr1, ":", attr2),
-                paste0(attr2, ":", attr1)
-            )
-        } else if (attrs[[attr1]]$continuous && !attrs[[attr2]]$continuous) {
-            # continuous * categorical: one parameter per categorical level
-            levels2 <- names(attrs[[attr2]]$mean)
-            expected_params <- c(
-                expected_params,
-                paste0(attr1, ":", attr2, levels2)
-            )
-        } else if (!attrs[[attr1]]$continuous && attrs[[attr2]]$continuous) {
-            # categorical * continuous: one parameter per categorical level
-            levels1 <- names(attrs[[attr1]]$mean)
-            expected_params <- c(
-                expected_params,
-                paste0(attr1, levels1, ":", attr2)
-            )
-        } else {
-            # categorical * categorical: one parameter per level combination
-            levels1 <- names(attrs[[attr1]]$mean)
-            levels2 <- names(attrs[[attr2]]$mean)
-            for (l1 in levels1) {
-                for (l2 in levels2) {
-                    expected_params <- c(
-                        expected_params,
-                        paste0(attr1, l1, ":", attr2, l2)
-                    )
-                }
-            }
-        }
-    }
-
-    return(unique(expected_params))
 }

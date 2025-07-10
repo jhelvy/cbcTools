@@ -628,27 +628,3 @@ randomize_alternative_order <- function(resp_design, no_choice, n_q, n_alts) {
 
     return(resp_design)
 }
-
-get_design_matrix_from_survey <- function(survey_design, opt_env) {
-    # Get regular (non-no-choice) rows
-    if (opt_env$no_choice) {
-        regular_rows <- survey_design[survey_design$profileID != 0, ]
-    } else {
-        regular_rows <- survey_design
-    }
-
-    # Get unique observation IDs and determine matrix dimensions
-    unique_obs <- sort(unique(regular_rows$obsID))
-    n_alts <- max(regular_rows$altID[regular_rows$profileID != 0])
-
-    # Rebuild design matrix from survey data
-    design_matrix <- matrix(0, nrow = length(unique_obs), ncol = n_alts)
-
-    for (i in seq_along(unique_obs)) {
-        obs_data <- regular_rows[regular_rows$obsID == unique_obs[i], ]
-        obs_data <- obs_data[order(obs_data$altID), ] # Ensure proper order
-        design_matrix[i, ] <- obs_data$profileID[1:n_alts]
-    }
-
-    return(design_matrix)
-}
