@@ -728,7 +728,7 @@ convert_single_idefix_design <- function(
     opt_env
 ) {
     # Get the optimized design from idefix
-    idefix_design <- design_result$design
+    idefix_design <- design_result$BestDesign$design
 
     # Decode the design back to readable format
     decoded_design <- idefix::Decode(
