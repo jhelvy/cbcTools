@@ -187,7 +187,7 @@ validate_idefix_result <- function(idefix_result, opt_env) {
     if (length(invalid_ids) > 0) {
         stop(sprintf(
             "idefix returned invalid profile IDs: %s",
-            paste(head(invalid_ids, 5), collapse = ", ")
+            paste(utils::head(invalid_ids, 5), collapse = ", ")
         ))
     }
 
