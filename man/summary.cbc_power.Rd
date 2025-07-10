@@ -13,6 +13,9 @@
 
 \item{...}{Additional arguments}
 }
+\value{
+Returns the input \code{cbc_power} object invisibly (class: c("cbc_power", "list")). This function is called for its side effect of printing a detailed summary to the console showing sample size requirements for achieving specified power thresholds for each parameter, including exact power levels and standard errors at the required sample sizes.
+}
 \description{
 Summary method for cbc_power objects
 }

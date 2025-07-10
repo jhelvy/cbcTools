@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Returns the input \code{cbc_power} object invisibly (class: c("cbc_power", "list")). This function is called for its side effect of printing a formatted summary of the CBC power analysis results to the console, including sample size ranges, significance levels, parameter summaries, and power estimates across different sample sizes.
+}
 \description{
 Print method for cbc_power objects
 }

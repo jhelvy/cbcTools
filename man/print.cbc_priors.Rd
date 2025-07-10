@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Returns the input \code{cbc_priors} object invisibly (class: c("cbc_priors", "list")). This function is called for its side effect of printing a formatted summary of the CBC priors specifications to the console, including parameter types, distributions, means, standard deviations, and any correlation structures.
+}
 \description{
 Print method for cbc_priors objects
 }

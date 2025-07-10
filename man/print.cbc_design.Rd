@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Returns the input \code{cbc_design} object invisibly (class: c("cbc_design", "data.frame")). This function is called for its side effect of printing a concise summary of the CBC design to the console, including design method, structure, D-error metrics, profile usage, and a preview of the design data.
+}
 \description{
 Concise print method for cbc_design objects
 }
