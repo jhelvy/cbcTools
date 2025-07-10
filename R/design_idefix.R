@@ -70,9 +70,10 @@ generate_idefix_design <- function(opt_env) {
             par.draws = idefix_inputs$par_draws,
             n.alts = idefix_inputs$n_alts,
             n.sets = idefix_inputs$n_sets,
+            n.blocks = idefix_inputs$n_blocks,
             alt.cte = idefix_inputs$alt_cte,
             no.choice = idefix_inputs$no_choice,
-            parallel = should_use_parallel(opt_env), # FIXED: Better parallel logic
+            parallel = should_use_parallel(opt_env),
             n.start = opt_env$n$start
         )
     } else if (method == "modfed") {
@@ -81,6 +82,7 @@ generate_idefix_design <- function(opt_env) {
             par.draws = idefix_inputs$par_draws,
             n.alts = idefix_inputs$n_alts,
             n.sets = idefix_inputs$n_sets,
+            n.blocks = idefix_inputs$n_blocks,
             alt.cte = idefix_inputs$alt_cte,
             no.choice = idefix_inputs$no_choice,
             parallel = should_use_parallel(opt_env),
@@ -142,8 +144,8 @@ validate_idefix_result <- function(idefix_result, opt_env) {
         )
     }
 
-    # Validate design matrix dimensions
-    expected_rows <- opt_env$n$blocks * opt_env$n$q
+    # Validate design matrix dimensions - idefix returns optimally blocked design
+    expected_rows <- opt_env$n$blocks * opt_env$n$q # Total choice sets across all blocks
     expected_cols <- opt_env$n$alts
 
     if (!is.matrix(idefix_result$design_matrix)) {
@@ -302,6 +304,18 @@ convert_to_idefix_format <- function(opt_env) {
     # Handle alternative specific constants and no-choice
     alt_cte_info <- setup_alt_cte_and_nochoice(opt_env)
 
+    # Calculate idefix parameters to match cbcTools blocking approach
+    if (n$blocks > 1) {
+        # cbcTools approach: each respondent gets n_q questions
+        # So we need n_blocks * n_q total choice sets, divided into n_blocks blocks
+        idefix_n_sets <- n$blocks * n$q # Total choice sets needed
+        idefix_n_blocks <- n$blocks # Number of blocks
+    } else {
+        # Single block case
+        idefix_n_sets <- n$q
+        idefix_n_blocks <- 1
+    }
+
     return(list(
         lvls = lvls,
         coding = coding,
@@ -309,7 +323,8 @@ convert_to_idefix_format <- function(opt_env) {
         cand_set = cand_set,
         par_draws = idefix_priors$par_draws,
         n_alts = alt_cte_info$n_alts,
-        n_sets = n$blocks * n$q,
+        n_sets = idefix_n_sets, # Total choice sets
+        n_blocks = idefix_n_blocks, # Number of blocks
         alt_cte = alt_cte_info$alt_cte,
         no_choice = alt_cte_info$no_choice,
         attr_mapping = idefix_priors$attr_mapping
@@ -484,7 +499,7 @@ convert_priors_to_idefix <- function(priors, profile_attrs, opt_env) {
             opt_env
         )
     } else {
-        # FIXED: For fixed priors, replicate the parameter vector without variance
+        # For fixed priors, replicate the parameter vector without variance
         n_draws <- 50
         par_draws <- matrix(
             rep(par_vector, each = n_draws),
@@ -637,8 +652,83 @@ setup_alt_cte_and_nochoice <- function(opt_env) {
 # =============================================================================
 
 convert_from_idefix_format <- function(design_result, idefix_inputs, opt_env) {
+    # Check if we have blocks in the result
+    blocks <- design_result$BestDesign$Blocks
+    if (!is.null(blocks) && length(blocks) > 0) {
+        # Handle blocked design
+        return(convert_blocked_idefix_design(
+            design_result,
+            idefix_inputs,
+            opt_env
+        ))
+    } else {
+        # Handle non-blocked design (original approach)
+        return(convert_single_idefix_design(
+            design_result,
+            idefix_inputs,
+            opt_env
+        ))
+    }
+}
+
+convert_blocked_idefix_design <- function(
+    design_result,
+    idefix_inputs,
+    opt_env
+) {
+    # Process each block separately and combine
+    blocks <- design_result$BestDesign$Blocks
+    all_designs <- list()
+
+    for (block_idx in seq_along(blocks)) {
+        block_design <- blocks[[block_idx]]
+
+        # Decode this block's design
+        decoded_block <- idefix::Decode(
+            des = block_design,
+            n.alts = idefix_inputs$n_alts,
+            alt.cte = idefix_inputs$alt_cte,
+            lvl.names = get_level_names_for_decode(opt_env$profiles),
+            c.lvls = idefix_inputs$c.lvls,
+            coding = idefix_inputs$coding,
+            no.choice = if (idefix_inputs$no_choice) {
+                idefix_inputs$n_alts
+            } else {
+                NULL
+            }
+        )
+
+        # Convert to data frame and add block identifier
+        block_df <- decoded_block$design
+        profile_attrs <- setdiff(names(opt_env$profiles), "profileID")
+        names(block_df) <- profile_attrs
+
+        # Add block ID for tracking
+        block_df$blockID <- block_idx
+
+        all_designs[[block_idx]] <- block_df
+    }
+
+    # Combine all blocks
+    combined_design <- do.call(rbind, all_designs)
+
+    # Use the join_profiles approach to get profile IDs
+    design_with_ids <- join_profiles(combined_design, opt_env$profiles)
+
+    # Convert to design matrix format expected by cbcTools
+    design_matrix <- convert_blocked_to_design_matrix(design_with_ids, opt_env)
+
+    return(design_matrix)
+}
+
+
+convert_single_idefix_design <- function(
+    design_result,
+    idefix_inputs,
+    opt_env
+) {
     # Get the optimized design from idefix
-    idefix_design <- design_result$BestDesign$design
+    idefix_design <- design_result$design
 
     # Decode the design back to readable format
     decoded_design <- idefix::Decode(
@@ -661,6 +751,45 @@ convert_from_idefix_format <- function(design_result, idefix_inputs, opt_env) {
 
     # Convert to design matrix format expected by cbcTools
     design_matrix <- convert_to_design_matrix(design_with_ids, opt_env)
+
+    return(design_matrix)
+}
+
+convert_blocked_to_design_matrix <- function(design_with_ids, opt_env) {
+    # Convert blocked design to design matrix format
+    n_sets <- opt_env$n$blocks * opt_env$n$q # Total choice sets
+    n_alts <- opt_env$n$alts
+
+    design_matrix <- matrix(0, nrow = n_sets, ncol = n_alts)
+
+    # Process each block - idefix returns blocks with equal numbers of choice sets
+    sets_per_block <- opt_env$n$q # Each block should have n_q choice sets
+
+    for (block_id in 1:opt_env$n$blocks) {
+        block_rows <- design_with_ids[design_with_ids$blockID == block_id, ]
+
+        # Calculate the starting row for this block in the design matrix
+        block_start_row <- (block_id - 1) * sets_per_block + 1
+
+        # Process each choice set within this block
+        n_sets_in_block <- nrow(block_rows) / n_alts
+
+        for (set_idx in 1:n_sets_in_block) {
+            set_start_row <- (set_idx - 1) * n_alts + 1
+            set_end_row <- set_start_row + n_alts - 1
+
+            if (set_end_row <= nrow(block_rows)) {
+                profile_ids <- block_rows$profileID[set_start_row:set_end_row]
+
+                # Calculate position in overall design matrix
+                matrix_row <- block_start_row + set_idx - 1
+
+                if (matrix_row <= nrow(design_matrix)) {
+                    design_matrix[matrix_row, ] <- profile_ids
+                }
+            }
+        }
+    }
 
     return(design_matrix)
 }
@@ -742,18 +871,17 @@ join_profiles <- function(design, profiles) {
 }
 
 convert_to_design_matrix <- function(design_with_ids, opt_env) {
-    # Convert to design matrix format (questions x alternatives)
-    n_sets <- opt_env$n$blocks * opt_env$n$q
-    n_alts_per_set <- opt_env$n$alts
-    if (opt_env$no_choice) {
-        n_alts_per_set <- n_alts_per_set + 1
-    }
+    # With idefix blocking, the design already has optimal block allocation
+    # We just need to convert to the matrix format cbcTools expects
 
-    design_matrix <- matrix(0, nrow = n_sets, ncol = opt_env$n$alts)
+    n_sets <- opt_env$n$blocks * opt_env$n$q # Total choice sets
+    n_alts <- opt_env$n$alts
+
+    design_matrix <- matrix(0, nrow = n_sets, ncol = n_alts)
 
     for (i in 1:n_sets) {
-        start_row <- (i - 1) * n_alts_per_set + 1
-        end_row <- start_row + opt_env$n$alts - 1 # Only get regular alternatives
+        start_row <- (i - 1) * n_alts + 1
+        end_row <- start_row + n_alts - 1
 
         if (end_row <= nrow(design_with_ids)) {
             profile_ids <- design_with_ids$profileID[start_row:end_row]
