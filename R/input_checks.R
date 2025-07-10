@@ -167,7 +167,8 @@ validate_design_inputs <- function(
     dominance_types,
     dominance_threshold,
     max_dominance_attempts,
-    include_probs
+    include_probs,
+    use_idefix
 ) {
     # Validate profiles
     validate_profiles(profiles)
@@ -425,6 +426,29 @@ validate_design_inputs <- function(
         }
     }
 
+    if (use_idefix) {
+        # Check if idefix is available
+        if (!requireNamespace("idefix", quietly = TRUE)) {
+            stop(
+                "Package 'idefix' is required for use_idefix = TRUE. Please install it with install.packages('idefix')"
+            )
+        }
+
+        # Check method compatibility
+        if (!method %in% c("cea", "modfed")) {
+            stop(
+                "Only 'cea' and 'modfed' methods can be used if use_idefix = TRUE"
+            )
+        }
+
+        # Check that priors are provided
+        if (is.null(priors)) {
+            stop(
+                "use_idefix = TRUE requires priors to be specified. Use cbc_priors to create priors."
+            )
+        }
+    }
+
     invisible(TRUE)
 }
 
@@ -486,6 +510,120 @@ validate_cea_profiles <- function(profiles) {
                 total_combinations,
                 nrow(profiles)
             ))
+        }
+    }
+
+    invisible(TRUE)
+}
+
+validate_idefix_inputs <- function(idefix_inputs, opt_env) {
+    # Basic structure validation
+    required_fields <- c("lvls", "coding", "par_draws", "n_alts", "n_sets")
+    missing_fields <- setdiff(required_fields, names(idefix_inputs))
+
+    if (length(missing_fields) > 0) {
+        stop(
+            "Missing required idefix inputs: ",
+            paste(missing_fields, collapse = ", ")
+        )
+    }
+
+    # Validate lvls and coding
+    if (length(idefix_inputs$lvls) != length(idefix_inputs$coding)) {
+        stop("lvls and coding must have same length")
+    }
+
+    if (any(idefix_inputs$lvls < 1)) {
+        stop("All lvls must be positive integers")
+    }
+
+    if (!all(idefix_inputs$coding %in% c("C", "D", "E"))) {
+        stop("coding must contain only 'C', 'D', or 'E' values")
+    }
+
+    # Validate parameter draws format and content
+    if (is.list(idefix_inputs$par_draws)) {
+        # ASC format validation
+        if (length(idefix_inputs$par_draws) != 2) {
+            stop("par_draws list must have exactly 2 elements for ASC format")
+        }
+
+        asc_draws <- idefix_inputs$par_draws[[1]]
+        main_draws <- idefix_inputs$par_draws[[2]]
+
+        if (!is.matrix(asc_draws) || !is.matrix(main_draws)) {
+            stop("Both elements of par_draws list must be matrices")
+        }
+
+        if (nrow(asc_draws) != nrow(main_draws)) {
+            stop("ASC and main effect draws must have same number of rows")
+        }
+
+        # Check for missing values
+        if (any(is.na(asc_draws)) || any(is.na(main_draws))) {
+            stop("par_draws contains missing values")
+        }
+
+        # Check for infinite values
+        if (any(!is.finite(asc_draws)) || any(!is.finite(main_draws))) {
+            stop("par_draws contains infinite values")
+        }
+    } else if (is.matrix(idefix_inputs$par_draws)) {
+        # Regular format validation
+        if (
+            nrow(idefix_inputs$par_draws) < 1 ||
+                ncol(idefix_inputs$par_draws) < 1
+        ) {
+            stop("par_draws matrix must have positive dimensions")
+        }
+
+        # Check for missing values
+        if (any(is.na(idefix_inputs$par_draws))) {
+            stop("par_draws contains missing values")
+        }
+
+        # Check for infinite values
+        if (any(!is.finite(idefix_inputs$par_draws))) {
+            stop("par_draws contains infinite values")
+        }
+    } else {
+        stop("par_draws must be a matrix or list of matrices")
+    }
+
+    # Validate candidate set for Modfed
+    if (opt_env$method == "modfed") {
+        if (is.null(idefix_inputs$cand_set)) {
+            stop("Modfed requires candidate set")
+        }
+        if (!is.matrix(idefix_inputs$cand_set)) {
+            stop("candidate set must be a matrix")
+        }
+        if (nrow(idefix_inputs$cand_set) < idefix_inputs$n_alts) {
+            stop("candidate set must have at least n_alts rows")
+        }
+
+        # Check for missing values in candidate set
+        if (any(is.na(idefix_inputs$cand_set))) {
+            stop("candidate set contains missing values")
+        }
+    }
+
+    # Validate design dimensions
+    if (idefix_inputs$n_alts < 2) {
+        stop("n_alts must be at least 2")
+    }
+
+    if (idefix_inputs$n_sets < 1) {
+        stop("n_sets must be at least 1")
+    }
+
+    # Validate alt_cte if present
+    if (!is.null(idefix_inputs$alt_cte)) {
+        if (length(idefix_inputs$alt_cte) != idefix_inputs$n_alts) {
+            stop("alt_cte length must equal n_alts")
+        }
+        if (!all(idefix_inputs$alt_cte %in% c(0, 1))) {
+            stop("alt_cte must contain only 0 and 1 values")
         }
     }
 

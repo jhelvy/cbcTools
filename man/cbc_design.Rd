@@ -23,7 +23,8 @@ cbc_design(
   max_dominance_attempts = 50,
   max_iter = 50,
   n_start = 5,
-  include_probs = FALSE
+  include_probs = FALSE,
+  use_idefix = FALSE
 )
 }
 \arguments{
@@ -65,6 +66,9 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 \item{n_start}{Number of random starts for optimized designs. Defaults to 5}
 
 \item{include_probs}{Include predicted probabilities in resulting design? Requires \code{priors}. Defaults to \code{FALSE}}
+
+\item{use_idefix}{If \code{TRUE}, the idefix package will be used to find optimal designs, which is faster.
+Only valid with \code{"cea"} and \code{"modfed"} methods. Defaults to \code{FALSE}.}
 }
 \value{
 A \code{cbc_design} object containing the experimental design
@@ -138,5 +142,21 @@ Uses a frequency-based greedy algorithm that:
 }
 }
 
+}
+
+\subsection{idefix Integration}{
+
+When \code{use_idefix = TRUE}, the function leverages the highly optimized
+algorithms from the idefix package for CEA and Modfed design generation.
+This can provide significant speed improvements, especially for larger
+problems. The idefix package must be installed separately.
+
+Key benefits of idefix integration:
+'
+\itemize{
+\item Faster optimization algorithms with C++ implementation
+\item Better handling of large candidate sets
+\item Optimized parallel processing
+}
 }
 }

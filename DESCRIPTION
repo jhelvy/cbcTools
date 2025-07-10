@@ -23,7 +23,9 @@ Suggests:
     testthat,
     tibble
 Imports:
+    fastDummies,
     ggplot2,
+    idefix (>= 1.1.0),
     logitr (>= 1.0.1),
     parallel,
     randtoolbox,

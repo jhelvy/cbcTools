@@ -23,6 +23,8 @@
 #' @param max_iter Maximum iterations for optimized designs. Defaults to 50
 #' @param n_start Number of random starts for optimized designs. Defaults to 5
 #' @param include_probs Include predicted probabilities in resulting design? Requires `priors`. Defaults to `FALSE`
+#' @param use_idefix If `TRUE`, the idefix package will be used to find optimal designs, which is faster.
+#' Only valid with `"cea"` and `"modfed"` methods. Defaults to `TRUE`.
 #'
 #' @details
 #' ## Design Methods
@@ -69,11 +71,25 @@
 #' - **CEA**: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
 #'
 #' ### Shortcut Method
+#'
 #' Uses a frequency-based greedy algorithm that:
 #' - Tracks attribute level usage within questions and across the overall design
 #' - Selects profiles with least frequently used attribute levels
 #' - Provides good level balance without requiring priors or D-error calculations
 #' - Fast execution suitable for large designs
+#'
+#' ## idefix Integration
+#'
+#' When `use_idefix = TRUE` (the default), the function leverages the highly optimized
+#' algorithms from the idefix package for CEA and Modfed design generation.
+#' This can provide significant speed improvements, especially for larger
+#' problems. The idefix package must be installed separately.
+#'
+#' Key benefits of idefix integration:
+#''
+#' - Faster optimization algorithms with C++ implementation
+#' - Better handling of large candidate sets
+#' - Optimized parallel processing
 #'
 #' @return A `cbc_design` object containing the experimental design
 #' @export
@@ -96,7 +112,8 @@ cbc_design <- function(
     max_dominance_attempts = 50,
     max_iter = 50,
     n_start = 5,
-    include_probs = FALSE
+    include_probs = FALSE,
+    use_idefix = TRUE
 ) {
     time_start <- Sys.time()
 
@@ -117,7 +134,8 @@ cbc_design <- function(
         dominance_types,
         dominance_threshold,
         max_dominance_attempts,
-        include_probs
+        include_probs,
+        use_idefix
     )
 
     # Set up the optimization environment
@@ -141,7 +159,8 @@ cbc_design <- function(
         max_dominance_attempts,
         randomize_questions,
         randomize_alts,
-        include_probs
+        include_probs,
+        use_idefix
     )
 
     design_result <- generate_design(opt_env)
@@ -183,7 +202,8 @@ setup_optimization_environment <- function(
     max_dominance_attempts,
     randomize_questions,
     randomize_alts,
-    include_probs
+    include_probs,
+    use_idefix
 ) {
     # Method logic vars
     method_random <- method == "random"
@@ -406,7 +426,8 @@ setup_optimization_environment <- function(
         available_profile_ids = profiles$profileID,
         randomize_questions = randomize_questions,
         randomize_alts = randomize_alts,
-        include_probs = include_probs
+        include_probs = include_probs,
+        use_idefix = use_idefix
     ))
 }
 
@@ -492,6 +513,9 @@ generate_design <- function(opt_env) {
         return(generate_random_design(opt_env))
     } else if (opt_env$method_greedy) {
         return(generate_greedy_design(opt_env))
+    } else if (opt_env$use_idefix) {
+        # Try idefix first, fallback to cbcTools if it fails
+        return(generate_idefix_design_with_fallback(opt_env))
     }
     return(generate_optimized_design(opt_env))
 }
