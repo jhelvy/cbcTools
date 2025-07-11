@@ -1144,6 +1144,8 @@ makeBetaDraws <- function(
     if (length(parIDs$cn) > 0) {
         betaDraws[, parIDs$cn] <- pmax(betaDraws[, parIDs$cn], 0)
     }
+
+    colnames(betaDraws) <- names(pars_mean)
     return(betaDraws)
 }
 
