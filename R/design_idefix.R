@@ -703,6 +703,19 @@ convert_blocked_idefix_design <- function(
         profile_attrs <- setdiff(names(opt_env$profiles), "profileID")
         names(block_df) <- profile_attrs
 
+        # FILTER OUT NO-CHOICE ROWS if no_choice option is enabled
+        if (opt_env$no_choice) {
+            # Identify no-choice rows (rows with all NA values)
+            no_choice_rows <- apply(block_df[, profile_attrs], 1, function(x) {
+                all(is.na(x))
+            })
+
+            if (any(no_choice_rows)) {
+                # Remove no-choice rows - they'll be added back later
+                block_df <- block_df[!no_choice_rows, , drop = FALSE]
+            }
+        }
+
         # Add block ID for tracking
         block_df$blockID <- block_idx
 
@@ -712,7 +725,7 @@ convert_blocked_idefix_design <- function(
     # Combine all blocks
     combined_design <- do.call(rbind, all_designs)
 
-    # Use the join_profiles approach to get profile IDs
+    # Use the original join_profiles function (no modifications needed)
     design_with_ids <- join_profiles(combined_design, opt_env$profiles)
 
     # Convert to design matrix format expected by cbcTools
@@ -720,7 +733,6 @@ convert_blocked_idefix_design <- function(
 
     return(design_matrix)
 }
-
 
 convert_single_idefix_design <- function(
     design_result,
@@ -746,7 +758,20 @@ convert_single_idefix_design <- function(
     profile_attrs <- setdiff(names(opt_env$profiles), "profileID")
     names(design_df) <- profile_attrs
 
-    # Use the join_profiles approach from your old code
+    # FILTER OUT NO-CHOICE ROWS if no_choice option is enabled
+    if (opt_env$no_choice) {
+        # Identify no-choice rows (rows with all NA values)
+        no_choice_rows <- apply(design_df[, profile_attrs], 1, function(x) {
+            all(is.na(x))
+        })
+
+        if (any(no_choice_rows)) {
+            # Remove no-choice rows - they'll be added back later by design_matrix_no_choice()
+            design_df <- design_df[!no_choice_rows, , drop = FALSE]
+        }
+    }
+
+    # Now use the original join_profiles function (no modifications needed)
     design_with_ids <- join_profiles(design_df, opt_env$profiles)
 
     # Convert to design matrix format expected by cbcTools

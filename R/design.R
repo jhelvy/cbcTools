@@ -216,6 +216,20 @@ setup_optimization_environment <- function(
     include_probs,
     use_idefix
 ) {
+    # Auto-generate zero priors for CEA/Modfed with idefix if none provided
+    if (
+        is.null(priors) &&
+            use_idefix &&
+            method %in% c("cea", "modfed")
+    ) {
+        message(
+            "No priors specified for ",
+            method,
+            " method with idefix. Using zero priors for all parameters."
+        )
+        priors <- create_zero_priors(profiles, no_choice)
+    }
+
     # Method logic vars
     method_random <- method == "random"
     method_greedy <- method %in% get_methods_greedy()
@@ -440,6 +454,47 @@ setup_optimization_environment <- function(
         include_probs = include_probs,
         use_idefix = use_idefix
     ))
+}
+
+create_zero_priors <- function(profiles, no_choice = FALSE) {
+    # Get attribute names (excluding profileID)
+    attr_names <- setdiff(names(profiles), "profileID")
+
+    # Create zero priors for each attribute
+    zero_params <- list()
+
+    for (attr in attr_names) {
+        values <- profiles[[attr]]
+
+        if (is.numeric(values)) {
+            # Continuous attribute: single zero value
+            zero_params[[attr]] <- 0
+        } else {
+            # Categorical attribute: zero for all non-reference levels
+            unique_vals <- if (is.factor(values)) {
+                levels(values)
+            } else {
+                unique(values)
+            }
+            n_levels <- length(unique_vals)
+
+            if (n_levels > 1) {
+                # Create zero vector for non-reference levels (all but first)
+                zero_params[[attr]] <- rep(0, n_levels - 1)
+            } else {
+                # Single level - still need one parameter
+                zero_params[[attr]] <- 0
+            }
+        }
+    }
+
+    # Add no-choice parameter if requested
+    if (no_choice) {
+        zero_params$no_choice <- 0
+    }
+
+    # Create the cbc_priors object using the existing function
+    do.call(cbc_priors, c(list(profiles = profiles), zero_params))
 }
 
 build_interaction_terms <- function(interactions) {

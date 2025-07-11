@@ -441,12 +441,8 @@ validate_design_inputs <- function(
             )
         }
 
-        # Check that priors are provided
-        if (is.null(priors)) {
-            stop(
-                "use_idefix = TRUE requires priors to be specified. Use cbc_priors to create priors."
-            )
-        }
+        # If no priors provided, we'll create zero priors automatically
+        # (This is handled in setup_optimization_environment)
     }
 
     invisible(TRUE)
