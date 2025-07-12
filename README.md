@@ -69,14 +69,14 @@ it if you cited it - you can get the citation by typing
 citation("cbcTools")
 #> To cite cbcTools in publications use:
 #> 
-#>   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
-#>   Conjoint Survey Experiments_. R package,
+#>   Helveston JP (2023). _cbcTools: Design and Analyze Choice-Based
+#>   Conjoint Experiments_. R package,
 #>   <https://jhelvy.github.io/cbcTools/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{,
-#>     title = {{cbcTools}: Design and Evaluate Choice-Based Conjoint Survey Experiments},
+#>     title = {{cbcTools}: Design and Analyze Choice-Based Conjoint Experiments},
 #>     author = {John Paul Helveston},
 #>     year = {2023},
 #>     note = {R package},
