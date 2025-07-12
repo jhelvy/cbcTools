@@ -25,6 +25,15 @@ check_inputs_profiles <- function(levels) {
             )
         }
     }
+
+    for (attr_name in names(levels)) {
+        if (length(levels[[attr_name]]) < 2) {
+            stop(sprintf(
+                "Attribute '%s' must have at least 2 levels for meaningful choice experiments",
+                attr_name
+            ))
+        }
+    }
 }
 
 validate_profiles <- function(profiles) {
