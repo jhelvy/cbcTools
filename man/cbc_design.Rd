@@ -23,13 +23,14 @@ cbc_design(
   max_dominance_attempts = 50,
   max_iter = 50,
   n_start = 5,
-  include_probs = FALSE
+  include_probs = FALSE,
+  use_idefix = TRUE
 )
 }
 \arguments{
 \item{profiles}{A data frame of class \code{cbc_profiles} created using \code{cbc_profiles()}}
 
-\item{method}{Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"}
+\item{method}{Choose the design method: "random", "shortcut", "minoverlap", "balanced", "stochastic", "modfed", or "cea". Defaults to "random"}
 
 \item{priors}{A \code{cbc_priors} object created by \code{cbc_priors()}, or NULL for random/shortcut designs}
 
@@ -65,6 +66,9 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 \item{n_start}{Number of random starts for optimized designs. Defaults to 5}
 
 \item{include_probs}{Include predicted probabilities in resulting design? Requires \code{priors}. Defaults to \code{FALSE}}
+
+\item{use_idefix}{If \code{TRUE} (the default), the idefix package will be used to find optimal designs, which is faster.
+Only valid with \code{"cea"} and \code{"modfed"} methods.}
 }
 \value{
 A \code{cbc_design} object containing the experimental design
@@ -79,10 +83,12 @@ using multiple design approaches including optimization and frequency-based meth
 The \code{method} argument determines the design approach used:
 \itemize{
 \item \code{"random"}: Creates designs by randomly sampling profiles for each respondent independently
+\item \code{"shortcut"}: Frequency-based greedy algorithm that balances attribute level usage
+\item \code{"minoverlap"}: Greedy algorithm that minimizes attribute overlap within choice sets
+\item \code{"balanced"}: Greedy algorithm that maximizes overall attribute balance across the design
 \item \code{"stochastic"}: Stochastic profile swapping with D-error optimization (first improvement found)
 \item \code{"modfed"}: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
 \item \code{"cea"}: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
-\item \code{"shortcut"}: Frequency-based greedy algorithm that balances attribute level usage
 }
 }
 
@@ -117,6 +123,18 @@ All methods ensure the following criteria are met:
 Creates designs where each respondent sees completely independent, randomly generated choice sets.
 }
 
+\subsection{Greedy Methods (shortcut, minoverlap, balanced)}{
+
+These methods use frequency-based algorithms that make locally optimal choices:
+\itemize{
+\item \strong{Shortcut}: Balances attribute level usage within questions and across the overall design
+\item \strong{Minoverlap}: Minimizes attribute overlap within choice sets while allowing some overlap for balance
+\item \strong{Balanced}: Maximizes overall attribute balance, prioritizing level distribution over overlap reduction
+}
+
+These methods provide good level balance without requiring priors or D-error calculations and offer fast execution suitable for large designs.
+}
+
 \subsection{D-Error Optimization Methods (stochastic, modfed, cea)}{
 
 These methods minimize D-error to create statistically efficient designs:
@@ -127,16 +145,21 @@ These methods minimize D-error to create statistically efficient designs:
 }
 }
 
-\subsection{Shortcut Method}{
+}
 
-Uses a frequency-based greedy algorithm that:
+\subsection{idefix Integration}{
+
+When \code{use_idefix = TRUE} (the default), the function leverages the highly optimized
+algorithms from the idefix package for 'cea' and 'modfed' design generation methods.
+This can provide significant speed improvements, especially for larger
+problems.
+
+Key benefits of idefix integration:
 \itemize{
-\item Tracks attribute level usage within questions and across the overall design
-\item Selects profiles with least frequently used attribute levels
-\item Provides good level balance without requiring priors or D-error calculations
-\item Fast execution suitable for large designs
+\item Faster optimization algorithms with C++ implementation
+\item Better handling of large candidate sets
+\item Optimized parallel processing
+\item Advanced blocking capabilities for multi-block designs
 }
-}
-
 }
 }

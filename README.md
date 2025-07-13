@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# cbcTools <a href='https://jhelvy.github.io/cbcTools/'><img src='man/figures/logo.png' align="right" style="height:139px;"/></a>
+# cbcTools <a href='https://jhelvy.github.io/cbcTools/'><img src='man/figures/logo.png' align="right" style="height:139px;" alt="cbcTools package logo: blue hexagonal badge with 'cbcTools' text and three bullet points representing choice options"/></a>
 
 <!-- badges: start -->
 
@@ -16,7 +16,15 @@ designs for choice-based conjoint survey experiments in R. Each function
 in the package begins with `cbc_` and supports a step in the following
 process for designing and analyzing survey experiments:
 
-![](man/figures/flowchart.png)
+<figure>
+<img src="man/figures/flowchart.png"
+alt="Workflow diagram showing the six-step cbcTools process: Generate Profiles (cbc_profiles) -&gt; Create Priors (cbc_priors) -&gt; Generate Design (cbc_design) -&gt; Inspect Design (cbc_inspect) -&gt; Simulate Choices (cbc_choices) -&gt; Assess Power (cbc_power)" />
+<figcaption aria-hidden="true">Workflow diagram showing the six-step
+cbcTools process: Generate Profiles (cbc_profiles) -&gt; Create Priors
+(cbc_priors) -&gt; Generate Design (cbc_design) -&gt; Inspect Design
+(cbc_inspect) -&gt; Simulate Choices (cbc_choices) -&gt; Assess Power
+(cbc_power)</figcaption>
+</figure>
 
 After installing the package, got to the [Getting
 Started](https://jhelvy.github.io/cbcTools/articles/getting-started.html)
@@ -61,14 +69,14 @@ it if you cited it - you can get the citation by typing
 citation("cbcTools")
 #> To cite cbcTools in publications use:
 #> 
-#>   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based
-#>   Conjoint Survey Experiments_. R package,
+#>   Helveston JP (2023). _cbcTools: Design and Analyze Choice-Based
+#>   Conjoint Experiments_. R package,
 #>   <https://jhelvy.github.io/cbcTools/>.
 #> 
 #> A BibTeX entry for LaTeX users is
 #> 
 #>   @Manual{,
-#>     title = {{cbcTools}: Design and Evaluate Choice-Based Conjoint Survey Experiments},
+#>     title = {{cbcTools}: Design and Analyze Choice-Based Conjoint Experiments},
 #>     author = {John Paul Helveston},
 #>     year = {2023},
 #>     note = {R package},

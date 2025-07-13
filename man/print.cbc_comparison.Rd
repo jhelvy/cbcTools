@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Returns the input \code{cbc_comparison} object invisibly (class: c("cbc_comparison", "list")). This function is called for its side effect of printing a formatted comparison table of multiple CBC designs to the console, including design metrics, performance rankings, and interpretation guidelines.
+}
 \description{
 Print method for cbc_comparison objects
 }

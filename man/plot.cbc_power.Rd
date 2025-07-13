@@ -15,6 +15,9 @@
 
 \item{...}{Additional arguments passed to ggplot}
 }
+\value{
+Returns a ggplot2 object (class: "gg", "ggplot") that can be further customized, saved, or displayed. The plot visualizes either statistical power curves or standard error curves across different sample sizes for each parameter in the power analysis, with appropriate axis labels, legends, and reference lines.
+}
 \description{
 Plot method for cbc_power objects
 }

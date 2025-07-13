@@ -4,7 +4,7 @@
 #' using multiple design approaches including optimization and frequency-based methods.
 #'
 #' @param profiles A data frame of class `cbc_profiles` created using `cbc_profiles()`
-#' @param method Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"
+#' @param method Choose the design method: "random", "shortcut", "minoverlap", "balanced", "stochastic", "modfed", or "cea". Defaults to "random"
 #' @param priors A `cbc_priors` object created by `cbc_priors()`, or NULL for random/shortcut designs
 #' @param n_alts Number of alternatives per choice question
 #' @param n_q Number of questions per respondent (or per block)
@@ -23,6 +23,8 @@
 #' @param max_iter Maximum iterations for optimized designs. Defaults to 50
 #' @param n_start Number of random starts for optimized designs. Defaults to 5
 #' @param include_probs Include predicted probabilities in resulting design? Requires `priors`. Defaults to `FALSE`
+#' @param use_idefix If `TRUE` (the default), the idefix package will be used to find optimal designs, which is faster.
+#' Only valid with `"cea"` and `"modfed"` methods.
 #'
 #' @details
 #' ## Design Methods
@@ -30,10 +32,12 @@
 #' The `method` argument determines the design approach used:
 #'
 #' - `"random"`: Creates designs by randomly sampling profiles for each respondent independently
+#' - `"shortcut"`: Frequency-based greedy algorithm that balances attribute level usage
+#' - `"minoverlap"`: Greedy algorithm that minimizes attribute overlap within choice sets
+#' - `"balanced"`: Greedy algorithm that maximizes overall attribute balance across the design
 #' - `"stochastic"`: Stochastic profile swapping with D-error optimization (first improvement found)
 #' - `"modfed"`: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization
 #' - `"cea"`: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization
-#' - `"shortcut"`: Frequency-based greedy algorithm that balances attribute level usage
 #'
 #' ## Method Compatibility
 #'
@@ -60,20 +64,38 @@
 #' ## Method Details
 #'
 #' ### Random Method
+#'
 #' Creates designs where each respondent sees completely independent, randomly generated choice sets.
 #'
+#' ### Greedy Methods (shortcut, minoverlap, balanced)
+#'
+#' These methods use frequency-based algorithms that make locally optimal choices:
+#' - **Shortcut**: Balances attribute level usage within questions and across the overall design
+#' - **Minoverlap**: Minimizes attribute overlap within choice sets while allowing some overlap for balance
+#' - **Balanced**: Maximizes overall attribute balance, prioritizing level distribution over overlap reduction
+#'
+#' These methods provide good level balance without requiring priors or D-error calculations and offer fast execution suitable for large designs.
+#'
 #' ### D-Error Optimization Methods (stochastic, modfed, cea)
+#'
 #' These methods minimize D-error to create statistically efficient designs:
 #' - **Stochastic**: Random profile sampling with first improvement acceptance
 #' - **Modfed**: Exhaustive profile testing for best improvement (slower but thorough)
 #' - **CEA**: Coordinate exchange testing attribute levels individually (requires full factorial profiles)
 #'
-#' ### Shortcut Method
-#' Uses a frequency-based greedy algorithm that:
-#' - Tracks attribute level usage within questions and across the overall design
-#' - Selects profiles with least frequently used attribute levels
-#' - Provides good level balance without requiring priors or D-error calculations
-#' - Fast execution suitable for large designs
+#' ## idefix Integration
+#'
+#' When `use_idefix = TRUE` (the default), the function leverages the highly optimized
+#' algorithms from the idefix package for 'cea' and 'modfed' design generation methods.
+#' This can provide significant speed improvements, especially for larger
+#' problems.
+#'
+#' Key benefits of idefix integration:
+#'
+#' - Faster optimization algorithms with C++ implementation
+#' - Better handling of large candidate sets
+#' - Optimized parallel processing
+#' - Advanced blocking capabilities for multi-block designs
 #'
 #' @return A `cbc_design` object containing the experimental design
 #' @export
@@ -96,9 +118,15 @@ cbc_design <- function(
     max_dominance_attempts = 50,
     max_iter = 50,
     n_start = 5,
-    include_probs = FALSE
+    include_probs = FALSE,
+    use_idefix = TRUE
 ) {
     time_start <- Sys.time()
+
+    # Override use_idefix if method doesn't support it
+    if (use_idefix && !method %in% c("cea", "modfed")) {
+        use_idefix <- FALSE
+    }
 
     # Validate inputs
     validate_design_inputs(
@@ -117,7 +145,8 @@ cbc_design <- function(
         dominance_types,
         dominance_threshold,
         max_dominance_attempts,
-        include_probs
+        include_probs,
+        use_idefix
     )
 
     # Set up the optimization environment
@@ -141,7 +170,8 @@ cbc_design <- function(
         max_dominance_attempts,
         randomize_questions,
         randomize_alts,
-        include_probs
+        include_probs,
+        use_idefix
     )
 
     design_result <- generate_design(opt_env)
@@ -183,8 +213,23 @@ setup_optimization_environment <- function(
     max_dominance_attempts,
     randomize_questions,
     randomize_alts,
-    include_probs
+    include_probs,
+    use_idefix
 ) {
+    # Auto-generate zero priors for CEA/Modfed with idefix if none provided
+    if (
+        is.null(priors) &&
+            use_idefix &&
+            method %in% c("cea", "modfed")
+    ) {
+        message(
+            "No priors specified for ",
+            method,
+            " method with idefix. Using zero priors for all parameters."
+        )
+        priors <- create_zero_priors(profiles, no_choice)
+    }
+
     # Method logic vars
     method_random <- method == "random"
     method_greedy <- method %in% get_methods_greedy()
@@ -406,8 +451,50 @@ setup_optimization_environment <- function(
         available_profile_ids = profiles$profileID,
         randomize_questions = randomize_questions,
         randomize_alts = randomize_alts,
-        include_probs = include_probs
+        include_probs = include_probs,
+        use_idefix = use_idefix
     ))
+}
+
+create_zero_priors <- function(profiles, no_choice = FALSE) {
+    # Get attribute names (excluding profileID)
+    attr_names <- setdiff(names(profiles), "profileID")
+
+    # Create zero priors for each attribute
+    zero_params <- list()
+
+    for (attr in attr_names) {
+        values <- profiles[[attr]]
+
+        if (is.numeric(values)) {
+            # Continuous attribute: single zero value
+            zero_params[[attr]] <- 0
+        } else {
+            # Categorical attribute: zero for all non-reference levels
+            unique_vals <- if (is.factor(values)) {
+                levels(values)
+            } else {
+                unique(values)
+            }
+            n_levels <- length(unique_vals)
+
+            if (n_levels > 1) {
+                # Create zero vector for non-reference levels (all but first)
+                zero_params[[attr]] <- rep(0, n_levels - 1)
+            } else {
+                # Single level - still need one parameter
+                zero_params[[attr]] <- 0
+            }
+        }
+    }
+
+    # Add no-choice parameter if requested
+    if (no_choice) {
+        zero_params$no_choice <- 0
+    }
+
+    # Create the cbc_priors object using the existing function
+    do.call(cbc_priors, c(list(profiles = profiles), zero_params))
 }
 
 build_interaction_terms <- function(interactions) {
@@ -492,6 +579,9 @@ generate_design <- function(opt_env) {
         return(generate_random_design(opt_env))
     } else if (opt_env$method_greedy) {
         return(generate_greedy_design(opt_env))
+    } else if (opt_env$use_idefix) {
+        # Try idefix first, fallback to cbcTools if it fails
+        return(generate_idefix_design_with_fallback(opt_env))
     }
     return(generate_optimized_design(opt_env))
 }

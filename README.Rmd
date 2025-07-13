@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# cbcTools <a href='https://jhelvy.github.io/cbcTools/'><img src='man/figures/logo.png' align="right" style="height:139px;"/></a>
+# cbcTools <a href='https://jhelvy.github.io/cbcTools/'><img src='man/figures/logo.png' align="right" style="height:139px;" alt="cbcTools package logo: blue hexagonal badge with 'cbcTools' text and three bullet points representing choice options"/></a>
 
 <!-- badges: start -->
 [![CRAN
@@ -25,7 +25,7 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 
 This package provides functions for generating and inspecting survey designs for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing survey experiments:
 
-![](man/figures/flowchart.png)
+![Workflow diagram showing the six-step cbcTools process: Generate Profiles (cbc_profiles) -> Create Priors (cbc_priors) -> Generate Design (cbc_design) -> Inspect Design (cbc_inspect) -> Simulate Choices (cbc_choices) -> Assess Power (cbc_power)](man/figures/flowchart.png)
 
 After installing the package, got to the [Getting Started](https://jhelvy.github.io/cbcTools/articles/getting-started.html) page to learn how to use the package. 
 

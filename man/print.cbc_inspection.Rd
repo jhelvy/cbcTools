@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Returns the input \code{cbc_inspection} object invisibly (class: c("cbc_inspection", "list")). This function is called for its side effect of printing a comprehensive inspection report of the CBC design to the console, including sections on design structure, efficiency metrics, attribute balance, overlap analysis, and variable encoding.
+}
 \description{
 Print method for cbc_inspection objects
 }

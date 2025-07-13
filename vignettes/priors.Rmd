@@ -297,7 +297,8 @@ priors_nochoice_fixed
 
 When you specify random parameters, `cbc_priors()` automatically generates parameter draws for Bayesian D-error calculation. You can conrol both the draw type with the `draw_type` argument (`"halton"` or `"sobol"`) and the number of draws with the `n_draws` argument, e.g.:
 
-```{r}
+```{r, fig.width=6, fig.height=4, fig.alt="Histogram showing the distribution of price parameter draws. The distribution appears roughly normal, centered around -0.25, with values ranging from approximately -0.5 to 0, indicating negative price sensitivity as expected."}
+
 priors_bayesian <- cbc_priors(
   profiles = profiles,
   price = rand_spec(

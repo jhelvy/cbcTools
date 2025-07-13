@@ -128,17 +128,23 @@ get_attribute_metadata <- function(levels) {
         type = "continuous",
         n_levels = length(values),
         range = range(values),
-        summary = sprintf("Continuous (%d levels, range: %.2f-%.2f)",
-                          length(values), min(values), max(values))
+        summary = sprintf(
+          "Continuous (%d levels, range: %.2f-%.2f)",
+          length(values),
+          min(values),
+          max(values)
+        )
       )
     } else {
       attr_info[[attr]] <- list(
         type = "categorical",
         n_levels = length(values),
         levels = values,
-        summary = sprintf("Categorical (%d levels: %s)",
-                          length(values),
-                          paste(values, collapse = ", "))
+        summary = sprintf(
+          "Categorical (%d levels: %s)",
+          length(values),
+          paste(values, collapse = ", ")
+        )
       )
     }
   }

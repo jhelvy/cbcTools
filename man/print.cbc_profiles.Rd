@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to print}
 }
+\value{
+Returns the input \code{cbc_profiles} object invisibly (class: c("cbc_profiles", "data.frame")). This function is called for its side effect of printing a formatted summary of the CBC profiles object to the console, including attribute information, profile counts, any applied restrictions, and a preview of the data.
+}
 \description{
 Print method for cbc_profiles objects
 }
