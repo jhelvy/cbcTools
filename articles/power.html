@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -116,7 +116,7 @@ design, some priors, and some simulated choices to work with:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: utility_based</span></span>
 <span><span class="co">#&gt; Priors: Used for utility-based simulation</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-07-08 13:37:42</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-07-13 20:09:53</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
 <span><span class="co">#&gt;   Alt 1: 66.7% (2 choices)</span></span>
@@ -398,13 +398,14 @@ effect)</li>
 <p>Plot power curves to visualize the relationship between sample size
 and precision:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Plot power curves</span></span>
+<code class="sourceCode R"><span></span>
+<span><span class="co"># Plot power curves</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">power_basic</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"power"</span>,</span>
 <span>  power_threshold <span class="op">=</span> <span class="fl">0.9</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="power_files/figure-html/unnamed-chunk-6-1.png" width="700"></p>
+<p><img src="power_files/figure-html/unnamed-chunk-6-1.png" alt="Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters." width="700"></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot standard error curves</span></span>
@@ -412,7 +413,7 @@ and precision:</p>
 <span>  <span class="va">power_basic</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"se"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="power_files/figure-html/unnamed-chunk-6-2.png" width="700"></p>
+<p><img src="power_files/figure-html/unnamed-chunk-7-1.png" alt="Standard error chart showing decreasing standard errors as sample size increases from 100 to 600 respondents for 5 parameters. All parameters show the expected decline in standard error with larger samples, with price having consistently lower standard errors than the freshness and type parameters." width="700"></p>
 </div>
 <div class="section level3">
 <h3 id="interpreting-results">Interpreting Results<a class="anchor" aria-label="anchor" href="#interpreting-results"></a>
@@ -601,8 +602,9 @@ and precision:</p>
 <span><span class="va">power_optimal</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
 <span>  <span class="va">choices_optimal</span>,</span>
 <span>  n_breaks <span class="op">=</span> <span class="fl">8</span></span>
-<span><span class="op">)</span></span>
-<span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
 <span><span class="co"># Compare power curves</span></span>
 <span><span class="fu"><a href="../reference/plot_compare_power.html">plot_compare_power</a></span><span class="op">(</span></span>
 <span>  Random <span class="op">=</span> <span class="va">power_random</span>,</span>
@@ -610,7 +612,7 @@ and precision:</p>
 <span>  Optimal <span class="op">=</span> <span class="va">power_optimal</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"power"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="power_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
+<p><img src="power_files/figure-html/unnamed-chunk-11-1.png" alt="Power comparison across three experimental designs (Optimal, Random, Shortcut) shown in separate panels for 5 parameters. Each panel shows power curves with an 80% power threshold line. The Shortcut design generally performs best, followed by Optimal, then Random designs. Some parameters like freshnessExcellent and typeHoneycrisp achieve high power quickly across all designs, while others like typeGala show more variation between design methods." width="700"></p>
 </div>
 </div>
 <div class="section level2">
@@ -620,7 +622,7 @@ and precision:</p>
 <h3 id="returning-full-models">Returning Full Models<a class="anchor" aria-label="anchor" href="#returning-full-models"></a>
 </h3>
 <p>Access complete model objects for detailed analysis:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Return full models for additional analysis</span></span>
 <span><span class="va">power_with_models</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">choices</span>,</span>
@@ -636,7 +638,7 @@ and precision:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">largest_model</span><span class="op">)</span></span>
 <span><span class="co">#&gt; =================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Model estimated on: Tue Jul 08 13:38:06 2025 </span></span>
+<span><span class="co">#&gt; Model estimated on: Sun Jul 13 20:10:17 2025 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Using logitr version: 1.1.2 </span></span>
 <span><span class="co">#&gt; </span></span>

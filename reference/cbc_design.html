@@ -9,7 +9,7 @@ using multiple design approaches including optimization and frequency-based meth
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,7 +68,8 @@ using multiple design approaches including optimization and frequency-based meth
 <span>  max_dominance_attempts <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  n_start <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  include_probs <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  include_probs <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  use_idefix <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -81,7 +82,7 @@ using multiple design approaches including optimization and frequency-based meth
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p>Choose the design method: "random", "stochastic", "modfed", "cea", or "shortcut". Defaults to "random"</p></dd>
+<dd><p>Choose the design method: "random", "shortcut", "minoverlap", "balanced", "stochastic", "modfed", or "cea". Defaults to "random"</p></dd>
 
 
 <dt id="arg-priors">priors<a class="anchor" aria-label="anchor" href="#arg-priors"></a></dt>
@@ -152,6 +153,11 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 <dt id="arg-include-probs">include_probs<a class="anchor" aria-label="anchor" href="#arg-include-probs"></a></dt>
 <dd><p>Include predicted probabilities in resulting design? Requires <code>priors</code>. Defaults to <code>FALSE</code></p></dd>
 
+
+<dt id="arg-use-idefix">use_idefix<a class="anchor" aria-label="anchor" href="#arg-use-idefix"></a></dt>
+<dd><p>If <code>TRUE</code> (the default), the idefix package will be used to find optimal designs, which is faster.
+Only valid with <code>"cea"</code> and <code>"modfed"</code> methods.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -165,10 +171,12 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 
 
 <p>The <code>method</code> argument determines the design approach used:</p><ul><li><p><code>"random"</code>: Creates designs by randomly sampling profiles for each respondent independently</p></li>
+<li><p><code>"shortcut"</code>: Frequency-based greedy algorithm that balances attribute level usage</p></li>
+<li><p><code>"minoverlap"</code>: Greedy algorithm that minimizes attribute overlap within choice sets</p></li>
+<li><p><code>"balanced"</code>: Greedy algorithm that maximizes overall attribute balance across the design</p></li>
 <li><p><code>"stochastic"</code>: Stochastic profile swapping with D-error optimization (first improvement found)</p></li>
 <li><p><code>"modfed"</code>: Modified Fedorov algorithm with exhaustive profile swapping for D-error optimization</p></li>
 <li><p><code>"cea"</code>: Coordinate Exchange Algorithm with attribute-by-attribute D-error optimization</p></li>
-<li><p><code>"shortcut"</code>: Frequency-based greedy algorithm that balances attribute level usage</p></li>
 </ul></div>
 
 <div class="section">
@@ -197,6 +205,16 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 </div>
 
 <div class="section">
+<h4 id="greedy-methods-shortcut-minoverlap-balanced-">Greedy Methods (shortcut, minoverlap, balanced)<a class="anchor" aria-label="anchor" href="#greedy-methods-shortcut-minoverlap-balanced-"></a></h4>
+
+
+<p>These methods use frequency-based algorithms that make locally optimal choices:</p><ul><li><p><strong>Shortcut</strong>: Balances attribute level usage within questions and across the overall design</p></li>
+<li><p><strong>Minoverlap</strong>: Minimizes attribute overlap within choice sets while allowing some overlap for balance</p></li>
+<li><p><strong>Balanced</strong>: Maximizes overall attribute balance, prioritizing level distribution over overlap reduction</p></li>
+</ul><p>These methods provide good level balance without requiring priors or D-error calculations and offer fast execution suitable for large designs.</p>
+</div>
+
+<div class="section">
 <h4 id="d-error-optimization-methods-stochastic-modfed-cea-">D-Error Optimization Methods (stochastic, modfed, cea)<a class="anchor" aria-label="anchor" href="#d-error-optimization-methods-stochastic-modfed-cea-"></a></h4>
 
 
@@ -205,18 +223,22 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 <li><p><strong>CEA</strong>: Coordinate exchange testing attribute levels individually (requires full factorial profiles)</p></li>
 </ul></div>
 
-<div class="section">
-<h4 id="shortcut-method">Shortcut Method<a class="anchor" aria-label="anchor" href="#shortcut-method"></a></h4>
-
-
-<p>Uses a frequency-based greedy algorithm that:</p><ul><li><p>Tracks attribute level usage within questions and across the overall design</p></li>
-<li><p>Selects profiles with least frequently used attribute levels</p></li>
-<li><p>Provides good level balance without requiring priors or D-error calculations</p></li>
-<li><p>Fast execution suitable for large designs</p></li>
-</ul></div>
-
 
 </div>
+
+<div class="section">
+<h3 id="idefix-integration">idefix Integration<a class="anchor" aria-label="anchor" href="#idefix-integration"></a></h3>
+
+
+<p>When <code>use_idefix = TRUE</code> (the default), the function leverages the highly optimized
+algorithms from the idefix package for 'cea' and 'modfed' design generation methods.
+This can provide significant speed improvements, especially for larger
+problems.</p>
+<p>Key benefits of idefix integration:</p><ul><li><p>Faster optimization algorithms with C++ implementation</p></li>
+<li><p>Better handling of large candidate sets</p></li>
+<li><p>Optimized parallel processing</p></li>
+<li><p>Advanced blocking capabilities for multi-block designs</p></li>
+</ul></div>
 
     </div>
 

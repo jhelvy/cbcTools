@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -515,7 +515,8 @@ calculation. You can conrol both the draw type with the
 <code>"sobol"</code>) and the number of draws with the
 <code>n_draws</code> argument, e.g.:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">priors_bayesian</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_priors.html">cbc_priors</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span></span>
+<span><span class="va">priors_bayesian</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_priors.html">cbc_priors</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
 <span>  price <span class="op">=</span> <span class="fu"><a href="../reference/rand_spec.html">rand_spec</a></span><span class="op">(</span></span>
 <span>    dist <span class="op">=</span> <span class="st">"n"</span>,</span>
@@ -547,7 +548,7 @@ calculation. You can conrol both the draw type with the
 <span>  main <span class="op">=</span> <span class="st">"Distribution of Price Parameter Draws"</span>,</span>
 <span>  xlab <span class="op">=</span> <span class="st">"Price Coefficient"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="priors_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
+<p><img src="priors_files/figure-html/unnamed-chunk-15-1.png" alt="Histogram showing the distribution of price parameter draws. The distribution appears roughly normal, centered around -0.25, with values ranging from approximately -0.5 to 0, indicating negative price sensitivity as expected." width="576"></p>
 </div>
 <div class="section level2">
 <h2 id="common-pitfalls">Common Pitfalls<a class="anchor" aria-label="anchor" href="#common-pitfalls"></a>

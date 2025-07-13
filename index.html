@@ -16,8 +16,8 @@
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Tools For Designing Choice-Based Conjoint Survey Experiments">
-<meta name="description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Choice simulation and model estimation in power analyses are handled using the logitr package &lt;doi:10.18637/jss.v105.i10&gt;.'>
-<meta property="og:description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Choice simulation and model estimation in power analyses are handled using the logitr package &lt;doi:10.18637/jss.v105.i10&gt;.'>
+<meta name="description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Bayesian D-efficient designs using the cea and modfed methods are obtained using the idefix package by Traets et al (2020) &lt;doi:10.18637/jss.v096.i03&gt;. Choice simulation and model estimation in power analyses are handled using the logitr package by Helveston (2023) &lt;doi:10.18637/jss.v105.i10&gt;.'>
+<meta property="og:description" content='Design and evaluate choice-based conjoint survey experiments. Generate a variety of survey designs, including random designs, frequency-based designs, and D-optimal designs, as well as "labeled" designs (also known as "alternative-specific designs"), designs with "no choice" options, and designs with dominant alternatives removed. Conveniently inspect and compare designs using a variety of metrics, including design balance, overlap, and D-error, and simulate choice data for a survey design either randomly or according to a utility model defined by user-provided prior parameters. Conduct a power analysis for a given survey design by estimating the same model on different subsets of the data to simulate different sample sizes. Bayesian D-efficient designs using the cea and modfed methods are obtained using the idefix package by Traets et al (2020) &lt;doi:10.18637/jss.v096.i03&gt;. Choice simulation and model estimation in power analyses are handled using the logitr package by Helveston (2023) &lt;doi:10.18637/jss.v105.i10&gt;.'>
 <meta property="og:image" content="https://jhelvy.github.io/cbcTools/reference/figures/logo.png">
 <meta property="og:image:alt" content="Logo for the cbcTools package">
 </head>
@@ -29,7 +29,7 @@
 
     <a class="navbar-brand me-2" href="index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,8 +71,9 @@
 <!-- badges: start -->
 
 <p>This package provides functions for generating and inspecting survey designs for choice-based conjoint survey experiments in R. Each function in the package begins with <code>cbc_</code> and supports a step in the following process for designing and analyzing survey experiments:</p>
-<p><img src="reference/figures/flowchart.png"></p>
-<p>After installing the package, got to the <a href="https://jhelvy.github.io/cbcTools/articles/getting-started.html">Getting Started</a> page to learn how to use the package.</p>
+<figure><img src="reference/figures/flowchart.png" alt="Workflow diagram showing the six-step cbcTools process: Generate Profiles (cbc_profiles) -&gt; Create Priors (cbc_priors) -&gt; Generate Design (cbc_design) -&gt; Inspect Design (cbc_inspect) -&gt; Simulate Choices (cbc_choices) -&gt; Assess Power (cbc_power)"><figcaption aria-hidden="true">
+Workflow diagram showing the six-step cbcTools process: Generate Profiles (cbc_profiles) -&gt; Create Priors (cbc_priors) -&gt; Generate Design (cbc_design) -&gt; Inspect Design (cbc_inspect) -&gt; Simulate Choices (cbc_choices) -&gt; Assess Power (cbc_power)
+</figcaption></figure><p>After installing the package, got to the <a href="https://jhelvy.github.io/cbcTools/articles/getting-started.html">Getting Started</a> page to learn how to use the package.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -107,14 +108,14 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"cbcTools"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; To cite cbcTools in publications use:</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;   Helveston JP (2023). _cbcTools: Design and Evaluate Choice-Based</span></span>
-<span><span class="co">#&gt;   Conjoint Survey Experiments_. R package,</span></span>
+<span><span class="co">#&gt;   Helveston JP (2023). _cbcTools: Design and Analyze Choice-Based</span></span>
+<span><span class="co">#&gt;   Conjoint Experiments_. R package,</span></span>
 <span><span class="co">#&gt;   &lt;https://jhelvy.github.io/cbcTools/&gt;.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; A BibTeX entry for LaTeX users is</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   @Manual{,</span></span>
-<span><span class="co">#&gt;     title = {{cbcTools}: Design and Evaluate Choice-Based Conjoint Survey Experiments},</span></span>
+<span><span class="co">#&gt;     title = {{cbcTools}: Design and Analyze Choice-Based Conjoint Experiments},</span></span>
 <span><span class="co">#&gt;     author = {John Paul Helveston},</span></span>
 <span><span class="co">#&gt;     year = {2023},</span></span>
 <span><span class="co">#&gt;     note = {R package},</span></span>
