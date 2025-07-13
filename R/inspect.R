@@ -38,176 +38,213 @@
 #' # Verbose output with technical details
 #' cbc_inspect(design, verbose = TRUE)
 cbc_inspect <- function(design, sections = "all", verbose = FALSE) {
-
-    # Validate inputs
-    if (!inherits(design, "cbc_design")) {
-        stop("design must be a cbc_design object created by cbc_design()")
-    }
-
-    # Handle "all" sections
-    if ("all" %in% sections) {
-        sections <- c("structure", "efficiency", "balance", "overlap", "encoding")
-    }
-
-    # Validate sections
-    valid_sections <- c("structure", "efficiency", "balance", "overlap", "encoding")
-    invalid_sections <- setdiff(sections, valid_sections)
-    if (length(invalid_sections) > 0) {
-        stop("Invalid sections: ", paste(invalid_sections, collapse = ", "),
-             ". Valid options are: ", paste(valid_sections, collapse = ", "))
-    }
-
-    # Extract design information
-    params <- attr(design, "design_params")
-    summary_info <- attr(design, "design_summary")
-
-    # Initialize results list
-    results <- list()
-
-    # Structure section
-    if ("structure" %in% sections) {
-        results$structure <- inspect_structure_section(design, params, summary_info, verbose)
-    }
-
-    # Efficiency section
-    if ("efficiency" %in% sections) {
-        results$efficiency <- inspect_efficiency_section(design, params, summary_info, verbose)
-    }
-
-    # Balance section
-    if ("balance" %in% sections) {
-        results$balance <- inspect_balance_section(design, summary_info, verbose)
-    }
-
-    # Overlap section
-    if ("overlap" %in% sections) {
-        results$overlap <- inspect_overlap_section(design, summary_info, verbose)
-    }
-
-    # Encoding section
-    if ("encoding" %in% sections) {
-        results$encoding <- inspect_encoding_section(design, params, verbose)
-    }
-
-    # Add metadata
-    results$sections_requested <- sections
-    results$verbose <- verbose
-    results$design_info <- list(
-        method = params$method,
-        d_error = params$d_error_prior %||% params$d_error_null,
-        n_choice_sets = summary_info$n_choice_sets,
-        profiles_used = summary_info$n_profiles_used,
-        profiles_available = summary_info$n_profiles_available
+  # Validate inputs
+  if (!inherits(design, "cbc_design") && !inherits(design, "cbc_choices")) {
+    stop(
+      "design must be a cbc_design object created by cbc_design() or a cbc_choices object created by cbc_choices()"
     )
+  }
 
-    class(results) <- c("cbc_inspection", "list")
-    return(results)
+  # Handle "all" sections
+  if ("all" %in% sections) {
+    sections <- c("structure", "efficiency", "balance", "overlap", "encoding")
+  }
+
+  # Validate sections
+  valid_sections <- c(
+    "structure",
+    "efficiency",
+    "balance",
+    "overlap",
+    "encoding"
+  )
+  invalid_sections <- setdiff(sections, valid_sections)
+  if (length(invalid_sections) > 0) {
+    stop(
+      "Invalid sections: ",
+      paste(invalid_sections, collapse = ", "),
+      ". Valid options are: ",
+      paste(valid_sections, collapse = ", ")
+    )
+  }
+
+  # Extract design information
+  params <- attr(design, "design_params")
+  summary_info <- attr(design, "design_summary")
+
+  # Initialize results list
+  results <- list()
+
+  # Structure section
+  if ("structure" %in% sections) {
+    results$structure <- inspect_structure_section(
+      design,
+      params,
+      summary_info,
+      verbose
+    )
+  }
+
+  # Efficiency section
+  if ("efficiency" %in% sections) {
+    results$efficiency <- inspect_efficiency_section(
+      design,
+      params,
+      summary_info,
+      verbose
+    )
+  }
+
+  # Balance section
+  if ("balance" %in% sections) {
+    results$balance <- inspect_balance_section(design, summary_info, verbose)
+  }
+
+  # Overlap section
+  if ("overlap" %in% sections) {
+    results$overlap <- inspect_overlap_section(design, summary_info, verbose)
+  }
+
+  # Encoding section
+  if ("encoding" %in% sections) {
+    results$encoding <- inspect_encoding_section(design, params, verbose)
+  }
+
+  # Add metadata
+  results$sections_requested <- sections
+  results$verbose <- verbose
+  results$design_info <- list(
+    method = params$method,
+    d_error = params$d_error_prior %||% params$d_error_null,
+    n_choice_sets = summary_info$n_choice_sets,
+    profiles_used = summary_info$n_profiles_used,
+    profiles_available = summary_info$n_profiles_available
+  )
+
+  class(results) <- c("cbc_inspection", "list")
+  return(results)
 }
 
 # Helper functions for each section
 
 inspect_structure_section <- function(design, params, summary_info, verbose) {
-    # Special features
-    features <- c()
-    if (params$no_choice) features <- c(features, "No-choice option")
-    if (!is.null(params$label)) features <- c(features, paste("Labeled design:", params$label))
-    if (!is.null(params$remove_dominant) && params$remove_dominant) {
-        features <- c(features, paste("Dominance removal:", paste(params$dominance_types, collapse = ", ")))
-    }
+  # Special features
+  features <- c()
+  if (params$no_choice) {
+    features <- c(features, "No-choice option")
+  }
+  if (!is.null(params$label)) {
+    features <- c(features, paste("Labeled design:", params$label))
+  }
+  if (!is.null(params$remove_dominant) && params$remove_dominant) {
+    features <- c(
+      features,
+      paste(
+        "Dominance removal:",
+        paste(params$dominance_types, collapse = ", ")
+      )
+    )
+  }
 
-    return(list(
-        method = params$method,
-        created_at = params$created_at,
-        generation_time = params$time_elapsed_sec,
-        n_resp = params$n_resp,
-        n_q = params$n_q,
-        n_alts = params$n_alts,
-        n_blocks = params$n_blocks,
-        n_choice_sets = summary_info$n_choice_sets,
-        n_profiles_used = summary_info$n_profiles_used,
-        n_profiles_available = summary_info$n_profiles_available,
-        profile_usage_rate = summary_info$profile_usage_rate,
-        features = features,
-        optimization_attempts = summary_info$optimization_attempts
-    ))
+  return(list(
+    method = params$method,
+    created_at = params$created_at,
+    generation_time = params$time_elapsed_sec,
+    n_resp = params$n_resp,
+    n_q = params$n_q,
+    n_alts = params$n_alts,
+    n_blocks = params$n_blocks,
+    n_choice_sets = summary_info$n_choice_sets,
+    n_profiles_used = summary_info$n_profiles_used,
+    n_profiles_available = summary_info$n_profiles_available,
+    profile_usage_rate = summary_info$profile_usage_rate,
+    features = features,
+    optimization_attempts = summary_info$optimization_attempts
+  ))
 }
 
 inspect_efficiency_section <- function(design, params, summary_info, verbose) {
-    return(list(
-        method = params$method,
-        d_error_prior = params$d_error_prior,
-        d_error_null = params$d_error_null,
-        balance_score = summary_info$efficiency$balance_score %||% NA,
-        overlap_score = summary_info$efficiency$overlap_score %||% NA,
-        profiles_used = summary_info$efficiency$profiles_used %||% NA,
-        profiles_available = summary_info$efficiency$profiles_available %||% NA
-    ))
+  return(list(
+    method = params$method,
+    d_error_prior = params$d_error_prior,
+    d_error_null = params$d_error_null,
+    balance_score = summary_info$efficiency$balance_score %||% NA,
+    overlap_score = summary_info$efficiency$overlap_score %||% NA,
+    profiles_used = summary_info$efficiency$profiles_used %||% NA,
+    profiles_available = summary_info$efficiency$profiles_available %||% NA
+  ))
 }
 
 inspect_balance_section <- function(design, summary_info, verbose) {
-    # Use pre-computed metrics if available
-    if (!is.null(summary_info$efficiency$balance_score)) {
-        balance_details <- summary_info$efficiency$balance_details
-        result <- inspect_balance_detailed(design, balance_details, verbose)
-        result$overall_balance <- summary_info$efficiency$balance_score
-    } else {
-        # Compute on the fly if not pre-computed
-        result <- inspect_balance_detailed(design, verbose = verbose)
-    }
+  # Use pre-computed metrics if available
+  if (!is.null(summary_info$efficiency$balance_score)) {
+    balance_details <- summary_info$efficiency$balance_details
+    result <- inspect_balance_detailed(design, balance_details, verbose)
+    result$overall_balance <- summary_info$efficiency$balance_score
+  } else {
+    # Compute on the fly if not pre-computed
+    result <- inspect_balance_detailed(design, verbose = verbose)
+  }
 
-    return(result)
+  return(result)
 }
 
 inspect_overlap_section <- function(design, summary_info, verbose) {
-    # Use pre-computed metrics if available
-    if (!is.null(summary_info$efficiency$overlap_score)) {
-        overlap_details <- summary_info$efficiency$overlap_details
-        result <- inspect_overlap_detailed(design, overlap_details, verbose)
-        result$overall_overlap <- summary_info$efficiency$overlap_score
-    } else {
-        # Compute on the fly if not pre-computed
-        result <- inspect_overlap_detailed(design, verbose = verbose)
-    }
+  # Use pre-computed metrics if available
+  if (!is.null(summary_info$efficiency$overlap_score)) {
+    overlap_details <- summary_info$efficiency$overlap_details
+    result <- inspect_overlap_detailed(design, overlap_details, verbose)
+    result$overall_overlap <- summary_info$efficiency$overlap_score
+  } else {
+    # Compute on the fly if not pre-computed
+    result <- inspect_overlap_detailed(design, verbose = verbose)
+  }
 
-    return(result)
+  return(result)
 }
 
 inspect_encoding_section <- function(design, params, verbose) {
-    is_dummy_coded <- attr(design, "is_dummy_coded") %||% params$dummy_coded %||% TRUE
-    categorical_structure <- attr(design, "categorical_structure")
+  is_dummy_coded <- attr(design, "is_dummy_coded") %||%
+    params$dummy_coded %||%
+    TRUE
+  categorical_structure <- attr(design, "categorical_structure")
 
-    categorical_variables <- NULL
-    categorical_details <- NULL
+  categorical_variables <- NULL
+  categorical_details <- NULL
 
-    if (!is.null(categorical_structure)) {
-        categorical_variables <- names(categorical_structure)[
-            sapply(categorical_structure, function(info) info$is_categorical)
-        ]
+  if (!is.null(categorical_structure)) {
+    categorical_variables <- names(categorical_structure)[
+      sapply(categorical_structure, function(info) info$is_categorical)
+    ]
 
-        if (verbose) {
-            categorical_details <- list()
-            for (var in names(categorical_structure)) {
-                info <- categorical_structure[[var]]
-                if (info$is_categorical) {
-                    categorical_details[[var]] <- list(
-                        levels = info$levels,
-                        reference_level = info$reference_level
-                    )
-                }
-            }
+    if (verbose) {
+      categorical_details <- list()
+      for (var in names(categorical_structure)) {
+        info <- categorical_structure[[var]]
+        if (info$is_categorical) {
+          categorical_details[[var]] <- list(
+            levels = info$levels,
+            reference_level = info$reference_level
+          )
         }
+      }
     }
+  }
 
-    return(list(
-        is_dummy_coded = is_dummy_coded,
-        categorical_variables = categorical_variables,
-        categorical_details = categorical_details,
-        no_choice = params$no_choice
-    ))
+  return(list(
+    is_dummy_coded = is_dummy_coded,
+    categorical_variables = categorical_variables,
+    categorical_details = categorical_details,
+    no_choice = params$no_choice
+  ))
 }
 
 # Detailed balance inspection
-inspect_balance_detailed <- function(design, balance_details = NULL, verbose = FALSE) {
+inspect_balance_detailed <- function(
+  design,
+  balance_details = NULL,
+  verbose = FALSE
+) {
   if (is.null(balance_details)) {
     # Compute balance metrics
     balance_result <- compute_balance_metrics_internal(design)
@@ -215,7 +252,10 @@ inspect_balance_detailed <- function(design, balance_details = NULL, verbose = F
     balance_metrics <- balance_result$balance_metrics
   } else {
     # Use pre-computed data - need to recompute counts for display
-    atts <- setdiff(names(design), c("respID", "qID", "altID", "obsID", "profileID", "blockID"))
+    atts <- setdiff(
+      names(design),
+      c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+    )
     counts <- lapply(atts, function(attr) table(design[[attr]]))
     names(counts) <- atts
     balance_metrics <- balance_details
@@ -229,7 +269,11 @@ inspect_balance_detailed <- function(design, balance_details = NULL, verbose = F
 }
 
 # Detailed overlap inspection
-inspect_overlap_detailed <- function(design, overlap_details = NULL, verbose = FALSE) {
+inspect_overlap_detailed <- function(
+  design,
+  overlap_details = NULL,
+  verbose = FALSE
+) {
   if (is.null(overlap_details)) {
     # Compute overlap metrics
     overlap_result <- compute_overlap_metrics_internal(design)
@@ -237,8 +281,13 @@ inspect_overlap_detailed <- function(design, overlap_details = NULL, verbose = F
     overlap_metrics <- overlap_result$overlap_metrics
   } else {
     # Use pre-computed data - need to recompute counts for display
-    atts <- setdiff(names(design), c("respID", "qID", "altID", "obsID", "profileID", "blockID"))
-    overlap_counts <- lapply(atts, function(attr) get_att_overlap_counts(attr, design))
+    atts <- setdiff(
+      names(design),
+      c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+    )
+    overlap_counts <- lapply(atts, function(attr) {
+      get_att_overlap_counts(attr, design)
+    })
     names(overlap_counts) <- atts
     overlap_metrics <- overlap_details
   }
@@ -248,7 +297,9 @@ inspect_overlap_detailed <- function(design, overlap_details = NULL, verbose = F
   return(list(
     overlap_counts = overlap_counts,
     overlap_metrics = overlap_metrics,
-    overall_overlap = mean(sapply(overlap_metrics, function(x) x$complete_overlap_rate))
+    overall_overlap = mean(sapply(overlap_metrics, function(x) {
+      x$complete_overlap_rate
+    }))
   ))
 }
 
