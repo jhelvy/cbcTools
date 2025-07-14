@@ -211,9 +211,11 @@ test_that("No-choice option works correctly", {
 # =============================================================================
 # PARAMETER RECOVERY TESTS
 # =============================================================================
+# All of these are skipped on CRAN as they take much longer to run
 
 test_that("Fixed parameters can be recovered accurately", {
   skip_if_not(logitr_available, "logitr package not available")
+  skip_on_cran() # Skip on CRAN due to computation time
 
   profiles <- setup_choice_test_profiles()
 
@@ -259,6 +261,7 @@ test_that("Fixed parameters can be recovered accurately", {
 
 test_that("Random parameters can be recovered accurately", {
   skip_if_not(logitr_available, "logitr package not available")
+  skip_on_cran() # Skip on CRAN due to computation time
 
   profiles <- setup_choice_test_profiles()
 
@@ -343,6 +346,7 @@ test_that("Random parameters can be recovered accurately", {
 
 test_that("No-choice parameters can be recovered accurately", {
   skip_if_not(logitr_available, "logitr package not available")
+  skip_on_cran() # Skip on CRAN due to computation time
 
   profiles <- setup_choice_test_profiles()
 
@@ -391,6 +395,7 @@ test_that("No-choice parameters can be recovered accurately", {
 
 test_that("Interaction parameters can be recovered accurately", {
   skip_if_not(logitr_available, "logitr package not available")
+  skip_on_cran() # Skip on CRAN due to computation time
 
   # Simpler profiles for interactions
   profiles_int <- cbc_profiles(
@@ -584,6 +589,7 @@ test_that("Choice simulation completes in reasonable time", {
 
 test_that("Choices work with different design methods", {
   profiles <- setup_choice_test_profiles()
+  skip_on_cran() # Skip on CRAN due to computation time
 
   priors <- cbc_priors(
     profiles = profiles,

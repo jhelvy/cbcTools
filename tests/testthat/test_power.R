@@ -301,6 +301,7 @@ test_that("Custom parameter specifications work", {
 # =============================================================================
 # STATISTICAL VALIDATION TESTS
 # =============================================================================
+# These are skipped on CRAN as they take too long to run
 
 test_that("Power increases with sample size", {
   skip_if_not(logitr_available, "logitr package not available")
@@ -346,6 +347,7 @@ test_that("Standard errors decrease with sample size", {
 })
 
 test_that("Power analysis results are reproducible", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -523,9 +525,11 @@ test_that("Power analysis works with no-choice data", {
 # =============================================================================
 # PERFORMANCE TESTS
 # =============================================================================
+# These are skipped on CRAN as they take too long to run
 
 test_that("Power analysis completes in reasonable time", {
   skip_if_not(logitr_available, "logitr package not available")
+  skip_on_cran() # Skip on CRAN due to computation time
 
   test_data <- setup_small_power_data()
 

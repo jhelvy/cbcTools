@@ -229,8 +229,10 @@ test_that("Random design with no-choice works", {
 # =============================================================================
 # METHOD-SPECIFIC TESTS
 # =============================================================================
+# These are skipped on CRAN as they take too long to run
 
 test_that("Greedy methods work with simple priors", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "simple")
 
@@ -260,6 +262,7 @@ test_that("Greedy methods work with simple priors", {
 
 test_that("Optimal methods work with simple priors", {
   skip_if_not_installed("idefix")
+  skip_on_cran() # Skip on CRAN due to computation time
 
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "simple")
