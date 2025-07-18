@@ -113,8 +113,8 @@ The `cbc_design()` function supports several design generation methods, each wit
 | `"minoverlap"` | Fast | Medium   | ✓         | ✓       | ✓            | ✗        | ✗            |
 | `"balanced"` | Fast  | Medium     | ✓         | ✓       | ✓            | ✗        | ✗            |
 | `"stochastic"` | Slow | High     | ✓         | ✓       | ✓            | ✓        | ✓            |
-| `"modfed"`   | Slow  | High       | ✓         | ✓       | ✓            | ✓        | ✓            |
-| `"cea"`      | Slow  | High       | ✓         | ✓       | ✗           | ✓        | ✓            |
+| `"modfed"`   | Medium  | High       | ✓         | ✓       | ✓            | ✓        | ✓            |
+| `"cea"`      | Medium  | High       | ✓         | ✓       | ✗           | ✓        | ✓            |
 
 All design methods ensure:
 
@@ -183,13 +183,17 @@ design_balanced <- cbc_design(
 
 ## D-Optimal Methods
 
-These methods minimize D-error to create statistically efficient designs. They require more computation but produce higher-quality designs, especially with good priors. Each method has a different approach:
+These methods minimize D-error to create statistically efficient designs. They require more computation but produce higher-quality designs, especially with good priors. 
+
+Unlike the previous methods, these methods identify a single d-optimal design and then repeat that design across each respondent. In contrast, the other methods create a unique design for each respondent.
+
+Each method has a different approach:
 
 - The `"stochastic"` method uses random profile swapping to minimize the d-error, accepting the first improvement found. This is a faster algorithm as a compromise between speed and exhaustiveness.
 - The `"modfed"` (Modified Fedorov) method exhaustively tests all possible profile swaps for each position. It is slower than other methods though more thorough.
 - The `"cea"` (Coordinate Exchange Algorithm) method optimizes attribute-by-attribute, testing all possible levels for each attribute. It is faster than `"modfed"`, though requires all possible profiles and cannot accept restricted profile sets.
 
-Unlike the previous methods, these methods identify a single d-optimal design and then repeat that design across each respondent. In contrast, the other methods create a unique design for each respondent.
+For the `"modfed"` and `"cea"` methods, designs are by default created using the much faster algorithms in the [{idefix}](https://github.com/traets/idefix) package. You can use the (slower) {cbcTools} versions of these methods by setting `use_idefix = FALSE`.
 
 For the examples below, we have `n_start = 1`, meaning it will only run one design search (which is faster), but you may want to run a longer search by increasing `n_start`. The best design across all starts is chosen.
 
@@ -293,22 +297,24 @@ head(design_labeled)
 
 ## Blocking
 
-For D-optimal methods, create multiple design blocks to reduce respondent burden:
+For D-optimal methods, create multiple design blocks to reduce respondent burden using the `n_blocks` argument. In the example below, two blocks are created with each block containing `n_q = 6` questions: 
 
 ```{r}
 design_blocked <- cbc_design(
   profiles = profiles,
+  method = "stochastic",
+  priors = priors,
   n_alts = 2,
   n_q = 6,
   n_resp = 100,
-  n_blocks = 2, # Create 2 different design blocks
-  priors = priors,
-  method = "stochastic"
+  n_blocks = 2 # Create 2 different design blocks
 )
 
 # Check block allocation
 table(design_blocked$blockID)
 ```
+
+The way blocking works is that a single design is created with `n_q*n_blocks` questions, then those questions are allocated into blocks with `n_q` questions per block. For the `"modfed"` and `"cea"` methods, the blocking is handled using the internal logic of the [{idefix}](https://github.com/traets/idefix) package, which allocates questions to the blocks in a balanced way. You can use the (slower) {cbcTools} versions of these methods by setting `use_idefix = FALSE`. For the `"stochastic"` method, questions are randomly allocated to blocks. 
 
 ## Dominance Removal
 
