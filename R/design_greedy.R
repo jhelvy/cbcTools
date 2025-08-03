@@ -46,10 +46,7 @@ generate_greedy_design <- function(opt_env) {
                     "reset_pairwise_tracker",
                     "update_pairwise_tracker",
                     "update_overlap_tracker",
-                    "get_eligible_profiles_greedy",
-                    "filter_dominant_profiles",
-                    "would_create_dominance",
-                    "get_probs"
+                    "get_eligible_profiles_greedy"
                 ),
                 envir = environment()
             )
@@ -75,6 +72,11 @@ generate_greedy_design <- function(opt_env) {
 
     # Combine all respondent designs into a single matrix
     design_matrix <- do.call(rbind, resp_designs)
+
+    # Post-process for dominance removal if requested
+    if (opt_env$remove_dominant && opt_env$has_priors) {
+        design_matrix <- remove_dominant_questions_greedy(design_matrix, opt_env)
+    }
 
     return(list(
         design_matrix = design_matrix,
@@ -103,7 +105,7 @@ generate_greedy_for_respondent <- function(resp_id, opt_env) {
 
         # Generate each alternative in this question
         for (alt in 1:n$alts) {
-            # Get eligible profiles based on constraints (including dominance filtering)
+            # Get eligible profiles based on basic constraints (no dominance filtering here)
             eligible_profiles <- get_eligible_profiles_greedy(
                 alt,
                 opt_env,
@@ -139,6 +141,44 @@ generate_greedy_for_respondent <- function(resp_id, opt_env) {
     }
 
     return(resp_design)
+}
+
+# Post-design dominance removal for greedy methods
+remove_dominant_questions_greedy <- function(design_matrix, opt_env) {
+    attempts <- 0
+    max_attempts <- opt_env$n$max_attempts
+
+    message("Checking for dominant alternatives and replacing if found...")
+
+    while (attempts < max_attempts) {
+        attempts <- attempts + 1
+
+        # Find all problematic questions using existing functions from random method
+        problem_questions <- find_problematic_questions(design_matrix, opt_env)
+
+        if (length(problem_questions) == 0) {
+            break # Design is valid
+        }
+
+        # Replace problematic questions
+        for (q in problem_questions) {
+            design_matrix[q, ] <- sample_question_profiles(opt_env)
+        }
+    }
+
+    # Find all remaining problematic questions (if any)
+    remaining_problems <- find_problematic_questions(design_matrix, opt_env)
+    if (length(remaining_problems) > 0) {
+        warning(sprintf(
+            "Could not remove all dominant alternatives after %d attempts. %d questions still have dominance issues.",
+            max_attempts,
+            length(remaining_problems)
+        ))
+    } else {
+        message("All dominant alternatives successfully removed.")
+    }
+
+    return(design_matrix)
 }
 
 # ===== TRACKER INITIALIZATION AND MANAGEMENT =====
@@ -192,14 +232,14 @@ reset_greedy_trackers <- function(trackers, method, attr_names) {
 
 # Update tracking structures based on method requirements
 update_greedy_trackers <- function(
-    trackers,
-    profile_id,
-    resp_design,
-    q,
-    alt,
-    profiles,
-    attr_names,
-    method
+        trackers,
+        profile_id,
+        resp_design,
+        q,
+        alt,
+        profiles,
+        attr_names,
+        method
 ) {
     # All methods update basic frequencies
     trackers$question_freq <- update_frequency_tracker(
@@ -278,10 +318,10 @@ reset_frequency_tracker <- function(freq_tracker) {
 
 # Update frequency tracker with new profile
 update_frequency_tracker <- function(
-    freq_tracker,
-    profile_id,
-    profiles,
-    attr_names
+        freq_tracker,
+        profile_id,
+        profiles,
+        attr_names
 ) {
     # Get the profile data
     profile_row <- profiles[profiles$profileID == profile_id, ]
@@ -344,10 +384,10 @@ reset_pairwise_tracker <- function(pairs_tracker, attr_names) {
 
 # Update pairwise frequency tracker
 update_pairwise_tracker <- function(
-    pairs_tracker,
-    profile_id,
-    profiles,
-    attr_names
+        pairs_tracker,
+        profile_id,
+        profiles,
+        attr_names
 ) {
     profile_row <- profiles[profiles$profileID == profile_id, ]
 
@@ -391,10 +431,10 @@ initialize_overlap_tracker <- function(attr_names, profiles) {
 
 # Update overlap tracker based on current question state
 update_overlap_tracker <- function(
-    overlap_tracker,
-    question_profiles,
-    profiles,
-    attr_names
+        overlap_tracker,
+        question_profiles,
+        profiles,
+        attr_names
 ) {
     # Reset tracker
     for (attr in attr_names) {
@@ -416,12 +456,12 @@ update_overlap_tracker <- function(
 
 # ===== PROFILE SELECTION AND SCORING =====
 
-# Get eligible profiles based on constraints (updated version with dominance support)
+# Get eligible profiles based on basic constraints (no dominance filtering during generation)
 get_eligible_profiles_greedy <- function(
-    alt,
-    opt_env,
-    resp_design = NULL,
-    current_q = NULL
+        alt,
+        opt_env,
+        resp_design = NULL,
+        current_q = NULL
 ) {
     # Start with basic constraint filtering
     if (!is.null(opt_env$label_constraints)) {
@@ -439,34 +479,20 @@ get_eligible_profiles_greedy <- function(
         eligible_profiles <- opt_env$available_profile_ids
     }
 
-    # Apply dominance filtering if requested and priors available
-    if (
-        opt_env$remove_dominant &&
-            opt_env$has_priors &&
-            !is.null(resp_design) &&
-            !is.null(current_q)
-    ) {
-        # Filter out profiles that would create dominant alternatives
-        eligible_profiles <- filter_dominant_profiles(
-            eligible_profiles,
-            resp_design,
-            current_q,
-            alt,
-            opt_env
-        )
-    }
+    # Note: Dominance filtering is now done post-design generation
+    # No longer filter for dominance here during generation
 
     return(eligible_profiles)
 }
 
 # Select profile using greedy algorithm
 select_profile_greedy <- function(
-    eligible_profiles,
-    trackers,
-    resp_design,
-    current_q,
-    current_alt,
-    opt_env
+        eligible_profiles,
+        trackers,
+        resp_design,
+        current_q,
+        current_alt,
+        opt_env
 ) {
     if (length(eligible_profiles) == 0) {
         stop("No eligible profiles available")
@@ -518,14 +544,14 @@ select_profile_greedy <- function(
 
 # Calculate score based on method requirements with distinct objectives
 calculate_greedy_score <- function(
-    profile_id,
-    trackers,
-    resp_design,
-    current_q,
-    current_alt,
-    method,
-    profiles,
-    attr_names
+        profile_id,
+        trackers,
+        resp_design,
+        current_q,
+        current_alt,
+        method,
+        profiles,
+        attr_names
 ) {
     if (method == "shortcut") {
         # Original shortcut: only frequency matters
@@ -627,14 +653,14 @@ get_pairwise_score <- function(profile_id, trackers, profiles, attr_names) {
 
 # Calculate overlap score (method-dependent)
 get_overlap_score <- function(
-    profile_id,
-    trackers,
-    resp_design,
-    current_q,
-    current_alt,
-    method,
-    profiles,
-    attr_names
+        profile_id,
+        trackers,
+        resp_design,
+        current_q,
+        current_alt,
+        method,
+        profiles,
+        attr_names
 ) {
     profile_row <- profiles[profiles$profileID == profile_id, ]
 
@@ -659,90 +685,4 @@ get_overlap_score <- function(
     }
 
     return(total_score)
-}
-
-# ===== DOMINANCE FILTERING (if needed) =====
-
-# Helper function to filter out profiles that would create dominance
-filter_dominant_profiles <- function(
-    eligible_profiles,
-    resp_design,
-    current_q,
-    current_alt,
-    opt_env
-) {
-    if (length(eligible_profiles) == 0) {
-        return(eligible_profiles)
-    }
-
-    # Get profiles already selected for this question
-    existing_profiles <- resp_design[current_q, 1:(current_alt - 1)]
-    existing_profiles <- existing_profiles[existing_profiles != 0]
-
-    if (length(existing_profiles) == 0) {
-        # First alternative in question - no dominance check needed yet
-        return(eligible_profiles)
-    }
-
-    valid_profiles <- c()
-
-    for (profile_id in eligible_profiles) {
-        # Create test question with current profile added
-        test_question <- c(existing_profiles, profile_id)
-
-        # Check if this would create dominance
-        if (!would_create_dominance(test_question, opt_env)) {
-            valid_profiles <- c(valid_profiles, profile_id)
-        }
-    }
-
-    return(valid_profiles)
-}
-
-# Check if a specific question configuration would create dominance
-would_create_dominance <- function(question_profiles, opt_env) {
-    # Create mini design matrix for this question
-    test_matrix <- matrix(question_profiles, nrow = 1)
-
-    # Check total dominance
-    if ("total" %in% opt_env$dominance_types) {
-        probs <- get_probs(test_matrix, opt_env)
-        if (opt_env$is_bayesian) {
-            probs <- rowMeans(probs)
-        }
-        if (any(probs > opt_env$dominance_threshold)) {
-            return(TRUE)
-        }
-    }
-
-    # Check partial dominance
-    if (
-        "partial" %in%
-            opt_env$dominance_types &&
-            !is.null(opt_env$partial_utilities)
-    ) {
-        design_vector <- as.vector(test_matrix)
-        partials <- opt_env$partial_utilities[design_vector, , drop = FALSE]
-
-        # Check if any profile dominates others
-        if (nrow(partials) > 1) {
-            for (i in 1:nrow(partials)) {
-                dominates_all <- TRUE
-                for (j in 1:nrow(partials)) {
-                    if (i != j) {
-                        # Check if profile i dominates profile j
-                        if (!all(partials[i, ] >= partials[j, ])) {
-                            dominates_all <- FALSE
-                            break
-                        }
-                    }
-                }
-                if (dominates_all) {
-                    return(TRUE) # Found a dominant profile
-                }
-            }
-        }
-    }
-
-    return(FALSE)
 }
