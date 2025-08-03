@@ -302,6 +302,7 @@ validate_encoding_section <- function(encoding_data) {
 # =============================================================================
 
 test_that("Basic inspection with all sections works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -328,6 +329,7 @@ test_that("Basic inspection with all sections works", {
 })
 
 test_that("Individual section inspection works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -355,6 +357,7 @@ test_that("Individual section inspection works", {
 })
 
 test_that("Multiple specific sections work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -374,6 +377,7 @@ test_that("Multiple specific sections work", {
 })
 
 test_that("Verbose mode works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -401,6 +405,7 @@ test_that("Verbose mode works correctly", {
 # =============================================================================
 
 test_that("Optimal design inspection includes D-errors", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_optimal_inspection_data()
   design <- test_data$design
 
@@ -419,6 +424,7 @@ test_that("Optimal design inspection includes D-errors", {
 })
 
 test_that("Random design inspection handles missing D-errors", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     quality = c("Low", "High")
@@ -449,6 +455,7 @@ test_that("Random design inspection handles missing D-errors", {
 })
 
 test_that("No-choice design inspection works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_special_features_data()
   design <- test_data$design
 
@@ -465,6 +472,7 @@ test_that("No-choice design inspection works correctly", {
 })
 
 test_that("Blocked design inspection works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not_installed("idefix")
 
   profiles <- cbc_profiles(
@@ -505,6 +513,7 @@ test_that("Blocked design inspection works correctly", {
 # =============================================================================
 
 test_that("Balance analysis produces reasonable results", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -536,6 +545,7 @@ test_that("Balance analysis produces reasonable results", {
 })
 
 test_that("Overlap analysis produces reasonable results", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
   inspection <- cbc_inspect(design, sections = "overlap")
@@ -580,6 +590,7 @@ test_that("Overlap analysis produces reasonable results", {
 })
 
 test_that("Inspection works with decoded (categorical) design", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -636,7 +647,9 @@ test_that("Inspection works with decoded (categorical) design", {
   }
 })
 
-test_that("Dummy-coded vs categorical inspection produces different attribute lists", {
+test_that("Dummy-coded vs categorical inspection produces different attribute
+  lists", {
+    skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -669,6 +682,7 @@ test_that("Dummy-coded vs categorical inspection produces different attribute li
 })
 
 test_that("Continuous vs categorical attributes are handled differently (decoded)", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -706,6 +720,7 @@ test_that("Continuous vs categorical attributes are handled differently (decoded
 # =============================================================================
 
 test_that("Input validation works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
 
   # Invalid design object
@@ -736,6 +751,7 @@ test_that("Input validation works correctly", {
 # =============================================================================
 
 test_that("Print method works correctly", {
+
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -751,6 +767,7 @@ test_that("Print method works correctly", {
 })
 
 test_that("Print method shows only requested sections", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -770,6 +787,7 @@ test_that("Print method shows only requested sections", {
 })
 
 test_that("Verbose print mode shows additional details", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -789,6 +807,7 @@ test_that("Verbose print mode shows additional details", {
 # =============================================================================
 
 test_that("Inspection works with different design methods", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2, 3),
     type = c("A", "B")
@@ -823,6 +842,7 @@ test_that("Inspection works with different design methods", {
 })
 
 test_that("Inspection works with choice data", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   choices <- test_data$choices
 
@@ -843,6 +863,7 @@ test_that("Inspection works with choice data", {
 # =============================================================================
 
 test_that("Inspection completes in reasonable time", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 
@@ -856,6 +877,7 @@ test_that("Inspection completes in reasonable time", {
 })
 
 test_that("Large design inspection is efficient", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create larger design
   profiles <- cbc_profiles(
     price = c(1, 2, 3, 4, 5),
@@ -893,6 +915,7 @@ test_that("Large design inspection is efficient", {
 # =============================================================================
 
 test_that("Design info metadata is populated correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 

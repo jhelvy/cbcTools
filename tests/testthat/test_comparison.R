@@ -201,6 +201,7 @@ validate_sorting <- function(comparison) {
 # =============================================================================
 
 test_that("Basic comparison with two designs works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   comparison <- cbc_compare(
@@ -226,6 +227,7 @@ test_that("Basic comparison with two designs works", {
 })
 
 test_that("Named design comparison works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   comparison <- cbc_compare(
@@ -249,6 +251,7 @@ test_that("Named design comparison works", {
 })
 
 test_that("Multiple designs comparison works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   comparison <- cbc_compare(
@@ -269,6 +272,7 @@ test_that("Multiple designs comparison works", {
 # =============================================================================
 
 test_that("Specific metric selection works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Test structure only
@@ -309,6 +313,7 @@ test_that("Specific metric selection works", {
 })
 
 test_that("All metrics option works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   comparison <- cbc_compare(
@@ -330,6 +335,7 @@ test_that("All metrics option works", {
 # =============================================================================
 
 test_that("Different sorting options work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Test balance sorting
@@ -367,6 +373,7 @@ test_that("Different sorting options work", {
 })
 
 test_that("Ascending and descending sort work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Test ascending (default for balance - higher is better)
@@ -395,6 +402,7 @@ test_that("Ascending and descending sort work", {
 })
 
 test_that("Default sort order is appropriate for metrics", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Test default for balance (should be descending - higher is better)
@@ -421,6 +429,7 @@ test_that("Default sort order is appropriate for metrics", {
 # =============================================================================
 
 test_that("D-error comparison works with optimal designs", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_optimal_comparison_data()
 
   comparison <- cbc_compare(
@@ -454,6 +463,7 @@ test_that("D-error comparison works with optimal designs", {
 })
 
 test_that("D-error sorting prioritizes prior over null", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_optimal_comparison_data()
 
   comparison <- cbc_compare(
@@ -481,6 +491,7 @@ test_that("D-error sorting prioritizes prior over null", {
 # =============================================================================
 
 test_that("No-choice designs are compared correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     quality = c("Low", "High")
@@ -537,6 +548,7 @@ test_that("No-choice designs are compared correctly", {
 })
 
 test_that("Blocked designs are compared correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not_installed("idefix")
 
   profiles <- cbc_profiles(
@@ -600,6 +612,7 @@ test_that("Blocked designs are compared correctly", {
 # =============================================================================
 
 test_that("Input validation works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Single design should error
@@ -636,6 +649,7 @@ test_that("Input validation works correctly", {
 })
 
 test_that("Missing data is handled gracefully", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create designs that might have missing metrics
   profiles <- cbc_profiles(
     price = c(1, 2),
@@ -672,6 +686,7 @@ test_that("Missing data is handled gracefully", {
 # =============================================================================
 
 test_that("Print method works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   comparison <- cbc_compare(
@@ -687,6 +702,7 @@ test_that("Print method works correctly", {
 })
 
 test_that("Print method shows appropriate sections", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Structure metrics
@@ -715,6 +731,7 @@ test_that("Print method shows appropriate sections", {
 # =============================================================================
 
 test_that("Comparison completes in reasonable time", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_comparison_test_data()
 
   # Should be fast for basic comparison
@@ -731,6 +748,7 @@ test_that("Comparison completes in reasonable time", {
 })
 
 test_that("Large number of designs can be compared", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create multiple similar designs
   profiles <- cbc_profiles(
     price = c(1, 2),
@@ -760,6 +778,7 @@ test_that("Large number of designs can be compared", {
 # =============================================================================
 
 test_that("Comparison works with different design complexities", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Simple design
   simple_profiles <- cbc_profiles(
     price = c(1, 2),
