@@ -17,14 +17,25 @@ generate_greedy_design <- function(opt_env) {
         " cores..."
     )
 
-    # Initialize trackers based on method requirements
-    trackers_init <- initialize_greedy_trackers(attr_names, profiles, method)
+    # Pre-compute encoded profiles and tracker systems
+    encoded_profiles <- get_encoded_profiles(profiles)
+    trackers_init <- initialize_greedy_trackers_matrix(
+        attr_names,
+        profiles,
+        encoded_profiles,
+        method
+    )
 
     # Generate designs in parallel
     if (n$cores == 1 || n$resp == 1) {
         # Sequential execution
         resp_designs <- lapply(1:n$resp, function(resp) {
-            generate_greedy_for_respondent(resp, trackers_init, opt_env)
+            generate_greedy_for_respondent(
+                resp,
+                trackers_init,
+                opt_env,
+                encoded_profiles
+            )
         })
     } else {
         # Parallel execution
@@ -35,27 +46,33 @@ generate_greedy_design <- function(opt_env) {
                 cl,
                 c(
                     "generate_greedy_for_respondent",
-                    "initialize_greedy_trackers",
-                    "update_greedy_trackers",
+                    "initialize_greedy_trackers_matrix",
+                    "update_greedy_trackers_matrix",
                     "select_profile_greedy",
                     "calculate_greedy_score",
-                    "get_pairwise_score",
-                    "get_overlap_score",
-                    "get_frequency_score",
-                    "initialize_frequency_tracker",
-                    "update_frequency_tracker",
-                    "initialize_pairwise_tracker",
-                    "initialize_overlap_tracker",
-                    "update_pairwise_tracker",
-                    "update_overlap_tracker",
-                    "get_eligible_profiles_list_greedy"
+                    "get_pairwise_score_matrix",
+                    "get_overlap_score_matrix",
+                    "get_frequency_score_matrix",
+                    "initialize_frequency_tracker_matrix",
+                    "update_frequency_tracker_matrix",
+                    "initialize_pairwise_tracker_matrix",
+                    "initialize_overlap_tracker_matrix",
+                    "update_pairwise_tracker_matrix",
+                    "update_overlap_tracker_matrix",
+                    "get_eligible_profiles_list_greedy",
+                    "get_encoded_profiles"
                 ),
                 envir = environment()
             )
 
             resp_designs <- suppressMessages(suppressWarnings(
                 parallel::parLapply(cl, 1:n$resp, function(resp) {
-                    generate_greedy_for_respondent(resp, trackers_init, opt_env)
+                    generate_greedy_for_respondent(
+                        resp,
+                        trackers_init,
+                        opt_env,
+                        encoded_profiles
+                    )
                 })
             ))
             parallel::stopCluster(cl)
@@ -67,7 +84,8 @@ generate_greedy_design <- function(opt_env) {
                         generate_greedy_for_respondent(
                             resp,
                             trackers_init,
-                            opt_env
+                            opt_env,
+                            encoded_profiles
                         )
                     },
                     mc.cores = min(n$cores, n$resp)
@@ -95,7 +113,12 @@ generate_greedy_design <- function(opt_env) {
 }
 
 # Generate greedy design for a single respondent
-generate_greedy_for_respondent <- function(resp_id, trackers_init, opt_env) {
+generate_greedy_for_respondent <- function(
+    resp_id,
+    trackers_init,
+    opt_env,
+    encoded_profiles
+) {
     n <- opt_env$n
     attr_names <- opt_env$attr_names
     profiles <- opt_env$profiles
@@ -104,13 +127,16 @@ generate_greedy_for_respondent <- function(resp_id, trackers_init, opt_env) {
     # Create design matrix for this respondent
     resp_design <- matrix(0, nrow = n$q, ncol = n$alts)
 
-    # Set eligible profiles
+    # Set eligible profiles (pre-computed for speed)
     eligible_profiles_list <- get_eligible_profiles_list_greedy(opt_env)
+
+    # Initialize trackers for this respondent
+    trackers <- trackers_init
 
     # Generate each question for this respondent
     for (q in 1:n$q) {
         # Reset question-level trackers
-        trackers <- trackers_init
+        trackers <- reset_question_trackers_matrix(trackers, method)
 
         # Generate each alternative in this question
         for (alt in 1:n$alts) {
@@ -123,21 +149,20 @@ generate_greedy_for_respondent <- function(resp_id, trackers_init, opt_env) {
                 resp_design,
                 q,
                 alt,
-                opt_env
+                opt_env,
+                encoded_profiles
             )
 
             # Store selected profile
             resp_design[q, alt] <- selected_profile
 
             # Update trackers
-            trackers <- update_greedy_trackers(
+            trackers <- update_greedy_trackers_matrix(
                 trackers,
                 selected_profile,
                 resp_design,
                 q,
                 alt,
-                profiles,
-                attr_names,
                 method
             )
         }
@@ -184,253 +209,278 @@ remove_dominant_questions_greedy <- function(design_matrix, opt_env) {
     return(design_matrix)
 }
 
-# ===== TRACKER INITIALIZATION AND MANAGEMENT =====
+# ===== ENCODING AND TRACKER INITIALIZATION =====
 
-# Initialize tracking structures based on method requirements
-initialize_greedy_trackers <- function(attr_names, profiles, method) {
+# Get encoded profiles for fast lookup
+get_encoded_profiles <- function(profiles) {
+    # Convert all non-profileID columns to character for dummy coding
+    profiles_for_dummy <- profiles[,
+        -which(names(profiles) == "profileID"),
+        drop = FALSE
+    ]
+    profiles_for_dummy <- as.data.frame(
+        lapply(profiles_for_dummy, as.character),
+        stringsAsFactors = FALSE
+    )
+
+    # Create dummy variables
+    profiles_dummy <- fastDummies::dummy_cols(
+        profiles_for_dummy,
+        remove_selected_columns = TRUE
+    )
+
+    # Add profileID back
+    profiles_dummy$profileID <- profiles$profileID
+
+    return(profiles_dummy)
+}
+
+# Initialize matrix-based tracking structures
+initialize_greedy_trackers_matrix <- function(
+    attr_names,
+    profiles,
+    encoded_profiles,
+    method
+) {
     # All methods need basic frequency tracking
     trackers <- list(
-        question_freq = initialize_frequency_tracker(attr_names, profiles),
-        overall_freq = initialize_frequency_tracker(attr_names, profiles)
+        question_freq = initialize_frequency_tracker_matrix(encoded_profiles),
+        overall_freq = initialize_frequency_tracker_matrix(encoded_profiles)
     )
 
     # Advanced methods need pairwise and overlap tracking
     if (method %in% c("minoverlap", "balanced")) {
-        trackers$question_pairs <- initialize_pairwise_tracker(
+        trackers$question_pairs = initialize_pairwise_tracker_matrix(
             attr_names,
-            profiles
+            profiles,
+            encoded_profiles
         )
-        trackers$overall_pairs <- initialize_pairwise_tracker(
+        trackers$overall_pairs = initialize_pairwise_tracker_matrix(
             attr_names,
-            profiles
+            profiles,
+            encoded_profiles
         )
-        trackers$question_overlap <- initialize_overlap_tracker(
-            attr_names,
-            profiles
+        trackers$question_overlap = initialize_overlap_tracker_matrix(
+            encoded_profiles
         )
-        trackers$overall_overlap <- initialize_overlap_tracker(
-            attr_names,
-            profiles
+        trackers$overall_overlap = initialize_overlap_tracker_matrix(
+            encoded_profiles
         )
     }
 
     return(trackers)
 }
 
-# Update tracking structures based on method requirements
-update_greedy_trackers <- function(
+# Reset question-level trackers to zero
+reset_question_trackers_matrix <- function(trackers, method) {
+    # Reset question-level frequency tracker
+    trackers$question_freq$current_counts[] <- 0
+
+    # Reset question-level advanced trackers if needed
+    if (method %in% c("minoverlap", "balanced")) {
+        trackers$question_pairs$current_counts[] <- 0
+        trackers$question_overlap$current_counts[] <- 0
+    }
+
+    return(trackers)
+}
+
+# Update tracking structures using matrix operations
+update_greedy_trackers_matrix <- function(
     trackers,
     profile_id,
     resp_design,
     q,
     alt,
-    profiles,
-    attr_names,
     method
 ) {
-    # All methods update basic frequencies
-    trackers$question_freq <- update_frequency_tracker(
+    # Convert profile_id to character for consistent indexing
+    profile_key <- as.character(profile_id)
+
+    # Update basic frequency trackers using vectorized operations
+    trackers$question_freq <- update_frequency_tracker_matrix(
         trackers$question_freq,
-        profile_id,
-        profiles,
-        attr_names
+        profile_key
     )
-    trackers$overall_freq <- update_frequency_tracker(
+    trackers$overall_freq <- update_frequency_tracker_matrix(
         trackers$overall_freq,
-        profile_id,
-        profiles,
-        attr_names
+        profile_key
     )
 
-    # Advanced methods update additional trackers
+    # Update advanced trackers if needed
     if (method %in% c("minoverlap", "balanced")) {
-        # Update pairwise frequencies
-        trackers$question_pairs <- update_pairwise_tracker(
+        trackers$question_pairs <- update_pairwise_tracker_matrix(
             trackers$question_pairs,
-            profile_id,
-            profiles,
-            attr_names
+            profile_key
         )
-        trackers$overall_pairs <- update_pairwise_tracker(
+        trackers$overall_pairs <- update_pairwise_tracker_matrix(
             trackers$overall_pairs,
-            profile_id,
-            profiles,
-            attr_names
+            profile_key
         )
 
-        # Update overlap tracking
+        # For overlap tracking, we need the current question state
         current_question_profiles <- resp_design[q, 1:alt]
         current_question_profiles <- current_question_profiles[
             current_question_profiles != 0
         ]
 
-        trackers$question_overlap <- update_overlap_tracker(
+        trackers$question_overlap <- update_overlap_tracker_matrix(
             trackers$question_overlap,
-            current_question_profiles,
-            profiles,
-            attr_names
+            current_question_profiles
         )
-        trackers$overall_overlap <- update_overlap_tracker(
+        trackers$overall_overlap <- update_overlap_tracker_matrix(
             trackers$overall_overlap,
-            current_question_profiles,
-            profiles,
-            attr_names
+            current_question_profiles
         )
     }
 
     return(trackers)
 }
 
-# ===== BASIC FREQUENCY TRACKING =====
+# ===== MATRIX-BASED FREQUENCY TRACKING =====
 
-# Initialize frequency tracker for attributes
-initialize_frequency_tracker <- function(attr_names, profiles) {
-    freq_tracker <- list()
+# Initialize frequency tracker as matrix system
+initialize_frequency_tracker_matrix <- function(encoded_profiles) {
+    # Extract dummy-coded columns (exclude profileID)
+    dummy_cols <- setdiff(names(encoded_profiles), "profileID")
 
-    for (attr in attr_names) {
-        levels <- unique(profiles[[attr]])
-        freq_tracker[[attr]] <- stats::setNames(rep(0, length(levels)), levels)
-    }
+    # Create update matrix: rows = profileIDs, cols = dummy variables
+    update_matrix <- as.matrix(encoded_profiles[, dummy_cols])
+    rownames(update_matrix) <- as.character(encoded_profiles$profileID)
 
-    return(freq_tracker)
+    # Initialize tracker vector (starts at zero)
+    current_counts <- setNames(rep(0, length(dummy_cols)), dummy_cols)
+
+    return(list(
+        current_counts = current_counts,
+        update_matrix = update_matrix,
+        dummy_cols = dummy_cols
+    ))
 }
 
-# Update frequency tracker with new profile
-update_frequency_tracker <- function(
-    freq_tracker,
-    profile_id,
+# Update frequency tracker using matrix lookup
+update_frequency_tracker_matrix <- function(freq_tracker_matrix, profile_key) {
+    # Get update vector for this profile (single row lookup)
+    update_vector <- freq_tracker_matrix$update_matrix[profile_key, ]
+
+    # Vectorized addition
+    freq_tracker_matrix$current_counts <- freq_tracker_matrix$current_counts +
+        update_vector
+
+    return(freq_tracker_matrix)
+}
+
+# ===== MATRIX-BASED PAIRWISE TRACKING =====
+
+# Initialize pairwise tracker as matrix system
+initialize_pairwise_tracker_matrix <- function(
+    attr_names,
     profiles,
-    attr_names
+    encoded_profiles
 ) {
-    # Get the profile data
-    profile_row <- profiles[profiles$profileID == profile_id, ]
+    # Create pairwise interaction terms
+    pairwise_matrix <- create_pairwise_interaction_matrix(
+        attr_names,
+        profiles,
+        encoded_profiles
+    )
 
-    # Update frequency for each attribute
-    for (attr in attr_names) {
-        level <- as.character(profile_row[[attr]])
-        freq_tracker[[attr]][level] <- freq_tracker[[attr]][level] + 1
-    }
+    # Create update matrix
+    update_matrix <- as.matrix(pairwise_matrix[,
+        -which(names(pairwise_matrix) == "profileID")
+    ])
+    rownames(update_matrix) <- as.character(pairwise_matrix$profileID)
 
-    return(freq_tracker)
+    # Initialize tracker vector
+    pairwise_cols <- setdiff(names(pairwise_matrix), "profileID")
+    current_counts <- setNames(rep(0, length(pairwise_cols)), pairwise_cols)
+
+    return(list(
+        current_counts = current_counts,
+        update_matrix = update_matrix,
+        pairwise_cols = pairwise_cols
+    ))
 }
 
-# ===== PAIRWISE FREQUENCY TRACKING =====
+# Create pairwise interaction matrix
+create_pairwise_interaction_matrix <- function(
+    attr_names,
+    profiles,
+    encoded_profiles
+) {
+    # Start with encoded profiles
+    result <- encoded_profiles
+    dummy_cols <- setdiff(names(encoded_profiles), "profileID")
 
-# Initialize pairwise frequency tracker
-initialize_pairwise_tracker <- function(attr_names, profiles) {
-    pairs_tracker <- list()
-
-    # For each pair of attributes
+    # Create interaction terms for each pair of attributes
     for (i in 1:(length(attr_names) - 1)) {
         for (j in (i + 1):length(attr_names)) {
             attr1 <- attr_names[i]
             attr2 <- attr_names[j]
-            pair_name <- paste(attr1, attr2, sep = "_x_")
 
-            # Get all possible level combinations
-            levels1 <- unique(profiles[[attr1]])
-            levels2 <- unique(profiles[[attr2]])
+            # Find dummy columns for each attribute
+            attr1_cols <- dummy_cols[grepl(paste0("^", attr1, "_"), dummy_cols)]
+            attr2_cols <- dummy_cols[grepl(paste0("^", attr2, "_"), dummy_cols)]
 
-            # Create combination names
-            combinations <- expand.grid(
-                levels1,
-                levels2,
-                stringsAsFactors = FALSE
-            )
-            comb_names <- paste(
-                combinations$Var1,
-                combinations$Var2,
-                sep = "_&_"
-            )
-
-            pairs_tracker[[pair_name]] <- stats::setNames(
-                rep(0, length(comb_names)),
-                comb_names
-            )
-        }
-    }
-
-    return(pairs_tracker)
-}
-
-# Update pairwise frequency tracker
-update_pairwise_tracker <- function(
-    pairs_tracker,
-    profile_id,
-    profiles,
-    attr_names
-) {
-    profile_row <- profiles[profiles$profileID == profile_id, ]
-
-    # For each pair of attributes
-    for (i in 1:(length(attr_names) - 1)) {
-        for (j in (i + 1):length(attr_names)) {
-            attr1 <- attr_names[i]
-            attr2 <- attr_names[j]
-            pair_name <- paste(attr1, attr2, sep = "_x_")
-
-            level1 <- as.character(profile_row[[attr1]])
-            level2 <- as.character(profile_row[[attr2]])
-            comb_name <- paste(level1, level2, sep = "_&_")
-
-            if (comb_name %in% names(pairs_tracker[[pair_name]])) {
-                pairs_tracker[[pair_name]][comb_name] <- pairs_tracker[[
-                    pair_name
-                ]][comb_name] +
-                    1
+            # Create interaction terms
+            for (col1 in attr1_cols) {
+                for (col2 in attr2_cols) {
+                    interaction_name <- paste(col1, col2, sep = "_x_")
+                    result[[interaction_name]] <- result[[col1]] *
+                        result[[col2]]
+                }
             }
         }
     }
 
-    return(pairs_tracker)
+    return(result)
 }
 
-# ===== OVERLAP TRACKING =====
+# Update pairwise tracker using matrix lookup
+update_pairwise_tracker_matrix <- function(
+    pairwise_tracker_matrix,
+    profile_key
+) {
+    # Get update vector for this profile
+    update_vector <- pairwise_tracker_matrix$update_matrix[profile_key, ]
 
-# Initialize overlap frequency tracker
-initialize_overlap_tracker <- function(attr_names, profiles) {
-    overlap_tracker <- list()
+    # Vectorized addition
+    pairwise_tracker_matrix$current_counts <- pairwise_tracker_matrix$current_counts +
+        update_vector
 
-    for (attr in attr_names) {
-        levels <- unique(profiles[[attr]])
-        # Track how many times each level appears in the same question
-        overlap_tracker[[attr]] <- stats::setNames(
-            rep(0, length(levels)),
-            levels
-        )
-    }
+    return(pairwise_tracker_matrix)
+}
 
-    return(overlap_tracker)
+# ===== MATRIX-BASED OVERLAP TRACKING =====
+
+# Initialize overlap tracker as matrix system
+initialize_overlap_tracker_matrix <- function(encoded_profiles) {
+    # Same structure as frequency tracker since overlap uses same dummy variables
+    return(initialize_frequency_tracker_matrix(encoded_profiles))
 }
 
 # Update overlap tracker based on current question state
-update_overlap_tracker <- function(
-    overlap_tracker,
-    question_profiles,
-    profiles,
-    attr_names
+update_overlap_tracker_matrix <- function(
+    overlap_tracker_matrix,
+    question_profiles
 ) {
     # Reset tracker
-    for (attr in attr_names) {
-        overlap_tracker[[attr]][] <- 0
-    }
+    overlap_tracker_matrix$current_counts[] <- 0
 
-    # Count occurrences of each level in current question
+    # Sum up all profiles in current question
     for (profile_id in question_profiles) {
-        profile_row <- profiles[profiles$profileID == profile_id, ]
-
-        for (attr in attr_names) {
-            level <- as.character(profile_row[[attr]])
-            overlap_tracker[[attr]][level] <- overlap_tracker[[attr]][level] + 1
-        }
+        profile_key <- as.character(profile_id)
+        update_vector <- overlap_tracker_matrix$update_matrix[profile_key, ]
+        overlap_tracker_matrix$current_counts <- overlap_tracker_matrix$current_counts +
+            update_vector
     }
 
-    return(overlap_tracker)
+    return(overlap_tracker_matrix)
 }
 
 # ===== PROFILE SELECTION AND SCORING =====
 
-# Get eligible profiles based on basic constraints
+# Get eligible profiles based on basic constraints (unchanged - already pre-computed)
 get_eligible_profiles_list_greedy <- function(opt_env) {
     n_alts <- opt_env$n$alts
     result <- list()
@@ -452,7 +502,6 @@ get_eligible_profiles_list_greedy <- function(opt_env) {
     return(result)
 }
 
-
 # Select profile using greedy algorithm
 select_profile_greedy <- function(
     eligible_profiles,
@@ -460,7 +509,8 @@ select_profile_greedy <- function(
     resp_design,
     current_q,
     current_alt,
-    opt_env
+    opt_env,
+    encoded_profiles
 ) {
     if (length(eligible_profiles) == 0) {
         stop("No eligible profiles available")
@@ -483,16 +533,15 @@ select_profile_greedy <- function(
             next
         }
 
-        # Calculate score based on method
-        profile_scores[i] <- calculate_greedy_score(
+        # Calculate score based on method using matrix operations
+        profile_scores[i] <- calculate_greedy_score_matrix(
             profile_id,
             trackers,
             resp_design,
             current_q,
             current_alt,
             method,
-            profiles,
-            attr_names
+            encoded_profiles
         )
     }
 
@@ -508,57 +557,42 @@ select_profile_greedy <- function(
     }
 }
 
-# ===== SCORING FUNCTIONS =====
+# ===== MATRIX-BASED SCORING FUNCTIONS =====
 
-# Calculate score based on method requirements with distinct objectives
-calculate_greedy_score <- function(
+# Calculate score using matrix operations
+calculate_greedy_score_matrix <- function(
     profile_id,
     trackers,
     resp_design,
     current_q,
     current_alt,
     method,
-    profiles,
-    attr_names
+    encoded_profiles
 ) {
+    profile_key <- as.character(profile_id)
+
     if (method == "shortcut") {
         # Original shortcut: only frequency matters
-        freq_score <- get_frequency_score(
-            profile_id,
-            trackers,
-            profiles,
-            attr_names
-        )
+        freq_score <- get_frequency_score_matrix(profile_key, trackers)
         return(freq_score)
     }
 
     if (method == "minoverlap") {
         # Only consider overlap, completely ignore frequency balance
-        overlap_score <- get_overlap_score(
-            profile_id,
+        overlap_score <- get_overlap_score_matrix(
+            profile_key,
             trackers,
             resp_design,
             current_q,
             current_alt,
             method,
-            profiles,
-            attr_names
+            encoded_profiles
         )
         return(overlap_score)
     } else if (method == "balanced") {
         # Maximize overall balance, ALLOW overlap if it helps balance
-        freq_score <- get_frequency_score(
-            profile_id,
-            trackers,
-            profiles,
-            attr_names
-        )
-        pairwise_score <- get_pairwise_score(
-            profile_id,
-            trackers,
-            profiles,
-            attr_names
-        )
+        freq_score <- get_frequency_score_matrix(profile_key, trackers)
+        pairwise_score <- get_pairwise_score_matrix(profile_key, trackers)
 
         # Weight pairwise interactions more heavily to create distinctly different behavior
         return(freq_score * 50 + pairwise_score * 200)
@@ -567,90 +601,66 @@ calculate_greedy_score <- function(
     }
 }
 
-# Calculate frequency score (same as original shortcut algorithm)
-get_frequency_score <- function(profile_id, trackers, profiles, attr_names) {
-    profile_row <- profiles[profiles$profileID == profile_id, ]
+# Calculate frequency score using matrix operations
+get_frequency_score_matrix <- function(profile_key, trackers) {
+    # Get the update vector for this profile
+    update_vector <- trackers$question_freq$update_matrix[profile_key, ]
 
-    total_score <- 0
-    for (attr in attr_names) {
-        level <- as.character(profile_row[[attr]])
+    # Calculate scores: question frequency * 1000 + overall frequency
+    question_scores <- trackers$question_freq$current_counts *
+        update_vector *
+        1000
+    overall_scores <- trackers$overall_freq$current_counts * update_vector
 
-        # Primary: frequency within current question, Secondary: overall frequency
-        question_count <- trackers$question_freq[[attr]][level]
-        overall_count <- trackers$overall_freq[[attr]][level]
-
-        attr_score <- question_count * 1000 + overall_count
-        total_score <- total_score + attr_score
-    }
+    # Sum all scores
+    total_score <- sum(question_scores + overall_scores)
 
     return(total_score)
 }
 
-# Calculate pairwise frequency score
-get_pairwise_score <- function(profile_id, trackers, profiles, attr_names) {
-    profile_row <- profiles[profiles$profileID == profile_id, ]
+# Calculate pairwise score using matrix operations
+get_pairwise_score_matrix <- function(profile_key, trackers) {
+    # Get the update vector for this profile
+    update_vector <- trackers$question_pairs$update_matrix[profile_key, ]
 
-    total_score <- 0
+    # Calculate scores: question frequency * 1000 + overall frequency
+    question_scores <- trackers$question_pairs$current_counts *
+        update_vector *
+        1000
+    overall_scores <- trackers$overall_pairs$current_counts * update_vector
 
-    # For each pair of attributes
-    for (i in 1:(length(attr_names) - 1)) {
-        for (j in (i + 1):length(attr_names)) {
-            attr1 <- attr_names[i]
-            attr2 <- attr_names[j]
-            pair_name <- paste(attr1, attr2, sep = "_x_")
-
-            level1 <- as.character(profile_row[[attr1]])
-            level2 <- as.character(profile_row[[attr2]])
-            comb_name <- paste(level1, level2, sep = "_&_")
-
-            if (comb_name %in% names(trackers$question_pairs[[pair_name]])) {
-                # Primary: frequency within current question, Secondary: overall frequency
-                question_count <- trackers$question_pairs[[pair_name]][
-                    comb_name
-                ]
-                overall_count <- trackers$overall_pairs[[pair_name]][comb_name]
-
-                pair_score <- question_count * 1000 + overall_count
-                total_score <- total_score + pair_score
-            }
-        }
-    }
+    # Sum all scores
+    total_score <- sum(question_scores + overall_scores)
 
     return(total_score)
 }
 
-# Calculate overlap score (method-dependent)
-get_overlap_score <- function(
-    profile_id,
+# Calculate overlap score using matrix operations
+get_overlap_score_matrix <- function(
+    profile_key,
     trackers,
     resp_design,
     current_q,
     current_alt,
     method,
-    profiles,
-    attr_names
+    encoded_profiles
 ) {
-    profile_row <- profiles[profiles$profileID == profile_id, ]
+    # Get the update vector for this profile
+    update_vector <- trackers$question_overlap$update_matrix[profile_key, ]
 
-    total_score <- 0
+    # Calculate future counts (current + 1 for each attribute level this profile contributes to)
+    future_counts <- trackers$question_overlap$current_counts + update_vector
 
-    for (attr in attr_names) {
-        level <- as.character(profile_row[[attr]])
-
-        # How many times would this level appear in current question if we add this profile?
-        current_count <- trackers$question_overlap[[attr]][level]
-        future_count <- current_count + 1
-
-        if (method == "minoverlap") {
-            # Heavily penalize overlap - exponential penalty for multiple occurrences
-            overlap_penalty <- future_count^3
-        } else if (method == "balanced") {
-            # Allow some overlap - linear penalty, less severe
-            overlap_penalty <- future_count
-        }
-
-        total_score <- total_score + overlap_penalty
+    if (method == "minoverlap") {
+        # Heavily penalize overlap - exponential penalty for multiple occurrences
+        overlap_penalties <- future_counts^3 * update_vector
+    } else if (method == "balanced") {
+        # Allow some overlap - linear penalty, less severe
+        overlap_penalties <- future_counts * update_vector
     }
+
+    # Sum all penalties
+    total_score <- sum(overlap_penalties)
 
     return(total_score)
 }
