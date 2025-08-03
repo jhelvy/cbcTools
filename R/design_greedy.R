@@ -26,30 +26,38 @@ generate_greedy_design <- function(opt_env) {
         method
     )
 
-    # Generate designs in parallel
+    # Generate designs and track final overall state
     if (n$cores == 1 || n$resp == 1) {
-        # Sequential execution
-        resp_designs <- lapply(1:n$resp, function(resp) {
-            generate_greedy_for_respondent(
+        # Sequential execution - track cumulative state
+        resp_results <- list()
+        overall_trackers <- trackers_init
+
+        for (resp in 1:n$resp) {
+            result <- generate_greedy_for_respondent_with_tracking(
                 resp,
-                trackers_init,
+                overall_trackers,
                 opt_env,
                 encoded_profiles
             )
-        })
+            resp_results[[resp]] <- result
+            overall_trackers <- result$final_trackers
+        }
+
+        final_overall_trackers <- overall_trackers
+        resp_designs <- lapply(resp_results, function(x) x$design)
     } else {
-        # Parallel execution
+        # Parallel execution - each worker returns design + tracker state
         if (Sys.info()[['sysname']] == 'Windows') {
             cl <- parallel::makeCluster(min(n$cores, n$resp), "PSOCK")
             # Export necessary functions and objects to cluster
             parallel::clusterExport(
                 cl,
                 c(
-                    "generate_greedy_for_respondent",
+                    "generate_greedy_for_respondent_with_tracking",
                     "initialize_greedy_trackers_matrix",
                     "update_greedy_trackers_matrix",
                     "select_profile_greedy",
-                    "calculate_greedy_score",
+                    "calculate_greedy_score_matrix",
                     "get_pairwise_score_matrix",
                     "get_overlap_score_matrix",
                     "get_frequency_score_matrix",
@@ -60,14 +68,15 @@ generate_greedy_design <- function(opt_env) {
                     "update_pairwise_tracker_matrix",
                     "update_overlap_tracker_matrix",
                     "get_eligible_profiles_list_greedy",
-                    "get_encoded_profiles"
+                    "get_encoded_profiles",
+                    "reset_question_trackers_matrix"
                 ),
                 envir = environment()
             )
 
-            resp_designs <- suppressMessages(suppressWarnings(
+            resp_results <- suppressMessages(suppressWarnings(
                 parallel::parLapply(cl, 1:n$resp, function(resp) {
-                    generate_greedy_for_respondent(
+                    generate_greedy_for_respondent_with_tracking(
                         resp,
                         trackers_init,
                         opt_env,
@@ -77,11 +86,11 @@ generate_greedy_design <- function(opt_env) {
             ))
             parallel::stopCluster(cl)
         } else {
-            resp_designs <- suppressMessages(suppressWarnings(
+            resp_results <- suppressMessages(suppressWarnings(
                 parallel::mclapply(
                     1:n$resp,
                     function(resp) {
-                        generate_greedy_for_respondent(
+                        generate_greedy_for_respondent_with_tracking(
                             resp,
                             trackers_init,
                             opt_env,
@@ -92,6 +101,10 @@ generate_greedy_design <- function(opt_env) {
                 )
             ))
         }
+
+        # Combine all tracker states to get final overall state
+        final_overall_trackers <- combine_tracker_states(resp_results, method)
+        resp_designs <- lapply(resp_results, function(x) x$design)
     }
 
     # Combine all respondent designs into a single matrix
@@ -101,7 +114,9 @@ generate_greedy_design <- function(opt_env) {
     if (opt_env$remove_dominant && opt_env$has_priors) {
         design_matrix <- remove_dominant_questions_greedy(
             design_matrix,
-            opt_env
+            opt_env,
+            encoded_profiles,
+            final_overall_trackers # Always have the final tracker state now
         )
     }
 
@@ -112,16 +127,14 @@ generate_greedy_design <- function(opt_env) {
     ))
 }
 
-# Generate greedy design for a single respondent
-generate_greedy_for_respondent <- function(
+# Generate greedy design for a single respondent with overall tracker updates
+generate_greedy_for_respondent_with_tracking <- function(
     resp_id,
-    trackers_init,
+    overall_trackers,
     opt_env,
     encoded_profiles
 ) {
     n <- opt_env$n
-    attr_names <- opt_env$attr_names
-    profiles <- opt_env$profiles
     method <- opt_env$method
 
     # Create design matrix for this respondent
@@ -130,8 +143,8 @@ generate_greedy_for_respondent <- function(
     # Set eligible profiles (pre-computed for speed)
     eligible_profiles_list <- get_eligible_profiles_list_greedy(opt_env)
 
-    # Initialize trackers for this respondent
-    trackers <- trackers_init
+    # Initialize local trackers from overall state
+    trackers <- overall_trackers
 
     # Generate each question for this respondent
     for (q in 1:n$q) {
@@ -168,15 +181,61 @@ generate_greedy_for_respondent <- function(
         }
     }
 
-    return(resp_design)
+    return(list(
+        design = resp_design,
+        final_trackers = trackers
+    ))
+}
+
+# Combine tracker states from parallel execution
+combine_tracker_states <- function(resp_results, method) {
+    # Initialize combined trackers from first result
+    combined_trackers <- resp_results[[1]]$final_trackers
+
+    # Add all other respondent tracker states to get total counts
+    for (i in 2:length(resp_results)) {
+        resp_trackers <- resp_results[[i]]$final_trackers
+
+        # Combine overall frequency trackers
+        combined_trackers$overall_freq$current_counts <-
+            combined_trackers$overall_freq$current_counts +
+            resp_trackers$overall_freq$current_counts
+
+        # Combine advanced trackers if needed
+        if (method %in% c("minoverlap", "balanced")) {
+            combined_trackers$overall_pairs$current_counts <-
+                combined_trackers$overall_pairs$current_counts +
+                resp_trackers$overall_pairs$current_counts
+
+            # For overlap, we want the final state (not cumulative)
+            combined_trackers$overall_overlap$current_counts <- resp_trackers$overall_overlap$current_counts
+        }
+    }
+
+    return(combined_trackers)
 }
 
 # Post-design dominance removal for greedy methods
-remove_dominant_questions_greedy <- function(design_matrix, opt_env) {
+remove_dominant_questions_greedy <- function(
+    design_matrix,
+    opt_env,
+    encoded_profiles,
+    final_trackers
+) {
     attempts <- 0
     max_attempts <- opt_env$n$max_attempts
+    method <- opt_env$method
 
     message("Checking for dominant alternatives and replacing if found...")
+
+    # Use the provided tracker state (now always available)
+    trackers <- final_trackers
+
+    # Pre-compute eligible profiles (reuse existing optimization)
+    eligible_profiles_list <- get_eligible_profiles_list_greedy(opt_env)
+
+    # Track initial problem count for summary message
+    initial_problems <- NULL
 
     while (attempts < max_attempts) {
         attempts <- attempts + 1
@@ -188,9 +247,52 @@ remove_dominant_questions_greedy <- function(design_matrix, opt_env) {
             break # Design is valid
         }
 
-        # Replace problematic questions
+        # Store initial problem count for summary
+        if (is.null(initial_problems)) {
+            initial_problems <- length(problem_questions)
+        }
+
+        # Replace problematic questions using greedy selection (no per-iteration message)
         for (q in problem_questions) {
-            design_matrix[q, ] <- sample_question_profiles(opt_env)
+            # Remove old question from trackers before replacing
+            old_profiles <- design_matrix[q, ]
+            trackers <- remove_question_from_trackers(
+                trackers,
+                old_profiles,
+                method
+            )
+
+            # Reset question-level trackers
+            trackers <- reset_question_trackers_matrix(trackers, method)
+
+            # Generate new question using greedy logic
+            for (alt in 1:opt_env$n$alts) {
+                eligible_profiles <- eligible_profiles_list[[alt]]
+
+                # Select profile using greedy algorithm
+                selected_profile <- select_profile_greedy(
+                    eligible_profiles,
+                    trackers,
+                    design_matrix,
+                    q,
+                    alt,
+                    opt_env,
+                    encoded_profiles
+                )
+
+                # Update design matrix
+                design_matrix[q, alt] <- selected_profile
+
+                # Update trackers
+                trackers <- update_greedy_trackers_matrix(
+                    trackers,
+                    selected_profile,
+                    design_matrix,
+                    q,
+                    alt,
+                    method
+                )
+            }
         }
     }
 
@@ -203,10 +305,45 @@ remove_dominant_questions_greedy <- function(design_matrix, opt_env) {
             length(remaining_problems)
         ))
     } else {
-        message("All dominant alternatives successfully removed.")
+        if (!is.null(initial_problems) && initial_problems > 0) {
+            message(sprintf(
+                "All dominant alternatives successfully removed (%d questions fixed in %d iterations).",
+                initial_problems,
+                attempts
+            ))
+        } else {
+            message("All dominant alternatives successfully removed.")
+        }
     }
 
     return(design_matrix)
+}
+
+# Remove a question's profiles from trackers
+remove_question_from_trackers <- function(trackers, old_profiles, method) {
+    # Remove from overall trackers by subtracting
+    for (profile_id in old_profiles) {
+        if (profile_id != 0) {
+            # Skip zeros
+            profile_key <- as.character(profile_id)
+
+            # Subtract from overall frequency tracker
+            update_vector <- trackers$overall_freq$update_matrix[profile_key, ]
+            trackers$overall_freq$current_counts <- trackers$overall_freq$current_counts -
+                update_vector
+
+            if (method %in% c("minoverlap", "balanced")) {
+                # Subtract from overall pairwise tracker
+                update_vector_pairs <- trackers$overall_pairs$update_matrix[
+                    profile_key,
+                ]
+                trackers$overall_pairs$current_counts <- trackers$overall_pairs$current_counts -
+                    update_vector_pairs
+            }
+        }
+    }
+
+    return(trackers)
 }
 
 # ===== ENCODING AND TRACKER INITIALIZATION =====
@@ -517,8 +654,6 @@ select_profile_greedy <- function(
     }
 
     method <- opt_env$method
-    attr_names <- opt_env$attr_names
-    profiles <- opt_env$profiles
 
     # Calculate scores for each eligible profile
     profile_scores <- numeric(length(eligible_profiles))
