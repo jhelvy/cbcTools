@@ -104,6 +104,9 @@ generate_greedy_for_respondent <- function(resp_id, trackers_init, opt_env) {
     # Create design matrix for this respondent
     resp_design <- matrix(0, nrow = n$q, ncol = n$alts)
 
+    # Set eligible profiles
+    eligible_profiles_list <- get_eligible_profiles_list_greedy(opt_env)
+
     # Generate each question for this respondent
     for (q in 1:n$q) {
         # Reset question-level trackers
@@ -111,13 +114,7 @@ generate_greedy_for_respondent <- function(resp_id, trackers_init, opt_env) {
 
         # Generate each alternative in this question
         for (alt in 1:n$alts) {
-            # Get eligible profiles based on basic constraints (no dominance filtering here)
-            eligible_profiles <- get_eligible_profiles_greedy(
-                alt,
-                opt_env,
-                resp_design,
-                q
-            )
+            eligible_profiles <- eligible_profiles_list[[alt]]
 
             # Select best profile using greedy algorithm
             selected_profile <- select_profile_greedy(
@@ -433,34 +430,28 @@ update_overlap_tracker <- function(
 
 # ===== PROFILE SELECTION AND SCORING =====
 
-# Get eligible profiles based on basic constraints (no dominance filtering during generation)
-get_eligible_profiles_greedy <- function(
-    alt,
-    opt_env,
-    resp_design = NULL,
-    current_q = NULL
-) {
-    # Start with basic constraint filtering
-    if (!is.null(opt_env$label_constraints)) {
-        # For labeled designs, only consider profiles from the correct label group
-        label_group_index <- alt
-        if (label_group_index <= length(opt_env$label_constraints$groups)) {
-            eligible_profiles <- opt_env$label_constraints$groups[[
-                label_group_index
-            ]]
-        } else {
-            return(c()) # No eligible profiles
+# Get eligible profiles based on basic constraints
+get_eligible_profiles_list_greedy <- function(opt_env) {
+    n_alts <- opt_env$n$alts
+    result <- list()
+
+    # No labels - all profiles are elligible for each alt
+    if (is.null(opt_env$label_constraints)) {
+        options <- opt_env$available_profile_ids
+        for (i in seq(n_alts)) {
+            result[[i]] <- options
         }
-    } else {
-        # Regular design: consider all profiles
-        eligible_profiles <- opt_env$available_profile_ids
+        return(result)
     }
 
-    # Note: Dominance filtering is now done post-design generation
-    # No longer filter for dominance here during generation
-
-    return(eligible_profiles)
+    # For labeled designs, only consider profiles from the correct label group
+    for (i in seq(n_alts)) {
+        options <- opt_env$label_constraints$groups[[i]]
+        result[[i]] <- options
+    }
+    return(result)
 }
+
 
 # Select profile using greedy algorithm
 select_profile_greedy <- function(
