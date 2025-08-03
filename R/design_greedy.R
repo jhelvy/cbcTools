@@ -4,6 +4,8 @@
 generate_greedy_design <- function(opt_env) {
     n <- opt_env$n
     method <- opt_env$method # "shortcut", "minoverlap", or "balanced"
+    attr_names <- opt_env$attr_names
+    profiles <- opt_env$profiles
 
     message(
         "Generating ",
@@ -15,11 +17,14 @@ generate_greedy_design <- function(opt_env) {
         " cores..."
     )
 
+    # Initialize trackers based on method requirements
+    trackers_init <- initialize_greedy_trackers(attr_names, profiles, method)
+
     # Generate designs in parallel
     if (n$cores == 1 || n$resp == 1) {
         # Sequential execution
         resp_designs <- lapply(1:n$resp, function(resp) {
-            generate_greedy_for_respondent(resp, opt_env)
+            generate_greedy_for_respondent(resp, trackers_init, opt_env)
         })
     } else {
         # Parallel execution
@@ -33,17 +38,14 @@ generate_greedy_design <- function(opt_env) {
                     "initialize_greedy_trackers",
                     "update_greedy_trackers",
                     "select_profile_greedy",
-                    "reset_greedy_trackers",
                     "calculate_greedy_score",
                     "get_pairwise_score",
                     "get_overlap_score",
                     "get_frequency_score",
                     "initialize_frequency_tracker",
-                    "reset_frequency_tracker",
                     "update_frequency_tracker",
                     "initialize_pairwise_tracker",
                     "initialize_overlap_tracker",
-                    "reset_pairwise_tracker",
                     "update_pairwise_tracker",
                     "update_overlap_tracker",
                     "get_eligible_profiles_greedy"
@@ -53,7 +55,7 @@ generate_greedy_design <- function(opt_env) {
 
             resp_designs <- suppressMessages(suppressWarnings(
                 parallel::parLapply(cl, 1:n$resp, function(resp) {
-                    generate_greedy_for_respondent(resp, opt_env)
+                    generate_greedy_for_respondent(resp, trackers_init, opt_env)
                 })
             ))
             parallel::stopCluster(cl)
@@ -62,7 +64,11 @@ generate_greedy_design <- function(opt_env) {
                 parallel::mclapply(
                     1:n$resp,
                     function(resp) {
-                        generate_greedy_for_respondent(resp, opt_env)
+                        generate_greedy_for_respondent(
+                            resp,
+                            trackers_init,
+                            opt_env
+                        )
                     },
                     mc.cores = min(n$cores, n$resp)
                 )
@@ -75,7 +81,10 @@ generate_greedy_design <- function(opt_env) {
 
     # Post-process for dominance removal if requested
     if (opt_env$remove_dominant && opt_env$has_priors) {
-        design_matrix <- remove_dominant_questions_greedy(design_matrix, opt_env)
+        design_matrix <- remove_dominant_questions_greedy(
+            design_matrix,
+            opt_env
+        )
     }
 
     return(list(
@@ -86,14 +95,11 @@ generate_greedy_design <- function(opt_env) {
 }
 
 # Generate greedy design for a single respondent
-generate_greedy_for_respondent <- function(resp_id, opt_env) {
+generate_greedy_for_respondent <- function(resp_id, trackers_init, opt_env) {
     n <- opt_env$n
     attr_names <- opt_env$attr_names
     profiles <- opt_env$profiles
     method <- opt_env$method
-
-    # Initialize trackers based on method requirements
-    trackers <- initialize_greedy_trackers(attr_names, profiles, method)
 
     # Create design matrix for this respondent
     resp_design <- matrix(0, nrow = n$q, ncol = n$alts)
@@ -101,7 +107,7 @@ generate_greedy_for_respondent <- function(resp_id, opt_env) {
     # Generate each question for this respondent
     for (q in 1:n$q) {
         # Reset question-level trackers
-        trackers <- reset_greedy_trackers(trackers, method, attr_names)
+        trackers <- trackers_init
 
         # Generate each alternative in this question
         for (alt in 1:n$alts) {
@@ -214,32 +220,16 @@ initialize_greedy_trackers <- function(attr_names, profiles, method) {
     return(trackers)
 }
 
-# Reset question-level trackers based on method
-reset_greedy_trackers <- function(trackers, method, attr_names) {
-    # All methods reset frequency trackers
-    trackers$question_freq <- reset_frequency_tracker(trackers$question_freq)
-
-    # Advanced methods reset additional trackers
-    if (method %in% c("minoverlap", "balanced")) {
-        trackers$question_pairs <- reset_pairwise_tracker(
-            trackers$question_pairs,
-            attr_names
-        )
-    }
-
-    return(trackers)
-}
-
 # Update tracking structures based on method requirements
 update_greedy_trackers <- function(
-        trackers,
-        profile_id,
-        resp_design,
-        q,
-        alt,
-        profiles,
-        attr_names,
-        method
+    trackers,
+    profile_id,
+    resp_design,
+    q,
+    alt,
+    profiles,
+    attr_names,
+    method
 ) {
     # All methods update basic frequencies
     trackers$question_freq <- update_frequency_tracker(
@@ -308,20 +298,12 @@ initialize_frequency_tracker <- function(attr_names, profiles) {
     return(freq_tracker)
 }
 
-# Reset question-level frequency tracker
-reset_frequency_tracker <- function(freq_tracker) {
-    for (attr in names(freq_tracker)) {
-        freq_tracker[[attr]][] <- 0 # Reset all counts to 0
-    }
-    return(freq_tracker)
-}
-
 # Update frequency tracker with new profile
 update_frequency_tracker <- function(
-        freq_tracker,
-        profile_id,
-        profiles,
-        attr_names
+    freq_tracker,
+    profile_id,
+    profiles,
+    attr_names
 ) {
     # Get the profile data
     profile_row <- profiles[profiles$profileID == profile_id, ]
@@ -374,20 +356,12 @@ initialize_pairwise_tracker <- function(attr_names, profiles) {
     return(pairs_tracker)
 }
 
-# Reset pairwise tracker for new question
-reset_pairwise_tracker <- function(pairs_tracker, attr_names) {
-    for (pair_name in names(pairs_tracker)) {
-        pairs_tracker[[pair_name]][] <- 0
-    }
-    return(pairs_tracker)
-}
-
 # Update pairwise frequency tracker
 update_pairwise_tracker <- function(
-        pairs_tracker,
-        profile_id,
-        profiles,
-        attr_names
+    pairs_tracker,
+    profile_id,
+    profiles,
+    attr_names
 ) {
     profile_row <- profiles[profiles$profileID == profile_id, ]
 
@@ -423,7 +397,10 @@ initialize_overlap_tracker <- function(attr_names, profiles) {
     for (attr in attr_names) {
         levels <- unique(profiles[[attr]])
         # Track how many times each level appears in the same question
-        overlap_tracker[[attr]] <- stats::setNames(rep(0, length(levels)), levels)
+        overlap_tracker[[attr]] <- stats::setNames(
+            rep(0, length(levels)),
+            levels
+        )
     }
 
     return(overlap_tracker)
@@ -431,10 +408,10 @@ initialize_overlap_tracker <- function(attr_names, profiles) {
 
 # Update overlap tracker based on current question state
 update_overlap_tracker <- function(
-        overlap_tracker,
-        question_profiles,
-        profiles,
-        attr_names
+    overlap_tracker,
+    question_profiles,
+    profiles,
+    attr_names
 ) {
     # Reset tracker
     for (attr in attr_names) {
@@ -458,10 +435,10 @@ update_overlap_tracker <- function(
 
 # Get eligible profiles based on basic constraints (no dominance filtering during generation)
 get_eligible_profiles_greedy <- function(
-        alt,
-        opt_env,
-        resp_design = NULL,
-        current_q = NULL
+    alt,
+    opt_env,
+    resp_design = NULL,
+    current_q = NULL
 ) {
     # Start with basic constraint filtering
     if (!is.null(opt_env$label_constraints)) {
@@ -487,12 +464,12 @@ get_eligible_profiles_greedy <- function(
 
 # Select profile using greedy algorithm
 select_profile_greedy <- function(
-        eligible_profiles,
-        trackers,
-        resp_design,
-        current_q,
-        current_alt,
-        opt_env
+    eligible_profiles,
+    trackers,
+    resp_design,
+    current_q,
+    current_alt,
+    opt_env
 ) {
     if (length(eligible_profiles) == 0) {
         stop("No eligible profiles available")
@@ -544,14 +521,14 @@ select_profile_greedy <- function(
 
 # Calculate score based on method requirements with distinct objectives
 calculate_greedy_score <- function(
-        profile_id,
-        trackers,
-        resp_design,
-        current_q,
-        current_alt,
-        method,
-        profiles,
-        attr_names
+    profile_id,
+    trackers,
+    resp_design,
+    current_q,
+    current_alt,
+    method,
+    profiles,
+    attr_names
 ) {
     if (method == "shortcut") {
         # Original shortcut: only frequency matters
@@ -653,14 +630,14 @@ get_pairwise_score <- function(profile_id, trackers, profiles, attr_names) {
 
 # Calculate overlap score (method-dependent)
 get_overlap_score <- function(
-        profile_id,
-        trackers,
-        resp_design,
-        current_q,
-        current_alt,
-        method,
-        profiles,
-        attr_names
+    profile_id,
+    trackers,
+    resp_design,
+    current_q,
+    current_alt,
+    method,
+    profiles,
+    attr_names
 ) {
     profile_row <- profiles[profiles$profileID == profile_id, ]
 
