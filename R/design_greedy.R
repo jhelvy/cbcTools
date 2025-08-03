@@ -48,7 +48,7 @@ generate_greedy_design <- function(opt_env) {
                     "initialize_overlap_tracker",
                     "update_pairwise_tracker",
                     "update_overlap_tracker",
-                    "get_eligible_profiles_greedy"
+                    "get_eligible_profiles_list_greedy"
                 ),
                 envir = environment()
             )
