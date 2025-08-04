@@ -486,7 +486,7 @@ initialize_frequency_tracker_matrix <- function(encoded_profiles) {
     rownames(update_matrix) <- as.character(encoded_profiles$profileID)
 
     # Initialize tracker vector (starts at zero)
-    current_counts <- setNames(rep(0, length(dummy_cols)), dummy_cols)
+    current_counts <- stats::setNames(rep(0, length(dummy_cols)), dummy_cols)
 
     return(list(
         current_counts = current_counts,
@@ -530,7 +530,7 @@ initialize_pairwise_tracker_matrix <- function(
 
     # Initialize tracker vector
     pairwise_cols <- setdiff(names(pairwise_matrix), "profileID")
-    current_counts <- setNames(rep(0, length(pairwise_cols)), pairwise_cols)
+    current_counts <- stats::setNames(rep(0, length(pairwise_cols)), pairwise_cols)
 
     return(list(
         current_counts = current_counts,
