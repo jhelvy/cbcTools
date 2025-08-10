@@ -1,6 +1,7 @@
 context("Testing cbc_profiles()")
 
 test_that("Basic profile creation works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2, 3),
     type = c("A", "B")
@@ -14,6 +15,7 @@ test_that("Basic profile creation works", {
 })
 
 test_that("Profile IDs are sequential", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     quality = c("Low", "High")
@@ -24,6 +26,7 @@ test_that("Profile IDs are sequential", {
 })
 
 test_that("Full factorial expansion works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     type = c("A", "B"),
@@ -39,6 +42,7 @@ test_that("Full factorial expansion works correctly", {
 })
 
 test_that("Factor levels are preserved correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     type = c("Fuji", "Gala", "Honeycrisp"),
     quality = c("Poor", "Average", "Excellent")
@@ -51,6 +55,7 @@ test_that("Factor levels are preserved correctly", {
 })
 
 test_that("Mixed data types work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1.5, 2.0, 2.5),
     available = c(TRUE, FALSE),
@@ -64,6 +69,7 @@ test_that("Mixed data types work", {
 })
 
 test_that("Single attribute works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(price = c(1, 2, 3, 4, 5))
 
   expect_equal(nrow(profiles), 5)
@@ -72,6 +78,7 @@ test_that("Single attribute works", {
 })
 
 test_that("Attribute metadata is stored correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2, 3),
     type = c("A", "B"),
@@ -92,6 +99,7 @@ test_that("Attribute metadata is stored correctly", {
 })
 
 test_that("Original count is tracked", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     type = c("A", "B", "C")
@@ -101,6 +109,7 @@ test_that("Original count is tracked", {
 })
 
 test_that("Input validation works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Test unnamed vectors
   expect_error(
     cbc_profiles(c(1, 2, 3)),
@@ -109,6 +118,7 @@ test_that("Input validation works", {
 })
 
 test_that("Logical variables work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     premium = c(TRUE, FALSE)
@@ -119,6 +129,7 @@ test_that("Logical variables work correctly", {
 })
 
 test_that("Large factorial works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     attr1 = c(1, 2, 3, 4),
     attr2 = c("A", "B", "C"),
@@ -130,6 +141,7 @@ test_that("Large factorial works", {
 })
 
 test_that("Empty attribute levels cause error", {
+  skip_on_cran() # Skip on CRAN due to computation time
   expect_error(
     cbc_profiles(price = c())
   )

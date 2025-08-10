@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.6.3
+
+- Improve the greedy methods to include proper handling of the dominance checking and overall efficiency improvements.
+
 # cbcTools 0.6.1
 
 - Added `include_probs` argument to `cbc_design()`, which includes predicted choice probabilities in the returned design data frame if `include_probs = TRUE`. Defaults to `FALSE`.

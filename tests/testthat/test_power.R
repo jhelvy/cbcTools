@@ -154,6 +154,7 @@ validate_power_estimates <- function(
 # =============================================================================
 
 test_that("Basic power analysis works with cbc_choices data", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -168,6 +169,7 @@ test_that("Basic power analysis works with cbc_choices data", {
 })
 
 test_that("Power analysis works with manual data specification", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -189,6 +191,7 @@ test_that("Power analysis works with manual data specification", {
 })
 
 test_that("Power analysis works with panel data", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -202,21 +205,22 @@ test_that("Power analysis works with panel data", {
   validate_power_structure(power_result, test_data)
 })
 
-# Hard to get this to consistently pass...too random
+# # Hard to get this to consistently pass...too random
 # test_that("Power analysis works with random parameters", {
+#   skip_on_cran() # Skip on CRAN due to computation time
 #   skip_if_not(logitr_available, "logitr package not available")
-
+#
 #   test_data <- setup_small_power_data()
-
+#
 #   power_result <- cbc_power(
 #     data = test_data$choices,
 #     randPars = c("price" = "n"), # Price as random parameter
 #     panelID = "respID",
 #     n_breaks = 4 # Smaller for mixed logit
 #   )
-
+#
 #   validate_power_structure(power_result, test_data)
-
+#
 #   # Should have standard deviation parameters
 #   params_in_result <- unique(power_result$power_summary$parameter)
 #   expect_true("sd_price" %in% params_in_result)
@@ -227,6 +231,7 @@ test_that("Power analysis works with panel data", {
 # =============================================================================
 
 test_that("Different sample size ranges work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -246,6 +251,7 @@ test_that("Different sample size ranges work correctly", {
 })
 
 test_that("Different alpha levels work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -280,6 +286,7 @@ test_that("Different alpha levels work correctly", {
 })
 
 test_that("Custom parameter specifications work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -304,8 +311,8 @@ test_that("Custom parameter specifications work", {
 # These are skipped on CRAN as they take too long to run
 
 test_that("Power increases with sample size", {
-  skip_if_not(logitr_available, "logitr package not available")
   skip_on_cran() # Skip on CRAN due to computation time
+  skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_large_power_data() # Larger data for better statistical properties
 
@@ -319,8 +326,8 @@ test_that("Power increases with sample size", {
 })
 
 test_that("Standard errors decrease with sample size", {
-  skip_if_not(logitr_available, "logitr package not available")
   skip_on_cran() # Skip on CRAN due to computation time
+  skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_large_power_data()
 
@@ -369,6 +376,7 @@ test_that("Power analysis results are reproducible", {
 # =============================================================================
 
 test_that("Input validation works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_small_power_data()
 
   # Invalid data object
@@ -403,6 +411,7 @@ test_that("Input validation works correctly", {
 })
 
 test_that("Auto-detection validation works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -428,6 +437,7 @@ test_that("Auto-detection validation works", {
 })
 
 test_that("Insufficient data handling works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   # Create very small dataset
@@ -445,6 +455,7 @@ test_that("Insufficient data handling works", {
 # =============================================================================
 
 test_that("Power analysis integrates with different design types", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   # Test with different design methods
@@ -488,6 +499,7 @@ test_that("Power analysis integrates with different design types", {
 })
 
 test_that("Power analysis works with no-choice data", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   profiles <- cbc_profiles(
@@ -528,8 +540,8 @@ test_that("Power analysis works with no-choice data", {
 # These are skipped on CRAN as they take too long to run
 
 test_that("Power analysis completes in reasonable time", {
-  skip_if_not(logitr_available, "logitr package not available")
   skip_on_cran() # Skip on CRAN due to computation time
+  skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
 
@@ -543,8 +555,8 @@ test_that("Power analysis completes in reasonable time", {
 })
 
 test_that("Large power analysis works but is slower", {
-  skip_if_not(logitr_available, "logitr package not available")
   skip_on_cran() # Skip on CRAN due to computation time
+  skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_large_power_data()
 
@@ -562,6 +574,7 @@ test_that("Large power analysis works but is slower", {
 # =============================================================================
 
 test_that("Print method works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -574,6 +587,7 @@ test_that("Print method works correctly", {
 })
 
 test_that("Summary method works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
 
   test_data <- setup_small_power_data()
@@ -588,6 +602,7 @@ test_that("Summary method works correctly", {
 })
 
 test_that("Plot method works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
   skip_if_not_installed("ggplot2")
 
@@ -611,6 +626,7 @@ test_that("Plot method works correctly", {
 # =============================================================================
 
 test_that("Power comparison function works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not(logitr_available, "logitr package not available")
   skip_if_not_installed("ggplot2")
 

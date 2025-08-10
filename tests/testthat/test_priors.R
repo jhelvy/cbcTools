@@ -125,6 +125,7 @@ validate_interactions <- function(priors, expected_interactions) {
 # =============================================================================
 
 test_that("Simple fixed priors work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   priors <- cbc_priors(
@@ -155,6 +156,7 @@ test_that("Simple fixed priors work correctly", {
 })
 
 test_that("Unnamed categorical priors work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   priors <- cbc_priors(
@@ -180,6 +182,7 @@ test_that("Unnamed categorical priors work correctly", {
 })
 
 test_that("No-choice priors work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   priors <- cbc_priors(
@@ -212,6 +215,7 @@ test_that("No-choice priors work correctly", {
 # =============================================================================
 
 test_that("Random parameters work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   priors <- cbc_priors(
@@ -246,6 +250,7 @@ test_that("Random parameters work correctly", {
 })
 
 test_that("Different random distributions work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   # Test different distributions
@@ -278,6 +283,7 @@ test_that("Different random distributions work", {
 })
 
 test_that("Random no-choice parameter works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   priors <- cbc_priors(
@@ -307,6 +313,7 @@ test_that("Random no-choice parameter works", {
 # =============================================================================
 
 test_that("Simple correlations work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   priors <- cbc_priors(
@@ -340,6 +347,7 @@ test_that("Simple correlations work correctly", {
 })
 
 test_that("Categorical correlations work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   priors <- cbc_priors(
@@ -377,6 +385,7 @@ test_that("Categorical correlations work correctly", {
 })
 
 test_that("Mixed type correlations work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   priors <- cbc_priors(
@@ -414,6 +423,7 @@ test_that("Mixed type correlations work correctly", {
 # =============================================================================
 
 test_that("Simple interactions work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   interactions <- list(
@@ -438,6 +448,7 @@ test_that("Simple interactions work correctly", {
 })
 
 test_that("Categorical-categorical interactions work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   interactions <- list(
@@ -463,6 +474,7 @@ test_that("Categorical-categorical interactions work", {
 })
 
 test_that("Complex interaction combinations work", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   interactions <- list(
@@ -506,6 +518,7 @@ test_that("Complex interaction combinations work", {
 # =============================================================================
 
 test_that("Input validation works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   # Invalid profiles object
@@ -545,6 +558,7 @@ test_that("Input validation works correctly", {
 })
 
 test_that("Random parameter validation works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   # Invalid distribution
@@ -569,6 +583,7 @@ test_that("Random parameter validation works", {
 })
 
 test_that("Interaction validation works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   # Interaction with non-existent attribute
@@ -618,6 +633,7 @@ test_that("Interaction validation works", {
 })
 
 test_that("Correlation validation works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   # Correlation with non-random parameter
@@ -652,6 +668,7 @@ test_that("Correlation validation works", {
 # =============================================================================
 
 test_that("Priors work with different profile structures", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Test with different numbers of levels
   profiles_binary <- cbc_profiles(
     price = c(1, 2),
@@ -682,6 +699,7 @@ test_that("Priors work with different profile structures", {
 })
 
 test_that("Priors work with cbc_design integration", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   priors <- cbc_priors(
@@ -704,6 +722,7 @@ test_that("Priors work with cbc_design integration", {
 })
 
 test_that("Parameter draws have correct statistical properties", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_simple_profiles()
 
   priors <- cbc_priors(
@@ -732,6 +751,7 @@ test_that("Parameter draws have correct statistical properties", {
 # =============================================================================
 
 test_that("Prior creation completes in reasonable time", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_priors_test_profiles()
 
   # Simple priors should be very fast

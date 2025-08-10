@@ -157,6 +157,7 @@ validate_dummy_removal <- function(decoded_data, original_profiles) {
 # =============================================================================
 
 test_that("Basic design decoding works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   design <- test_data$design
 
@@ -188,6 +189,7 @@ test_that("Basic design decoding works correctly", {
 })
 
 test_that("Choice data decoding works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   choices <- test_data$choices
 
@@ -210,6 +212,7 @@ test_that("Choice data decoding works correctly", {
 })
 
 test_that("Already decoded data returns unchanged with message", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   design <- test_data$design
 
@@ -227,6 +230,7 @@ test_that("Already decoded data returns unchanged with message", {
 })
 
 test_that("Continuous variables are preserved correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   design <- test_data$design
 
@@ -239,6 +243,7 @@ test_that("Continuous variables are preserved correctly", {
 })
 
 test_that("Factor level ordering is preserved", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create profiles with specific ordering
   profiles <- cbc_profiles(
     priority = c("High", "Medium", "Low"), # Will become factor with this level order
@@ -271,6 +276,7 @@ test_that("Factor level ordering is preserved", {
 # =============================================================================
 
 test_that("No-choice data cannot be decoded", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_nochoice_test_data()
   design <- test_data$design
   choices <- test_data$choices
@@ -289,6 +295,7 @@ test_that("No-choice data cannot be decoded", {
 })
 
 test_that("Invalid input objects are rejected", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Invalid object type
   expect_error(
     cbc_decode("not_a_design"),
@@ -302,6 +309,7 @@ test_that("Invalid input objects are rejected", {
 })
 
 test_that("Missing categorical structure is handled gracefully", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   design <- test_data$design
 
@@ -318,6 +326,7 @@ test_that("Missing categorical structure is handled gracefully", {
 })
 
 test_that("Data without dummy coding is handled correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create design that's not dummy coded
   profiles <- cbc_profiles(
     price = c(1, 2),
@@ -348,6 +357,7 @@ test_that("Data without dummy coding is handled correctly", {
 # =============================================================================
 
 test_that("Binary categorical variables work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Test with minimal 2-level categorical (valid edge case)
   profiles <- cbc_profiles(
     price = c(1, 2),
@@ -387,6 +397,7 @@ test_that("Binary categorical variables work correctly", {
 })
 
 test_that("Mixed data types are handled correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create profiles with various data types
   profiles <- cbc_profiles(
     price = c(1.5, 2.0, 2.5), # Numeric
@@ -423,6 +434,7 @@ test_that("Mixed data types are handled correctly", {
 })
 
 test_that("Large datasets decode efficiently", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create larger dataset
   profiles <- cbc_profiles(
     price = c(1, 2, 3, 4, 5),
@@ -462,6 +474,7 @@ test_that("Large datasets decode efficiently", {
 # =============================================================================
 
 test_that("Decode works with different design methods", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2, 3),
     type = c("A", "B")
@@ -493,6 +506,7 @@ test_that("Decode works with different design methods", {
 })
 
 test_that("Decode works with blocked designs", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not_installed("idefix")
 
   profiles <- cbc_profiles(
@@ -529,6 +543,7 @@ test_that("Decode works with blocked designs", {
 })
 
 test_that("Roundtrip compatibility works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Test that we can decode and the result is sensible
   # (Can't easily test encode->decode roundtrip since we don't have encode function)
 
@@ -559,6 +574,7 @@ test_that("Roundtrip compatibility works", {
 # =============================================================================
 
 test_that("All attributes are preserved during decoding", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   design <- test_data$design
 
@@ -587,6 +603,7 @@ test_that("All attributes are preserved during decoding", {
 })
 
 test_that("Class inheritance is preserved", {
+  skip_on_cran() # Skip on CRAN due to computation time
   test_data <- setup_decode_test_data()
   design <- test_data$design
   choices <- test_data$choices

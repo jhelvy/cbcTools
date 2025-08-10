@@ -181,6 +181,7 @@ validate_interactions <- function(design, has_interactions) {
 # =============================================================================
 
 test_that("Random design with no priors works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
 
   design <- cbc_design(
@@ -204,6 +205,7 @@ test_that("Random design with no priors works", {
 })
 
 test_that("Random design with no-choice works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
 
   design <- cbc_design(
@@ -261,8 +263,8 @@ test_that("Greedy methods work with simple priors", {
 })
 
 test_that("Optimal methods work with simple priors", {
-  skip_if_not_installed("idefix")
   skip_on_cran() # Skip on CRAN due to computation time
+  skip_if_not_installed("idefix")
 
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "simple")
@@ -300,6 +302,7 @@ test_that("Optimal methods work with simple priors", {
 # =============================================================================
 
 test_that("No-choice option works across methods", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "nochoice")
 
@@ -337,6 +340,7 @@ test_that("No-choice option works across methods", {
 })
 
 test_that("Interaction terms work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not_installed("idefix")
 
   profiles <- setup_test_profiles()
@@ -366,6 +370,7 @@ test_that("Interaction terms work correctly", {
 })
 
 test_that("Random parameters work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not_installed("idefix")
 
   profiles <- setup_test_profiles()
@@ -395,6 +400,7 @@ test_that("Random parameters work correctly", {
 })
 
 test_that("Blocking works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   skip_if_not_installed("idefix")
 
   profiles <- setup_test_profiles()
@@ -424,6 +430,7 @@ test_that("Blocking works correctly", {
 # =============================================================================
 
 test_that("Labeled designs work correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create profiles with label attribute
   labeled_profiles <- cbc_profiles(
     price = c(1, 2, 3),
@@ -466,6 +473,7 @@ test_that("Labeled designs work correctly", {
 # =============================================================================
 
 test_that("Input validation works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
 
   # Invalid method
@@ -501,6 +509,7 @@ test_that("Input validation works correctly", {
 # =============================================================================
 
 test_that("Design generation completes in reasonable time", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "simple")
 
@@ -533,6 +542,7 @@ test_that("Design generation completes in reasonable time", {
 # =============================================================================
 
 test_that("Design integrates properly with cbc_choices", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "simple")
 
@@ -555,6 +565,7 @@ test_that("Design integrates properly with cbc_choices", {
 })
 
 test_that("Design works with cbc_inspect", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
   priors <- setup_test_priors(profiles, "simple")
 
