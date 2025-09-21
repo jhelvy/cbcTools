@@ -15,6 +15,7 @@ cbc_design(
   n_cores = NULL,
   no_choice = FALSE,
   label = NULL,
+  balance_by = NULL,
   randomize_questions = TRUE,
   randomize_alts = TRUE,
   remove_dominant = FALSE,
@@ -48,6 +49,10 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 \item{no_choice}{Include a "no choice" option? Defaults to FALSE}
 
 \item{label}{The name of the variable to use in a "labeled" design. Defaults to NULL}
+
+\item{balance_by}{Character vector of attribute names to balance sampling across.
+Ensures balanced representation across levels of specified attributes.
+Cannot be used with labeled designs. Defaults to NULL}
 
 \item{randomize_questions}{Randomize question order for each respondent? Defaults to TRUE (optimized methods only)}
 
@@ -117,6 +122,21 @@ All methods ensure the following criteria are met:
 }
 }
 
+\subsection{Balanced Sampling with balance_by}{
+
+The \code{balance_by} argument enables balanced sampling across specified attributes,
+solving the problem of attribute-specific features that create imbalanced designs.
+For example, when you have electric vehicle range that should be 0 for non-electric
+powertrains, using restrictions can lead to over-representation of electric vehicles.
+
+Using \code{balance_by = "powertrain"} ensures that each choice question samples
+proportionally from gas, hybrid, and electric powertrains, maintaining balance
+even when electric vehicles have additional attributes.
+
+Multiple attributes can be balanced simultaneously using \code{balance_by = c("attr1", "attr2")},
+which creates groups based on unique combinations of the specified attributes.
+}
+
 \subsection{Method Details}{
 \subsection{Random Method}{
 
@@ -162,4 +182,48 @@ Key benefits of idefix integration:
 \item Advanced blocking capabilities for multi-block designs
 }
 }
+}
+\examples{
+\dontrun{
+# Basic balance_by example for attribute-specific features
+library(cbcTools)
+
+# Create profiles with electric vehicle range that applies only to electric powertrains
+profiles <- cbc_profiles(
+    price = c(15, 20, 25),
+    fuelEconomy = c(20, 25, 30), 
+    accelTime = c(6, 7, 8),
+    powertrain = c('gas', 'hybrid', 'electric'),
+    range_electric = c(0, 100, 150, 200, 250)
+) \%>\%
+    cbc_restrict(
+        (powertrain == 'electric') & (range_electric == 0),
+        (powertrain != 'electric') & (range_electric != 0)
+    )
+
+# Without balance_by: electric powertrains are over-represented
+design_unbalanced <- cbc_design(
+    profiles = profiles,
+    n_resp = 100, n_alts = 3, n_q = 8
+)
+
+# With balance_by: balanced sampling across powertrains
+design_balanced <- cbc_design(
+    profiles = profiles,
+    n_resp = 100, n_alts = 3, n_q = 8,
+    balance_by = "powertrain"
+)
+
+# Compare powertrain balance
+count(design_unbalanced, powertrain)
+count(design_balanced, powertrain)
+
+# Balance by multiple attributes
+design_multi_balance <- cbc_design(
+    profiles = profiles,
+    n_resp = 100, n_alts = 3, n_q = 8,
+    balance_by = c("powertrain", "price")
+)
+}
+
 }

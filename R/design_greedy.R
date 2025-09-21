@@ -530,7 +530,10 @@ initialize_pairwise_tracker_matrix <- function(
 
     # Initialize tracker vector
     pairwise_cols <- setdiff(names(pairwise_matrix), "profileID")
-    current_counts <- stats::setNames(rep(0, length(pairwise_cols)), pairwise_cols)
+    current_counts <- stats::setNames(
+        rep(0, length(pairwise_cols)),
+        pairwise_cols
+    )
 
     return(list(
         current_counts = current_counts,

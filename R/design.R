@@ -14,9 +14,9 @@
 #' Defaults to NULL, in which case it is set to the number of available cores minus 1.
 #' @param no_choice Include a "no choice" option? Defaults to FALSE
 #' @param label The name of the variable to use in a "labeled" design. Defaults to NULL
-#' @param balance_by Character vector of attribute names to balance sampling across. 
-#' Ensures balanced representation across levels of specified attributes. 
-#' Cannot be used with labeled designs. Defaults to NULL
+#' @param balance_by Character vector of attribute names to balance sampling across.
+#' Ensures balanced representation across levels of specified attributes.
+#' Cannot be used with labeled designs. Defaults to NyULL
 #' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (optimized methods only)
 #' @param randomize_alts Randomize alternative order within questions? Defaults to TRUE (optimized methods only)
 #' @param remove_dominant Remove choice sets with dominant alternatives? Defaults to FALSE
@@ -68,13 +68,13 @@
 #'
 #' The `balance_by` argument enables balanced sampling across specified attributes,
 #' solving the problem of attribute-specific features that create imbalanced designs.
-#' For example, when you have electric vehicle range that should be 0 for non-electric
-#' powertrains, using restrictions can lead to over-representation of electric vehicles.
-#' 
-#' Using `balance_by = "powertrain"` ensures that each choice question samples 
-#' proportionally from gas, hybrid, and electric powertrains, maintaining balance 
+#' For example, consider an experiment on alternative vehicle powertrains with a "powertrain"
+#' attribute for gas and electric vehicles. If you had an "electric_vehicle_range" attribute,
+#' it should be 0 for non-electric powertrains, but using restrictions can lead to
+#' over-representation of electric vehicles. Using `balance_by = "powertrain"` ensures that each
+#' choice question samples proportionally from gas and electric powertrains, maintaining balance
 #' even when electric vehicles have additional attributes.
-#' 
+#'
 #' Multiple attributes can be balanced simultaneously using `balance_by = c("attr1", "attr2")`,
 #' which creates groups based on unique combinations of the specified attributes.
 #'
@@ -115,50 +115,64 @@
 #' - Advanced blocking capabilities for multi-block designs
 #'
 #' @return A `cbc_design` object containing the experimental design
-#' 
+#'
 #' @examples
-#' \dontrun{
 #' # Basic balance_by example for attribute-specific features
 #' library(cbcTools)
-#' 
+#'
 #' # Create profiles with electric vehicle range that applies only to electric powertrains
 #' profiles <- cbc_profiles(
 #'     price = c(15, 20, 25),
-#'     fuelEconomy = c(20, 25, 30), 
-#'     accelTime = c(6, 7, 8),
 #'     powertrain = c('gas', 'hybrid', 'electric'),
 #'     range_electric = c(0, 100, 150, 200, 250)
-#' ) %>%
+#' ) |>
+#'     # range_electric feature only applies to electric powertrain
 #'     cbc_restrict(
 #'         (powertrain == 'electric') & (range_electric == 0),
 #'         (powertrain != 'electric') & (range_electric != 0)
 #'     )
-#' 
+#'
 #' # Without balance_by: electric powertrains are over-represented
 #' design_unbalanced <- cbc_design(
 #'     profiles = profiles,
-#'     n_resp = 100, n_alts = 3, n_q = 8
-#' )
-#' 
+#'     n_resp = 100,
+#'     n_alts = 3,
+#'     n_q = 8
+#' ) |>
+#'     cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+#'
 #' # With balance_by: balanced sampling across powertrains
 #' design_balanced <- cbc_design(
 #'     profiles = profiles,
-#'     n_resp = 100, n_alts = 3, n_q = 8,
+#'     n_resp = 100,
+#'     n_alts = 3,
+#'     n_q = 8,
 #'     balance_by = "powertrain"
-#' )
-#' 
+#' ) |>
+#'     cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+#'
 #' # Compare powertrain balance
-#' count(design_unbalanced, powertrain)
-#' count(design_balanced, powertrain)
-#' 
+#'
+#' table(design_unbalanced$powertrain)
+#' table(design_balanced$powertrain)
+#'
 #' # Balance by multiple attributes
 #' design_multi_balance <- cbc_design(
 #'     profiles = profiles,
-#'     n_resp = 100, n_alts = 3, n_q = 8,
+#'     n_resp = 100,
+#'     n_alts = 3,
+#'     n_q = 8,
 #'     balance_by = c("powertrain", "price")
-#' )
+#' ) |>
+#'     cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+#'
+#' # Compare balance
+#' table(design_unbalanced$powertrain)
+#' table(design_multi_balance$powertrain)
+#' table(design_unbalanced$price)
+#' table(design_multi_balance$price)
 #' }
-#' 
+#'
 #' @export
 cbc_design <- function(
     profiles,
@@ -453,11 +467,15 @@ setup_optimization_environment <- function(
     if (!is.null(label)) {
         label_constraints <- setup_label_constraints(profiles, label, n_alts)
     }
-    
+
     # Set up balance_by constraints if specified
     balance_by_constraints <- NULL
     if (!is.null(balance_by)) {
-        balance_by_constraints <- setup_balance_by_constraints(profiles, balance_by, n_alts)
+        balance_by_constraints <- setup_balance_by_constraints(
+            profiles,
+            balance_by,
+            n_alts
+        )
     }
 
     # Setup n parameter
@@ -913,12 +931,12 @@ sample_balanced_profiles <- function(opt_env) {
     balance_constraints <- opt_env$balance_by_constraints
     n_alts <- opt_env$n$alts
     n_groups <- balance_constraints$n_groups
-    
+
     # Calculate how many profiles to sample from each group
     # Try to distribute n_alts as evenly as possible across groups
     base_per_group <- floor(n_alts / n_groups)
     remainder <- n_alts %% n_groups
-    
+
     # Create sampling plan
     samples_per_group <- rep(base_per_group, n_groups)
     if (remainder > 0) {
@@ -926,16 +944,16 @@ sample_balanced_profiles <- function(opt_env) {
         extra_groups <- sample(seq_len(n_groups), remainder)
         samples_per_group[extra_groups] <- samples_per_group[extra_groups] + 1
     }
-    
+
     # Sample from each group
     selected_profiles <- numeric(n_alts)
     current_index <- 1
-    
+
     for (i in seq_len(n_groups)) {
         n_to_sample <- samples_per_group[i]
         if (n_to_sample > 0) {
             group_profiles <- balance_constraints$groups[[i]]
-            
+
             # Handle case where group has fewer profiles than needed
             if (length(group_profiles) < n_to_sample) {
                 # Sample with replacement if necessary
@@ -944,14 +962,14 @@ sample_balanced_profiles <- function(opt_env) {
                 # Sample without replacement
                 sampled <- sample(group_profiles, n_to_sample, replace = FALSE)
             }
-            
+
             # Add to selected profiles
             end_index <- current_index + n_to_sample - 1
             selected_profiles[current_index:end_index] <- sampled
             current_index <- end_index + 1
         }
     }
-    
+
     return(selected_profiles)
 }
 
@@ -1377,24 +1395,24 @@ setup_label_constraints <- function(profiles, label, n_alts) {
 setup_balance_by_constraints <- function(profiles, balance_by, n_alts) {
     # Create composite balance key from all balance_by attributes
     balance_key <- do.call(paste, c(profiles[balance_by], sep = "|"))
-    
+
     # Get unique balance groups
     balance_groups <- unique(balance_key)
-    
+
     # Create groups list mapping each unique combination to its profile IDs
     groups <- list()
     for (i in seq_along(balance_groups)) {
         groups[[i]] <- profiles$profileID[balance_key == balance_groups[i]]
     }
-    
+
     # Calculate expected group sizes for balanced sampling
     total_samples_per_question <- n_alts
     n_groups <- length(groups)
-    
+
     # For each question, we want to sample roughly equally from each group
     # We'll allow some flexibility in case perfect balance isn't possible
     target_per_group <- total_samples_per_question / n_groups
-    
+
     return(list(
         attributes = balance_by,
         balance_key = balance_key,

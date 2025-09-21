@@ -28,6 +28,7 @@ Before starting, let's define some basic profiles and priors to work with:
 
 ```{r}
 library(cbcTools)
+library(dplyr)
 
 profiles <- cbc_profiles(
   price = c(1, 1.5, 2, 2.5, 3),
@@ -294,6 +295,86 @@ design_labeled <- cbc_design(
 
 head(design_labeled)
 ```
+
+## Balanced Sampling
+
+When working with attribute-specific features (attributes that only apply to certain levels of another attribute), you may encounter balance problems. For example, electric vehicles have an all-electric driving range attribute, but gas and hybrid vehicles do not. Using restrictions to handle this can lead to over-representation of certain attribute levels.
+
+The `balance_by` argument solves this by ensuring balanced sampling across specified attributes. Here's an example with vehicle powertrains and electric range:
+
+```{r}
+# Create profiles with attribute-specific feature
+profiles_vehicles <- cbc_profiles(
+  price = c(15, 20, 25), # Price in $1,000s
+  fuelEconomy = c(20, 25, 30), # Fuel economy (mpg)
+  powertrain = c('gas', 'hybrid', 'electric'),
+  range_electric = c(0, 100, 150, 200, 250) # EV driving range (miles)
+) %>%
+  # Restrict non-electric powertrains from having range_electric other than 0
+  cbc_restrict(
+    (powertrain == 'electric') & (range_electric == 0),
+    (powertrain != 'electric') & (range_electric != 0)
+  )
+
+# Check the balance problem - electric vehicles are over-represented
+table(profiles_vehicles$powertrain)
+```
+
+Without `balance_by`, the restricted profiles lead to unbalanced designs:
+
+```{r}
+# Design without balance_by - electric powertrains over-represented
+design_unbalanced <- cbc_design(
+  profiles = profiles_vehicles,
+  n_alts = 3,
+  n_q = 8,
+  n_resp = 100,
+  method = "random"
+) |>
+    cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+
+# Check powertrain distribution - again, electric is over-represented
+table(design_unbalanced$powertrain)
+```
+
+Using `balance_by` ensures balanced sampling across powertrains:
+
+```{r}
+# Design with balance_by - balanced powertrain representation
+design_balanced <- cbc_design(
+  profiles = profiles_vehicles,
+  n_alts = 3,
+  n_q = 8,
+  n_resp = 100,
+  method = "random",
+  balance_by = "powertrain" # Balance across powertrain levels
+) |> 
+    cbc_decode()
+
+# Check improved powertrain distribution - now powertrain is balanced
+table(design_balanced$powertrain)
+```
+
+You can also balance across multiple attributes simultaneously:
+
+```{r}
+# Balance across combinations of powertrain and price
+design_multi_balance <- cbc_design(
+  profiles = profiles_vehicles,
+  n_alts = 3,
+  n_q = 8,
+  n_resp = 50,
+  method = "random",
+  balance_by = c("powertrain", "price")
+) |> 
+    cbc_decode()
+
+# Check improved powertrain distribution - now powertrain and price are balanced
+table(design_multi_balance$powertrain)
+table(design_multi_balance$price)
+```
+
+> **Note**: The `balance_by` argument cannot be used simultaneously with `label`. Choose one approach based on your design needs.
 
 ## Blocking
 
