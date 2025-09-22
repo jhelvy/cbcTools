@@ -107,23 +107,33 @@ The `cbc_design()` function supports several design generation methods, each wit
 
 ## Method Comparison Table
 
-| Method       | Speed | Efficiency | No Choice | Labeled | Restrictions | balance_by | Blocking | Interactions |
-|--------------|-------|------------|-----------|---------|--------------|------------|----------|--------------|
-| `"random"`   | Fast  | Low        | ✓         | ✓       | ✓            | ✓          | ✗        | ✓            |
-| `"shortcut"` | Fast  | Medium     | ✓         | ✓       | ✓            | ✓          | ✗        | ✗            |
-| `"minoverlap"` | Fast | Medium   | ✓         | ✓       | ✓            | ✓          | ✗        | ✗            |
-| `"balanced"` | Fast  | Medium     | ✓         | ✓       | ✓            | ✓          | ✗        | ✗            |
-| `"stochastic"` | Slow | High     | ✓         | ✓       | ✓            | ✗          | ✓        | ✓            |
-| `"modfed"`   | Medium  | High       | ✓         | ✓       | ✓            | ✗          | ✓        | ✓            |
-| `"cea"`      | Medium  | High       | ✓         | ✓       | ✗           | ✗          | ✓        | ✓            |
+<style>
+table {
+  table-layout: fixed;
+  width: 100%;
+}
+table th:first-child,
+table td:first-child {
+  width: 120px;
+  white-space: nowrap;
+}
+</style>
+
+| Method         | Speed  | Efficiency | No Choice | Labeled | Restrictions | Balanced Sampling | Blocking | Interactions |
+|:---------------|:-------|:-----------|:---------:|:-------:|:------------:|:-----------------:|:--------:|:------------:|
+| `"random"`     | Fast   | Low        | ✓         | ✓       | ✓            | ✓                 | ✗        | ✓            |
+| `"shortcut"`   | Fast   | Medium     | ✓         | ✓       | ✓            | ✓                 | ✗        | ✗            |
+| `"minoverlap"` | Fast   | Medium     | ✓         | ✓       | ✓            | ✓                 | ✗        | ✗            |
+| `"balanced"`   | Fast   | Medium     | ✓         | ✓       | ✓            | ✓                 | ✗        | ✗            |
+| `"stochastic"` | Slow   | High       | ✓         | ✓       | ✓            | ✗                 | ✓        | ✓            |
+| `"modfed"`     | Medium | High       | ✓         | ✓       | ✓            | ✗                 | ✓        | ✓            |
+| `"cea"`        | Medium | High       | ✓         | ✓       | ✗            | ✗                 | ✓        | ✓            |
 
 All design methods ensure:
 
 1. **No duplicate profiles** within any choice set
 2. **No duplicate choice sets** within any respondent
 3. **Dominance removal** (if enabled) eliminates choice sets with dominant alternatives (requires priors)
-
-> **Note**: The `balance_by` feature is only available for `"random"`, `"shortcut"`, `"minoverlap"`, and `"balanced"` methods. D-optimal methods (`"stochastic"`, `"modfed"`, `"cea"`) prioritize statistical efficiency over balance and do not support this feature.
 
 ## `"random"` Method
 
