@@ -321,7 +321,7 @@ profiles_vehicles <- cbc_profiles(
   fuelEconomy = c(20, 25, 30), # Fuel economy (mpg)
   powertrain = c('gas', 'hybrid', 'electric'),
   range_electric = c(0, 100, 150, 200, 250) # EV driving range (miles)
-) %>%
+) |> 
   # Restrict non-electric powertrains from having range_electric other than 0
   cbc_restrict(
     (powertrain == 'electric') & (range_electric == 0),
