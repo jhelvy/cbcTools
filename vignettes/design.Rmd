@@ -388,6 +388,8 @@ table(design_multi_balance$price)
 
 > **Note**: The `balance_by` argument cannot be used simultaneously with `label`. Choose one approach based on your design needs.
 
+> **Note**: The `balance_by` feature is only available for `"random"`, `"shortcut"`, `"minoverlap"`, and `"balanced"` methods. D-optimal methods (`"stochastic"`, `"modfed"`, `"cea"`) prioritize statistical efficiency over balance and do not support this feature.
+
 ## Blocking
 
 For D-optimal methods, create multiple design blocks to reduce respondent burden using the `n_blocks` argument. In the example below, two blocks are created with each block containing `n_q = 6` questions: 

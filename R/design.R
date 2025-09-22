@@ -1316,21 +1316,36 @@ compute_partial_utilities_with_interactions <- function(X_matrix, priors) {
 compute_partial_utilities <- function(X_matrix, priors) {
     n_profiles <- nrow(X_matrix)
 
+    # Extract parameters excluding no_choice if present
+    if (priors$has_no_choice) {
+        no_choice_index <- which(names(priors$pars) == "no_choice")
+        pars_without_no_choice <- priors$pars[-no_choice_index]
+    } else {
+        pars_without_no_choice <- priors$pars
+    }
+
     # Compute mean partial utility across par draws if exist
     par_draws <- priors$par_draws
-    n_draws <- nrow(par_draws)
     if (!is.null(par_draws)) {
-        pars <- par_draws[1, ]
+        # For Bayesian case, exclude no_choice from draws too
+        if (priors$has_no_choice) {
+            par_draws_without_no_choice <- par_draws[, -no_choice_index]
+        } else {
+            par_draws_without_no_choice <- par_draws
+        }
+
+        n_draws <- nrow(par_draws_without_no_choice)
+        pars <- par_draws_without_no_choice[1, ]
         partials <- compute_partial_utility_single(X_matrix, pars, n_profiles)
         for (i in 2:n_draws) {
-            pars <- par_draws[i, ]
+            pars <- par_draws_without_no_choice[i, ]
             partials <- partials +
                 compute_partial_utility_single(X_matrix, pars, n_profiles)
         }
         return(partials / n_draws)
     }
-    # Otherwise just compute direct partial utility using prior pars
-    return(compute_partial_utility_single(X_matrix, priors$pars, n_profiles))
+    # Otherwise just compute direct partial utility using prior pars (without no_choice)
+    return(compute_partial_utility_single(X_matrix, pars_without_no_choice, n_profiles))
 }
 
 compute_partial_utility_single <- function(X_matrix, pars, n_profiles) {
