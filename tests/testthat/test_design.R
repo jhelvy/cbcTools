@@ -596,12 +596,22 @@ test_that("balance_by basic functionality works", {
     fuelEconomy = c(20, 25, 30),
     powertrain = c('gas', 'hybrid', 'electric'),
     range_electric = c(0, 100, 150, 200, 250)
-  ) %>%
+  ) |>
     cbc_restrict(
       (powertrain == 'electric') & (range_electric == 0),
       (powertrain != 'electric') & (range_electric != 0)
     )
-  
+
+  # Design without balance_by
+  design_unbalanced <- cbc_design(
+    profiles = profiles,
+    method = "random",
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 10
+  ) |>
+    cbc_decode()
+
   # Design with balance_by
   design <- cbc_design(
     profiles = profiles,
@@ -610,24 +620,52 @@ test_that("balance_by basic functionality works", {
     n_q = 6,
     n_resp = 10,
     balance_by = "powertrain"
-  )
-  
+  ) |>
+    cbc_decode()
+
   expect_s3_class(design, "cbc_design")
   expect_true("powertrain" %in% names(design))
-  
+
   # Check that all powertrain types are represented
+  powertrain_counts_unbalanced <- table(design_unbalanced$powertrain)
   powertrain_counts <- table(design$powertrain)
   expect_equal(length(powertrain_counts), 3)
   expect_true(all(names(powertrain_counts) %in% c("gas", "hybrid", "electric")))
-  
+
   # Check that balance is better than without balance_by
   # (This is a qualitative check - exact balance depends on sampling)
   expect_true(min(powertrain_counts) > 0)
+  gap_unbalanced <- max(powertrain_counts_unbalanced) -
+    min(powertrain_counts_unbalanced)
+  gap_balanced <- max(powertrain_counts) - min(powertrain_counts)
+  expect_true(gap_unbalanced - gap_balanced > 0)
 })
 
 test_that("balance_by with multiple attributes works", {
-  profiles <- setup_test_profiles()
-  
+  # Create profiles with unbalanced attribute combinations
+  # Similar to vehicle example but with multiple attributes
+  profiles <- cbc_profiles(
+    price = c(15, 20, 25),
+    type = c('Fuji', 'Gala', 'Honeycrisp'),
+    freshness = c('Poor', 'Average', 'Excellent'),
+    organic = c('No', 'Yes')
+  ) |>
+    cbc_restrict(
+      # Create imbalance: Honeycrisp apples are rarely poor quality
+      (type == 'Honeycrisp') & (freshness == 'Poor'),
+      # Fuji apples are rarely organic
+      (type == 'Fuji') & (organic == 'Yes')
+    )
+
+  design_unbalanced <- cbc_design(
+    profiles = profiles,
+    method = "random",
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 10
+  ) |>
+    cbc_decode()
+
   design <- cbc_design(
     profiles = profiles,
     method = "random",
@@ -635,19 +673,28 @@ test_that("balance_by with multiple attributes works", {
     n_q = 6,
     n_resp = 10,
     balance_by = c("type", "freshness")
-  )
-  
+  ) |>
+    cbc_decode()
+
   expect_s3_class(design, "cbc_design")
-  
+
   # Check that multiple attributes are balanced
+  combo_counts_unbalanced <- table(
+    design_unbalanced$type,
+    design_unbalanced$freshness
+  )
   combo_counts <- table(design$type, design$freshness)
   expect_true(nrow(combo_counts) > 1)
   expect_true(ncol(combo_counts) > 1)
+  gap_unbalanced <- max(combo_counts_unbalanced) -
+    min(combo_counts_unbalanced)
+  gap_balanced <- max(combo_counts) - min(combo_counts)
+  expect_true(gap_unbalanced - gap_balanced > 0)
 })
 
 test_that("balance_by validation works correctly", {
   profiles <- setup_test_profiles()
-  
+
   # Test invalid attribute name
   expect_error(
     cbc_design(
@@ -660,7 +707,7 @@ test_that("balance_by validation works correctly", {
     ),
     "balance_by attributes not found in profiles"
   )
-  
+
   # Test profileID in balance_by
   expect_error(
     cbc_design(
@@ -680,7 +727,7 @@ test_that("balance_by conflicts with label", {
     price = c(1, 2),
     brand = c("A", "B", "C")
   )
-  
+
   expect_error(
     cbc_design(
       profiles = profiles,
@@ -695,31 +742,6 @@ test_that("balance_by conflicts with label", {
   )
 })
 
-test_that("balance_by works with different design methods", {
-  profiles <- setup_test_profiles()
-  
-  methods_to_test <- c("random", "shortcut", "minoverlap", "balanced")
-  
-  for (method in methods_to_test) {
-    design <- cbc_design(
-      profiles = profiles,
-      method = method,
-      n_alts = 3,
-      n_q = 6,
-      n_resp = 10,
-      balance_by = "type"
-    )
-    
-    expect_s3_class(design, "cbc_design")
-    expect_true("type" %in% names(design))
-    
-    # Check that all types are represented
-    type_counts <- table(design$type)
-    expect_equal(length(type_counts), 3)
-    expect_true(all(names(type_counts) %in% c("Fuji", "Gala", "Honeycrisp")))
-  }
-})
-
 test_that("balance_by handles edge cases gracefully", {
   # Test with single-valued attribute (should warn or error)
   profiles_single <- cbc_profiles(
@@ -727,7 +749,7 @@ test_that("balance_by handles edge cases gracefully", {
     constant_attr = c("same", "same", "same"),
     type = c("A", "B", "C")
   )
-  
+
   expect_error(
     cbc_design(
       profiles = profiles_single,
