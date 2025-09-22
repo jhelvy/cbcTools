@@ -366,6 +366,18 @@ validate_design_inputs <- function(
         stop("Cannot use both 'label' and 'balance_by' arguments simultaneously. Use one or the other.")
     }
 
+    # Check method compatibility with balance_by
+    if (!is.null(balance_by)) {
+        incompatible_methods <- c("stochastic", "modfed", "cea")
+        if (method %in% incompatible_methods) {
+            stop(sprintf(
+                "balance_by is not supported with method '%s'. Compatible methods are: %s",
+                method,
+                paste(c("random", "shortcut", "minoverlap", "balanced"), collapse = ", ")
+            ))
+        }
+    }
+
     # Validate dominance parameters
     if (remove_dominant) {
         if (is.null(priors)) {

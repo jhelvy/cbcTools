@@ -16,7 +16,9 @@
 #' @param label The name of the variable to use in a "labeled" design. Defaults to NULL
 #' @param balance_by Character vector of attribute names to balance sampling across.
 #' Ensures balanced representation across levels of specified attributes.
-#' Cannot be used with labeled designs. Defaults to NyULL
+#' Only compatible with "random", "shortcut", "minoverlap", and "balanced" methods.
+#' Cannot be used with labeled designs or D-optimal methods ("stochastic", "modfed", "cea").
+#' Defaults to NULL
 #' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (optimized methods only)
 #' @param randomize_alts Randomize alternative order within questions? Defaults to TRUE (optimized methods only)
 #' @param remove_dominant Remove choice sets with dominant alternatives? Defaults to FALSE
@@ -46,15 +48,15 @@
 #'
 #' The table below summarizes method compatibility with design features:
 #'
-#' | Method       | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Interactions? | Dominance removal? |
-#' |--------------|------------|------------------|---------------------|-----------|---------------|-------------------|
-#' | "random"     | Yes        | Yes              | Yes                 | No        | Yes           | Yes               |
-#' | "shortcut"   | Yes        | Yes              | Yes                 | No        | No            | Yes               |
-#' | "minoverlap" | Yes        | Yes              | Yes                 | No        | No            | Yes               |
-#' | "balanced"   | Yes        | Yes              | Yes                 | No        | No            | Yes               |
-#' | "stochastic" | Yes        | Yes              | Yes                 | Yes       | Yes           | Yes               |
-#' | "modfed"     | Yes        | Yes              | Yes                 | Yes       | Yes           | Yes               |
-#' | "cea"        | Yes        | Yes              | No                  | Yes       | Yes           | Yes               |
+#' | Method       | No choice? | Labeled designs? | Restricted profiles? | balance_by? | Blocking? | Interactions? | Dominance removal? |
+#' |--------------|------------|------------------|---------------------|-------------|-----------|---------------|-------------------|
+#' | "random"     | Yes        | Yes              | Yes                 | Yes         | No        | Yes           | Yes               |
+#' | "shortcut"   | Yes        | Yes              | Yes                 | Yes         | No        | No            | Yes               |
+#' | "minoverlap" | Yes        | Yes              | Yes                 | Yes         | No        | No            | Yes               |
+#' | "balanced"   | Yes        | Yes              | Yes                 | Yes         | No        | No            | Yes               |
+#' | "stochastic" | Yes        | Yes              | Yes                 | No          | Yes       | Yes           | Yes               |
+#' | "modfed"     | Yes        | Yes              | Yes                 | No          | Yes       | Yes           | Yes               |
+#' | "cea"        | Yes        | Yes              | No                  | No          | Yes       | Yes           | Yes               |
 #'
 #' ## Design Quality Assurance
 #'
@@ -117,61 +119,61 @@
 #' @return A `cbc_design` object containing the experimental design
 #'
 #' @examples
-#' # Basic balance_by example for attribute-specific features
 #' library(cbcTools)
 #'
-#' # Create profiles with electric vehicle range that applies only to electric powertrains
+#' # Create profiles for an apple choice experiment
 #' profiles <- cbc_profiles(
-#'     price = c(15, 20, 25),
-#'     powertrain = c('gas', 'hybrid', 'electric'),
-#'     range_electric = c(0, 100, 150, 200, 250)
-#' ) |>
-#'     # range_electric feature only applies to electric powertrain
-#'     cbc_restrict(
-#'         (powertrain == 'electric') & (range_electric == 0),
-#'         (powertrain != 'electric') & (range_electric != 0)
-#'     )
+#'     price = c(1, 1.5, 2, 2.5, 3),
+#'     type = c("Fuji", "Gala", "Honeycrisp"),
+#'     freshness = c("Poor", "Average", "Excellent")
+#' )
 #'
-#' # Without balance_by: electric powertrains are over-represented
-#' design_unbalanced <- cbc_design(
+#' # Basic random design
+#' design_random <- cbc_design(
 #'     profiles = profiles,
-#'     n_resp = 100,
 #'     n_alts = 3,
-#'     n_q = 8
-#' ) |>
-#'     cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+#'     n_q = 6,
+#'     n_resp = 100
+#' )
 #'
-#' # With balance_by: balanced sampling across powertrains
+#' head(design_random)
+#'
+#' # Inspect design
+#' cbc_inspect(design_random)
+#'
+#' # Greedy design with balanced frequency
 #' design_balanced <- cbc_design(
 #'     profiles = profiles,
-#'     n_resp = 100,
+#'     method = "balanced",
 #'     n_alts = 3,
-#'     n_q = 8,
-#'     balance_by = "powertrain"
-#' ) |>
-#'     cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+#'     n_q = 6,
+#'     n_resp = 100
+#' )
 #'
-#' # Compare powertrain balance
-#'
-#' table(design_unbalanced$powertrain)
-#' table(design_balanced$powertrain)
-#'
-#' # Balance by multiple attributes
-#' design_multi_balance <- cbc_design(
+#' # Design with priors using D-optimal method
+#' priors <- cbc_priors(
 #'     profiles = profiles,
-#'     n_resp = 100,
-#'     n_alts = 3,
-#'     n_q = 8,
-#'     balance_by = c("powertrain", "price")
-#' ) |>
-#'     cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+#'     price = -0.25,
+#'     type = c("Gala" = 0.5, "Honeycrisp" = 1.0),
+#'     freshness = c("Average" = 0.6, "Excellent" = 1.2)
+#' )
 #'
-#' # Compare balance
-#' table(design_unbalanced$powertrain)
-#' table(design_multi_balance$powertrain)
-#' table(design_unbalanced$price)
-#' table(design_multi_balance$price)
-#' }
+#' design_optimal <- cbc_design(
+#'     profiles = profiles,
+#'     method = "stochastic",
+#'     priors = priors,
+#'     n_alts = 3,
+#'     n_q = 6,
+#'     n_resp = 100,
+#'     n_start = 3
+#' )
+#'
+#' # Compare designs
+#' cbc_compare(
+#'     "Random" = design_random,
+#'     "Balanced" = design_balanced,
+#'     "D-optimal" = design_optimal
+#' )
 #'
 #' @export
 cbc_design <- function(
@@ -928,47 +930,20 @@ sample_labeled_profiles <- function(opt_env) {
 
 # Sample profiles for balance_by design
 sample_balanced_profiles <- function(opt_env) {
+    # Use weighted sampling based on pre-computed profile weights
+    # This ensures balanced representation across the entire design
+    # without forcing balance within individual choice sets
+
     balance_constraints <- opt_env$balance_by_constraints
     n_alts <- opt_env$n$alts
-    n_groups <- balance_constraints$n_groups
 
-    # Calculate how many profiles to sample from each group
-    # Try to distribute n_alts as evenly as possible across groups
-    base_per_group <- floor(n_alts / n_groups)
-    remainder <- n_alts %% n_groups
-
-    # Create sampling plan
-    samples_per_group <- rep(base_per_group, n_groups)
-    if (remainder > 0) {
-        # Randomly assign the remainder to groups
-        extra_groups <- sample(seq_len(n_groups), remainder)
-        samples_per_group[extra_groups] <- samples_per_group[extra_groups] + 1
-    }
-
-    # Sample from each group
-    selected_profiles <- numeric(n_alts)
-    current_index <- 1
-
-    for (i in seq_len(n_groups)) {
-        n_to_sample <- samples_per_group[i]
-        if (n_to_sample > 0) {
-            group_profiles <- balance_constraints$groups[[i]]
-
-            # Handle case where group has fewer profiles than needed
-            if (length(group_profiles) < n_to_sample) {
-                # Sample with replacement if necessary
-                sampled <- sample(group_profiles, n_to_sample, replace = TRUE)
-            } else {
-                # Sample without replacement
-                sampled <- sample(group_profiles, n_to_sample, replace = FALSE)
-            }
-
-            # Add to selected profiles
-            end_index <- current_index + n_to_sample - 1
-            selected_profiles[current_index:end_index] <- sampled
-            current_index <- end_index + 1
-        }
-    }
+    # Sample profiles using weights (higher weights for underrepresented groups)
+    selected_profiles <- sample(
+        opt_env$available_profile_ids,
+        size = n_alts,
+        replace = FALSE,
+        prob = balance_constraints$profile_weights
+    )
 
     return(selected_profiles)
 }
@@ -1396,29 +1371,27 @@ setup_balance_by_constraints <- function(profiles, balance_by, n_alts) {
     # Create composite balance key from all balance_by attributes
     balance_key <- do.call(paste, c(profiles[balance_by], sep = "|"))
 
-    # Get unique balance groups
+    # Get unique balance groups and their frequencies
     balance_groups <- unique(balance_key)
+    group_frequencies <- table(balance_key)
 
-    # Create groups list mapping each unique combination to its profile IDs
-    groups <- list()
+    # Calculate inverse frequency weights for balanced sampling
+    # Groups with fewer profiles get higher weights
+    max_freq <- max(group_frequencies)
+    group_weights <- max_freq / group_frequencies[balance_groups]
+
+    # Create profile weights based on their balance group
+    profile_weights <- numeric(nrow(profiles))
     for (i in seq_along(balance_groups)) {
-        groups[[i]] <- profiles$profileID[balance_key == balance_groups[i]]
+        group_mask <- balance_key == balance_groups[i]
+        profile_weights[group_mask] <- group_weights[i]
     }
-
-    # Calculate expected group sizes for balanced sampling
-    total_samples_per_question <- n_alts
-    n_groups <- length(groups)
-
-    # For each question, we want to sample roughly equally from each group
-    # We'll allow some flexibility in case perfect balance isn't possible
-    target_per_group <- total_samples_per_question / n_groups
 
     return(list(
         attributes = balance_by,
         balance_key = balance_key,
-        groups = groups,
         group_labels = balance_groups,
-        n_groups = n_groups,
-        target_per_group = target_per_group
+        n_groups = length(balance_groups),
+        profile_weights = profile_weights
     ))
 }

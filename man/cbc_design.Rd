@@ -52,7 +52,9 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 
 \item{balance_by}{Character vector of attribute names to balance sampling across.
 Ensures balanced representation across levels of specified attributes.
-Cannot be used with labeled designs. Defaults to NULL}
+Only compatible with "random", "shortcut", "minoverlap", and "balanced" methods.
+Cannot be used with labeled designs or D-optimal methods ("stochastic", "modfed", "cea").
+Defaults to NULL}
 
 \item{randomize_questions}{Randomize question order for each respondent? Defaults to TRUE (optimized methods only)}
 
@@ -99,15 +101,15 @@ The \code{method} argument determines the design approach used:
 
 \subsection{Method Compatibility}{
 
-The table below summarizes method compatibility with design features:\tabular{lllllll}{
-   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Interactions? \tab Dominance removal? \cr
-   "random" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \cr
-   "shortcut" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
-   "minoverlap" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
-   "balanced" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
-   "stochastic" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
-   "modfed" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
-   "cea" \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+The table below summarizes method compatibility with design features:\tabular{llllllll}{
+   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab balance_by? \tab Blocking? \tab Interactions? \tab Dominance removal? \cr
+   "random" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \cr
+   "shortcut" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "minoverlap" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "balanced" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "stochastic" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+   "modfed" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+   "cea" \tab Yes \tab Yes \tab No \tab No \tab Yes \tab Yes \tab Yes \cr
 }
 
 }
@@ -126,11 +128,11 @@ All methods ensure the following criteria are met:
 
 The \code{balance_by} argument enables balanced sampling across specified attributes,
 solving the problem of attribute-specific features that create imbalanced designs.
-For example, when you have electric vehicle range that should be 0 for non-electric
-powertrains, using restrictions can lead to over-representation of electric vehicles.
-
-Using \code{balance_by = "powertrain"} ensures that each choice question samples
-proportionally from gas, hybrid, and electric powertrains, maintaining balance
+For example, consider an experiment on alternative vehicle powertrains with a "powertrain"
+attribute for gas and electric vehicles. If you had an "electric_vehicle_range" attribute,
+it should be 0 for non-electric powertrains, but using restrictions can lead to
+over-representation of electric vehicles. Using \code{balance_by = "powertrain"} ensures that each
+choice question samples proportionally from gas and electric powertrains, maintaining balance
 even when electric vehicles have additional attributes.
 
 Multiple attributes can be balanced simultaneously using \code{balance_by = c("attr1", "attr2")},
@@ -184,46 +186,60 @@ Key benefits of idefix integration:
 }
 }
 \examples{
-\dontrun{
-# Basic balance_by example for attribute-specific features
 library(cbcTools)
 
-# Create profiles with electric vehicle range that applies only to electric powertrains
+# Create profiles for an apple choice experiment
 profiles <- cbc_profiles(
-    price = c(15, 20, 25),
-    fuelEconomy = c(20, 25, 30), 
-    accelTime = c(6, 7, 8),
-    powertrain = c('gas', 'hybrid', 'electric'),
-    range_electric = c(0, 100, 150, 200, 250)
-) \%>\%
-    cbc_restrict(
-        (powertrain == 'electric') & (range_electric == 0),
-        (powertrain != 'electric') & (range_electric != 0)
-    )
-
-# Without balance_by: electric powertrains are over-represented
-design_unbalanced <- cbc_design(
-    profiles = profiles,
-    n_resp = 100, n_alts = 3, n_q = 8
+    price = c(1, 1.5, 2, 2.5, 3),
+    type = c("Fuji", "Gala", "Honeycrisp"),
+    freshness = c("Poor", "Average", "Excellent")
 )
 
-# With balance_by: balanced sampling across powertrains
+# Basic random design
+design_random <- cbc_design(
+    profiles = profiles,
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 100
+)
+
+head(design_random)
+
+# Inspect design
+cbc_inspect(design_random)
+
+# Greedy design with balanced frequency
 design_balanced <- cbc_design(
     profiles = profiles,
-    n_resp = 100, n_alts = 3, n_q = 8,
-    balance_by = "powertrain"
+    method = "balanced",
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 100
 )
 
-# Compare powertrain balance
-count(design_unbalanced, powertrain)
-count(design_balanced, powertrain)
-
-# Balance by multiple attributes
-design_multi_balance <- cbc_design(
+# Design with priors using D-optimal method
+priors <- cbc_priors(
     profiles = profiles,
-    n_resp = 100, n_alts = 3, n_q = 8,
-    balance_by = c("powertrain", "price")
+    price = -0.25,
+    type = c("Gala" = 0.5, "Honeycrisp" = 1.0),
+    freshness = c("Average" = 0.6, "Excellent" = 1.2)
 )
-}
+
+design_optimal <- cbc_design(
+    profiles = profiles,
+    method = "stochastic",
+    priors = priors,
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 100,
+    n_start = 3
+)
+
+# Compare designs
+cbc_compare(
+    "Random" = design_random,
+    "Balanced" = design_balanced,
+    "D-optimal" = design_optimal
+)
 
 }
