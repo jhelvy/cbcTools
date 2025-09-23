@@ -170,6 +170,7 @@ simulate_utility_based_choices <- function(design, priors) {
         priors = priors, # The new priors for choice simulation
         no_choice = design_params$no_choice,
         label = design_params$label,
+        balance_by = NULL, # Not used for choice simulation
         remove_dominant = FALSE, # Not needed for choice simulation
         dominance_types = NULL, # Not needed for choice simulation
         dominance_threshold = 0.8, # Not needed for choice simulation

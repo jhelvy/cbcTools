@@ -14,6 +14,11 @@
 #' Defaults to NULL, in which case it is set to the number of available cores minus 1.
 #' @param no_choice Include a "no choice" option? Defaults to FALSE
 #' @param label The name of the variable to use in a "labeled" design. Defaults to NULL
+#' @param balance_by Character vector of attribute names to balance sampling across.
+#' Ensures balanced representation across levels of specified attributes.
+#' Only compatible with "random", "shortcut", "minoverlap", and "balanced" methods.
+#' Cannot be used with labeled designs or D-optimal methods ("stochastic", "modfed", "cea").
+#' Defaults to NULL
 #' @param randomize_questions Randomize question order for each respondent? Defaults to TRUE (optimized methods only)
 #' @param randomize_alts Randomize alternative order within questions? Defaults to TRUE (optimized methods only)
 #' @param remove_dominant Remove choice sets with dominant alternatives? Defaults to FALSE
@@ -43,15 +48,15 @@
 #'
 #' The table below summarizes method compatibility with design features:
 #'
-#' | Method       | No choice? | Labeled designs? | Restricted profiles? | Blocking? | Interactions? | Dominance removal? |
-#' |--------------|------------|------------------|---------------------|-----------|---------------|-------------------|
-#' | "random"     | Yes        | Yes              | Yes                 | No        | Yes           | Yes               |
-#' | "shortcut"   | Yes        | Yes              | Yes                 | No        | No            | Yes               |
-#' | "minoverlap" | Yes        | Yes              | Yes                 | No        | No            | Yes               |
-#' | "balanced"   | Yes        | Yes              | Yes                 | No        | No            | Yes               |
-#' | "stochastic" | Yes        | Yes              | Yes                 | Yes       | Yes           | Yes               |
-#' | "modfed"     | Yes        | Yes              | Yes                 | Yes       | Yes           | Yes               |
-#' | "cea"        | Yes        | Yes              | No                  | Yes       | Yes           | Yes               |
+#' | Method       | No choice? | Labeled designs? | Restricted profiles? | balance_by? | Blocking? | Interactions? | Dominance removal? |
+#' |--------------|------------|------------------|---------------------|-------------|-----------|---------------|-------------------|
+#' | "random"     | Yes        | Yes              | Yes                 | Yes         | No        | Yes           | Yes               |
+#' | "shortcut"   | Yes        | Yes              | Yes                 | Yes         | No        | No            | Yes               |
+#' | "minoverlap" | Yes        | Yes              | Yes                 | Yes         | No        | No            | Yes               |
+#' | "balanced"   | Yes        | Yes              | Yes                 | Yes         | No        | No            | Yes               |
+#' | "stochastic" | Yes        | Yes              | Yes                 | No          | Yes       | Yes           | Yes               |
+#' | "modfed"     | Yes        | Yes              | Yes                 | No          | Yes       | Yes           | Yes               |
+#' | "cea"        | Yes        | Yes              | No                  | No          | Yes       | Yes           | Yes               |
 #'
 #' ## Design Quality Assurance
 #'
@@ -60,6 +65,20 @@
 #' 1. No duplicate profiles within any choice set
 #' 2. No duplicate choice sets within any respondent
 #' 3. If `remove_dominant = TRUE`, choice sets with dominant alternatives are eliminated (optimization methods only)
+#'
+#' ## Balanced Sampling with balance_by
+#'
+#' The `balance_by` argument enables balanced sampling across specified attributes,
+#' solving the problem of attribute-specific features that create imbalanced designs.
+#' For example, consider an experiment on alternative vehicle powertrains with a "powertrain"
+#' attribute for gas and electric vehicles. If you had an "electric_vehicle_range" attribute,
+#' it should be 0 for non-electric powertrains, but using restrictions can lead to
+#' over-representation of electric vehicles. Using `balance_by = "powertrain"` ensures that each
+#' choice question samples proportionally from gas and electric powertrains, maintaining balance
+#' even when electric vehicles have additional attributes.
+#'
+#' Multiple attributes can be balanced simultaneously using `balance_by = c("attr1", "attr2")`,
+#' which creates groups based on unique combinations of the specified attributes.
 #'
 #' ## Method Details
 #'
@@ -98,6 +117,64 @@
 #' - Advanced blocking capabilities for multi-block designs
 #'
 #' @return A `cbc_design` object containing the experimental design
+#'
+#' @examples
+#' library(cbcTools)
+#'
+#' # Create profiles for an apple choice experiment
+#' profiles <- cbc_profiles(
+#'     price = c(1, 1.5, 2, 2.5, 3),
+#'     type = c("Fuji", "Gala", "Honeycrisp"),
+#'     freshness = c("Poor", "Average", "Excellent")
+#' )
+#'
+#' # Basic random design
+#' design_random <- cbc_design(
+#'     profiles = profiles,
+#'     n_alts = 3,
+#'     n_q = 6,
+#'     n_resp = 100
+#' )
+#'
+#' head(design_random)
+#'
+#' # Inspect design
+#' cbc_inspect(design_random)
+#'
+#' # Greedy design with balanced frequency
+#' design_balanced <- cbc_design(
+#'     profiles = profiles,
+#'     method = "balanced",
+#'     n_alts = 3,
+#'     n_q = 6,
+#'     n_resp = 100
+#' )
+#'
+#' # Design with priors using D-optimal method
+#' priors <- cbc_priors(
+#'     profiles = profiles,
+#'     price = -0.25,
+#'     type = c("Gala" = 0.5, "Honeycrisp" = 1.0),
+#'     freshness = c("Average" = 0.6, "Excellent" = 1.2)
+#' )
+#'
+#' design_optimal <- cbc_design(
+#'     profiles = profiles,
+#'     method = "stochastic",
+#'     priors = priors,
+#'     n_alts = 3,
+#'     n_q = 6,
+#'     n_resp = 100,
+#'     n_start = 3
+#' )
+#'
+#' # Compare designs
+#' cbc_compare(
+#'     "Random" = design_random,
+#'     "Balanced" = design_balanced,
+#'     "D-optimal" = design_optimal
+#' )
+#'
 #' @export
 cbc_design <- function(
     profiles,
@@ -110,6 +187,7 @@ cbc_design <- function(
     n_cores = NULL,
     no_choice = FALSE,
     label = NULL,
+    balance_by = NULL,
     randomize_questions = TRUE,
     randomize_alts = TRUE,
     remove_dominant = FALSE,
@@ -139,6 +217,7 @@ cbc_design <- function(
         n_blocks,
         no_choice,
         label,
+        balance_by,
         randomize_questions,
         randomize_alts,
         remove_dominant,
@@ -164,6 +243,7 @@ cbc_design <- function(
         priors,
         no_choice,
         label,
+        balance_by,
         remove_dominant,
         dominance_types,
         dominance_threshold,
@@ -207,6 +287,7 @@ setup_optimization_environment <- function(
     priors,
     no_choice,
     label,
+    balance_by,
     remove_dominant,
     dominance_types,
     dominance_threshold,
@@ -389,6 +470,16 @@ setup_optimization_environment <- function(
         label_constraints <- setup_label_constraints(profiles, label, n_alts)
     }
 
+    # Set up balance_by constraints if specified
+    balance_by_constraints <- NULL
+    if (!is.null(balance_by)) {
+        balance_by_constraints <- setup_balance_by_constraints(
+            profiles,
+            balance_by,
+            n_alts
+        )
+    }
+
     # Setup n parameter
     n <- list(
         q = n_q,
@@ -438,6 +529,8 @@ setup_optimization_environment <- function(
         no_choice = no_choice,
         label = label,
         label_constraints = label_constraints,
+        balance_by = balance_by,
+        balance_by_constraints = balance_by_constraints,
         is_bayesian = is_bayesian,
         n = n,
         reps = reps,
@@ -644,6 +737,11 @@ generate_initial_random_matrix <- function(
         for (q in 1:n_questions) {
             design_matrix[q, ] <- sample_labeled_profiles(opt_env)
         }
+    } else if (!is.null(opt_env$balance_by_constraints)) {
+        # Balance_by design: sample balanced across specified attributes
+        for (q in 1:n_questions) {
+            design_matrix[q, ] <- sample_balanced_profiles(opt_env)
+        }
     } else {
         # Regular design: sample without replacement for each question
         for (q in 1:n_questions) {
@@ -806,6 +904,9 @@ sample_question_profiles <- function(opt_env) {
     if (!is.null(opt_env$label_constraints)) {
         # Labeled design: sample one from each label group
         return(sample_labeled_profiles(opt_env))
+    } else if (!is.null(opt_env$balance_by_constraints)) {
+        # Balance_by design: sample balanced across specified attributes
+        return(sample_balanced_profiles(opt_env))
     } else {
         # Regular design: sample without replacement from all available profiles
         return(sample(opt_env$available_profile_ids, n_alts, replace = FALSE))
@@ -825,6 +926,26 @@ sample_labeled_profiles <- function(opt_env) {
         profiles[i] <- sample(group_profiles, 1)
     }
     return(profiles)
+}
+
+# Sample profiles for balance_by design
+sample_balanced_profiles <- function(opt_env) {
+    # Use weighted sampling based on pre-computed profile weights
+    # This ensures balanced representation across the entire design
+    # without forcing balance within individual choice sets
+
+    balance_constraints <- opt_env$balance_by_constraints
+    n_alts <- opt_env$n$alts
+
+    # Sample profiles using weights (higher weights for underrepresented groups)
+    selected_profiles <- sample(
+        opt_env$available_profile_ids,
+        size = n_alts,
+        replace = FALSE,
+        prob = balance_constraints$profile_weights
+    )
+
+    return(selected_profiles)
 }
 
 # Convert profileID design matrix to full design data frame using existing encoded matrix
@@ -1195,21 +1316,36 @@ compute_partial_utilities_with_interactions <- function(X_matrix, priors) {
 compute_partial_utilities <- function(X_matrix, priors) {
     n_profiles <- nrow(X_matrix)
 
+    # Extract parameters excluding no_choice if present
+    if (priors$has_no_choice) {
+        no_choice_index <- which(names(priors$pars) == "no_choice")
+        pars_without_no_choice <- priors$pars[-no_choice_index]
+    } else {
+        pars_without_no_choice <- priors$pars
+    }
+
     # Compute mean partial utility across par draws if exist
     par_draws <- priors$par_draws
-    n_draws <- nrow(par_draws)
     if (!is.null(par_draws)) {
-        pars <- par_draws[1, ]
+        # For Bayesian case, exclude no_choice from draws too
+        if (priors$has_no_choice) {
+            par_draws_without_no_choice <- par_draws[, -no_choice_index]
+        } else {
+            par_draws_without_no_choice <- par_draws
+        }
+
+        n_draws <- nrow(par_draws_without_no_choice)
+        pars <- par_draws_without_no_choice[1, ]
         partials <- compute_partial_utility_single(X_matrix, pars, n_profiles)
         for (i in 2:n_draws) {
-            pars <- par_draws[i, ]
+            pars <- par_draws_without_no_choice[i, ]
             partials <- partials +
                 compute_partial_utility_single(X_matrix, pars, n_profiles)
         }
         return(partials / n_draws)
     }
-    # Otherwise just compute direct partial utility using prior pars
-    return(compute_partial_utility_single(X_matrix, priors$pars, n_profiles))
+    # Otherwise just compute direct partial utility using prior pars (without no_choice)
+    return(compute_partial_utility_single(X_matrix, pars_without_no_choice, n_profiles))
 }
 
 compute_partial_utility_single <- function(X_matrix, pars, n_profiles) {
@@ -1242,5 +1378,35 @@ setup_label_constraints <- function(profiles, label, n_alts) {
     return(list(
         values = label_values,
         groups = groups
+    ))
+}
+
+# Set up balance_by constraints for balanced sampling across specified attributes
+setup_balance_by_constraints <- function(profiles, balance_by, n_alts) {
+    # Create composite balance key from all balance_by attributes
+    balance_key <- do.call(paste, c(profiles[balance_by], sep = "|"))
+
+    # Get unique balance groups and their frequencies
+    balance_groups <- unique(balance_key)
+    group_frequencies <- table(balance_key)
+
+    # Calculate inverse frequency weights for balanced sampling
+    # Groups with fewer profiles get higher weights
+    max_freq <- max(group_frequencies)
+    group_weights <- max_freq / group_frequencies[balance_groups]
+
+    # Create profile weights based on their balance group
+    profile_weights <- numeric(nrow(profiles))
+    for (i in seq_along(balance_groups)) {
+        group_mask <- balance_key == balance_groups[i]
+        profile_weights[group_mask] <- group_weights[i]
+    }
+
+    return(list(
+        attributes = balance_by,
+        balance_key = balance_key,
+        group_labels = balance_groups,
+        n_groups = length(balance_groups),
+        profile_weights = profile_weights
     ))
 }

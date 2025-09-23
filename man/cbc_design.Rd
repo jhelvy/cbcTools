@@ -15,6 +15,7 @@ cbc_design(
   n_cores = NULL,
   no_choice = FALSE,
   label = NULL,
+  balance_by = NULL,
   randomize_questions = TRUE,
   randomize_alts = TRUE,
   remove_dominant = FALSE,
@@ -48,6 +49,12 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 \item{no_choice}{Include a "no choice" option? Defaults to FALSE}
 
 \item{label}{The name of the variable to use in a "labeled" design. Defaults to NULL}
+
+\item{balance_by}{Character vector of attribute names to balance sampling across.
+Ensures balanced representation across levels of specified attributes.
+Only compatible with "random", "shortcut", "minoverlap", and "balanced" methods.
+Cannot be used with labeled designs or D-optimal methods ("stochastic", "modfed", "cea").
+Defaults to NULL}
 
 \item{randomize_questions}{Randomize question order for each respondent? Defaults to TRUE (optimized methods only)}
 
@@ -94,15 +101,15 @@ The \code{method} argument determines the design approach used:
 
 \subsection{Method Compatibility}{
 
-The table below summarizes method compatibility with design features:\tabular{lllllll}{
-   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab Blocking? \tab Interactions? \tab Dominance removal? \cr
-   "random" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \cr
-   "shortcut" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
-   "minoverlap" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
-   "balanced" \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
-   "stochastic" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
-   "modfed" \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \tab Yes \cr
-   "cea" \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+The table below summarizes method compatibility with design features:\tabular{llllllll}{
+   Method \tab No choice? \tab Labeled designs? \tab Restricted profiles? \tab balance_by? \tab Blocking? \tab Interactions? \tab Dominance removal? \cr
+   "random" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \cr
+   "shortcut" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "minoverlap" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "balanced" \tab Yes \tab Yes \tab Yes \tab Yes \tab No \tab No \tab Yes \cr
+   "stochastic" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+   "modfed" \tab Yes \tab Yes \tab Yes \tab No \tab Yes \tab Yes \tab Yes \cr
+   "cea" \tab Yes \tab Yes \tab No \tab No \tab Yes \tab Yes \tab Yes \cr
 }
 
 }
@@ -115,6 +122,21 @@ All methods ensure the following criteria are met:
 \item No duplicate choice sets within any respondent
 \item If \code{remove_dominant = TRUE}, choice sets with dominant alternatives are eliminated (optimization methods only)
 }
+}
+
+\subsection{Balanced Sampling with balance_by}{
+
+The \code{balance_by} argument enables balanced sampling across specified attributes,
+solving the problem of attribute-specific features that create imbalanced designs.
+For example, consider an experiment on alternative vehicle powertrains with a "powertrain"
+attribute for gas and electric vehicles. If you had an "electric_vehicle_range" attribute,
+it should be 0 for non-electric powertrains, but using restrictions can lead to
+over-representation of electric vehicles. Using \code{balance_by = "powertrain"} ensures that each
+choice question samples proportionally from gas and electric powertrains, maintaining balance
+even when electric vehicles have additional attributes.
+
+Multiple attributes can be balanced simultaneously using \code{balance_by = c("attr1", "attr2")},
+which creates groups based on unique combinations of the specified attributes.
 }
 
 \subsection{Method Details}{
@@ -162,4 +184,62 @@ Key benefits of idefix integration:
 \item Advanced blocking capabilities for multi-block designs
 }
 }
+}
+\examples{
+library(cbcTools)
+
+# Create profiles for an apple choice experiment
+profiles <- cbc_profiles(
+    price = c(1, 1.5, 2, 2.5, 3),
+    type = c("Fuji", "Gala", "Honeycrisp"),
+    freshness = c("Poor", "Average", "Excellent")
+)
+
+# Basic random design
+design_random <- cbc_design(
+    profiles = profiles,
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 100
+)
+
+head(design_random)
+
+# Inspect design
+cbc_inspect(design_random)
+
+# Greedy design with balanced frequency
+design_balanced <- cbc_design(
+    profiles = profiles,
+    method = "balanced",
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 100
+)
+
+# Design with priors using D-optimal method
+priors <- cbc_priors(
+    profiles = profiles,
+    price = -0.25,
+    type = c("Gala" = 0.5, "Honeycrisp" = 1.0),
+    freshness = c("Average" = 0.6, "Excellent" = 1.2)
+)
+
+design_optimal <- cbc_design(
+    profiles = profiles,
+    method = "stochastic",
+    priors = priors,
+    n_alts = 3,
+    n_q = 6,
+    n_resp = 100,
+    n_start = 3
+)
+
+# Compare designs
+cbc_compare(
+    "Random" = design_random,
+    "Balanced" = design_balanced,
+    "D-optimal" = design_optimal
+)
+
 }

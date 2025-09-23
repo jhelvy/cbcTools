@@ -530,7 +530,10 @@ initialize_pairwise_tracker_matrix <- function(
 
     # Initialize tracker vector
     pairwise_cols <- setdiff(names(pairwise_matrix), "profileID")
-    current_counts <- stats::setNames(rep(0, length(pairwise_cols)), pairwise_cols)
+    current_counts <- stats::setNames(
+        rep(0, length(pairwise_cols)),
+        pairwise_cols
+    )
 
     return(list(
         current_counts = current_counts,
@@ -669,7 +672,7 @@ select_profile_greedy <- function(
         }
 
         # Calculate score based on method using matrix operations
-        profile_scores[i] <- calculate_greedy_score_matrix(
+        base_score <- calculate_greedy_score_matrix(
             profile_id,
             trackers,
             resp_design,
@@ -678,6 +681,18 @@ select_profile_greedy <- function(
             method,
             encoded_profiles
         )
+
+        # Apply balance_by adjustment if balance_by constraints exist
+        if (!is.null(opt_env$balance_by_constraints)) {
+            # Get the weight for this profile (higher weight = more underrepresented)
+            profile_weight <- opt_env$balance_by_constraints$profile_weights[profile_id]
+            # Convert weight to score adjustment: higher weight = lower score (better)
+            # Use a mild adjustment to allow the greedy algorithm to still work
+            balance_adjustment <- 1 / sqrt(profile_weight)  # Softer than 1/weight
+            profile_scores[i] <- base_score * balance_adjustment
+        } else {
+            profile_scores[i] <- base_score
+        }
     }
 
     # Select profile with best (lowest) score
