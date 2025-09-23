@@ -1,5 +1,10 @@
 # cbcTools (development version)
 
+# cbcTools 0.6.4
+
+- Adds `balance_by` argument to force balanced sampling in designs with restricted or otherwise unbalanced levels across attributes.
+- Fixes issue where `remove_dominant` was not working if there was a `no_choice` option.
+
 # cbcTools 0.6.3
 
 - Improve the greedy methods to include proper handling of the dominance checking and overall efficiency improvements.
