@@ -9,7 +9,7 @@ using multiple design approaches including optimization and frequency-based meth
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,6 +60,7 @@ using multiple design approaches including optimization and frequency-based meth
 <span>  n_cores <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  no_choice <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  label <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  balance_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  randomize_questions <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  randomize_alts <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  remove_dominant <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -116,6 +117,14 @@ Defaults to NULL, in which case it is set to the number of available cores minus
 
 <dt id="arg-label">label<a class="anchor" aria-label="anchor" href="#arg-label"></a></dt>
 <dd><p>The name of the variable to use in a "labeled" design. Defaults to NULL</p></dd>
+
+
+<dt id="arg-balance-by">balance_by<a class="anchor" aria-label="anchor" href="#arg-balance-by"></a></dt>
+<dd><p>Character vector of attribute names to balance sampling across.
+Ensures balanced representation across levels of specified attributes.
+Only compatible with "random", "shortcut", "minoverlap", and "balanced" methods.
+Cannot be used with labeled designs or D-optimal methods ("stochastic", "modfed", "cea").
+Defaults to NULL</p></dd>
 
 
 <dt id="arg-randomize-questions">randomize_questions<a class="anchor" aria-label="anchor" href="#arg-randomize-questions"></a></dt>
@@ -183,7 +192,7 @@ Only valid with <code>"cea"</code> and <code>"modfed"</code> methods.</p></dd>
 <h3 id="method-compatibility">Method Compatibility<a class="anchor" aria-label="anchor" href="#method-compatibility"></a></h3>
 
 
-<p>The table below summarizes method compatibility with design features:</p><table class="table table"><tr><td>Method</td><td>No choice?</td><td>Labeled designs?</td><td>Restricted profiles?</td><td>Blocking?</td><td>Interactions?</td><td>Dominance removal?</td></tr><tr><td>"random"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td></tr><tr><td>"shortcut"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td></tr><tr><td>"minoverlap"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td></tr><tr><td>"balanced"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td></tr><tr><td>"stochastic"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr><tr><td>"modfed"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr><tr><td>"cea"</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr></table></div>
+<p>The table below summarizes method compatibility with design features:</p><table class="table table"><tr><td>Method</td><td>No choice?</td><td>Labeled designs?</td><td>Restricted profiles?</td><td>balance_by?</td><td>Blocking?</td><td>Interactions?</td><td>Dominance removal?</td></tr><tr><td>"random"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td></tr><tr><td>"shortcut"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td></tr><tr><td>"minoverlap"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td></tr><tr><td>"balanced"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td></tr><tr><td>"stochastic"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr><tr><td>"modfed"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr><tr><td>"cea"</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr></table></div>
 
 <div class="section">
 <h3 id="design-quality-assurance">Design Quality Assurance<a class="anchor" aria-label="anchor" href="#design-quality-assurance"></a></h3>
@@ -193,6 +202,22 @@ Only valid with <code>"cea"</code> and <code>"modfed"</code> methods.</p></dd>
 <li><p>No duplicate choice sets within any respondent</p></li>
 <li><p>If <code>remove_dominant = TRUE</code>, choice sets with dominant alternatives are eliminated (optimization methods only)</p></li>
 </ol></div>
+
+<div class="section">
+<h3 id="balanced-sampling-with-balance-by">Balanced Sampling with balance_by<a class="anchor" aria-label="anchor" href="#balanced-sampling-with-balance-by"></a></h3>
+
+
+<p>The <code>balance_by</code> argument enables balanced sampling across specified attributes,
+solving the problem of attribute-specific features that create imbalanced designs.
+For example, consider an experiment on alternative vehicle powertrains with a "powertrain"
+attribute for gas and electric vehicles. If you had an "electric_vehicle_range" attribute,
+it should be 0 for non-electric powertrains, but using restrictions can lead to
+over-representation of electric vehicles. Using <code>balance_by = "powertrain"</code> ensures that each
+choice question samples proportionally from gas and electric powertrains, maintaining balance
+even when electric vehicles have additional attributes.</p>
+<p>Multiple attributes can be balanced simultaneously using <code>balance_by = c("attr1", "attr2")</code>,
+which creates groups based on unique combinations of the specified attributes.</p>
+</div>
 
 <div class="section">
 <h3 id="method-details">Method Details<a class="anchor" aria-label="anchor" href="#method-details"></a></h3>
@@ -242,6 +267,237 @@ problems.</p>
 
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create profiles for an apple choice experiment</span></span></span>
+<span class="r-in"><span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Fuji"</span>, <span class="st">"Gala"</span>, <span class="st">"Honeycrisp"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Poor"</span>, <span class="st">"Average"</span>, <span class="st">"Excellent"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Basic random design</span></span></span>
+<span class="r-in"><span><span class="va">design_random</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>    n_alts <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>    n_q <span class="op">=</span> <span class="fl">6</span>,</span></span>
+<span class="r-in"><span>    n_resp <span class="op">=</span> <span class="fl">100</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_random</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Design method: random</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Structure: 100 respondents × 6 questions × 3 alternatives</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Profile usage: 45/45 (100.0%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 💡 Use cbc_inspect() for a more detailed summary</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> First few rows of design:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   profileID respID qID altID obsID price typeGala typeHoneycrisp</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        22      1   1     1     1   1.5        1              0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2         9      1   1     2     1   2.5        1              0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3        34      1   1     3     1   2.5        0              0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4        18      1   2     1     2   2.0        0              0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5         3      1   2     2     2   2.0        0              0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6         7      1   2     3     2   1.5        1              0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   freshnessAverage freshnessExcellent</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                1                  0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                0                  0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                0                  1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                1                  0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5                0                  0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                0                  0</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Inspect design</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="cbc_inspect.html">cbc_inspect</a></span><span class="op">(</span><span class="va">design_random</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> DESIGN SUMMARY</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =========================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> STRUCTURE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Method: random</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Created: 2025-09-23 13:12:25</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Respondents: 100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Questions per respondent: 6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Alternatives per question: 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Total choice sets: 600</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Profile usage: 45/45 (100.0%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> SUMMARY METRICS</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> D-error calculation not available for random designs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Overall balance score: 0.736 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Overall overlap score: 0.255 (lower is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> VARIABLE ENCODING</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Format: Dummy-coded (type, freshness)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 💡 Use cbc_decode_design() to convert to categorical format</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ATTRIBUTE BALANCE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Overall balance score: 0.736 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Individual attribute level counts:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> price:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 1.5   2 2.5   3 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 380 350 361 381 328 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balance score: 0.942 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> typeGala:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    0    1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1180  620 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balance score: 0.694 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> typeHoneycrisp:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    0    1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1223  577 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balance score: 0.663 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshnessAverage:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    0    1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1194  606 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balance score: 0.684 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshnessExcellent:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    0    1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1179  621 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balance score: 0.695 (higher is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ATTRIBUTE OVERLAP</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Overall overlap score: 0.255 (lower is better)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Counts of attribute overlap:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (# of questions with N unique levels)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> price: Continuous variable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Questions by # unique levels:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 (complete overlap):   2.5%  (15 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2 (partial overlap):   47.2%  (283 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   3 (partial overlap):   50.3%  (302 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   4 (partial overlap):    0.0%  (0 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   5 (no overlap):         0.0%  (0 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Average unique levels per question: 2.48</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> typeGala: Continuous variable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Questions by # unique levels:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 (complete overlap):  29.2%  (175 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2 (no overlap):        70.8%  (425 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Average unique levels per question: 1.71</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> typeHoneycrisp: Continuous variable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Questions by # unique levels:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 (complete overlap):  33.8%  (203 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2 (no overlap):        66.2%  (397 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Average unique levels per question: 1.66</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshnessAverage: Continuous variable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Questions by # unique levels:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 (complete overlap):  28.8%  (173 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2 (no overlap):        71.2%  (427 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Average unique levels per question: 1.71</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> freshnessExcellent: Continuous variable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Questions by # unique levels:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   1 (complete overlap):  33.0%  (198 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   2 (no overlap):        67.0%  (402 / 600 questions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Average unique levels per question: 1.67</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Greedy design with balanced frequency</span></span></span>
+<span class="r-in"><span><span class="va">design_balanced</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>    method <span class="op">=</span> <span class="st">"balanced"</span>,</span></span>
+<span class="r-in"><span>    n_alts <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>    n_q <span class="op">=</span> <span class="fl">6</span>,</span></span>
+<span class="r-in"><span>    n_resp <span class="op">=</span> <span class="fl">100</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Generating balanced design for 100 respondents using 3 cores...</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Design with priors using D-optimal method</span></span></span>
+<span class="r-in"><span><span class="va">priors</span> <span class="op">&lt;-</span> <span class="fu"><a href="cbc_priors.html">cbc_priors</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>    price <span class="op">=</span> <span class="op">-</span><span class="fl">0.25</span>,</span></span>
+<span class="r-in"><span>    type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gala"</span> <span class="op">=</span> <span class="fl">0.5</span>, <span class="st">"Honeycrisp"</span> <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    freshness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Average"</span> <span class="op">=</span> <span class="fl">0.6</span>, <span class="st">"Excellent"</span> <span class="op">=</span> <span class="fl">1.2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">design_optimal</span> <span class="op">&lt;-</span> <span class="fu">cbc_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    profiles <span class="op">=</span> <span class="va">profiles</span>,</span></span>
+<span class="r-in"><span>    method <span class="op">=</span> <span class="st">"stochastic"</span>,</span></span>
+<span class="r-in"><span>    priors <span class="op">=</span> <span class="va">priors</span>,</span></span>
+<span class="r-in"><span>    n_alts <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>    n_q <span class="op">=</span> <span class="fl">6</span>,</span></span>
+<span class="r-in"><span>    n_resp <span class="op">=</span> <span class="fl">100</span>,</span></span>
+<span class="r-in"><span>    n_start <span class="op">=</span> <span class="fl">3</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Stochastic design will be optimized into 1 design block, then allocated across 100 respondents</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Running 3 design searches using 3 cores...</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> D-error results from all starts:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 3: 0.801597   (Best)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 2: 0.902901 </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 1: 0.928954 </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Compare designs</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="cbc_compare.html">cbc_compare</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="st">"Random"</span> <span class="op">=</span> <span class="va">design_random</span>,</span></span>
+<span class="r-in"><span>    <span class="st">"Balanced"</span> <span class="op">=</span> <span class="va">design_balanced</span>,</span></span>
+<span class="r-in"><span>    <span class="st">"D-optimal"</span> <span class="op">=</span> <span class="va">design_optimal</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CBC Design Comparison</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =====================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Designs compared: 3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Metrics: structure, efficiency, balance, overlap</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Sorted by: d_error (ascending)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Structure</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =====================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Design     Method respondents questions</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  D-optimal stochastic         100         6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Random     random         100         6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balanced   balanced         100         6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Alternatives Blocks Profile Usage</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             3      1 (16/45) 35.6%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             3      1  (45/45) 100%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             3      1  (45/45) 100%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  No Choice Labeled?</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         No       No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         No       No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         No       No</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Design Metrics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> =====================</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Design     Method D-Error (Null) D-Error (Prior) Balance Overlap</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  D-optimal stochastic       0.731647        0.801597   0.673   0.033</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Random     random             NA              NA   0.736   0.255</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Balanced   balanced             NA              NA   0.740   0.000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Interpretation:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - D-Error: Lower is better (design efficiency)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Higher is better (level distribution)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Overlap: Lower is better (attribute variation)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Profile Usage: Higher means more profiles used</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Best performers:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - D-Error: D-optimal (0.801597)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Balanced (0.740)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Overlap: Balanced (0.000)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Profile Usage: Random (100.0%)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Use summary() for detailed information on any one design.</span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

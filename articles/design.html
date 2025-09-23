@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,6 +81,7 @@ specific research needs.</p>
 with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jhelvy/cbcTools" class="external-link">cbcTools</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">profiles</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
 <span>  price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span>, <span class="fl">2.5</span>, <span class="fl">3</span><span class="op">)</span>,</span>
@@ -230,97 +231,117 @@ generation methods, each with different strengths and use cases:</p>
 <div class="section level3">
 <h3 id="method-comparison-table">Method Comparison Table<a class="anchor" aria-label="anchor" href="#method-comparison-table"></a>
 </h3>
+<style>
+table {
+  table-layout: fixed;
+  width: 100%;
+}
+table th:first-child,
+table td:first-child {
+  width: 120px;
+  white-space: nowrap;
+}
+</style>
 <table class="table">
 <colgroup>
-<col width="15%">
+<col width="14%">
 <col width="7%">
-<col width="13%">
-<col width="12%">
-<col width="9%">
-<col width="15%">
 <col width="10%">
-<col width="15%">
+<col width="9%">
+<col width="7%">
+<col width="12%">
+<col width="16%">
+<col width="8%">
+<col width="12%">
 </colgroup>
 <thead><tr class="header">
-<th>Method</th>
-<th>Speed</th>
-<th>Efficiency</th>
-<th>No Choice</th>
-<th>Labeled</th>
-<th>Restrictions</th>
-<th>Blocking</th>
-<th>Interactions</th>
+<th align="left">Method</th>
+<th align="left">Speed</th>
+<th align="left">Efficiency</th>
+<th align="center">No Choice</th>
+<th align="center">Labeled</th>
+<th align="center">Restrictions</th>
+<th align="center">Balanced Sampling</th>
+<th align="center">Blocking</th>
+<th align="center">Interactions</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>"random"</code></td>
-<td>Fast</td>
-<td>Low</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-<td>✓</td>
+<td align="left"><code>"random"</code></td>
+<td align="left">Fast</td>
+<td align="left">Low</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✓</td>
 </tr>
 <tr class="even">
-<td><code>"shortcut"</code></td>
-<td>Fast</td>
-<td>Medium</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
+<td align="left"><code>"shortcut"</code></td>
+<td align="left">Fast</td>
+<td align="left">Medium</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✗</td>
 </tr>
 <tr class="odd">
-<td><code>"minoverlap"</code></td>
-<td>Fast</td>
-<td>Medium</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
+<td align="left"><code>"minoverlap"</code></td>
+<td align="left">Fast</td>
+<td align="left">Medium</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✗</td>
 </tr>
 <tr class="even">
-<td><code>"balanced"</code></td>
-<td>Fast</td>
-<td>Medium</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-<td>✗</td>
+<td align="left"><code>"balanced"</code></td>
+<td align="left">Fast</td>
+<td align="left">Medium</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✗</td>
 </tr>
 <tr class="odd">
-<td><code>"stochastic"</code></td>
-<td>Slow</td>
-<td>High</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
+<td align="left"><code>"stochastic"</code></td>
+<td align="left">Slow</td>
+<td align="left">High</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr class="even">
-<td><code>"modfed"</code></td>
-<td>Medium</td>
-<td>High</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
-<td>✓</td>
+<td align="left"><code>"modfed"</code></td>
+<td align="left">Medium</td>
+<td align="left">High</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr class="odd">
-<td><code>"cea"</code></td>
-<td>Medium</td>
-<td>High</td>
-<td>✓</td>
-<td>✓</td>
-<td>✗</td>
-<td>✓</td>
-<td>✓</td>
+<td align="left"><code>"cea"</code></td>
+<td align="left">Medium</td>
+<td align="left">High</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
+<td align="center">✗</td>
+<td align="center">✗</td>
+<td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 </tbody>
 </table>
@@ -359,7 +380,7 @@ ensures maximum diversity but may be less statistically efficient.</p>
 <span><span class="co">#&gt; STRUCTURE</span></span>
 <span><span class="co">#&gt; ================</span></span>
 <span><span class="co">#&gt; Method: random</span></span>
-<span><span class="co">#&gt; Created: 2025-08-27 16:18:07</span></span>
+<span><span class="co">#&gt; Created: 2025-09-23 13:12:43</span></span>
 <span><span class="co">#&gt; Respondents: 100</span></span>
 <span><span class="co">#&gt; Questions per respondent: 6</span></span>
 <span><span class="co">#&gt; Alternatives per question: 2</span></span>
@@ -544,9 +565,9 @@ D-error, overlap, and balance.</p>
 <span><span class="co">#&gt;          CEA        cea       0.858174        1.043690   0.777   0.233</span></span>
 <span><span class="co">#&gt;   Stochastic stochastic       1.203841        1.485359   0.686   0.300</span></span>
 <span><span class="co">#&gt;       Random     random             NA              NA   0.739   0.477</span></span>
-<span><span class="co">#&gt;     Shortcut   shortcut             NA              NA   0.738   0.267</span></span>
-<span><span class="co">#&gt;  Min Overlap minoverlap             NA              NA   0.735   0.265</span></span>
-<span><span class="co">#&gt;     Balanced   balanced             NA              NA   0.741   0.267</span></span>
+<span><span class="co">#&gt;     Shortcut   shortcut             NA              NA   0.740   0.267</span></span>
+<span><span class="co">#&gt;  Min Overlap minoverlap             NA              NA   0.731   0.272</span></span>
+<span><span class="co">#&gt;     Balanced   balanced             NA              NA   0.736   0.269</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Interpretation:</span></span>
 <span><span class="co">#&gt; - D-Error: Lower is better (design efficiency)</span></span>
@@ -595,25 +616,25 @@ priors in your design (optional), then you must also provide a
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">design_nochoice</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Design method: stochastic</span></span>
 <span><span class="co">#&gt; Structure: 100 respondents × 6 questions × 2 alternatives</span></span>
-<span><span class="co">#&gt; Profile usage: 11/45 (24.4%)</span></span>
-<span><span class="co">#&gt; D-error: 0.790371</span></span>
+<span><span class="co">#&gt; Profile usage: 10/45 (22.2%)</span></span>
+<span><span class="co">#&gt; D-error: 0.783989</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; 💡 Use cbc_inspect() for a more detailed summary</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows of design:</span></span>
 <span><span class="co">#&gt;   profileID blockID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1         5       1      1   1     1     1   3.0        0              0</span></span>
-<span><span class="co">#&gt; 2        41       1      1   1     2     1   1.0        0              1</span></span>
+<span><span class="co">#&gt; 1        22       1      1   1     1     1   1.5        1              0</span></span>
+<span><span class="co">#&gt; 2        45       1      1   1     2     1   3.0        0              1</span></span>
 <span><span class="co">#&gt; 3         0       1      1   1     3     1   0.0        0              0</span></span>
 <span><span class="co">#&gt; 4        20       1      1   2     1     2   3.0        0              0</span></span>
-<span><span class="co">#&gt; 5         7       1      1   2     2     2   1.5        1              0</span></span>
+<span><span class="co">#&gt; 5        38       1      1   2     2     2   2.0        1              0</span></span>
 <span><span class="co">#&gt; 6         0       1      1   2     3     2   0.0        0              0</span></span>
 <span><span class="co">#&gt;   freshnessAverage freshnessExcellent no_choice</span></span>
-<span><span class="co">#&gt; 1                0                  0         0</span></span>
+<span><span class="co">#&gt; 1                1                  0         0</span></span>
 <span><span class="co">#&gt; 2                0                  1         0</span></span>
 <span><span class="co">#&gt; 3                0                  0         1</span></span>
 <span><span class="co">#&gt; 4                1                  0         0</span></span>
-<span><span class="co">#&gt; 5                0                  0         0</span></span>
+<span><span class="co">#&gt; 5                0                  1         0</span></span>
 <span><span class="co">#&gt; 6                0                  0         1</span></span></code></pre></div>
 <blockquote>
 <p>Note: Designs with no-choice options must be dummy-coded and cannot
@@ -659,13 +680,117 @@ attribute serves as a label using the <code>label</code> argument:</p>
 <span><span class="co">#&gt; 6                0                  1</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="balanced-sampling">Balanced Sampling<a class="anchor" aria-label="anchor" href="#balanced-sampling"></a>
+</h3>
+<p>When working with attribute-specific features (attributes that only
+apply to certain levels of another attribute), you may encounter balance
+problems. For example, electric vehicles have an all-electric driving
+range attribute, but gas and hybrid vehicles do not. Using restrictions
+to handle this can lead to over-representation of certain attribute
+levels.</p>
+<p>The <code>balance_by</code> argument solves this by ensuring balanced
+sampling across specified attributes. Here’s an example with vehicle
+powertrains and electric range:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create profiles with attribute-specific feature</span></span>
+<span><span class="va">profiles_vehicles</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_profiles.html">cbc_profiles</a></span><span class="op">(</span></span>
+<span>  price <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">15</span>, <span class="fl">20</span>, <span class="fl">25</span><span class="op">)</span>, <span class="co"># Price in $1,000s</span></span>
+<span>  fuelEconomy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>, <span class="fl">25</span>, <span class="fl">30</span><span class="op">)</span>, <span class="co"># Fuel economy (mpg)</span></span>
+<span>  powertrain <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'gas'</span>, <span class="st">'hybrid'</span>, <span class="st">'electric'</span><span class="op">)</span>,</span>
+<span>  range_electric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">100</span>, <span class="fl">150</span>, <span class="fl">200</span>, <span class="fl">250</span><span class="op">)</span> <span class="co"># EV driving range (miles)</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="co"># Restrict non-electric powertrains from having range_electric other than 0</span></span>
+<span>  <span class="fu"><a href="../reference/cbc_restrict.html">cbc_restrict</a></span><span class="op">(</span></span>
+<span>    <span class="op">(</span><span class="va">powertrain</span> <span class="op">==</span> <span class="st">'electric'</span><span class="op">)</span> <span class="op">&amp;</span> <span class="op">(</span><span class="va">range_electric</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>    <span class="op">(</span><span class="va">powertrain</span> <span class="op">!=</span> <span class="st">'electric'</span><span class="op">)</span> <span class="op">&amp;</span> <span class="op">(</span><span class="va">range_electric</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check the balance problem - electric vehicles are over-represented</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">profiles_vehicles</span><span class="op">$</span><span class="va">powertrain</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;      gas   hybrid electric </span></span>
+<span><span class="co">#&gt;        9        9       36</span></span></code></pre></div>
+<p>Without <code>balance_by</code>, the restricted profiles lead to
+unbalanced designs:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Design without balance_by - electric powertrains over-represented</span></span>
+<span><span class="va">design_unbalanced</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
+<span>  profiles <span class="op">=</span> <span class="va">profiles_vehicles</span>,</span>
+<span>  n_alts <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  n_q <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  n_resp <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"random"</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="op">)</span> <span class="co"># Converts dummy-coded powertrain attributes back to "powertrain"</span></span>
+<span></span>
+<span><span class="co"># Check powertrain distribution - again, electric is over-represented</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">design_unbalanced</span><span class="op">$</span><span class="va">powertrain</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;      gas   hybrid electric </span></span>
+<span><span class="co">#&gt;      389      382     1629</span></span></code></pre></div>
+<p>Using <code>balance_by</code> ensures balanced sampling across
+powertrains:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Design with balance_by - balanced powertrain representation</span></span>
+<span><span class="va">design_balanced</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
+<span>  profiles <span class="op">=</span> <span class="va">profiles_vehicles</span>,</span>
+<span>  n_alts <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  n_q <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  n_resp <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"random"</span>,</span>
+<span>  balance_by <span class="op">=</span> <span class="st">"powertrain"</span> <span class="co"># Balance across powertrain levels</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>    <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check improved powertrain distribution - now powertrain is balanced</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">design_balanced</span><span class="op">$</span><span class="va">powertrain</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;      gas   hybrid electric </span></span>
+<span><span class="co">#&gt;      777      798      825</span></span></code></pre></div>
+<p>You can also balance across multiple attributes simultaneously:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Balance across combinations of powertrain and price</span></span>
+<span><span class="va">design_multi_balance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
+<span>  profiles <span class="op">=</span> <span class="va">profiles_vehicles</span>,</span>
+<span>  n_alts <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  n_q <span class="op">=</span> <span class="fl">8</span>,</span>
+<span>  n_resp <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"random"</span>,</span>
+<span>  balance_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"powertrain"</span>, <span class="st">"price"</span><span class="op">)</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> </span>
+<span>    <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check improved powertrain distribution - now powertrain and price are balanced</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">design_multi_balance</span><span class="op">$</span><span class="va">powertrain</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;      gas   hybrid electric </span></span>
+<span><span class="co">#&gt;      407      422      371</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">design_multi_balance</span><span class="op">$</span><span class="va">price</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  15  20  25 </span></span>
+<span><span class="co">#&gt; 381 419 400</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: The <code>balance_by</code> argument cannot be
+used simultaneously with <code>label</code>. Choose one approach based
+on your design needs.</p>
+</blockquote>
+<blockquote>
+<p><strong>Note</strong>: The <code>balance_by</code> feature is only
+available for <code>"random"</code>, <code>"shortcut"</code>,
+<code>"minoverlap"</code>, and <code>"balanced"</code> methods.
+D-optimal methods (<code>"stochastic"</code>, <code>"modfed"</code>,
+<code>"cea"</code>) prioritize statistical efficiency over balance and
+do not support this feature.</p>
+</blockquote>
+</div>
+<div class="section level3">
 <h3 id="blocking">Blocking<a class="anchor" aria-label="anchor" href="#blocking"></a>
 </h3>
 <p>For D-optimal methods, create multiple design blocks to reduce
 respondent burden using the <code>n_blocks</code> argument. In the
 example below, two blocks are created with each block containing
 <code>n_q = 6</code> questions:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_blocked</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"stochastic"</span>,</span>
@@ -718,7 +843,7 @@ utility.</li>
 <p>Both forms of dominance create unrealistic choice scenarios that
 provide less information about respondent preferences, so removing them
 generally improves design quality.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design_no_dominance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
 <span>  n_alts <span class="op">=</span> <span class="fl">2</span>,</span>
@@ -741,7 +866,7 @@ optimization then accounts for these interaction terms when minimizing
 D-error.</p>
 <p>Interactions are specified via the priors defined by
 <code><a href="../reference/cbc_priors.html">cbc_priors()</a></code>. For example:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create priors with interactions</span></span>
 <span><span class="va">priors_interactions</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_priors.html">cbc_priors</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
@@ -797,7 +922,7 @@ details and options on defining priors with interactions.</p>
 <h2 id="comprehensive-design-inspection">Comprehensive Design Inspection<a class="anchor" aria-label="anchor" href="#comprehensive-design-inspection"></a>
 </h2>
 <p>Use <code><a href="../reference/cbc_inspect.html">cbc_inspect()</a></code> for detailed design analysis:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Detailed inspection of the stochastic design</span></span>
 <span><span class="fu"><a href="../reference/cbc_inspect.html">cbc_inspect</a></span><span class="op">(</span></span>
 <span>  <span class="va">design_stochastic</span>,</span>
@@ -809,7 +934,7 @@ details and options on defining priors with interactions.</p>
 <span><span class="co">#&gt; STRUCTURE</span></span>
 <span><span class="co">#&gt; ================</span></span>
 <span><span class="co">#&gt; Method: stochastic</span></span>
-<span><span class="co">#&gt; Created: 2025-08-27 16:18:09</span></span>
+<span><span class="co">#&gt; Created: 2025-09-23 13:12:45</span></span>
 <span><span class="co">#&gt; Respondents: 100</span></span>
 <span><span class="co">#&gt; Questions per respondent: 6</span></span>
 <span><span class="co">#&gt; Alternatives per question: 2</span></span>
@@ -910,7 +1035,7 @@ details and options on defining priors with interactions.</p>
 </h3>
 <p>The <code><a href="../reference/cbc_design.html">cbc_design()</a></code> function offers many customization
 options:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Advanced stochastic design with custom settings</span></span>
 <span><span class="va">design_advanced</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
