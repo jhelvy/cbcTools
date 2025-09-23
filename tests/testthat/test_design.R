@@ -590,6 +590,7 @@ test_that("Design works with cbc_inspect", {
 # =============================================================================
 
 test_that("balance_by basic functionality works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create profiles with attribute-specific feature (like EV range)
   profiles <- cbc_profiles(
     price = c(15, 20, 25),
@@ -642,6 +643,7 @@ test_that("balance_by basic functionality works", {
 })
 
 test_that("balance_by with multiple attributes works", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Create profiles with unbalanced attribute combinations
   # Similar to vehicle example but with multiple attributes
   profiles <- cbc_profiles(
@@ -693,6 +695,7 @@ test_that("balance_by with multiple attributes works", {
 })
 
 test_that("balance_by validation works correctly", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- setup_test_profiles()
 
   # Test invalid attribute name
@@ -723,6 +726,7 @@ test_that("balance_by validation works correctly", {
 })
 
 test_that("balance_by conflicts with label", {
+  skip_on_cran() # Skip on CRAN due to computation time
   profiles <- cbc_profiles(
     price = c(1, 2),
     brand = c("A", "B", "C")
@@ -743,6 +747,7 @@ test_that("balance_by conflicts with label", {
 })
 
 test_that("balance_by handles edge cases gracefully", {
+  skip_on_cran() # Skip on CRAN due to computation time
   # Test with single-valued attribute (should warn or error)
   profiles_single <- cbc_profiles(
     price = c(1, 2, 3),
