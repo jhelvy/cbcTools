@@ -1050,3 +1050,174 @@ summary.cbc_power <- function(object, power_threshold = 0.8, ...) {
     cat("\n")
     invisible(object)
 }
+
+# ============================================================================
+# Attribute preservation methods for cbc_profiles
+# ============================================================================
+
+#' @export
+`[.cbc_profiles` <- function(x, i, j, drop = FALSE) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("[")
+
+    if (is.data.frame(result)) {
+        class(result) <- c("cbc_profiles", "data.frame")
+
+        custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+        for (attr_name in custom_attr_names) {
+            attr(result, attr_name) <- custom_attrs[[attr_name]]
+        }
+    }
+
+    return(result)
+}
+
+#' @export
+`[<-.cbc_profiles` <- function(x, i, j, value) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("[<-")
+
+    class(result) <- c("cbc_profiles", "data.frame")
+
+    custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+    for (attr_name in custom_attr_names) {
+        attr(result, attr_name) <- custom_attrs[[attr_name]]
+    }
+
+    return(result)
+}
+
+#' @export
+`names<-.cbc_profiles` <- function(x, value) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("names<-")
+
+    class(result) <- c("cbc_profiles", "data.frame")
+
+    custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+    for (attr_name in custom_attr_names) {
+        attr(result, attr_name) <- custom_attrs[[attr_name]]
+    }
+
+    return(result)
+}
+
+# ============================================================================
+# Attribute preservation methods for cbc_design
+# ============================================================================
+
+#' @export
+`[.cbc_design` <- function(x, i, j, drop = FALSE) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("[")
+
+    if (is.data.frame(result)) {
+        class(result) <- c("cbc_design", "data.frame")
+
+        custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+        for (attr_name in custom_attr_names) {
+            attr(result, attr_name) <- custom_attrs[[attr_name]]
+        }
+    }
+
+    return(result)
+}
+
+#' @export
+`[<-.cbc_design` <- function(x, i, j, value) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("[<-")
+
+    class(result) <- c("cbc_design", "data.frame")
+
+    custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+    for (attr_name in custom_attr_names) {
+        attr(result, attr_name) <- custom_attrs[[attr_name]]
+    }
+
+    return(result)
+}
+
+#' @export
+`names<-.cbc_design` <- function(x, value) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("names<-")
+
+    class(result) <- c("cbc_design", "data.frame")
+
+    custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+    for (attr_name in custom_attr_names) {
+        attr(result, attr_name) <- custom_attrs[[attr_name]]
+    }
+
+    return(result)
+}
+
+# ============================================================================
+# Attribute preservation methods for cbc_choices
+# ============================================================================
+
+#' @export
+`[.cbc_choices` <- function(x, i, j, drop = FALSE) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("[")
+
+    if (is.data.frame(result)) {
+        class(result) <- c("cbc_choices", "data.frame")
+
+        custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+        for (attr_name in custom_attr_names) {
+            attr(result, attr_name) <- custom_attrs[[attr_name]]
+        }
+    }
+
+    return(result)
+}
+
+#' @export
+`[<-.cbc_choices` <- function(x, i, j, value) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("[<-")
+
+    class(result) <- c("cbc_choices", "data.frame")
+
+    custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+    for (attr_name in custom_attr_names) {
+        attr(result, attr_name) <- custom_attrs[[attr_name]]
+    }
+
+    return(result)
+}
+
+#' @export
+`names<-.cbc_choices` <- function(x, value) {
+    custom_attrs <- attributes(x)
+    standard_attrs <- c("names", "row.names", "class")
+
+    result <- NextMethod("names<-")
+
+    class(result) <- c("cbc_choices", "data.frame")
+
+    custom_attr_names <- setdiff(names(custom_attrs), standard_attrs)
+    for (attr_name in custom_attr_names) {
+        attr(result, attr_name) <- custom_attrs[[attr_name]]
+    }
+
+    return(result)
+}
