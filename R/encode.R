@@ -86,6 +86,12 @@ cbc_encode <- function(data, coding = "dummy") {
 decode_to_standard <- function(data, categorical_structure) {
     decoded_data <- data
 
+    # Check if this is a no-choice design
+    has_no_choice <- "no_choice" %in% names(data)
+    if (has_no_choice) {
+        no_choice_rows <- data$no_choice == 1
+    }
+
     # Get categorical attributes
     categorical_attrs <- names(categorical_structure)[
         sapply(categorical_structure, function(x) x$is_categorical)
@@ -124,8 +130,26 @@ decode_to_standard <- function(data, categorical_structure) {
                 levels = levels_order
             )
 
+            # Set NA for no-choice rows
+            if (has_no_choice) {
+                decoded_data[[attr]][no_choice_rows] <- NA
+            }
+
             # Remove coded columns
             decoded_data[existing_coded_cols] <- NULL
+        }
+    }
+
+    # Set continuous variables back to NA for no-choice rows
+    if (has_no_choice) {
+        continuous_attrs <- names(categorical_structure)[
+            sapply(categorical_structure, function(x) !x$is_categorical)
+        ]
+
+        for (attr in continuous_attrs) {
+            if (attr %in% names(decoded_data)) {
+                decoded_data[[attr]][no_choice_rows] <- NA
+            }
         }
     }
 
@@ -135,6 +159,12 @@ decode_to_standard <- function(data, categorical_structure) {
 # Helper function: encode to dummy coding
 encode_dummy <- function(data, categorical_structure) {
     encoded_data <- data
+
+    # Check if this is a no-choice design
+    has_no_choice <- "no_choice" %in% names(data)
+    if (has_no_choice) {
+        no_choice_rows <- data$no_choice == 1
+    }
 
     # Get categorical attributes
     categorical_attrs <- names(categorical_structure)[
@@ -155,10 +185,30 @@ encode_dummy <- function(data, categorical_structure) {
         for (level in non_ref_levels) {
             dummy_col_name <- paste0(attr, level)
             encoded_data[[dummy_col_name]] <- as.integer(data[[attr]] == level)
+
+            # Convert NA to 0 for no-choice rows
+            if (has_no_choice) {
+                encoded_data[[dummy_col_name]][is.na(encoded_data[[
+                    dummy_col_name
+                ]])] <- 0
+            }
         }
 
         # Remove original categorical variable
         encoded_data[[attr]] <- NULL
+    }
+
+    # Convert NA to 0 for continuous variables in no-choice rows
+    if (has_no_choice) {
+        continuous_attrs <- names(categorical_structure)[
+            sapply(categorical_structure, function(x) !x$is_categorical)
+        ]
+
+        for (attr in continuous_attrs) {
+            if (attr %in% names(encoded_data)) {
+                encoded_data[[attr]][no_choice_rows] <- 0
+            }
+        }
     }
 
     return(encoded_data)
@@ -167,6 +217,12 @@ encode_dummy <- function(data, categorical_structure) {
 # Helper function: encode to effects coding
 encode_effects <- function(data, categorical_structure) {
     encoded_data <- data
+
+    # Check if this is a no-choice design
+    has_no_choice <- "no_choice" %in% names(data)
+    if (has_no_choice) {
+        no_choice_rows <- data$no_choice == 1
+    }
 
     # Get categorical attributes
     categorical_attrs <- names(categorical_structure)[
@@ -192,10 +248,30 @@ encode_effects <- function(data, categorical_structure) {
                 1,
                 ifelse(data[[attr]] == reference_level, -1, 0)
             )
+
+            # Convert NA to 0 for no-choice rows
+            if (has_no_choice) {
+                encoded_data[[effects_col_name]][is.na(encoded_data[[
+                    effects_col_name
+                ]])] <- 0
+            }
         }
 
         # Remove original categorical variable
         encoded_data[[attr]] <- NULL
+    }
+
+    # Convert NA to 0 for continuous variables in no-choice rows
+    if (has_no_choice) {
+        continuous_attrs <- names(categorical_structure)[
+            sapply(categorical_structure, function(x) !x$is_categorical)
+        ]
+
+        for (attr in continuous_attrs) {
+            if (attr %in% names(encoded_data)) {
+                encoded_data[[attr]][no_choice_rows] <- 0
+            }
+        }
     }
 
     return(encoded_data)
@@ -216,20 +292,6 @@ get_standard_encoding <- function(data) {
     }
 
     return(decode_to_standard(data, categorical_structure))
-}
-
-#' Convert dummy-coded CBC data back to categorical format
-#'
-#' This function is depreciated. Use `cbc_encode()` instead
-#'
-#' @param data A `cbc_design` or `cbc_choices` object with dummy-coded categorical variables
-#' @return The input object with categorical variables restored to their original format
-#' @export
-cbc_decode <- function(data) {
-    # v0.6.5
-    .Deprecated(
-        "This function was depreciated in v0.13.0; use the cbc_encode() function instead"
-    )
 }
 
 # Helper functions (same as before but work with both object types)
