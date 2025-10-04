@@ -46,6 +46,9 @@ cbc_choices <- function(design, priors = NULL) {
         stop("design must be a cbc_design object created by cbc_design()")
     }
 
+    # Store original encoding
+    original_encoding <- attr(design, "encoding") %||% "standard"
+
     if (is.null(priors)) {
         # Simulate random choices
         result <- simulate_random_choices(design)
@@ -66,8 +69,8 @@ cbc_choices <- function(design, priors = NULL) {
         priors_used <- TRUE
     }
 
-    # Preserve encoding attributes
-    attr(result, "is_dummy_coded") <- attr(design, "is_dummy_coded")
+    # Preserve encoding and categorical structure attributes
+    attr(result, "encoding") <- original_encoding
     attr(result, "categorical_structure") <- attr(
         design,
         "categorical_structure"

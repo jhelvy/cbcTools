@@ -200,10 +200,10 @@ extract_comparison_data <- function(designs, design_names, metrics) {
     return(comparison_df)
 }
 
-# Extract structural metrics
 extract_structure_metrics <- function(design) {
     params <- attr(design, "design_params")
     summary_info <- attr(design, "design_summary")
+    encoding <- params$encoding %||% "standard"
 
     list(
         method = params$method,
@@ -216,7 +216,8 @@ extract_structure_metrics <- function(design) {
         profile_usage_pct = round(summary_info$profile_usage_rate * 100, 1),
         generation_time = round(params$time_elapsed_sec, 3),
         no_choice = params$no_choice,
-        labeled = !is.null(params$label)
+        labeled = !is.null(params$label),
+        encoding = encoding
     )
 }
 
@@ -242,30 +243,34 @@ extract_efficiency_metrics <- function(design) {
     return(result)
 }
 
-# Extract balance metrics
 extract_balance_metrics <- function(design) {
+    # Convert to standard encoding for accurate metrics
+    design_standard <- get_standard_encoding(design)
+
     summary_info <- attr(design, "design_summary")
 
     if (!is.null(summary_info$efficiency$balance_score)) {
         balance_score <- round(summary_info$efficiency$balance_score, 3)
     } else {
         # Compute on the fly if not available
-        balance_result <- compute_balance_metrics_internal(design)
+        balance_result <- compute_balance_metrics_internal(design_standard)
         balance_score <- round(balance_result$overall_balance, 3)
     }
 
     list(balance_score = balance_score)
 }
 
-# Extract overlap metrics
 extract_overlap_metrics <- function(design) {
+    # Convert to standard encoding for accurate metrics
+    design_standard <- get_standard_encoding(design)
+
     summary_info <- attr(design, "design_summary")
 
     if (!is.null(summary_info$efficiency$overlap_score)) {
         overlap_score <- round(summary_info$efficiency$overlap_score, 3)
     } else {
         # Compute on the fly if not available
-        overlap_result <- compute_overlap_metrics_internal(design)
+        overlap_result <- compute_overlap_metrics_internal(design_standard)
         overlap_score <- round(overlap_result$overall_overlap, 3)
     }
 

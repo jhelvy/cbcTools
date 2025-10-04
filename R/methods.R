@@ -195,11 +195,13 @@ print.cbc_design <- function(x, ...) {
     # Extract basic information
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
+    encoding <- params$encoding %||% "standard"
 
     # Basic structure info
     cat(sprintf("Design method: %s\n", params$method))
+    cat(sprintf("Encoding: %s\n", encoding))
     cat(sprintf(
-        "Structure: %d respondents \u00D7 %d questions \u00D7 %d alternatives",
+        "Structure: %d respondents × %d questions × %d alternatives",
         params$n_resp,
         params$n_q,
         params$n_alts
@@ -238,7 +240,11 @@ print.cbc_design <- function(x, ...) {
     }
 
     cat("\n")
-    cat("\U0001F4A1 Use cbc_inspect() for a more detailed summary\n\n")
+    cat("\U0001F4A1 Use cbc_inspect() for a more detailed summary\n")
+    if (encoding != "standard") {
+        cat("\U0001F4A1 Use cbc_encode(design, 'standard') to view categorical format\n")
+    }
+    cat("\n")
 
     # Sample data
     cat("First few rows of design:\n")
@@ -265,6 +271,7 @@ print.cbc_choices <- function(x, ...) {
 
     # Get choice info
     choice_info <- attr(x, "choice_info")
+    encoding <- attr(x, "encoding") %||% "standard"
 
     # Basic structure
     n_obs <- max(x$obsID, na.rm = TRUE)
@@ -272,6 +279,7 @@ print.cbc_choices <- function(x, ...) {
     n_resp <- if ("respID" %in% names(x)) max(x$respID, na.rm = TRUE) else 1
     n_choices <- sum(x$choice, na.rm = TRUE)
 
+    cat(sprintf("Encoding: %s\n", encoding))
     cat(sprintf("Observations: %d choice tasks\n", n_obs))
     cat(sprintf("Alternatives per task: %d\n", n_alts))
     if (n_resp > 1) {
@@ -316,6 +324,10 @@ print.cbc_choices <- function(x, ...) {
     if ("no_choice" %in% names(x)) {
         no_choice_rate <- mean(x$choice[x$no_choice == 1], na.rm = TRUE)
         cat(sprintf("\nNo-choice rate: %.1f%%\n", no_choice_rate * 100))
+    }
+
+    if (encoding != "standard") {
+        cat("\n\U0001F4A1 Use cbc_encode(choices, 'standard') to view categorical format\n")
     }
 
     cat("\nFirst few rows:\n")
@@ -594,42 +606,48 @@ print_overlap_section <- function(overlap_data, verbose) {
 }
 
 print_encoding_section <- function(encoding_data, verbose) {
-    if (encoding_data$is_dummy_coded) {
-        cat("Format: Dummy-coded")
+    encoding_names <- c(
+        standard = "Standard (categorical)",
+        dummy = "Dummy-coded",
+        effects = "Effects-coded"
+    )
 
-        # Show which variables are categorical
-        if (
-            !is.null(encoding_data$categorical_variables) &&
-                length(encoding_data$categorical_variables) > 0
-        ) {
+    cat("Format: ", encoding_names[encoding_data$encoding], sep = "")
+
+    # Show which variables are categorical
+    if (
+        !is.null(encoding_data$categorical_variables) &&
+            length(encoding_data$categorical_variables) > 0
+    ) {
+        cat(sprintf(
+            " (%s)",
+            paste(encoding_data$categorical_variables, collapse = ", ")
+        ))
+    }
+    cat("\n")
+
+    if (verbose && !is.null(encoding_data$categorical_details)) {
+        cat("\nCategorical variable details:\n")
+        for (var in names(encoding_data$categorical_details)) {
+            details <- encoding_data$categorical_details[[var]]
             cat(sprintf(
-                " (%s)",
-                paste(encoding_data$categorical_variables, collapse = ", ")
+                "  %s: %s (reference: %s)\n",
+                var,
+                paste(details$levels, collapse = ", "),
+                details$reference_level
             ))
         }
-        cat("\n")
+    }
 
-        if (verbose && !is.null(encoding_data$categorical_details)) {
-            cat("\nCategorical variable details:\n")
-            for (var in names(encoding_data$categorical_details)) {
-                details <- encoding_data$categorical_details[[var]]
-                cat(sprintf(
-                    "  %s: %s (reference: %s)\n",
-                    var,
-                    paste(details$levels, collapse = ", "),
-                    details$reference_level
-                ))
-            }
-        }
-
-        # Show decode option if no no-choice
-        if (!encoding_data$no_choice) {
-            cat(
-                "\U0001F4A1 Use cbc_decode_design() to convert to categorical format\n"
-            )
-        }
+    # Show encoding options
+    if (encoding_data$encoding != "standard") {
+        cat(
+            "\U0001F4A1 Use cbc_encode(design, 'standard') to convert to categorical format\n"
+        )
     } else {
-        cat("Format: Categorical\n")
+        cat(
+            "\U0001F4A1 Use cbc_encode() to convert to dummy or effects coding\n"
+        )
     }
 }
 
