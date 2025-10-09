@@ -219,7 +219,17 @@ infer_from_coded_columns <- function(data, attr_cols, encoding) {
 
     # Find columns that look like dummy/effects variables
     # Pattern: starts with lowercase, then has uppercase (attributeLevel)
-    potential_dummies <- attr_cols[grepl("^[a-z]+[A-Z]", attr_cols)]
+    # But only if they are binary (0/1 values only, excluding NA)
+    potential_dummies <- attr_cols[sapply(attr_cols, function(col) {
+        has_camel_case <- grepl("^[a-z]+[A-Z]", col)
+        if (!has_camel_case) return(FALSE)
+
+        # Check if values are binary (0/1 only)
+        if (!is.numeric(data[[col]])) return(FALSE)
+
+        unique_vals <- unique(data[[col]][!is.na(data[[col]])])
+        all(unique_vals %in% c(0, 1))
+    })]
 
     if (length(potential_dummies) == 0) {
         # All columns are continuous
@@ -249,7 +259,7 @@ infer_from_coded_columns <- function(data, attr_cols, encoding) {
         # For now, we can't reliably infer this without more context
         categorical_structure[[attr]] <- list(
             is_categorical = TRUE,
-            levels = c("Reference", levels),  # Placeholder
+            levels = c("Reference", levels),
             reference_level = "Reference"
         )
     }

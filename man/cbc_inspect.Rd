@@ -7,7 +7,7 @@
 cbc_inspect(design, sections = "all", verbose = FALSE)
 }
 \arguments{
-\item{design}{A \code{cbc_design} object created by \code{cbc_design()}}
+\item{design}{A \code{cbc_design} or \code{cbc_choices} object created by \code{cbc_design()}}
 
 \item{sections}{Character vector specifying which sections to show.
 Options: "structure", "efficiency", "balance", "overlap", "encoding", or "all" (default).

@@ -192,57 +192,94 @@ print.cbc_priors <- function(x, ...) {
 #' @return Returns the input `cbc_design` object invisibly (class: c("cbc_design", "data.frame")). This function is called for its side effect of printing a concise summary of the CBC design to the console, including design method, structure, D-error metrics, profile usage, and a preview of the design data.
 #' @export
 print.cbc_design <- function(x, ...) {
-    # Extract basic information
+    # Extract basic information (may be NULL if reconstructed)
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
-    encoding <- params$encoding %||% "standard"
+    encoding <- attr(x, "encoding") %||% "standard"
 
-    # Basic structure info
-    cat(sprintf("Design method: %s\n", params$method))
-    cat(sprintf("Encoding: %s\n", encoding))
-    cat(sprintf(
-        "Structure: %d respondents × %d questions × %d alternatives",
-        params$n_resp,
-        params$n_q,
-        params$n_alts
-    ))
+    # Infer basic structure if params missing
+    if (is.null(params)) {
+        has_resp_id <- "respID" %in% names(x)
+        has_block_id <- "blockID" %in% names(x)
 
-    if (params$n_blocks > 1) {
-        cat(sprintf(" [%d blocks]", params$n_blocks))
-    }
-    cat("\n")
+        n_resp <- if (has_resp_id) max(x$respID, na.rm = TRUE) else 1
+        n_blocks <- if (has_block_id) max(x$blockID, na.rm = TRUE) else 1
+        n_q <- max(x$qID, na.rm = TRUE)
+        n_alts <- max(x$altID, na.rm = TRUE)
 
-    # Show interaction information
-    if (!is.null(params$has_interactions) && params$has_interactions) {
+        cat("Design method: unknown\n")
+        cat(sprintf("Encoding: %s\n", encoding))
         cat(sprintf(
-            "Interactions: %d interaction terms used in design search\n",
-            params$n_interactions
+            "Structure: %d respondents × %d questions × %d alternatives",
+            n_resp,
+            n_q,
+            n_alts
         ))
-    }
 
-    # Profile usage
-    cat(sprintf(
-        "Profile usage: %d/%d (%.1f%%)\n",
-        summary_info$n_profiles_used,
-        summary_info$n_profiles_available,
-        summary_info$profile_usage_rate * 100
-    ))
-
-    # D-error (show best available)
-    if (!is.null(params$d_error_prior)) {
-        cat(sprintf("D-error: %.6f", params$d_error_prior))
-        if (!is.null(params$has_interactions) && params$has_interactions) {
-            cat(" (with interactions)")
+        if (n_blocks > 1) {
+            cat(sprintf(" [%d blocks]", n_blocks))
         }
         cat("\n")
-    } else if (!is.null(params$d_error_null)) {
-        cat(sprintf("D-error: %.6f\n", params$d_error_null))
+
+        # Profile usage
+        n_profiles_used <- length(unique(x$profileID[x$profileID != 0]))
+        n_profiles_available <- max(x$profileID, na.rm = TRUE)
+        cat(sprintf(
+            "Profile usage: %d/%d (%.1f%%)\n",
+            n_profiles_used,
+            n_profiles_available,
+            (n_profiles_used / n_profiles_available) * 100
+        ))
+    } else {
+        # Full information available
+        cat(sprintf("Design method: %s\n", params$method))
+        cat(sprintf("Encoding: %s\n", encoding))
+        cat(sprintf(
+            "Structure: %d respondents × %d questions × %d alternatives",
+            params$n_resp,
+            params$n_q,
+            params$n_alts
+        ))
+
+        if (params$n_blocks > 1) {
+            cat(sprintf(" [%d blocks]", params$n_blocks))
+        }
+        cat("\n")
+
+        # Show interaction information
+        if (!is.null(params$has_interactions) && params$has_interactions) {
+            cat(sprintf(
+                "Interactions: %d interaction terms used in design search\n",
+                params$n_interactions
+            ))
+        }
+
+        # Profile usage
+        cat(sprintf(
+            "Profile usage: %d/%d (%.1f%%)\n",
+            summary_info$n_profiles_used,
+            summary_info$n_profiles_available,
+            summary_info$profile_usage_rate * 100
+        ))
+
+        # D-error (show best available)
+        if (!is.null(params$d_error_prior)) {
+            cat(sprintf("D-error: %.6f", params$d_error_prior))
+            if (!is.null(params$has_interactions) && params$has_interactions) {
+                cat(" (with interactions)")
+            }
+            cat("\n")
+        } else if (!is.null(params$d_error_null)) {
+            cat(sprintf("D-error: %.6f\n", params$d_error_null))
+        }
     }
 
     cat("\n")
     cat("\U0001F4A1 Use cbc_inspect() for a more detailed summary\n")
     if (encoding != "standard") {
-        cat("\U0001F4A1 Use cbc_encode(design, 'standard') to view categorical format\n")
+        cat(
+            "\U0001F4A1 Use cbc_encode(design, 'standard') to view categorical format\n"
+        )
     }
     cat("\n")
 
@@ -327,7 +364,9 @@ print.cbc_choices <- function(x, ...) {
     }
 
     if (encoding != "standard") {
-        cat("\n\U0001F4A1 Use cbc_encode(choices, 'standard') to view categorical format\n")
+        cat(
+            "\n\U0001F4A1 Use cbc_encode(choices, 'standard') to view categorical format\n"
+        )
     }
 
     cat("\nFirst few rows:\n")
@@ -400,12 +439,15 @@ print.cbc_inspection <- function(x, ...) {
 
 print_structure_section <- function(structure_data, verbose) {
     cat(sprintf("Method: %s\n", structure_data$method))
-    cat(sprintf(
-        "Created: %s\n",
-        format(structure_data$created_at, "%Y-%m-%d %H:%M:%S")
-    ))
 
-    if (verbose) {
+    if (!is.na(structure_data$created_at)) {
+        cat(sprintf(
+            "Created: %s\n",
+            format(structure_data$created_at, "%Y-%m-%d %H:%M:%S")
+        ))
+    }
+
+    if (verbose && !is.na(structure_data$generation_time)) {
         cat(sprintf(
             "Generation time: %.3f seconds\n",
             structure_data$generation_time
@@ -436,7 +478,7 @@ print_structure_section <- function(structure_data, verbose) {
         }
     }
 
-    if (verbose && !is.null(structure_data$optimization_attempts)) {
+    if (verbose && !is.na(structure_data$optimization_attempts)) {
         cat(sprintf(
             "Optimization attempts: %d\n",
             structure_data$optimization_attempts
@@ -446,22 +488,30 @@ print_structure_section <- function(structure_data, verbose) {
 
 print_efficiency_section <- function(efficiency_data, verbose) {
     # D-error information
-    if (efficiency_data$method != 'random') {
-        if (!is.null(efficiency_data$d_error_prior)) {
+    if (
+        efficiency_data$method != 'random' &&
+            efficiency_data$method != 'unknown'
+    ) {
+        if (!is.na(efficiency_data$d_error_prior)) {
             cat(sprintf(
                 "D-error (with priors): %.6f\n",
                 efficiency_data$d_error_prior
             ))
         }
-        if (!is.null(efficiency_data$d_error_null)) {
+        if (!is.na(efficiency_data$d_error_null)) {
             cat(sprintf(
                 "D-error (null model): %.6f\n",
                 efficiency_data$d_error_null
             ))
         }
-        cat("(Lower values indicate more efficient designs)\n\n")
+        if (
+            !is.na(efficiency_data$d_error_prior) ||
+                !is.na(efficiency_data$d_error_null)
+        ) {
+            cat("(Lower values indicate more efficient designs)\n\n")
+        }
     } else {
-        cat("D-error calculation not available for random designs\n")
+        cat("D-error calculation not available for this design\n")
     }
 
     # Quality metrics if available
@@ -482,6 +532,52 @@ print_efficiency_section <- function(efficiency_data, verbose) {
                 efficiency_data$profiles_available
             ))
         }
+    }
+}
+
+print_encoding_section <- function(encoding_data, verbose) {
+    encoding_names <- c(
+        standard = "Standard (categorical)",
+        dummy = "Dummy-coded",
+        effects = "Effects-coded"
+    )
+
+    cat("Format: ", encoding_names[encoding_data$encoding], sep = "")
+
+    # Show which variables are categorical
+    if (
+        !is.null(encoding_data$categorical_variables) &&
+            length(encoding_data$categorical_variables) > 0
+    ) {
+        cat(sprintf(
+            " (%s)",
+            paste(encoding_data$categorical_variables, collapse = ", ")
+        ))
+    }
+    cat("\n")
+
+    if (verbose && !is.null(encoding_data$categorical_details)) {
+        cat("\nCategorical variable details:\n")
+        for (var in names(encoding_data$categorical_details)) {
+            details <- encoding_data$categorical_details[[var]]
+            cat(sprintf(
+                "  %s: %s (reference: %s)\n",
+                var,
+                paste(details$levels, collapse = ", "),
+                details$reference_level
+            ))
+        }
+    }
+
+    # Show encoding options
+    if (encoding_data$encoding != "standard") {
+        cat(
+            "\U0001F4A1 Use cbc_encode(design, 'standard') to convert to categorical format\n"
+        )
+    } else {
+        cat(
+            "\U0001F4A1 Use cbc_encode() to convert to dummy or effects coding\n"
+        )
     }
 }
 
@@ -602,52 +698,6 @@ print_overlap_section <- function(overlap_data, verbose) {
             }
             cat("\n")
         }
-    }
-}
-
-print_encoding_section <- function(encoding_data, verbose) {
-    encoding_names <- c(
-        standard = "Standard (categorical)",
-        dummy = "Dummy-coded",
-        effects = "Effects-coded"
-    )
-
-    cat("Format: ", encoding_names[encoding_data$encoding], sep = "")
-
-    # Show which variables are categorical
-    if (
-        !is.null(encoding_data$categorical_variables) &&
-            length(encoding_data$categorical_variables) > 0
-    ) {
-        cat(sprintf(
-            " (%s)",
-            paste(encoding_data$categorical_variables, collapse = ", ")
-        ))
-    }
-    cat("\n")
-
-    if (verbose && !is.null(encoding_data$categorical_details)) {
-        cat("\nCategorical variable details:\n")
-        for (var in names(encoding_data$categorical_details)) {
-            details <- encoding_data$categorical_details[[var]]
-            cat(sprintf(
-                "  %s: %s (reference: %s)\n",
-                var,
-                paste(details$levels, collapse = ", "),
-                details$reference_level
-            ))
-        }
-    }
-
-    # Show encoding options
-    if (encoding_data$encoding != "standard") {
-        cat(
-            "\U0001F4A1 Use cbc_encode(design, 'standard') to convert to categorical format\n"
-        )
-    } else {
-        cat(
-            "\U0001F4A1 Use cbc_encode() to convert to dummy or effects coding\n"
-        )
     }
 }
 
