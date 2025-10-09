@@ -204,37 +204,37 @@ inspect_overlap_section <- function(design, summary_info, verbose) {
 }
 
 inspect_encoding_section <- function(design, params, verbose) {
-  encoding <- attr(design, "encoding") %||% "standard"
-  categorical_structure <- attr(design, "categorical_structure")
+    encoding <- attr(design, "encoding") %||% "standard"
+    categorical_structure <- attr(design, "categorical_structure")
 
-  categorical_variables <- NULL
-  categorical_details <- NULL
+    categorical_variables <- NULL
+    categorical_details <- NULL
 
-  if (!is.null(categorical_structure)) {
-    categorical_variables <- names(categorical_structure)[
-      sapply(categorical_structure, function(info) info$is_categorical)
-    ]
+    if (!is.null(categorical_structure)) {
+        categorical_variables <- names(categorical_structure)[
+            sapply(categorical_structure, function(info) info$is_categorical)
+        ]
 
-    if (verbose) {
-      categorical_details <- list()
-      for (var in names(categorical_structure)) {
-        info <- categorical_structure[[var]]
-        if (info$is_categorical) {
-          categorical_details[[var]] <- list(
-            levels = info$levels,
-            reference_level = info$reference_level
-          )
+        if (verbose) {
+            categorical_details <- list()
+            for (var in names(categorical_structure)) {
+                info <- categorical_structure[[var]]
+                if (info$is_categorical) {
+                    categorical_details[[var]] <- list(
+                        levels = info$levels,
+                        reference_level = info$reference_level
+                    )
+                }
+            }
         }
-      }
     }
-  }
 
-  return(list(
-    encoding = encoding,
-    categorical_variables = categorical_variables,
-    categorical_details = categorical_details,
-    no_choice = params$no_choice
-  ))
+    return(list(
+        encoding = encoding,
+        categorical_variables = categorical_variables,
+        categorical_details = categorical_details,
+        no_choice = params$no_choice
+    ))
 }
 
 # Detailed balance inspection
@@ -243,41 +243,32 @@ inspect_balance_detailed <- function(
   balance_details = NULL,
   verbose = FALSE
 ) {
-  # Convert to standard encoding first
-  design_standard <- get_standard_encoding(design)
+    # Convert to standard encoding first
+    design_standard <- get_standard_encoding(design)
 
-  if (is.null(balance_details)) {
-    # Compute balance metrics
-    balance_result <- compute_balance_metrics_internal(design_standard)
-    counts <- balance_result$individual_counts
-    balance_metrics <- balance_result$balance_metrics
-  } else {
-    # Use pre-computed data - need to recompute counts for display
-    atts <- setdiff(
-      names(design_standard),
-      c(
-        "respID",
-        "qID",
-        "altID",
-        "obsID",
-        "profileID",
-        "blockID",
-        "no_choice",
-        "prob"
-      )
-    )
-    counts <- lapply(atts, function(attr) {
-      table(design_standard[[attr]], useNA = "no")
-    })
-    names(counts) <- atts
-    balance_metrics <- balance_details
-  }
+    if (is.null(balance_details)) {
+        # Compute balance metrics
+        balance_result <- compute_balance_metrics_internal(design_standard)
+        counts <- balance_result$individual_counts
+        balance_metrics <- balance_result$balance_metrics
+    } else {
+        # Use pre-computed data - need to recompute counts for display
+        atts <- setdiff(
+            names(design_standard),
+            c("respID", "qID", "altID", "obsID", "profileID", "blockID", "no_choice", "prob")
+        )
+        counts <- lapply(atts, function(attr) {
+            table(design_standard[[attr]], useNA = "no")
+        })
+        names(counts) <- atts
+        balance_metrics <- balance_details
+    }
 
-  return(list(
-    individual_counts = counts,
-    balance_metrics = balance_metrics,
-    overall_balance = mean(sapply(balance_metrics, function(x) x$balance_score))
-  ))
+    return(list(
+        individual_counts = counts,
+        balance_metrics = balance_metrics,
+        overall_balance = mean(sapply(balance_metrics, function(x) x$balance_score))
+    ))
 }
 
 # Detailed overlap inspection
@@ -286,45 +277,36 @@ inspect_overlap_detailed <- function(
   overlap_details = NULL,
   verbose = FALSE
 ) {
-  # Convert to standard encoding first
-  design_standard <- get_standard_encoding(design)
+    # Convert to standard encoding first
+    design_standard <- get_standard_encoding(design)
 
-  if (is.null(overlap_details)) {
-    # Compute overlap metrics
-    overlap_result <- compute_overlap_metrics_internal(design_standard)
-    overlap_counts <- overlap_result$overlap_counts
-    overlap_metrics <- overlap_result$overlap_metrics
-  } else {
-    # Use pre-computed data - need to recompute counts for display
-    atts <- setdiff(
-      names(design_standard),
-      c(
-        "respID",
-        "qID",
-        "altID",
-        "obsID",
-        "profileID",
-        "blockID",
-        "no_choice",
-        "prob"
-      )
-    )
-    overlap_counts <- lapply(atts, function(attr) {
-      get_att_overlap_counts(attr, design_standard)
-    })
-    names(overlap_counts) <- atts
-    overlap_metrics <- overlap_details
-  }
+    if (is.null(overlap_details)) {
+        # Compute overlap metrics
+        overlap_result <- compute_overlap_metrics_internal(design_standard)
+        overlap_counts <- overlap_result$overlap_counts
+        overlap_metrics <- overlap_result$overlap_metrics
+    } else {
+        # Use pre-computed data - need to recompute counts for display
+        atts <- setdiff(
+            names(design_standard),
+            c("respID", "qID", "altID", "obsID", "profileID", "blockID", "no_choice", "prob")
+        )
+        overlap_counts <- lapply(atts, function(attr) {
+            get_att_overlap_counts(attr, design_standard)
+        })
+        names(overlap_counts) <- atts
+        overlap_metrics <- overlap_details
+    }
 
-  total_questions <- max(design_standard$obsID, na.rm = TRUE)
+    total_questions <- max(design_standard$obsID, na.rm = TRUE)
 
-  return(list(
-    overlap_counts = overlap_counts,
-    overlap_metrics = overlap_metrics,
-    overall_overlap = mean(sapply(overlap_metrics, function(x) {
-      x$complete_overlap_rate
-    }))
-  ))
+    return(list(
+        overlap_counts = overlap_counts,
+        overlap_metrics = overlap_metrics,
+        overall_overlap = mean(sapply(overlap_metrics, function(x) {
+            x$complete_overlap_rate
+        }))
+    ))
 }
 
 # Helper functions

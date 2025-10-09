@@ -51,12 +51,13 @@
 #' )
 #' head(design_dummy2)
 cbc_encode <- function(data, coding = NULL, refs = NULL) {
-    # Check input class
-    if (!inherits(data, c("cbc_design", "cbc_choices"))) {
-        stop(
-            "Input must be a cbc_design or cbc_choices object created by cbc_design() or cbc_choices()"
-        )
-    }
+    # Validate and potentially reconstruct design object
+    data <- validate_or_reconstruct(
+        data,
+        require_class = FALSE,
+        allow_choices = TRUE,
+        context = "cbc_encode()"
+    )
 
     # Get current encoding
     current_coding <- attr(data, "encoding") %||% "standard"
@@ -68,10 +69,7 @@ cbc_encode <- function(data, coding = NULL, refs = NULL) {
             message("Converting from standard to dummy encoding")
         } else {
             coding <- "standard"
-            message(sprintf(
-                "Converting from %s to standard encoding",
-                current_coding
-            ))
+            message(sprintf("Converting from %s to standard encoding", current_coding))
         }
     }
 
@@ -222,9 +220,7 @@ encode_dummy <- function(data, categorical_structure) {
 
             # Convert NA to 0 for no-choice rows
             if (has_no_choice) {
-                encoded_data[[dummy_col_name]][is.na(encoded_data[[
-                    dummy_col_name
-                ]])] <- 0
+                encoded_data[[dummy_col_name]][is.na(encoded_data[[dummy_col_name]])] <- 0
             }
         }
 
@@ -278,16 +274,13 @@ encode_effects <- function(data, categorical_structure) {
             effects_col_name <- paste0(attr, level)
             # 1 for this level, -1 for reference, 0 for others
             encoded_data[[effects_col_name]] <- ifelse(
-                data[[attr]] == level,
-                1,
+                data[[attr]] == level, 1,
                 ifelse(data[[attr]] == reference_level, -1, 0)
             )
 
             # Convert NA to 0 for no-choice rows
             if (has_no_choice) {
-                encoded_data[[effects_col_name]][is.na(encoded_data[[
-                    effects_col_name
-                ]])] <- 0
+                encoded_data[[effects_col_name]][is.na(encoded_data[[effects_col_name]])] <- 0
             }
         }
 
@@ -384,26 +377,4 @@ update_reference_levels <- function(data, categorical_structure, refs) {
         data = data,
         categorical_structure = categorical_structure
     ))
-}
-
-is_dummy_coded <- function(data) {
-    is_coded <- attr(data, "is_dummy_coded")
-    if (is.null(is_coded)) {
-        # If no attribute, try to infer from column names
-        # Look for column names that suggest dummy coding (e.g., "qualityHigh", "brandB")
-        categorical_structure <- attr(data, "categorical_structure")
-        if (!is.null(categorical_structure)) {
-            categorical_attrs <- names(categorical_structure)[
-                sapply(categorical_structure, function(x) x$is_categorical)
-            ]
-
-            # Check if any original categorical column names are missing
-            missing_categoricals <- setdiff(categorical_attrs, names(data))
-            if (length(missing_categoricals) > 0) {
-                return(TRUE) # Likely dummy-coded if original categorical columns are missing
-            }
-        }
-        return(FALSE)
-    }
-    return(is_coded)
 }

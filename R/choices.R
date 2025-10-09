@@ -161,27 +161,28 @@ simulate_utility_based_choices <- function(design, priors) {
     # Create optimization environment using the existing function
     opt_env <- setup_optimization_environment(
         profiles = profiles,
-        method = "random", # Hard-code this so that the obsID vectors are correct
-        time_start = Sys.time(), # Not important for choice simulation
+        method = "random",
+        time_start = Sys.time(),
         n_alts = design_params$n_alts,
         n_q = design_params$n_q,
         n_resp = design_params$n_resp,
         n_blocks = design_params$n_blocks,
-        n_cores = 1, # Not used for choice simulation
-        n_start = 1, # Not used for choice simulation
-        max_iter = 1, # Not used for choice simulation
-        priors = priors, # The new priors for choice simulation
+        n_cores = 1,
+        n_start = 1,
+        max_iter = 1,
+        priors = priors,
         no_choice = design_params$no_choice,
         label = design_params$label,
-        balance_by = NULL, # Not used for choice simulation
-        remove_dominant = FALSE, # Not needed for choice simulation
-        dominance_types = NULL, # Not needed for choice simulation
-        dominance_threshold = 0.8, # Not needed for choice simulation
-        max_dominance_attempts = 1, # Not needed for choice simulation
-        randomize_questions = TRUE, # Not used for choice simulation
-        randomize_alts = TRUE, # Not used for choice simulation
-        include_probs = FALSE, # Not used for choice simulation
-        use_idefix = FALSE # Not used for choice simulation
+        balance_by = NULL,
+        remove_dominant = FALSE,
+        dominance_types = NULL,
+        dominance_threshold = 0.8,
+        max_dominance_attempts = 1,
+        randomize_questions = TRUE,
+        randomize_alts = TRUE,
+        include_probs = FALSE,
+        use_idefix = FALSE,
+        coding = design_params$coding %||% "standard"
     )
 
     # Get design matrix from the design object
@@ -207,7 +208,8 @@ get_design_matrix_from_design_object <- function(design, opt_env) {
     # Get the regular profiles (excluding no-choice if present)
     regular_design <- design
     if (opt_env$no_choice) {
-        regular_design <- design[design$profileID != 0, ]
+        no_choice_id <- opt_env$n$profiles + 1
+        regular_design <- design[design$profileID != no_choice_id, ]
     }
 
     # Determine matrix dimensions
@@ -220,16 +222,16 @@ get_design_matrix_from_design_object <- function(design, opt_env) {
     # Fill matrix from profileID data
     for (obs in 1:n_questions) {
         obs_rows <- regular_design[regular_design$obsID == obs, ]
-        obs_rows <- obs_rows[order(obs_rows$altID), ] # Ensure proper order
+        obs_rows <- obs_rows[order(obs_rows$altID), ]
 
-        if (nrow(obs_rows) == n_alts) {
-            design_matrix[obs, ] <- obs_rows$profileID
-        } else {
+        if (nrow(obs_rows) != n_alts) {
             stop(sprintf(
-                "Inconsistent number of alternatives in observation %d",
-                obs
+                "Inconsistent number of alternatives in observation %d: expected %d, got %d",
+                obs, n_alts, nrow(obs_rows)
             ))
         }
+
+        design_matrix[obs, ] <- obs_rows$profileID
     }
 
     return(design_matrix)
