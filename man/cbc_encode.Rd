@@ -4,15 +4,16 @@
 \alias{cbc_encode}
 \title{Encode categorical variables in a CBC design}
 \usage{
-cbc_encode(data, coding = NULL, refs = NULL)
+cbc_encode(data, coding = NULL, ref_levels = NULL)
 }
 \arguments{
 \item{data}{A \code{cbc_design} or \code{cbc_choices} object}
 
 \item{coding}{Character. Type of encoding: "standard", "dummy", or "effects".
-If NULL (default), automatically toggles: standard → dummy, dummy/effects → standard.}
+If NULL and ref_levels is NULL, data is returned unchanged. If NULL and
+ref_levels is specified, the current encoding is maintained.}
 
-\item{refs}{Named list specifying reference levels for categorical variables.
+\item{ref_levels}{Named list specifying reference levels for categorical variables.
 For example: \code{list(powertrain = "Gasoline", brand = "A")}. If NULL (default),
 uses the first level of each categorical variable as reference.}
 }
@@ -43,23 +44,30 @@ design <- cbc_design(
   n_q = 4
 )
 
-# Auto-toggle: standard → dummy
-design_dummy <- cbc_encode(design)
+# Convert to dummy coding
+design_dummy <- cbc_encode(design, coding = "dummy")
 head(design_dummy)
 
-# Auto-toggle: dummy → standard
-design_standard <- cbc_encode(design_dummy)
-head(design_standard)
-
-# Explicit coding
-design_effects <- cbc_encode(design, "effects")
+# Convert to effects coding
+design_effects <- cbc_encode(design, coding = "effects")
 head(design_effects)
 
-# Custom reference levels
+# Convert back to standard
+design_standard <- cbc_encode(design_dummy, coding = "standard")
+head(design_standard)
+
+# Custom reference levels with dummy coding
 design_dummy2 <- cbc_encode(
   design,
-  "dummy",
-  refs = list(quality = "Medium", brand = "B")
+  coding = "dummy",
+  ref_levels = list(quality = "Medium", brand = "B")
 )
 head(design_dummy2)
+
+# Update reference levels without changing encoding
+design_updated <- cbc_encode(
+  design_dummy,
+  ref_levels = list(quality = "High")
+)
+head(design_updated)
 }

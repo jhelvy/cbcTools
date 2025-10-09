@@ -8,8 +8,9 @@
 #'
 #' @param data A `cbc_design` or `cbc_choices` object
 #' @param coding Character. Type of encoding: "standard", "dummy", or "effects".
-#'   If NULL (default), automatically toggles: standard → dummy, dummy/effects → standard.
-#' @param refs Named list specifying reference levels for categorical variables.
+#'   If NULL and ref_levels is NULL, data is returned unchanged. If NULL and
+#'   ref_levels is specified, the current encoding is maintained.
+#' @param ref_levels Named list specifying reference levels for categorical variables.
 #'   For example: `list(powertrain = "Gasoline", brand = "A")`. If NULL (default),
 #'   uses the first level of each categorical variable as reference.
 #' @return The input object with specified encoding applied
@@ -31,26 +32,33 @@
 #'   n_q = 4
 #' )
 #'
-#' # Auto-toggle: standard → dummy
-#' design_dummy <- cbc_encode(design)
+#' # Convert to dummy coding
+#' design_dummy <- cbc_encode(design, coding = "dummy")
 #' head(design_dummy)
 #'
-#' # Auto-toggle: dummy → standard
-#' design_standard <- cbc_encode(design_dummy)
-#' head(design_standard)
-#'
-#' # Explicit coding
-#' design_effects <- cbc_encode(design, "effects")
+#' # Convert to effects coding
+#' design_effects <- cbc_encode(design, coding = "effects")
 #' head(design_effects)
 #'
-#' # Custom reference levels
+#' # Convert back to standard
+#' design_standard <- cbc_encode(design_dummy, coding = "standard")
+#' head(design_standard)
+#'
+#' # Custom reference levels with dummy coding
 #' design_dummy2 <- cbc_encode(
 #'   design,
-#'   "dummy",
-#'   refs = list(quality = "Medium", brand = "B")
+#'   coding = "dummy",
+#'   ref_levels = list(quality = "Medium", brand = "B")
 #' )
 #' head(design_dummy2)
-cbc_encode <- function(data, coding = NULL, refs = NULL) {
+#'
+#' # Update reference levels without changing encoding
+#' design_updated <- cbc_encode(
+#'   design_dummy,
+#'   ref_levels = list(quality = "High")
+#' )
+#' head(design_updated)
+cbc_encode <- function(data, coding = NULL, ref_levels = NULL) {
     # Validate and potentially reconstruct design object
     data <- validate_or_reconstruct(
         data,
@@ -62,19 +70,29 @@ cbc_encode <- function(data, coding = NULL, refs = NULL) {
     # Get current encoding
     current_coding <- attr(data, "encoding") %||% "standard"
 
-    # Auto-determine target coding if not specified
-    if (is.null(coding)) {
-        if (current_coding == "standard") {
-            coding <- "dummy"
-            message("Converting from standard to dummy encoding")
-        } else {
-            coding <- "standard"
-            message(sprintf("Converting from %s to standard encoding", current_coding))
-        }
+    # If no coding or ref_levels specified, return with message
+    if (is.null(coding) && is.null(ref_levels)) {
+        message("No encoding or reference levels specified. Data returned unchanged.")
+        return(data)
     }
 
-    # Check if already in target coding
-    if (current_coding == coding && is.null(refs)) {
+    # If only ref_levels specified, keep current encoding
+    if (is.null(coding)) {
+        coding <- current_coding
+    }
+
+    # Validate coding argument
+    valid_codings <- c("standard", "dummy", "effects")
+    if (!coding %in% valid_codings) {
+        stop(
+            "coding must be one of: ",
+            paste0("'", valid_codings, "'", collapse = ", "),
+            call. = FALSE
+        )
+    }
+
+    # Check if already in target coding and no ref_levels to update
+    if (current_coding == coding && is.null(ref_levels)) {
         message("Data is already in '", coding, "' encoding")
         return(data)
     }
@@ -94,8 +112,8 @@ cbc_encode <- function(data, coding = NULL, refs = NULL) {
     }
 
     # Update reference levels if specified
-    if (!is.null(refs)) {
-        result <- update_reference_levels(data, categorical_structure, refs)
+    if (!is.null(ref_levels)) {
+        result <- update_reference_levels(data, categorical_structure, ref_levels)
         data <- result$data
         categorical_structure <- result$categorical_structure
     }
@@ -322,14 +340,14 @@ get_standard_encoding <- function(data) {
 }
 
 # Helper function to update reference levels
-update_reference_levels <- function(data, categorical_structure, refs) {
-    # Validate refs input
-    if (!is.list(refs)) {
-        stop("refs must be a named list")
+update_reference_levels <- function(data, categorical_structure, ref_levels) {
+    # Validate ref_levels input
+    if (!is.list(ref_levels)) {
+        stop("ref_levels must be a named list", call. = FALSE)
     }
 
-    if (is.null(names(refs)) || any(names(refs) == "")) {
-        stop("refs must be a named list (e.g., list(powertrain = 'Gasoline'))")
+    if (is.null(names(ref_levels)) || any(names(ref_levels) == "")) {
+        stop("ref_levels must be a named list (e.g., list(powertrain = 'Gasoline'))", call. = FALSE)
     }
 
     # Get categorical attributes
@@ -337,28 +355,27 @@ update_reference_levels <- function(data, categorical_structure, refs) {
         sapply(categorical_structure, function(x) x$is_categorical)
     ]
 
-    # Check that specified attributes are categorical
-    invalid_attrs <- setdiff(names(refs), categorical_attrs)
+    # Check that specified attributes exist in categorical structure
+    invalid_attrs <- setdiff(names(ref_levels), categorical_attrs)
     if (length(invalid_attrs) > 0) {
         stop(sprintf(
-            "Cannot set reference levels for non-categorical attributes: %s",
-            paste(invalid_attrs, collapse = ", ")
-        ))
+            "Attribute '%s' not found in categorical structure",
+            invalid_attrs[1]
+        ), call. = FALSE)
     }
 
     # Update each specified attribute
-    for (attr in names(refs)) {
-        new_ref <- refs[[attr]]
+    for (attr in names(ref_levels)) {
+        new_ref <- ref_levels[[attr]]
 
         # Validate that new reference level exists
         all_levels <- categorical_structure[[attr]]$levels
         if (!new_ref %in% all_levels) {
             stop(sprintf(
-                "Invalid reference level '%s' for attribute '%s'. Valid levels are: %s",
+                "Level '%s' not found in attribute '%s'",
                 new_ref,
-                attr,
-                paste(all_levels, collapse = ", ")
-            ))
+                attr
+            ), call. = FALSE)
         }
 
         # Reorder factor levels to put new reference first
