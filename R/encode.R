@@ -7,7 +7,11 @@
 #' coefficients sum to zero.
 #'
 #' @param data A `cbc_design` or `cbc_choices` object
-#' @param coding Character. Type of encoding: "dummy" (default), "standard", or "effects"
+#' @param coding Character. Type of encoding: "standard", "dummy", or "effects".
+#'   If NULL (default), automatically toggles: standard → dummy, dummy/effects → standard.
+#' @param refs Named list specifying reference levels for categorical variables.
+#'   For example: `list(powertrain = "Gasoline", brand = "A")`. If NULL (default),
+#'   uses the first level of each categorical variable as reference.
 #' @return The input object with specified encoding applied
 #' @export
 #' @examples
@@ -27,18 +31,26 @@
 #'   n_q = 4
 #' )
 #'
-#' # Convert to dummy coding
-#' design_dummy <- cbc_encode(design, "dummy")
+#' # Auto-toggle: standard → dummy
+#' design_dummy <- cbc_encode(design)
 #' head(design_dummy)
 #'
-#' # Convert to effects coding
+#' # Auto-toggle: dummy → standard
+#' design_standard <- cbc_encode(design_dummy)
+#' head(design_standard)
+#'
+#' # Explicit coding
 #' design_effects <- cbc_encode(design, "effects")
 #' head(design_effects)
 #'
-#' # Convert back to standard
-#' design_standard <- cbc_encode(design_effects, "standard")
-#' head(design_standard)
-cbc_encode <- function(data, coding = "dummy") {
+#' # Custom reference levels
+#' design_dummy2 <- cbc_encode(
+#'   design,
+#'   "dummy",
+#'   refs = list(quality = "Medium", brand = "B")
+#' )
+#' head(design_dummy2)
+cbc_encode <- function(data, coding = NULL, refs = NULL) {
     # Check input class
     if (!inherits(data, c("cbc_design", "cbc_choices"))) {
         stop(
@@ -49,7 +61,22 @@ cbc_encode <- function(data, coding = "dummy") {
     # Get current encoding
     current_coding <- attr(data, "encoding") %||% "standard"
 
-    if (current_coding == coding) {
+    # Auto-determine target coding if not specified
+    if (is.null(coding)) {
+        if (current_coding == "standard") {
+            coding <- "dummy"
+            message("Converting from standard to dummy encoding")
+        } else {
+            coding <- "standard"
+            message(sprintf(
+                "Converting from %s to standard encoding",
+                current_coding
+            ))
+        }
+    }
+
+    # Check if already in target coding
+    if (current_coding == coding && is.null(refs)) {
         message("Data is already in '", coding, "' encoding")
         return(data)
     }
@@ -68,6 +95,13 @@ cbc_encode <- function(data, coding = "dummy") {
         data <- decode_to_standard(data, categorical_structure)
     }
 
+    # Update reference levels if specified
+    if (!is.null(refs)) {
+        result <- update_reference_levels(data, categorical_structure, refs)
+        data <- result$data
+        categorical_structure <- result$categorical_structure
+    }
+
     # Then encode to target
     if (coding == "dummy") {
         data <- encode_dummy(data, categorical_structure)
@@ -75,10 +109,10 @@ cbc_encode <- function(data, coding = "dummy") {
         data <- encode_effects(data, categorical_structure)
     }
 
-    # Update encoding attribute
+    # Update encoding attribute and categorical structure
     attr(data, "encoding") <- coding
+    attr(data, "categorical_structure") <- categorical_structure
 
-    # Copy over all other attributes
     return(data)
 }
 
@@ -294,7 +328,63 @@ get_standard_encoding <- function(data) {
     return(decode_to_standard(data, categorical_structure))
 }
 
-# Helper functions (same as before but work with both object types)
+# Helper function to update reference levels
+update_reference_levels <- function(data, categorical_structure, refs) {
+    # Validate refs input
+    if (!is.list(refs)) {
+        stop("refs must be a named list")
+    }
+
+    if (is.null(names(refs)) || any(names(refs) == "")) {
+        stop("refs must be a named list (e.g., list(powertrain = 'Gasoline'))")
+    }
+
+    # Get categorical attributes
+    categorical_attrs <- names(categorical_structure)[
+        sapply(categorical_structure, function(x) x$is_categorical)
+    ]
+
+    # Check that specified attributes are categorical
+    invalid_attrs <- setdiff(names(refs), categorical_attrs)
+    if (length(invalid_attrs) > 0) {
+        stop(sprintf(
+            "Cannot set reference levels for non-categorical attributes: %s",
+            paste(invalid_attrs, collapse = ", ")
+        ))
+    }
+
+    # Update each specified attribute
+    for (attr in names(refs)) {
+        new_ref <- refs[[attr]]
+
+        # Validate that new reference level exists
+        all_levels <- categorical_structure[[attr]]$levels
+        if (!new_ref %in% all_levels) {
+            stop(sprintf(
+                "Invalid reference level '%s' for attribute '%s'. Valid levels are: %s",
+                new_ref,
+                attr,
+                paste(all_levels, collapse = ", ")
+            ))
+        }
+
+        # Reorder factor levels to put new reference first
+        current_levels <- all_levels
+        new_levels <- c(new_ref, setdiff(current_levels, new_ref))
+
+        # Update the factor in the data
+        data[[attr]] <- factor(data[[attr]], levels = new_levels)
+
+        # Update the categorical structure
+        categorical_structure[[attr]]$levels <- new_levels
+        categorical_structure[[attr]]$reference_level <- new_ref
+    }
+
+    return(list(
+        data = data,
+        categorical_structure = categorical_structure
+    ))
+}
 
 is_dummy_coded <- function(data) {
     is_coded <- attr(data, "is_dummy_coded")
