@@ -210,7 +210,7 @@ print.cbc_design <- function(x, ...) {
         cat("Design method: unknown\n")
         cat(sprintf("Encoding: %s\n", encoding))
         cat(sprintf(
-            "Structure: %d respondents × %d questions × %d alternatives",
+            "Structure: %d respondents \u00D7 %d questions \u00D7 %d alternatives",
             n_resp,
             n_q,
             n_alts
@@ -235,7 +235,7 @@ print.cbc_design <- function(x, ...) {
         cat(sprintf("Design method: %s\n", params$method))
         cat(sprintf("Encoding: %s\n", encoding))
         cat(sprintf(
-            "Structure: %d respondents × %d questions × %d alternatives",
+            "Structure: %d respondents \u00D7 %d questions \u00D7 %d alternatives",
             params$n_resp,
             params$n_q,
             params$n_alts
@@ -494,14 +494,20 @@ print_efficiency_section <- function(efficiency_data, verbose) {
     ) {
         has_d_error <- FALSE
 
-        if (!is.null(efficiency_data$d_error_prior) && !is.na(efficiency_data$d_error_prior)) {
+        if (
+            !is.null(efficiency_data$d_error_prior) &&
+                !is.na(efficiency_data$d_error_prior)
+        ) {
             cat(sprintf(
                 "D-error (with priors): %.6f\n",
                 efficiency_data$d_error_prior
             ))
             has_d_error <- TRUE
         }
-        if (!is.null(efficiency_data$d_error_null) && !is.na(efficiency_data$d_error_null)) {
+        if (
+            !is.null(efficiency_data$d_error_null) &&
+                !is.na(efficiency_data$d_error_null)
+        ) {
             cat(sprintf(
                 "D-error (null model): %.6f\n",
                 efficiency_data$d_error_null
@@ -516,7 +522,10 @@ print_efficiency_section <- function(efficiency_data, verbose) {
     }
 
     # Quality metrics if available
-    if (!is.null(efficiency_data$balance_score) && !is.na(efficiency_data$balance_score)) {
+    if (
+        !is.null(efficiency_data$balance_score) &&
+            !is.na(efficiency_data$balance_score)
+    ) {
         cat(sprintf(
             "Overall balance score: %.3f (higher is better)\n",
             efficiency_data$balance_score
@@ -526,7 +535,11 @@ print_efficiency_section <- function(efficiency_data, verbose) {
             efficiency_data$overlap_score
         ))
 
-        if (verbose && !is.null(efficiency_data$profiles_used) && !is.na(efficiency_data$profiles_used)) {
+        if (
+            verbose &&
+                !is.null(efficiency_data$profiles_used) &&
+                !is.na(efficiency_data$profiles_used)
+        ) {
             cat(sprintf(
                 "  Profiles used: %d/%d\n",
                 efficiency_data$profiles_used,

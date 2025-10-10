@@ -1,6 +1,6 @@
 Package: cbcTools
 Title: Design and Analyze Choice-Based Conjoint Experiments
-Version: 0.6.4
+Version: 0.6.5
 Maintainer: John Helveston <john.helveston@gmail.com>
 Authors@R: c(
     person(given   = "John",

@@ -25,8 +25,7 @@ cbc_design(
   max_iter = 50,
   n_start = 5,
   include_probs = FALSE,
-  use_idefix = TRUE,
-  coding = "standard"
+  use_idefix = TRUE
 )
 }
 \arguments{

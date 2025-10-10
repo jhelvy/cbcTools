@@ -197,8 +197,7 @@ cbc_design <- function(
     max_iter = 50,
     n_start = 5,
     include_probs = FALSE,
-    use_idefix = TRUE,
-    coding = "standard"
+    use_idefix = TRUE
 ) {
     time_start <- Sys.time()
 
@@ -206,6 +205,8 @@ cbc_design <- function(
     if (use_idefix && !method %in% c("cea", "modfed")) {
         use_idefix <- FALSE
     }
+
+    coding <- 'standard' # Hard-coded for now
 
     # Validate inputs
     validate_design_inputs(
@@ -1103,7 +1104,9 @@ compute_design_efficiency_metrics <- function(design) {
         balance_details = balance_result$balance_metrics,
         overlap_score = overlap_result$overall_overlap,
         overlap_details = overlap_result$overlap_metrics,
-        profiles_used = length(unique(design_standard$profileID[design_standard$profileID != 0])),
+        profiles_used = length(unique(design_standard$profileID[
+            design_standard$profileID != 0
+        ])),
         profiles_available = max(design_standard$profileID, na.rm = TRUE)
     ))
 }
@@ -1116,12 +1119,21 @@ compute_balance_metrics_internal <- function(design) {
     # Get attribute columns (exclude no_choice if present)
     atts <- setdiff(
         names(design_standard),
-        c("respID", "qID", "altID", "obsID", "profileID", "blockID", "no_choice", "prob")
+        c(
+            "respID",
+            "qID",
+            "altID",
+            "obsID",
+            "profileID",
+            "blockID",
+            "no_choice",
+            "prob"
+        )
     )
 
     # Get counts of each individual attribute (handles NA from no-choice)
     counts <- lapply(atts, function(attr) {
-        table(design_standard[[attr]], useNA = "no")  # Exclude NA values
+        table(design_standard[[attr]], useNA = "no") # Exclude NA values
     })
     names(counts) <- atts
 
@@ -1148,7 +1160,16 @@ compute_overlap_metrics_internal <- function(design) {
     # Get attribute columns (exclude no_choice if present)
     atts <- setdiff(
         names(design_standard),
-        c("respID", "qID", "altID", "obsID", "profileID", "blockID", "no_choice", "prob")
+        c(
+            "respID",
+            "qID",
+            "altID",
+            "obsID",
+            "profileID",
+            "blockID",
+            "no_choice",
+            "prob"
+        )
     )
 
     # Calculate overlap for each attribute
@@ -1158,7 +1179,10 @@ compute_overlap_metrics_internal <- function(design) {
     names(overlap_counts) <- atts
 
     # Calculate overlap metrics
-    overlap_metrics <- calculate_overlap_metrics(overlap_counts, design_standard)
+    overlap_metrics <- calculate_overlap_metrics(
+        overlap_counts,
+        design_standard
+    )
 
     # Calculate overall overlap score (average of complete overlap rates)
     overall_overlap <- mean(sapply(overlap_metrics, function(x) {
