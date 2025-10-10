@@ -1,0 +1,248 @@
+---
+title: "Variable Encoding"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Variable Encoding}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.retina = 3,
+  comment = "#>"
+)
+```
+
+This article demonstrates how to convert between different encoding schemes for categorical variables in choice-based conjoint designs using the `cbc_encode()` function.
+
+# Overview
+
+Choice-based conjoint data can use different encoding schemes for categorical variables:
+
+- **Standard encoding**: Categorical variables represented as factors or characters
+- **Dummy coding**: Binary indicators with a reference category (all zeros)
+- **Effects coding**: Coded as -1, 0, or 1 to ensure coefficients sum to zero
+
+The `cbc_encode()` function allows you to convert between these encodings and customize reference levels.
+
+# Basic Encoding Conversion
+
+## Creating a Design
+
+Let's start by creating a simple design:
+
+```{r}
+library(cbcTools)
+
+# Create profiles
+profiles <- cbc_profiles(
+  price = c(1, 1.5, 2, 2.5, 3),
+  type = c("Fuji", "Gala", "Honeycrisp"),
+  freshness = c("Poor", "Average", "Excellent")
+)
+
+# Create design (uses standard encoding by default)
+design <- cbc_design(
+  profiles = profiles,
+  n_alts = 3,
+  n_q = 6,
+  n_resp = 100,
+  method = "random"
+)
+
+head(design)
+```
+
+By default, designs are created with **standard encoding** where categorical variables remain as factors.
+
+## Converting to Dummy Coding
+
+Convert to dummy coding for model estimation:
+
+```{r}
+design_dummy <- cbc_encode(design, coding = "dummy")
+head(design_dummy)
+```
+
+Notice that:
+- The `type` variable is replaced with `typeGala` and `typeHoneycrisp`
+- The `freshness` variable is replaced with `freshnessAverage` and `freshnessExcellent`
+- `Fuji` and `Poor` are the reference levels (represented when dummy variables = 0)
+- Continuous variables like `price` remain unchanged
+
+## Converting to Effects Coding
+
+Effects coding uses -1 for the reference level:
+
+```{r}
+design_effects <- cbc_encode(design, coding = "effects")
+head(design_effects)
+```
+
+In effects coding:
+- Non-reference levels are coded as 0 or 1 (same as dummy)
+- Reference level rows have -1 for all level indicators
+- This ensures coefficients sum to zero
+
+## Converting Back to Standard
+
+Convert back to categorical variables:
+
+```{r}
+design_standard <- cbc_encode(design_dummy, coding = "standard")
+head(design_standard)
+```
+
+# Customizing Reference Levels
+
+By default, the first level of each categorical variable is used as the reference. You can specify different reference levels using the `ref_levels` argument.
+
+## Setting Custom References
+
+```{r}
+# Use "Honeycrisp" as reference for type, "Excellent" for freshness
+design_custom <- cbc_encode(
+  design,
+  coding = "dummy",
+  ref_levels = list(
+    type = "Honeycrisp",
+    freshness = "Excellent"
+  )
+)
+
+head(design_custom)
+```
+
+Now `Honeycrisp` and `Excellent` are the reference categories.
+
+## Updating References Without Changing Encoding
+
+You can update reference levels while keeping the current encoding:
+
+```{r}
+# Start with dummy coding
+design_dummy <- cbc_encode(design, coding = "dummy")
+
+# Update reference levels only (keeps dummy coding)
+design_updated <- cbc_encode(
+  design_dummy,
+  ref_levels = list(type = "Gala")
+)
+
+head(design_updated)
+```
+
+# Working with No-Choice Options
+
+When using designs with no-choice options, you should convert to dummy coding before power analysis or model estimation:
+
+```{r}
+# Create profiles
+profiles_nc <- cbc_profiles(
+  price = c(1, 2, 3),
+  quality = c("Low", "High")
+)
+
+# Create priors including no-choice
+priors_nc <- cbc_priors(
+  profiles = profiles_nc,
+  price = -0.1,
+  quality = c("High" = 0.5),
+  no_choice = -1.5
+)
+
+# Create design with no-choice
+design_nc <- cbc_design(
+  profiles = profiles_nc,
+  priors = priors_nc,
+  n_alts = 2,
+  n_q = 4,
+  n_resp = 50,
+  no_choice = TRUE,
+  method = "random"
+)
+
+# Simulate choices
+choices_nc <- cbc_choices(design_nc, priors_nc)
+
+head(choices_nc)
+```
+
+For modeling or power analysis with no-choice data, convert to dummy or effects coding:
+
+```{r eval=FALSE}
+# Convert to dummy coding for power analysis
+choices_dummy <- cbc_encode(choices_nc, coding = "dummy")
+
+# Run power analysis
+power_result <- cbc_power(
+  data = choices_dummy,
+  n_breaks = 5
+)
+
+power_result
+```
+
+# Use Cases
+
+## For Model Estimation
+
+While it is not required for the `logitr` package, encoding the data into dummy or effects coding can be helpful when estimating models for easier interpretation or simply greater control over which levels are included in the model:
+
+```{r eval=FALSE}
+library(logitr)
+
+# Convert to dummy coding
+choices_dummy <- cbc_encode(choices, coding = "dummy")
+
+# Estimate model
+model <- logitr(
+  data = choices_dummy,
+  outcome = "choice",
+  obsID = "obsID",
+  pars = c("price", "typeGala", "typeHoneycrisp",
+           "freshnessAverage", "freshnessExcellent")
+)
+```
+
+## For Data Inspection
+
+It is generally easier to inspect your data when using standard encoding:
+
+```{r}
+# Work with categorical variables
+choices_standard <- design
+
+# Filter for chosen alternatives
+chosen <- choices_standard[sample(1:nrow(choices_standard), 100), ]
+
+# Examine choice frequencies by category
+table(chosen$type)
+table(chosen$freshness)
+
+# Use cbc_inspect
+cbc_inspect(choices_standard, sections = 'balance')
+```
+
+## For Power Analysis
+
+You can use either encoding, but results differ:
+
+```{r eval=FALSE}
+# Dummy coding: estimates for each level
+power_dummy <- cbc_power(
+  cbc_encode(choices, coding = "dummy"),
+  n_breaks = 5
+)
+
+# Standard coding: estimates categorical effect
+power_standard <- cbc_power(
+  cbc_encode(choices, coding = "standard"),
+  pars = c("price", "type", "freshness"),
+  n_breaks = 5
+)
+```

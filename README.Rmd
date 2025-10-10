@@ -23,7 +23,7 @@ status](https://www.r-pkg.org/badges/version/cbcTools)](https://CRAN.R-project.o
 [![metacran downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran.r-project.org/package=cbcTools)
 <!-- badges: end -->
 
-This package provides functions for generating and inspecting survey designs for choice-based conjoint survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing survey experiments:
+This package provides functions for generating and inspecting survey designs for **choice-based conjoint** (CBC) survey experiments in R. Each function in the package begins with `cbc_` and supports a step in the following process for designing and analyzing survey experiments:
 
 ![Workflow diagram showing the six-step cbcTools process: Generate Profiles (cbc_profiles) -> Create Priors (cbc_priors) -> Generate Design (cbc_design) -> Inspect Design (cbc_inspect) -> Simulate Choices (cbc_choices) -> Assess Power (cbc_power)](man/figures/flowchart.png)
 
@@ -49,6 +49,10 @@ Load the package with:
 ```{r, eval=FALSE}
 library(cbcTools)
 ```
+
+## Alternatives
+
+The **cbcTools** package is an open-source alternative to commercial design software such as [Ngene](https://www.choice-metrics.com/) and [Sawtooth Software](https://sawtoothsoftware.com/). Other open-source conjoint experiment design packages include [idefix](https://www.jstatsoft.org/article/view/v096i03) and [spdesign](https://spdesign.edsandorf.me/).
 
 ## Author, Version, and License Information
 

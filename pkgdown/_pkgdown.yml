@@ -37,6 +37,8 @@ navbar:
           href: articles/priors.html
         - text: "Generating Designs"
           href: articles/design.html
+        - text: "Variable Encoding"
+          href: articles/encoding.html
         - text: "Computing D-Error"
           href: articles/d_error.html
         - text: "Simulating Choices"
@@ -66,10 +68,10 @@ reference:
   - cbc_design
   - cbc_compare
 - title: "Inspect"
-  desc: "Functions for inspecting survey designs."
+  desc: "Functions for inspecting and encoding survey designs."
   contents:
   - cbc_inspect
-  - cbc_decode
+  - cbc_encode
 - title: "Simulate Choice"
   desc: "Functions for simulating choices."
   contents:
@@ -91,3 +93,8 @@ reference:
   - summary.cbc_power
   - print.cbc_inspection
   - print.cbc_comparison
+- title: "Depreciated"
+  desc: "Depreciated functions."
+  contents:
+  - cbc_decode
+  

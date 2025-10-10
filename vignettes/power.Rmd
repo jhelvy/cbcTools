@@ -122,6 +122,8 @@ power_auto <- cbc_power(
 )
 
 # Shows all parameters: price, typeGala, typeHoneycrisp, freshnessAverage, freshnessExcellent
+
+power_auto
 ```
 
 ### Specify Dummy-Coded Parameters
@@ -129,9 +131,12 @@ power_auto <- cbc_power(
 You can explicitly specify which dummy-coded parameters to include:
 
 ```{r}
+# First create dummy-coded version of the choices data
+choices_dummy <- cbc_encode(choices, 'dummy')
+
 # Focus on specific dummy-coded parameters
 power_specific <- cbc_power(
-  data = choices,
+  data = choices_dummy,
   pars = c(
     # Specific dummy variables
     "price",
@@ -143,35 +148,14 @@ power_specific <- cbc_power(
   n_q = 6,
   n_breaks = 8
 )
-```
 
-### Use Decoded Data with Attribute Names
-
-For easier interpretation, decode the choice data first to use original attribute names:
-
-```{r}
-# Decode choice data to get back categorical variables
-choices_decoded <- cbc_decode(choices)
-
-# Now you can use attribute names instead of dummy variables
-power_decoded <- cbc_power(
-  data = choices_decoded,
-  pars = c("price", "type", "freshness"), # Original attribute names
-  outcome = "choice",
-  obsID = "obsID",
-  n_q = 6,
-  n_breaks = 8
-)
-
-# Note: This approach estimates effects differently -
-# it treats categorical variables as factors rather than separate dummy variables
+power_specific
 ```
 
 ### When to Use Each Approach
 
 - **Auto-detection**: Best for comprehensive power analysis of all effects
 - **Dummy-coded specification**: When you want to focus on specific levels of categorical variables
-- **Decoded data**: When you want power analysis at the attribute level rather than level-specific effects, or for easier interpretation
 
 ## Understanding Power Results
 
@@ -259,7 +243,7 @@ choices_mixed <- cbc_choices(
 
 # Power analysis for mixed logit model
 power_mixed <- cbc_power(
-  data = cbc_decode(choices_mixed),
+  data = choices_mixed,
   pars = c("price", "type", "freshness"),
   randPars = c(price = "n", type = "n"), # Specify random parameters
   outcome = "choice",

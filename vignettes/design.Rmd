@@ -74,7 +74,19 @@ These columns identify the structure of your experiment:
 
 ### Attribute Columns
 
-The remaining columns represent your experimental attributes. By default, categorical attributes are **dummy-coded**. In dummy coding, **continuous attributes** (like `price`) appear as-is, but **categorical attributes** (like `type` and `freshness`) are split into multiple binary columns. 
+The remaining columns represent your experimental attributes. By default, categorical attributes use **standard** coding, meaning the level names are directly used. 
+
+### Converting Encoding
+
+You can change the design encoding to **dummy** coding or **effects** coding using the `cbc_encode()` function (see the [Variable Encoding](encoding.html) article for more details.):
+
+```{r}
+design_dummy <- cbc_encode(design, coding = 'dummy')
+
+design_dummy
+```
+
+In dummy coding, **continuous attributes** (like `price`) appear as-is, but **categorical attributes** (like `type` and `freshness`) are split into multiple binary columns. 
 
 For example, for `type`, we have the following columns:
 
@@ -82,23 +94,6 @@ For example, for `type`, we have the following columns:
   - `typeHoneycrisp` = 1 if type is "Honeycrisp", 0 otherwise
 
 Here the reference level ("Fuji") is represented when both dummy variables equal 0.
-
-### Converting to Categorical Format
-
-If you prefer to see categorical variables in their original format, use `cbc_decode()`:
-
-```{r}
-design_decoded <- cbc_decode(design)
-design_decoded
-```
-
-The decoded version shows:
-
-- `type` as a categorical variable with levels "Fuji", "Gala", "Honeycrisp"
-- `freshness` as a categorical variable with levels "Poor", "Average", "Excellent"
-- `price` remains unchanged (continuous variables don't need decoding)
-
-Both forms of the design (dummy-coded and categorical) are convenient for different purposes, though they are otherwise equivalent.
 
 # Design Methods 
 
@@ -288,11 +283,18 @@ design_nochoice <- cbc_design(
 head(design_nochoice)
 ```
 
-> Note: Designs with no-choice options must be dummy-coded and cannot be converted back to categorical format.
+Notice that the "no_choice" row contains `NA` values for all other attributes. This is the default behavior when using standard encoding. When used for modeling, the design must be converted to either "dummy" or "effects" coding for proper handling of the "no_choice" attribute:
+
+```{r}
+design_nochoice |> 
+  cbc_encode(coding = 'dummy')
+```
+
+With "dummy" coding, the "no_choice" row contains `0` for all other attributes.
 
 ## Labeled Designs
 
-Create "labeled" or "alternative-specific" designs where one attribute serves as a label using the `label` argument:
+Create "labeled" or "alternative-specific" designs where one attribute serves as a label using the `label` argument. With a labeled design, the attribute chosen to use as the label will always have the same ordering in each choice set:
 
 ```{r}
 design_labeled <- cbc_design(
@@ -341,10 +343,9 @@ design_unbalanced <- cbc_design(
   n_q = 8,
   n_resp = 100,
   method = "random"
-) |>
-    cbc_decode() # Converts dummy-coded powertrain attributes back to "powertrain"
+)
 
-# Check powertrain distribution - again, electric is over-represented
+# Check powertrain distribution - electric is over-represented
 table(design_unbalanced$powertrain)
 ```
 
@@ -359,8 +360,7 @@ design_balanced <- cbc_design(
   n_resp = 100,
   method = "random",
   balance_by = "powertrain" # Balance across powertrain levels
-) |> 
-    cbc_decode()
+)
 
 # Check improved powertrain distribution - now powertrain is balanced
 table(design_balanced$powertrain)
@@ -377,8 +377,7 @@ design_multi_balance <- cbc_design(
   n_resp = 50,
   method = "random",
   balance_by = c("powertrain", "price")
-) |> 
-    cbc_decode()
+)
 
 # Check improved powertrain distribution - now powertrain and price are balanced
 table(design_multi_balance$powertrain)
