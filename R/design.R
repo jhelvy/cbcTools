@@ -971,6 +971,11 @@ construct_final_design <- function(design_matrix, opt_env) {
     # Initialize design data frame with profileID
     design <- data.frame(profileID = as.vector(t(design_matrix)))
 
+    # Convert no-choice profileID from n$profiles + 1 to 0
+    if (opt_env$no_choice) {
+        design$profileID[design$profileID == (n$profiles + 1)] <- 0
+    }
+
     # Add metadata columns based on method
     if (!opt_env$method_optimal) {
         design <- add_metadata(design, n$resp, n$alts_total, n$q)
@@ -986,9 +991,9 @@ construct_final_design <- function(design_matrix, opt_env) {
     # Handle no-choice option - add no-choice profile to lookup table
     if (opt_env$no_choice) {
         # Create a no-choice profile with NA values for all attributes
-        # Use the same ID that design_matrix_no_choice() uses
+        # Use profileID = 0 for no-choice
         no_choice_profile <- profiles_standard[1, ]
-        no_choice_profile$profileID <- n$profiles + 1
+        no_choice_profile$profileID <- 0
         attr_cols <- setdiff(names(no_choice_profile), "profileID")
         no_choice_profile[, attr_cols] <- NA
 
@@ -1000,7 +1005,7 @@ construct_final_design <- function(design_matrix, opt_env) {
 
     # Add no_choice indicator if applicable
     if (opt_env$no_choice) {
-        design$no_choice <- as.integer(design$profileID == (n$profiles + 1))
+        design$no_choice <- as.integer(design$profileID == 0)
     }
 
     # Reorder columns and rows
@@ -1170,11 +1175,6 @@ compute_overlap_metrics_internal <- function(design) {
 # Finalize the design object with metadata including both D-errors
 finalize_design_object <- function(design, design_result, opt_env) {
     method <- opt_env$method
-
-    # Update profileID to 0 for no_choice (if present)
-    if (opt_env$no_choice) {
-        # profileID is already 0 for no-choice rows
-    }
 
     # Store the design matrix for later use in cbc_choices
     attr(design, "design_matrix") <- design_result$design_matrix

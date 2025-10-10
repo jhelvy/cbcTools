@@ -81,24 +81,3 @@ set_num_cores <- function(n_cores) {
     return(n_cores)
 }
 
-is_dummy_coded <- function(data) {
-    is_coded <- attr(data, "is_dummy_coded")
-    if (is.null(is_coded)) {
-        # If no attribute, try to infer from column names
-        # Look for column names that suggest dummy coding (e.g., "qualityHigh", "brandB")
-        categorical_structure <- attr(data, "categorical_structure")
-        if (!is.null(categorical_structure)) {
-            categorical_attrs <- names(categorical_structure)[
-                sapply(categorical_structure, function(x) x$is_categorical)
-            ]
-
-            # Check if any original categorical column names are missing
-            missing_categoricals <- setdiff(categorical_attrs, names(data))
-            if (length(missing_categoricals) > 0) {
-                return(TRUE) # Likely dummy-coded if original categorical columns are missing
-            }
-        }
-        return(FALSE)
-    }
-    return(is_coded)
-}

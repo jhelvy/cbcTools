@@ -179,7 +179,7 @@ test_that("Power analysis works with manual data specification", {
     data = choices,
     outcome = "choice",
     obsID = "obsID",
-    pars = c("price", "typeB", "typeC", "qualityHigh"),
+    pars = c("price", "type", "quality"),
     n_breaks = 5
   )
 
@@ -294,7 +294,7 @@ test_that("Custom parameter specifications work", {
   # Test subset of parameters
   power_result <- cbc_power(
     data = test_data$choices,
-    pars = c("price", "typeB"), # Only subset
+    pars = c("price", "type"), # Only subset
     n_breaks = 4
   )
 
@@ -302,7 +302,7 @@ test_that("Custom parameter specifications work", {
 
   # Should only have specified parameters
   params_in_result <- unique(power_result$power_summary$parameter)
-  expect_setequal(params_in_result, c("price", "typeB"))
+  expect_setequal(params_in_result, c("price", "typeB", "typeC"))
 })
 
 # =============================================================================

@@ -281,10 +281,11 @@ validate_encoding_section <- function(encoding_data) {
   expect_type(encoding_data, "list")
 
   # Required fields
-  expect_true("is_dummy_coded" %in% names(encoding_data))
+  expect_true("encoding" %in% names(encoding_data))
   expect_true("no_choice" %in% names(encoding_data))
 
-  expect_type(encoding_data$is_dummy_coded, "logical")
+  expect_type(encoding_data$encoding, "character")
+  expect_true(encoding_data$encoding %in% c("standard", "dummy", "effects"))
   expect_type(encoding_data$no_choice, "logical")
 
   # Categorical variables info
@@ -558,23 +559,6 @@ test_that("Overlap analysis produces reasonable results", {
   expect_true("price" %in% overlap_names)
   expect_true("weight" %in% overlap_names)
 
-  # Categorical attributes should be dummy-coded
-  expect_true(any(grepl("^type", overlap_names))) # typeGala, typeHoneycrisp
-  expect_true(any(grepl("^freshness", overlap_names))) # freshnessAverage, freshnessExcellent
-
-  # Verify we have the expected dummy variables
-  type_dummies <- grep("^type", overlap_names, value = TRUE)
-  freshness_dummies <- grep("^freshness", overlap_names, value = TRUE)
-
-  expect_length(type_dummies, 2) # Gala, Honeycrisp (Fuji is reference)
-  expect_length(freshness_dummies, 2) # Average, Excellent (Poor is reference)
-
-  expect_setequal(type_dummies, c("typeGala", "typeHoneycrisp"))
-  expect_setequal(
-    freshness_dummies,
-    c("freshnessAverage", "freshnessExcellent")
-  )
-
   # Overlap scores should be reasonable for all attributes
   for (attr in overlap_names) {
     if (attr %in% names(inspection$overlap$overlap_metrics)) {
@@ -589,132 +573,6 @@ test_that("Overlap analysis produces reasonable results", {
   }
 })
 
-test_that("Inspection works with decoded (categorical) design", {
-  skip_on_cran() # Skip on CRAN due to computation time
-  test_data <- setup_inspection_test_data()
-  design <- test_data$design
-
-  # Decode the design to categorical format
-  design_decoded <- cbc_decode(design)
-
-  # Inspect the decoded design
-  inspection_decoded <- cbc_inspect(
-    design_decoded,
-    sections = c("balance", "overlap")
-  )
-
-  validate_inspection_structure(inspection_decoded, c("balance", "overlap"))
-  validate_balance_section(inspection_decoded$balance)
-  validate_overlap_section(inspection_decoded$overlap)
-
-  # Check that we now have original attribute names (not dummy-coded)
-  overlap_names_decoded <- names(inspection_decoded$overlap$overlap_counts)
-  balance_names_decoded <- names(inspection_decoded$balance$individual_counts)
-
-  # Should have original attribute names
-  expected_attrs <- c("price", "type", "freshness", "weight")
-
-  expect_setequal(overlap_names_decoded, expected_attrs)
-  expect_setequal(balance_names_decoded, expected_attrs)
-
-  # Verify categorical attributes are no longer dummy-coded
-  expect_false(any(grepl("^type[A-Z]", overlap_names_decoded)))
-  expect_false(any(grepl("^freshness[A-Z]", overlap_names_decoded)))
-
-  # Balance and overlap scores should still be reasonable
-  for (attr in expected_attrs) {
-    # Balance scores
-    if (attr %in% names(inspection_decoded$balance$balance_metrics)) {
-      balance_score <- inspection_decoded$balance$balance_metrics[[
-        attr
-      ]]$balance_score
-      expect_true(
-        balance_score >= 0 && balance_score <= 1,
-        info = paste("Invalid balance score for", attr)
-      )
-    }
-
-    # Overlap scores
-    if (attr %in% names(inspection_decoded$overlap$overlap_metrics)) {
-      overlap_rate <- inspection_decoded$overlap$overlap_metrics[[
-        attr
-      ]]$complete_overlap_rate
-      expect_true(
-        overlap_rate >= 0 && overlap_rate <= 1,
-        info = paste("Invalid overlap rate for", attr)
-      )
-    }
-  }
-})
-
-test_that("Dummy-coded vs categorical inspection produces different attribute
-  lists", {
-    skip_on_cran() # Skip on CRAN due to computation time
-  test_data <- setup_inspection_test_data()
-  design <- test_data$design
-
-  # Inspect dummy-coded design
-  inspection_dummy <- cbc_inspect(design, sections = "balance")
-
-  # Decode and inspect categorical design
-  design_decoded <- cbc_decode(design)
-  inspection_categorical <- cbc_inspect(design_decoded, sections = "balance")
-
-  dummy_names <- names(inspection_dummy$balance$individual_counts)
-  categorical_names <- names(inspection_categorical$balance$individual_counts)
-
-  # Dummy-coded should have more variables (expanded categoricals)
-  expect_gt(length(dummy_names), length(categorical_names))
-
-  # Categorical should have exactly the original 4 attributes
-  expect_length(categorical_names, 4)
-  expect_setequal(categorical_names, c("price", "type", "freshness", "weight"))
-
-  # Dummy-coded should have 6 variables (price, weight, typeGala, typeHoneycrisp, freshnessAverage, freshnessExcellent)
-  expect_length(dummy_names, 6)
-
-  # Continuous variables should be the same in both
-  continuous_vars <- c("price", "weight")
-  for (var in continuous_vars) {
-    expect_true(var %in% dummy_names)
-    expect_true(var %in% categorical_names)
-  }
-})
-
-test_that("Continuous vs categorical attributes are handled differently (decoded)", {
-  skip_on_cran() # Skip on CRAN due to computation time
-  test_data <- setup_inspection_test_data()
-  design <- test_data$design
-
-  # Decode to get original categorical format
-  design_decoded <- cbc_decode(design)
-  inspection <- cbc_inspect(design_decoded, sections = c("balance", "overlap"))
-
-  # Price (continuous) should have different analysis than type (categorical)
-  price_overlap <- inspection$overlap$overlap_counts$price
-  type_overlap <- inspection$overlap$overlap_counts$type
-
-  # Both should exist
-  expect_false(is.null(price_overlap))
-  expect_false(is.null(type_overlap))
-
-  # Both should have type information
-  expect_true("type" %in% names(price_overlap))
-  expect_true("type" %in% names(type_overlap))
-
-  # Should be different types
-  expect_equal(price_overlap$type, "continuous")
-  expect_equal(type_overlap$type, "categorical")
-
-  # Continuous should have value_counts, categorical should not
-  expect_true("value_counts" %in% names(price_overlap))
-  expect_false("value_counts" %in% names(type_overlap))
-
-  # Categorical should have max_possible_unique based on levels
-  expect_true("max_possible_unique" %in% names(type_overlap))
-  expect_equal(type_overlap$max_possible_unique, 3) # Fuji, Gala, Honeycrisp
-})
-
 # =============================================================================
 # ERROR HANDLING TESTS
 # =============================================================================
@@ -726,12 +584,12 @@ test_that("Input validation works correctly", {
   # Invalid design object
   expect_error(
     cbc_inspect("not_a_design"),
-    "design must be a cbc_design object"
+    "Input must be a data.frame or cbc_design/cbc_choices object"
   )
 
   expect_error(
     cbc_inspect(data.frame(x = 1:5)),
-    "design must be a cbc_design object"
+    "Missing required ID columns: profileID, qID, altID, obsID"
   )
 
   # Invalid sections
@@ -751,7 +609,6 @@ test_that("Input validation works correctly", {
 # =============================================================================
 
 test_that("Print method works correctly", {
-
   test_data <- setup_inspection_test_data()
   design <- test_data$design
 

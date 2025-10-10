@@ -492,22 +492,23 @@ print_efficiency_section <- function(efficiency_data, verbose) {
         efficiency_data$method != 'random' &&
             efficiency_data$method != 'unknown'
     ) {
-        if (!is.na(efficiency_data$d_error_prior)) {
+        has_d_error <- FALSE
+
+        if (!is.null(efficiency_data$d_error_prior) && !is.na(efficiency_data$d_error_prior)) {
             cat(sprintf(
                 "D-error (with priors): %.6f\n",
                 efficiency_data$d_error_prior
             ))
+            has_d_error <- TRUE
         }
-        if (!is.na(efficiency_data$d_error_null)) {
+        if (!is.null(efficiency_data$d_error_null) && !is.na(efficiency_data$d_error_null)) {
             cat(sprintf(
                 "D-error (null model): %.6f\n",
                 efficiency_data$d_error_null
             ))
+            has_d_error <- TRUE
         }
-        if (
-            !is.na(efficiency_data$d_error_prior) ||
-                !is.na(efficiency_data$d_error_null)
-        ) {
+        if (has_d_error) {
             cat("(Lower values indicate more efficient designs)\n\n")
         }
     } else {
@@ -515,7 +516,7 @@ print_efficiency_section <- function(efficiency_data, verbose) {
     }
 
     # Quality metrics if available
-    if (!is.na(efficiency_data$balance_score)) {
+    if (!is.null(efficiency_data$balance_score) && !is.na(efficiency_data$balance_score)) {
         cat(sprintf(
             "Overall balance score: %.3f (higher is better)\n",
             efficiency_data$balance_score
@@ -525,7 +526,7 @@ print_efficiency_section <- function(efficiency_data, verbose) {
             efficiency_data$overlap_score
         ))
 
-        if (verbose && !is.na(efficiency_data$profiles_used)) {
+        if (verbose && !is.null(efficiency_data$profiles_used) && !is.na(efficiency_data$profiles_used)) {
             cat(sprintf(
                 "  Profiles used: %d/%d\n",
                 efficiency_data$profiles_used,

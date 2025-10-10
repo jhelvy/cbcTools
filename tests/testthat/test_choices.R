@@ -359,7 +359,7 @@ test_that("No-choice parameters can be recovered accurately", {
   )
 
   choices <- cbc_choices(design, true_priors) |>
-    cbc_encode()
+    cbc_encode(coding = 'dummy')
 
   # Estimate model with no-choice
   model <- logitr::logitr(

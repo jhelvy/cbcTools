@@ -208,8 +208,7 @@ get_design_matrix_from_design_object <- function(design, opt_env) {
     # Get the regular profiles (excluding no-choice if present)
     regular_design <- design
     if (opt_env$no_choice) {
-        no_choice_id <- opt_env$n$profiles + 1
-        regular_design <- design[design$profileID != no_choice_id, ]
+        regular_design <- design[design$profileID != 0, ]
     }
 
     # Determine matrix dimensions

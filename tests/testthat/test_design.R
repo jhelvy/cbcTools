@@ -610,8 +610,7 @@ test_that("balance_by basic functionality works", {
     n_alts = 3,
     n_q = 6,
     n_resp = 10
-  ) |>
-    cbc_decode()
+  )
 
   # Design with balance_by
   design <- cbc_design(
@@ -621,8 +620,7 @@ test_that("balance_by basic functionality works", {
     n_q = 6,
     n_resp = 10,
     balance_by = "powertrain"
-  ) |>
-    cbc_decode()
+  )
 
   expect_s3_class(design, "cbc_design")
   expect_true("powertrain" %in% names(design))
@@ -665,8 +663,7 @@ test_that("balance_by with multiple attributes works", {
     n_alts = 3,
     n_q = 6,
     n_resp = 10
-  ) |>
-    cbc_decode()
+  )
 
   design <- cbc_design(
     profiles = profiles,
@@ -675,8 +672,7 @@ test_that("balance_by with multiple attributes works", {
     n_q = 6,
     n_resp = 10,
     balance_by = c("type", "freshness")
-  ) |>
-    cbc_decode()
+  )
 
   expect_s3_class(design, "cbc_design")
 
