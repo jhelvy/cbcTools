@@ -72,7 +72,9 @@ cbc_encode <- function(data, coding = NULL, ref_levels = NULL) {
 
     # If no coding or ref_levels specified, return with message
     if (is.null(coding) && is.null(ref_levels)) {
-        message("No encoding or reference levels specified. Data returned unchanged.")
+        message(
+            "No encoding or reference levels specified. Data returned unchanged."
+        )
         return(data)
     }
 
@@ -97,13 +99,27 @@ cbc_encode <- function(data, coding = NULL, ref_levels = NULL) {
         return(data)
     }
 
-    # Get categorical structure
+    # Get categorical structure (should be present after validate_or_reconstruct)
     categorical_structure <- attr(data, "categorical_structure")
     if (is.null(categorical_structure)) {
-        warning(
-            "No categorical structure information found. Data may not have any categorical variables or was created with an older version."
+        # Try to infer it one more time based on current encoding
+        categorical_structure <- infer_categorical_structure(
+            data,
+            current_coding
         )
-        return(data)
+
+        if (
+            is.null(categorical_structure) || length(categorical_structure) == 0
+        ) {
+            warning(
+                "No categorical structure information found. Data may not have any categorical variables.",
+                call. = FALSE
+            )
+            return(data)
+        }
+
+        # Store the inferred structure
+        attr(data, "categorical_structure") <- categorical_structure
     }
 
     # First convert to standard if not already
@@ -113,7 +129,11 @@ cbc_encode <- function(data, coding = NULL, ref_levels = NULL) {
 
     # Update reference levels if specified
     if (!is.null(ref_levels)) {
-        result <- update_reference_levels(data, categorical_structure, ref_levels)
+        result <- update_reference_levels(
+            data,
+            categorical_structure,
+            ref_levels
+        )
         data <- result$data
         categorical_structure <- result$categorical_structure
     }
@@ -238,7 +258,9 @@ encode_dummy <- function(data, categorical_structure) {
 
             # Convert NA to 0 for no-choice rows
             if (has_no_choice) {
-                encoded_data[[dummy_col_name]][is.na(encoded_data[[dummy_col_name]])] <- 0
+                encoded_data[[dummy_col_name]][is.na(encoded_data[[
+                    dummy_col_name
+                ]])] <- 0
             }
         }
 
@@ -292,13 +314,16 @@ encode_effects <- function(data, categorical_structure) {
             effects_col_name <- paste0(attr, level)
             # 1 for this level, -1 for reference, 0 for others
             encoded_data[[effects_col_name]] <- ifelse(
-                data[[attr]] == level, 1,
+                data[[attr]] == level,
+                1,
                 ifelse(data[[attr]] == reference_level, -1, 0)
             )
 
             # Convert NA to 0 for no-choice rows
             if (has_no_choice) {
-                encoded_data[[effects_col_name]][is.na(encoded_data[[effects_col_name]])] <- 0
+                encoded_data[[effects_col_name]][is.na(encoded_data[[
+                    effects_col_name
+                ]])] <- 0
             }
         }
 
@@ -347,7 +372,10 @@ update_reference_levels <- function(data, categorical_structure, ref_levels) {
     }
 
     if (is.null(names(ref_levels)) || any(names(ref_levels) == "")) {
-        stop("ref_levels must be a named list (e.g., list(powertrain = 'Gasoline'))", call. = FALSE)
+        stop(
+            "ref_levels must be a named list (e.g., list(powertrain = 'Gasoline'))",
+            call. = FALSE
+        )
     }
 
     # Get categorical attributes
@@ -358,10 +386,13 @@ update_reference_levels <- function(data, categorical_structure, ref_levels) {
     # Check that specified attributes exist in categorical structure
     invalid_attrs <- setdiff(names(ref_levels), categorical_attrs)
     if (length(invalid_attrs) > 0) {
-        stop(sprintf(
-            "Attribute '%s' not found in categorical structure",
-            invalid_attrs[1]
-        ), call. = FALSE)
+        stop(
+            sprintf(
+                "Attribute '%s' not found in categorical structure",
+                invalid_attrs[1]
+            ),
+            call. = FALSE
+        )
     }
 
     # Update each specified attribute
@@ -371,11 +402,14 @@ update_reference_levels <- function(data, categorical_structure, ref_levels) {
         # Validate that new reference level exists
         all_levels <- categorical_structure[[attr]]$levels
         if (!new_ref %in% all_levels) {
-            stop(sprintf(
-                "Level '%s' not found in attribute '%s'",
-                new_ref,
-                attr
-            ), call. = FALSE)
+            stop(
+                sprintf(
+                    "Level '%s' not found in attribute '%s'",
+                    new_ref,
+                    attr
+                ),
+                call. = FALSE
+            )
         }
 
         # Reorder factor levels to put new reference first

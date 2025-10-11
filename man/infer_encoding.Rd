@@ -2,7 +2,7 @@
 % Please edit documentation in R/validate_design.R
 \name{infer_encoding}
 \alias{infer_encoding}
-\title{Infer encoding type from column names}
+\title{Infer encoding type from column names and values}
 \usage{
 infer_encoding(data)
 }
@@ -13,6 +13,6 @@ infer_encoding(data)
 Character: "standard", "dummy", or "effects"
 }
 \description{
-Infer encoding type from column names
+Infer encoding type from column names and values
 }
 \keyword{internal}

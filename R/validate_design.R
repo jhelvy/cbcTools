@@ -119,7 +119,7 @@ reconstruct_design_attributes <- function(data) {
     return(data)
 }
 
-#' Infer encoding type from column names
+#' Infer encoding type from column names and values
 #'
 #' @param data A data.frame
 #' @return Character: "standard", "dummy", or "effects"
@@ -135,13 +135,30 @@ infer_encoding <- function(data) {
     }
 
     # Check for dummy/effects coding patterns
-    # Look for columns like "attributeLevel" (no separator) or "attribute_Level"
+    # Look for columns like "attributeLevel" that are ALSO binary (0/1)
+    # This distinguishes dummy variables from regular camelCase names
     has_compound_names <- any(grepl("[a-z][A-Z]", attr_cols)) ||
                           any(grepl("_[A-Z]", attr_cols))
 
     if (has_compound_names) {
+        # Check if any compound-named columns are binary (0/1)
+        # This is the key indicator of dummy/effects coding
+        compound_cols <- attr_cols[grepl("[a-z][A-Z]", attr_cols) |
+                                   grepl("_[A-Z]", attr_cols)]
+
+        has_binary_compound <- any(sapply(compound_cols, function(col) {
+            if (!is.numeric(data[[col]])) return(FALSE)
+            unique_vals <- unique(data[[col]][!is.na(data[[col]])])
+            all(unique_vals %in% c(0, 1, -1))
+        }))
+
+        if (!has_binary_compound) {
+            # Compound names but not binary - likely just camelCase variables
+            return("standard")
+        }
+
         # Check if any columns have negative values (effects coding)
-        has_negatives <- any(sapply(attr_cols, function(col) {
+        has_negatives <- any(sapply(compound_cols, function(col) {
             if (is.numeric(data[[col]])) {
                 any(data[[col]] < 0, na.rm = TRUE)
             } else {
