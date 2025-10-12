@@ -11,7 +11,7 @@ a summary of coefficient estimates, standard errors, and power statistics."><met
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,6 +26,7 @@ a summary of coefficient estimates, standard errors, and power statistics."><met
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/profiles.html">Generating Profiles</a></li>
     <li><a class="dropdown-item" href="../articles/priors.html">Specifying Priors</a></li>
     <li><a class="dropdown-item" href="../articles/design.html">Generating Designs</a></li>
+    <li><a class="dropdown-item" href="../articles/encoding.html">Variable Encoding</a></li>
     <li><a class="dropdown-item" href="../articles/d_error.html">Computing D-Error</a></li>
     <li><a class="dropdown-item" href="../articles/choices.html">Simulating Choices</a></li>
     <li><a class="dropdown-item" href="../articles/power.html">Power Analysis</a></li>
@@ -157,7 +158,7 @@ standard errors, t-statistics, and power</p></li>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Run power analysis</span></span></span>
 <span class="r-in"><span><span class="va">power_results</span> <span class="op">&lt;-</span> <span class="fu">cbc_power</span><span class="op">(</span><span class="va">choices</span>, n_breaks <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Auto-detected parameters: price, typeB, typeC, qualityHigh</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Auto-detected parameters: price, type, quality</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Using 'respID' as panelID for panel data estimation.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating models using 3 cores...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Model estimation complete!</span>
@@ -174,34 +175,34 @@ standard errors, t-statistics, and power</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Power summary (probability of detecting true effect):</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n = 12:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.234, SE = 0.2189</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.476, SE = 0.5480</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.375, SE = 0.5332</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.131, SE = 0.3701</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.079, SE = 0.1959</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.199, SE = 0.3850</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.201, SE = 0.4036</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.054, SE = 0.3341</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n = 38:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.056, SE = 0.1161</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.051, SE = 0.2393</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.138, SE = 0.2326</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.870, SE = 0.1928</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.584, SE = 0.1146</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.574, SE = 0.2425</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.148, SE = 0.2341</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.116, SE = 0.1867</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n = 50:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.104, SE = 0.0977</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.185, SE = 0.2054</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.052, SE = 0.1999</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.773, SE = 0.1696</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.570, SE = 0.1002</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.287, SE = 0.2006</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.052, SE = 0.2001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.294, SE = 0.1618</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n = 75:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.178, SE = 0.0820</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.869, SE = 0.1677</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.188, SE = 0.1644</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.876, SE = 0.1359</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.884, SE = 0.0811</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.161, SE = 0.1634</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.055, SE = 0.1628</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.557, SE = 0.1358</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> n = 100:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.121, SE = 0.0712</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.914, SE = 0.1451</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.084, SE = 0.1423</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.989, SE = 0.1165</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   price       : Power = 0.804, SE = 0.0709</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeB       : Power = 0.698, SE = 0.1432</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   typeC       : Power = 0.075, SE = 0.1412</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   qualityHigh : Power = 0.869, SE = 0.1147</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use plot() to visualize power curves.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use summary() for detailed power analysis.</span>

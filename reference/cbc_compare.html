@@ -11,7 +11,7 @@ Useful for evaluating different design methods or parameter settings."><meta pro
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,6 +26,7 @@ Useful for evaluating different design methods or parameter settings."><meta pro
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/profiles.html">Generating Profiles</a></li>
     <li><a class="dropdown-item" href="../articles/priors.html">Specifying Priors</a></li>
     <li><a class="dropdown-item" href="../articles/design.html">Generating Designs</a></li>
+    <li><a class="dropdown-item" href="../articles/encoding.html">Variable Encoding</a></li>
     <li><a class="dropdown-item" href="../articles/d_error.html">Computing D-Error</a></li>
     <li><a class="dropdown-item" href="../articles/choices.html">Simulating Choices</a></li>
     <li><a class="dropdown-item" href="../articles/power.html">Power Analysis</a></li>
@@ -113,11 +114,11 @@ a formatted table.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Running 5 design searches using 3 cores...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> D-error results from all starts:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 4: 1.632993   (Best)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 3: 2.309401 </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 1: 2.828427 </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 1: 2.828427 </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 5: Inf </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 2: 1.414214   (Best)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 1: 2.309401 </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 1: 2.309401 </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 4: Inf </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Start 4: Inf </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Compare designs</span></span></span>
 <span class="r-in"><span><span class="fu">cbc_compare</span><span class="op">(</span><span class="va">design_random</span>, <span class="va">design_stochastic</span><span class="op">)</span></span></span>
@@ -133,7 +134,7 @@ a formatted table.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Design 2 stochastic         100         4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Design 1     random         100         4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Alternatives Blocks Profile Usage</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             2      1  (7/18) 38.9%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             2      1  (8/18) 44.4%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             2      1  (18/18) 100%</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  No Choice Labeled?</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         No       No</span>
@@ -142,8 +143,8 @@ a formatted table.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Design Metrics</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> =====================</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Design     Method D-Error (Null) D-Error (Prior) Balance Overlap</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Design 2 stochastic       1.632993              NA   0.645   0.375</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Design 1     random             NA              NA   0.826   0.448</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Design 2 stochastic       1.414214              NA   0.732   0.250</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Design 1     random             NA              NA   0.958   0.343</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Interpretation:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - D-Error: Lower is better (design efficiency)</span>
@@ -152,8 +153,8 @@ a formatted table.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Profile Usage: Higher means more profiles used</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Best performers:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Design 1 (0.826)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Overlap: Design 2 (0.375)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Design 1 (0.958)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Overlap: Design 2 (0.250)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Profile Usage: Design 1 (100.0%)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use summary() for detailed information on any one design.</span>
@@ -174,15 +175,15 @@ a formatted table.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Design Metrics</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> =====================</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Design     Method D-Error (Null) D-Error (Prior) Balance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Stochastic stochastic       1.632993              NA   0.645</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      Random     random             NA              NA   0.826</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Stochastic stochastic       1.414214              NA   0.732</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      Random     random             NA              NA   0.958</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Interpretation:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - D-Error: Lower is better (design efficiency)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Higher is better (level distribution)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Best performers:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Random (0.826)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> - Balance: Random (0.958)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use summary() for detailed information on any one design.</span>
 </code></pre></div>

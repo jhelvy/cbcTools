@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +42,7 @@
 <li><a class="dropdown-item" href="../articles/profiles.html">Generating Profiles</a></li>
     <li><a class="dropdown-item" href="../articles/priors.html">Specifying Priors</a></li>
     <li><a class="dropdown-item" href="../articles/design.html">Generating Designs</a></li>
+    <li><a class="dropdown-item" href="../articles/encoding.html">Variable Encoding</a></li>
     <li><a class="dropdown-item" href="../articles/d_error.html">Computing D-Error</a></li>
     <li><a class="dropdown-item" href="../articles/choices.html">Simulating Choices</a></li>
     <li><a class="dropdown-item" href="../articles/power.html">Power Analysis</a></li>
@@ -99,26 +100,20 @@ design to work with:</p>
 <span></span>
 <span><span class="va">design</span></span>
 <span><span class="co">#&gt; Design method: random</span></span>
+<span><span class="co">#&gt; Encoding: standard</span></span>
 <span><span class="co">#&gt; Structure: 100 respondents × 6 questions × 2 alternatives</span></span>
 <span><span class="co">#&gt; Profile usage: 45/45 (100.0%)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; 💡 Use cbc_inspect() for a more detailed summary</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows of design:</span></span>
-<span><span class="co">#&gt;   profileID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        31      1   1     1     1   1.0        0              0</span></span>
-<span><span class="co">#&gt; 2        15      1   1     2     1   3.0        0              1</span></span>
-<span><span class="co">#&gt; 3        14      1   2     1     2   2.5        0              1</span></span>
-<span><span class="co">#&gt; 4         3      1   2     2     2   2.0        0              0</span></span>
-<span><span class="co">#&gt; 5        42      1   3     1     3   1.5        0              1</span></span>
-<span><span class="co">#&gt; 6        43      1   3     2     3   2.0        0              1</span></span>
-<span><span class="co">#&gt;   freshnessAverage freshnessExcellent</span></span>
-<span><span class="co">#&gt; 1                0                  1</span></span>
-<span><span class="co">#&gt; 2                0                  0</span></span>
-<span><span class="co">#&gt; 3                0                  0</span></span>
-<span><span class="co">#&gt; 4                0                  0</span></span>
-<span><span class="co">#&gt; 5                0                  1</span></span>
-<span><span class="co">#&gt; 6                0                  1</span></span>
+<span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness</span></span>
+<span><span class="co">#&gt; 1        31      1   1     1     1   1.0       Fuji Excellent</span></span>
+<span><span class="co">#&gt; 2        15      1   1     2     1   3.0 Honeycrisp      Poor</span></span>
+<span><span class="co">#&gt; 3        14      1   2     1     2   2.5 Honeycrisp      Poor</span></span>
+<span><span class="co">#&gt; 4         3      1   2     2     2   2.0       Fuji      Poor</span></span>
+<span><span class="co">#&gt; 5        42      1   3     1     3   1.5 Honeycrisp Excellent</span></span>
+<span><span class="co">#&gt; 6        43      1   3     2     3   2.0 Honeycrisp Excellent</span></span>
 <span><span class="co">#&gt; ... and 1194 more rows</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="choice-simulation-approaches">Choice Simulation Approaches<a class="anchor" aria-label="anchor" href="#choice-simulation-approaches"></a>
@@ -144,33 +139,27 @@ probabilities:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">choices_random</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CBC Choice Data</span></span>
 <span><span class="co">#&gt; ===============</span></span>
+<span><span class="co">#&gt; Encoding: standard</span></span>
 <span><span class="co">#&gt; Observations: 3 choice tasks</span></span>
 <span><span class="co">#&gt; Alternatives per task: 2</span></span>
 <span><span class="co">#&gt; Total choices made: 3</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: random</span></span>
 <span><span class="co">#&gt; Priors: None (random choices)</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-09-23 16:54:16</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-10-12 18:05:38</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
 <span><span class="co">#&gt;   Alt 1: 33.3% (1 choices)</span></span>
 <span><span class="co">#&gt;   Alt 2: 66.7% (2 choices)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows:</span></span>
-<span><span class="co">#&gt;   profileID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        31      1   1     1     1   1.0        0              0</span></span>
-<span><span class="co">#&gt; 2        15      1   1     2     1   3.0        0              1</span></span>
-<span><span class="co">#&gt; 3        14      1   2     1     2   2.5        0              1</span></span>
-<span><span class="co">#&gt; 4         3      1   2     2     2   2.0        0              0</span></span>
-<span><span class="co">#&gt; 5        42      1   3     1     3   1.5        0              1</span></span>
-<span><span class="co">#&gt; 6        43      1   3     2     3   2.0        0              1</span></span>
-<span><span class="co">#&gt;   freshnessAverage freshnessExcellent choice</span></span>
-<span><span class="co">#&gt; 1                0                  1      0</span></span>
-<span><span class="co">#&gt; 2                0                  0      1</span></span>
-<span><span class="co">#&gt; 3                0                  0      0</span></span>
-<span><span class="co">#&gt; 4                0                  0      1</span></span>
-<span><span class="co">#&gt; 5                0                  1      1</span></span>
-<span><span class="co">#&gt; 6                0                  1      0</span></span>
+<span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness choice</span></span>
+<span><span class="co">#&gt; 1        31      1   1     1     1   1.0       Fuji Excellent      0</span></span>
+<span><span class="co">#&gt; 2        15      1   1     2     1   3.0 Honeycrisp      Poor      1</span></span>
+<span><span class="co">#&gt; 3        14      1   2     1     2   2.5 Honeycrisp      Poor      0</span></span>
+<span><span class="co">#&gt; 4         3      1   2     2     2   2.0       Fuji      Poor      1</span></span>
+<span><span class="co">#&gt; 5        42      1   3     1     3   1.5 Honeycrisp Excellent      1</span></span>
+<span><span class="co">#&gt; 6        43      1   3     2     3   2.0 Honeycrisp Excellent      0</span></span>
 <span></span>
 <span><span class="co"># Check choice distribution</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">choices_random</span><span class="op">$</span><span class="va">choice</span>, <span class="va">choices_random</span><span class="op">$</span><span class="va">altID</span><span class="op">)</span></span>
@@ -204,33 +193,27 @@ probabilities:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">choices_utility</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CBC Choice Data</span></span>
 <span><span class="co">#&gt; ===============</span></span>
+<span><span class="co">#&gt; Encoding: standard</span></span>
 <span><span class="co">#&gt; Observations: 3 choice tasks</span></span>
 <span><span class="co">#&gt; Alternatives per task: 2</span></span>
 <span><span class="co">#&gt; Total choices made: 3</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: utility_based</span></span>
 <span><span class="co">#&gt; Priors: Used for utility-based simulation</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-09-23 16:54:16</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-10-12 18:05:38</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
 <span><span class="co">#&gt;   Alt 1: 66.7% (2 choices)</span></span>
 <span><span class="co">#&gt;   Alt 2: 33.3% (1 choices)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows:</span></span>
-<span><span class="co">#&gt;   profileID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        31      1   1     1     1   1.0        0              0</span></span>
-<span><span class="co">#&gt; 2        15      1   1     2     1   3.0        0              1</span></span>
-<span><span class="co">#&gt; 3        14      1   2     1     2   2.5        0              1</span></span>
-<span><span class="co">#&gt; 4         3      1   2     2     2   2.0        0              0</span></span>
-<span><span class="co">#&gt; 5        42      1   3     1     3   1.5        0              1</span></span>
-<span><span class="co">#&gt; 6        43      1   3     2     3   2.0        0              1</span></span>
-<span><span class="co">#&gt;   freshnessAverage freshnessExcellent choice</span></span>
-<span><span class="co">#&gt; 1                0                  1      1</span></span>
-<span><span class="co">#&gt; 2                0                  0      0</span></span>
-<span><span class="co">#&gt; 3                0                  0      0</span></span>
-<span><span class="co">#&gt; 4                0                  0      1</span></span>
-<span><span class="co">#&gt; 5                0                  1      1</span></span>
-<span><span class="co">#&gt; 6                0                  1      0</span></span></code></pre></div>
+<span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness choice</span></span>
+<span><span class="co">#&gt; 1        31      1   1     1     1   1.0       Fuji Excellent      1</span></span>
+<span><span class="co">#&gt; 2        15      1   1     2     1   3.0 Honeycrisp      Poor      0</span></span>
+<span><span class="co">#&gt; 3        14      1   2     1     2   2.5 Honeycrisp      Poor      0</span></span>
+<span><span class="co">#&gt; 4         3      1   2     2     2   2.0       Fuji      Poor      1</span></span>
+<span><span class="co">#&gt; 5        42      1   3     1     3   1.5 Honeycrisp Excellent      1</span></span>
+<span><span class="co">#&gt; 6        43      1   3     2     3   2.0 Honeycrisp Excellent      0</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="choice-data-format">Choice Data Format<a class="anchor" aria-label="anchor" href="#choice-data-format"></a>
@@ -241,33 +224,27 @@ probabilities:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">choices_utility</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CBC Choice Data</span></span>
 <span><span class="co">#&gt; ===============</span></span>
+<span><span class="co">#&gt; Encoding: standard</span></span>
 <span><span class="co">#&gt; Observations: 3 choice tasks</span></span>
 <span><span class="co">#&gt; Alternatives per task: 2</span></span>
 <span><span class="co">#&gt; Total choices made: 3</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: utility_based</span></span>
 <span><span class="co">#&gt; Priors: Used for utility-based simulation</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-09-23 16:54:16</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-10-12 18:05:38</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
 <span><span class="co">#&gt;   Alt 1: 66.7% (2 choices)</span></span>
 <span><span class="co">#&gt;   Alt 2: 33.3% (1 choices)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows:</span></span>
-<span><span class="co">#&gt;   profileID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        31      1   1     1     1   1.0        0              0</span></span>
-<span><span class="co">#&gt; 2        15      1   1     2     1   3.0        0              1</span></span>
-<span><span class="co">#&gt; 3        14      1   2     1     2   2.5        0              1</span></span>
-<span><span class="co">#&gt; 4         3      1   2     2     2   2.0        0              0</span></span>
-<span><span class="co">#&gt; 5        42      1   3     1     3   1.5        0              1</span></span>
-<span><span class="co">#&gt; 6        43      1   3     2     3   2.0        0              1</span></span>
-<span><span class="co">#&gt;   freshnessAverage freshnessExcellent choice</span></span>
-<span><span class="co">#&gt; 1                0                  1      1</span></span>
-<span><span class="co">#&gt; 2                0                  0      0</span></span>
-<span><span class="co">#&gt; 3                0                  0      0</span></span>
-<span><span class="co">#&gt; 4                0                  0      1</span></span>
-<span><span class="co">#&gt; 5                0                  1      1</span></span>
-<span><span class="co">#&gt; 6                0                  1      0</span></span></code></pre></div>
+<span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness choice</span></span>
+<span><span class="co">#&gt; 1        31      1   1     1     1   1.0       Fuji Excellent      1</span></span>
+<span><span class="co">#&gt; 2        15      1   1     2     1   3.0 Honeycrisp      Poor      0</span></span>
+<span><span class="co">#&gt; 3        14      1   2     1     2   2.5 Honeycrisp      Poor      0</span></span>
+<span><span class="co">#&gt; 4         3      1   2     2     2   2.0       Fuji      Poor      1</span></span>
+<span><span class="co">#&gt; 5        42      1   3     1     3   1.5 Honeycrisp Excellent      1</span></span>
+<span><span class="co">#&gt; 6        43      1   3     2     3   2.0 Honeycrisp Excellent      0</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -378,11 +355,11 @@ coefficients: 0.2 &gt; 0.1 &gt; 0)</li>
 </ul>
 <p>Examine aggregate choice patterns to validate simulation:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Decode the choice data first to get categorical variables</span></span>
-<span><span class="va">choices_decoded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="va">choices_utility</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Convert to standard encoding to get categorical variables</span></span>
+<span><span class="va">choices_standard</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_encode.html">cbc_encode</a></span><span class="op">(</span><span class="va">choices_utility</span>, coding <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Aggregate attribute choices across all respondents</span></span>
-<span><span class="va">choices</span> <span class="op">&lt;-</span> <span class="va">choices_decoded</span></span>
+<span><span class="va">choices</span> <span class="op">&lt;-</span> <span class="va">choices_standard</span></span>
 <span></span>
 <span><span class="co"># Price choices</span></span>
 <span><span class="va">price_choices</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span><span class="va">choice</span> <span class="op">~</span> <span class="va">price</span>, data <span class="op">=</span> <span class="va">choices</span>, <span class="va">sum</span><span class="op">)</span></span>
@@ -421,7 +398,9 @@ coefficients: 0.2 &gt; 0.1 &gt; 0)</li>
 respondents:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create dataset with only chosen alternatives</span></span>
-<span><span class="va">chosen_alts</span> <span class="op">&lt;-</span> <span class="va">choices_mixed</span><span class="op">[</span><span class="va">choices_mixed</span><span class="op">$</span><span class="va">choice</span> <span class="op">==</span> <span class="fl">1</span>, <span class="op">]</span></span>
+<span><span class="co"># Convert to dummy coding to more easily select individual levels</span></span>
+<span><span class="va">chosen_alts</span> <span class="op">&lt;-</span> <span class="va">choices_mixed</span><span class="op">[</span><span class="va">choices_mixed</span><span class="op">$</span><span class="va">choice</span> <span class="op">==</span> <span class="fl">1</span>, <span class="op">]</span> <span class="op">|&gt;</span> </span>
+<span>  <span class="fu"><a href="../reference/cbc_encode.html">cbc_encode</a></span><span class="op">(</span><span class="st">'dummy'</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Mean attribute levels chosen by each respondent</span></span>
 <span><span class="va">resp_means</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span></span>

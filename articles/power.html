@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +42,7 @@
 <li><a class="dropdown-item" href="../articles/profiles.html">Generating Profiles</a></li>
     <li><a class="dropdown-item" href="../articles/priors.html">Specifying Priors</a></li>
     <li><a class="dropdown-item" href="../articles/design.html">Generating Designs</a></li>
+    <li><a class="dropdown-item" href="../articles/encoding.html">Variable Encoding</a></li>
     <li><a class="dropdown-item" href="../articles/d_error.html">Computing D-Error</a></li>
     <li><a class="dropdown-item" href="../articles/choices.html">Simulating Choices</a></li>
     <li><a class="dropdown-item" href="../articles/power.html">Power Analysis</a></li>
@@ -110,33 +111,27 @@ design, some priors, and some simulated choices to work with:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">choices</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CBC Choice Data</span></span>
 <span><span class="co">#&gt; ===============</span></span>
+<span><span class="co">#&gt; Encoding: standard</span></span>
 <span><span class="co">#&gt; Observations: 3 choice tasks</span></span>
 <span><span class="co">#&gt; Alternatives per task: 2</span></span>
 <span><span class="co">#&gt; Total choices made: 3</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: utility_based</span></span>
 <span><span class="co">#&gt; Priors: Used for utility-based simulation</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-09-23 16:54:46</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-10-12 18:06:13</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
 <span><span class="co">#&gt;   Alt 1: 66.7% (2 choices)</span></span>
 <span><span class="co">#&gt;   Alt 2: 33.3% (1 choices)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows:</span></span>
-<span><span class="co">#&gt;   profileID respID qID altID obsID price typeGala typeHoneycrisp</span></span>
-<span><span class="co">#&gt; 1        31      1   1     1     1   1.0        0              0</span></span>
-<span><span class="co">#&gt; 2        15      1   1     2     1   3.0        0              1</span></span>
-<span><span class="co">#&gt; 3        14      1   2     1     2   2.5        0              1</span></span>
-<span><span class="co">#&gt; 4         3      1   2     2     2   2.0        0              0</span></span>
-<span><span class="co">#&gt; 5        42      1   3     1     3   1.5        0              1</span></span>
-<span><span class="co">#&gt; 6        43      1   3     2     3   2.0        0              1</span></span>
-<span><span class="co">#&gt;   freshnessAverage freshnessExcellent choice</span></span>
-<span><span class="co">#&gt; 1                0                  1      0</span></span>
-<span><span class="co">#&gt; 2                0                  0      1</span></span>
-<span><span class="co">#&gt; 3                0                  0      1</span></span>
-<span><span class="co">#&gt; 4                0                  0      0</span></span>
-<span><span class="co">#&gt; 5                0                  1      1</span></span>
-<span><span class="co">#&gt; 6                0                  1      0</span></span></code></pre></div>
+<span><span class="co">#&gt;   profileID respID qID altID obsID price       type freshness choice</span></span>
+<span><span class="co">#&gt; 1        31      1   1     1     1   1.0       Fuji Excellent      0</span></span>
+<span><span class="co">#&gt; 2        15      1   1     2     1   3.0 Honeycrisp      Poor      1</span></span>
+<span><span class="co">#&gt; 3        14      1   2     1     2   2.5 Honeycrisp      Poor      1</span></span>
+<span><span class="co">#&gt; 4         3      1   2     2     2   2.0       Fuji      Poor      0</span></span>
+<span><span class="co">#&gt; 5        42      1   3     1     3   1.5 Honeycrisp Excellent      1</span></span>
+<span><span class="co">#&gt; 6        43      1   3     2     3   2.0 Honeycrisp Excellent      0</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="understanding-power-analysis">Understanding Power Analysis<a class="anchor" aria-label="anchor" href="#understanding-power-analysis"></a>
 </h2>
@@ -291,7 +286,55 @@ attribute parameters from your choice data:</p>
 <span>  n_breaks <span class="op">=</span> <span class="fl">8</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Shows all parameters: price, typeGala, typeHoneycrisp, freshnessAverage, freshnessExcellent</span></span></code></pre></div>
+<span><span class="co"># Shows all parameters: price, typeGala, typeHoneycrisp, freshnessAverage, freshnessExcellent</span></span>
+<span></span>
+<span><span class="va">power_auto</span></span>
+<span><span class="co">#&gt; CBC Power Analysis Results</span></span>
+<span><span class="co">#&gt; ==========================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Sample sizes tested: 75 to 600 (8 breaks)</span></span>
+<span><span class="co">#&gt; Significance level: 0.050</span></span>
+<span><span class="co">#&gt; Parameters: price, typeGala, typeHoneycrisp, freshnessAverage, freshnessExcellent</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Power summary (probability of detecting true effect):</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 75:</span></span>
+<span><span class="co">#&gt;   price       : Power = 0.711, SE = 0.1046</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 0.859, SE = 0.1823</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 0.999, SE = 0.1878</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 0.872, SE = 0.1816</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1985</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 225:</span></span>
+<span><span class="co">#&gt;   price       : Power = 0.998, SE = 0.0592</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 0.999, SE = 0.1027</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.1074</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.1031</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1086</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 300:</span></span>
+<span><span class="co">#&gt;   price       : Power = 0.999, SE = 0.0507</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 1.000, SE = 0.0886</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0930</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0901</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0943</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 450:</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0416</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 1.000, SE = 0.0717</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0756</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0739</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0766</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 600:</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0362</span></span>
+<span><span class="co">#&gt;   typeGala    : Power = 1.000, SE = 0.0620</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0655</span></span>
+<span><span class="co">#&gt;   freshnessAverage: Power = 1.000, SE = 0.0638</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0668</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Use plot() to visualize power curves.</span></span>
+<span><span class="co">#&gt; Use summary() for detailed power analysis.</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="specify-dummy-coded-parameters">Specify Dummy-Coded Parameters<a class="anchor" aria-label="anchor" href="#specify-dummy-coded-parameters"></a>
@@ -299,9 +342,12 @@ attribute parameters from your choice data:</p>
 <p>You can explicitly specify which dummy-coded parameters to
 include:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Focus on specific dummy-coded parameters</span></span>
+<code class="sourceCode R"><span><span class="co"># First create dummy-coded version of the choices data</span></span>
+<span><span class="va">choices_dummy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_encode.html">cbc_encode</a></span><span class="op">(</span><span class="va">choices</span>, <span class="st">'dummy'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Focus on specific dummy-coded parameters</span></span>
 <span><span class="va">power_specific</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">choices</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">choices_dummy</span>,</span>
 <span>  pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="co"># Specific dummy variables</span></span>
 <span>    <span class="st">"price"</span>,</span>
@@ -312,29 +358,45 @@ include:</p>
 <span>  obsID <span class="op">=</span> <span class="st">"obsID"</span>,</span>
 <span>  n_q <span class="op">=</span> <span class="fl">6</span>,</span>
 <span>  n_breaks <span class="op">=</span> <span class="fl">8</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="use-decoded-data-with-attribute-names">Use Decoded Data with Attribute Names<a class="anchor" aria-label="anchor" href="#use-decoded-data-with-attribute-names"></a>
-</h4>
-<p>For easier interpretation, decode the choice data first to use
-original attribute names:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Decode choice data to get back categorical variables</span></span>
-<span><span class="va">choices_decoded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="va">choices</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Now you can use attribute names instead of dummy variables</span></span>
-<span><span class="va">power_decoded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">choices_decoded</span>,</span>
-<span>  pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"price"</span>, <span class="st">"type"</span>, <span class="st">"freshness"</span><span class="op">)</span>, <span class="co"># Original attribute names</span></span>
-<span>  outcome <span class="op">=</span> <span class="st">"choice"</span>,</span>
-<span>  obsID <span class="op">=</span> <span class="st">"obsID"</span>,</span>
-<span>  n_q <span class="op">=</span> <span class="fl">6</span>,</span>
-<span>  n_breaks <span class="op">=</span> <span class="fl">8</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Note: This approach estimates effects differently -</span></span>
-<span><span class="co"># it treats categorical variables as factors rather than separate dummy variables</span></span></code></pre></div>
+<span><span class="va">power_specific</span></span>
+<span><span class="co">#&gt; CBC Power Analysis Results</span></span>
+<span><span class="co">#&gt; ==========================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Sample sizes tested: 75 to 600 (8 breaks)</span></span>
+<span><span class="co">#&gt; Significance level: 0.050</span></span>
+<span><span class="co">#&gt; Parameters: price, typeHoneycrisp, freshnessExcellent</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Power summary (probability of detecting true effect):</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 75:</span></span>
+<span><span class="co">#&gt;   price       : Power = 0.621, SE = 0.1022</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 0.988, SE = 0.1510</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.1663</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 225:</span></span>
+<span><span class="co">#&gt;   price       : Power = 0.995, SE = 0.0578</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0883</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0910</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 300:</span></span>
+<span><span class="co">#&gt;   price       : Power = 0.997, SE = 0.0494</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0769</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0792</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 450:</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0405</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0633</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0640</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; n = 600:</span></span>
+<span><span class="co">#&gt;   price       : Power = 1.000, SE = 0.0353</span></span>
+<span><span class="co">#&gt;   typeHoneycrisp: Power = 1.000, SE = 0.0551</span></span>
+<span><span class="co">#&gt;   freshnessExcellent: Power = 1.000, SE = 0.0553</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Use plot() to visualize power curves.</span></span>
+<span><span class="co">#&gt; Use summary() for detailed power analysis.</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="when-to-use-each-approach">When to Use Each Approach<a class="anchor" aria-label="anchor" href="#when-to-use-each-approach"></a>
@@ -346,10 +408,6 @@ analysis of all effects</li>
 <li>
 <strong>Dummy-coded specification</strong>: When you want to focus
 on specific levels of categorical variables</li>
-<li>
-<strong>Decoded data</strong>: When you want power analysis at the
-attribute level rather than level-specific effects, or for easier
-interpretation</li>
 </ul>
 </div>
 </div>
@@ -397,7 +455,7 @@ effect)</li>
 </h3>
 <p>Plot power curves to visualize the relationship between sample size
 and precision:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot power curves</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
@@ -405,20 +463,20 @@ and precision:</p>
 <span>  type <span class="op">=</span> <span class="st">"power"</span>,</span>
 <span>  power_threshold <span class="op">=</span> <span class="fl">0.9</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="power_files/figure-html/unnamed-chunk-6-1.png" alt="Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters." width="700"></p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<p><img src="power_files/figure-html/unnamed-chunk-5-1.png" alt="Power analysis chart showing statistical power vs sample size for 5 parameters. A red dashed line marks 90% power threshold. Most parameters achieve adequate power by 100 respondents, though freshnessAverage and typeGala require larger sample sizes than price and other freshness/type parameters." width="700"></p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot standard error curves</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
 <span>  <span class="va">power_basic</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"se"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="power_files/figure-html/unnamed-chunk-7-1.png" alt="Standard error chart showing decreasing standard errors as sample size increases from 100 to 600 respondents for 5 parameters. All parameters show the expected decline in standard error with larger samples, with price having consistently lower standard errors than the freshness and type parameters." width="700"></p>
+<p><img src="power_files/figure-html/unnamed-chunk-6-1.png" alt="Standard error chart showing decreasing standard errors as sample size increases from 100 to 600 respondents for 5 parameters. All parameters show the expected decline in standard error with larger samples, with price having consistently lower standard errors than the freshness and type parameters." width="700"></p>
 </div>
 <div class="section level3">
 <h3 id="interpreting-results">Interpreting Results<a class="anchor" aria-label="anchor" href="#interpreting-results"></a>
 </h3>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Sample size requirements for 90% power</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span></span>
 <span>  <span class="va">power_basic</span>,</span>
@@ -445,7 +503,7 @@ and precision:</p>
 <h3 id="mixed-logit-models">Mixed Logit Models<a class="anchor" aria-label="anchor" href="#mixed-logit-models"></a>
 </h3>
 <p>Conduct power analysis for random parameter models:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create choices with random parameters</span></span>
 <span><span class="va">priors_random</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_priors.html">cbc_priors</a></span><span class="op">(</span></span>
 <span>  profiles <span class="op">=</span> <span class="va">profiles</span>,</span>
@@ -469,7 +527,7 @@ and precision:</p>
 <span></span>
 <span><span class="co"># Power analysis for mixed logit model</span></span>
 <span><span class="va">power_mixed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="fu"><a href="../reference/cbc_decode.html">cbc_decode</a></span><span class="op">(</span><span class="va">choices_mixed</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">choices_mixed</span>,</span>
 <span>  pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"price"</span>, <span class="st">"type"</span>, <span class="st">"freshness"</span><span class="op">)</span>,</span>
 <span>  randPars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>price <span class="op">=</span> <span class="st">"n"</span>, type <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span>, <span class="co"># Specify random parameters</span></span>
 <span>  outcome <span class="op">=</span> <span class="st">"choice"</span>,</span>
@@ -551,7 +609,7 @@ and precision:</p>
 <h3 id="design-method-comparison">Design Method Comparison<a class="anchor" aria-label="anchor" href="#design-method-comparison"></a>
 </h3>
 <p>Compare power across different design methods:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create designs with different methods</span></span>
 <span><span class="va">design_random</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_design.html">cbc_design</a></span><span class="op">(</span></span>
 <span>  <span class="va">profiles</span>,</span>
@@ -603,7 +661,7 @@ and precision:</p>
 <span>  <span class="va">choices_optimal</span>,</span>
 <span>  n_breaks <span class="op">=</span> <span class="fl">8</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Compare power curves</span></span>
 <span><span class="fu"><a href="../reference/plot_compare_power.html">plot_compare_power</a></span><span class="op">(</span></span>
@@ -612,7 +670,7 @@ and precision:</p>
 <span>  Optimal <span class="op">=</span> <span class="va">power_optimal</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"power"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="power_files/figure-html/unnamed-chunk-11-1.png" alt="Power comparison across three experimental designs (Optimal, Random, Shortcut) shown in separate panels for 5 parameters. Each panel shows power curves with an 80% power threshold line. The Shortcut design generally performs best, followed by Optimal, then Random designs. Some parameters like freshnessExcellent and typeHoneycrisp achieve high power quickly across all designs, while others like typeGala show more variation between design methods." width="700"></p>
+<p><img src="power_files/figure-html/unnamed-chunk-10-1.png" alt="Power comparison across three experimental designs (Optimal, Random, Shortcut) shown in separate panels for 5 parameters. Each panel shows power curves with an 80% power threshold line. The Shortcut design generally performs best, followed by Optimal, then Random designs. Some parameters like freshnessExcellent and typeHoneycrisp achieve high power quickly across all designs, while others like typeGala show more variation between design methods." width="700"></p>
 </div>
 </div>
 <div class="section level2">
@@ -622,7 +680,7 @@ and precision:</p>
 <h3 id="returning-full-models">Returning Full Models<a class="anchor" aria-label="anchor" href="#returning-full-models"></a>
 </h3>
 <p>Access complete model objects for detailed analysis:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Return full models for additional analysis</span></span>
 <span><span class="va">power_with_models</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cbc_power.html">cbc_power</a></span><span class="op">(</span></span>
 <span>  data <span class="op">=</span> <span class="va">choices</span>,</span>
@@ -638,7 +696,7 @@ and precision:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">largest_model</span><span class="op">)</span></span>
 <span><span class="co">#&gt; =================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Model estimated on: Tue Sep 23 16:55:07 2025 </span></span>
+<span><span class="co">#&gt; Model estimated on: Sun Oct 12 18:06:33 2025 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Using logitr version: 1.1.2 </span></span>
 <span><span class="co">#&gt; </span></span>
