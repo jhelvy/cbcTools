@@ -52,7 +52,7 @@ library(cbcTools)
 
 ## Alternatives
 
-The **cbcTools** package is an open-source alternative to commercial design software such as [Ngene](https://www.choice-metrics.com/) and [Sawtooth Software](https://sawtoothsoftware.com/). Other open-source conjoint experiment design packages include [idefix](https://www.jstatsoft.org/article/view/v096i03) and [spdesign](https://spdesign.edsandorf.me/).
+The **cbcTools** package is an open-source alternative to commercial design software such as [Ngene](https://www.choice-metrics.com/) and Sawtooth Software. Other open-source conjoint experiment design packages include [idefix](https://www.jstatsoft.org/article/view/v096i03) and [spdesign](https://spdesign.edsandorf.me/).
 
 ## Author, Version, and License Information
 

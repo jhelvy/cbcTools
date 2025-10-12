@@ -12,9 +12,9 @@ downloads](https://cranlogs.r-pkg.org/badges/grand-total/cbcTools)](https://cran
 <!-- badges: end -->
 
 This package provides functions for generating and inspecting survey
-designs for choice-based conjoint survey experiments in R. Each function
-in the package begins with `cbc_` and supports a step in the following
-process for designing and analyzing survey experiments:
+designs for **choice-based conjoint** (CBC) survey experiments in R.
+Each function in the package begins with `cbc_` and supports a step in
+the following process for designing and analyzing survey experiments:
 
 <figure>
 <img src="man/figures/flowchart.png"
@@ -52,6 +52,14 @@ Load the package with:
 library(cbcTools)
 ```
 
+## Alternatives
+
+The **cbcTools** package is an open-source alternative to commercial
+design software such as [Ngene](https://www.choice-metrics.com/) and
+Sawtooth Software. Other open-source conjoint experiment design packages
+include [idefix](https://www.jstatsoft.org/article/view/v096i03) and
+[spdesign](https://spdesign.edsandorf.me/).
+
 ## Author, Version, and License Information
 
 - Author: *John Paul Helveston* <https://www.jhelvy.com/>
@@ -69,7 +77,7 @@ it if you cited it - you can get the citation by typing
 citation("cbcTools")
 #> To cite cbcTools in publications use:
 #> 
-#>   Helveston JP (2023). _cbcTools: Design and Analyze Choice-Based
+#>   Helveston JP (2025). _cbcTools: Design and Analyze Choice-Based
 #>   Conjoint Experiments_. R package,
 #>   <https://jhelvy.github.io/cbcTools/>.
 #> 
@@ -78,7 +86,7 @@ citation("cbcTools")
 #>   @Manual{,
 #>     title = {{cbcTools}: Design and Analyze Choice-Based Conjoint Experiments},
 #>     author = {John Paul Helveston},
-#>     year = {2023},
+#>     year = {2025},
 #>     note = {R package},
 #>     url = {https://jhelvy.github.io/cbcTools/},
 #>   }
