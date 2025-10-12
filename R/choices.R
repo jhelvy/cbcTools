@@ -46,6 +46,9 @@ cbc_choices <- function(design, priors = NULL) {
         stop("design must be a cbc_design object created by cbc_design()")
     }
 
+    # Store original encoding
+    original_encoding <- attr(design, "encoding") %||% "standard"
+
     if (is.null(priors)) {
         # Simulate random choices
         result <- simulate_random_choices(design)
@@ -66,8 +69,8 @@ cbc_choices <- function(design, priors = NULL) {
         priors_used <- TRUE
     }
 
-    # Preserve encoding attributes
-    attr(result, "is_dummy_coded") <- attr(design, "is_dummy_coded")
+    # Preserve encoding and categorical structure attributes
+    attr(result, "encoding") <- original_encoding
     attr(result, "categorical_structure") <- attr(
         design,
         "categorical_structure"
@@ -158,27 +161,28 @@ simulate_utility_based_choices <- function(design, priors) {
     # Create optimization environment using the existing function
     opt_env <- setup_optimization_environment(
         profiles = profiles,
-        method = "random", # Hard-code this so that the obsID vectors are correct
-        time_start = Sys.time(), # Not important for choice simulation
+        method = "random",
+        time_start = Sys.time(),
         n_alts = design_params$n_alts,
         n_q = design_params$n_q,
         n_resp = design_params$n_resp,
         n_blocks = design_params$n_blocks,
-        n_cores = 1, # Not used for choice simulation
-        n_start = 1, # Not used for choice simulation
-        max_iter = 1, # Not used for choice simulation
-        priors = priors, # The new priors for choice simulation
+        n_cores = 1,
+        n_start = 1,
+        max_iter = 1,
+        priors = priors,
         no_choice = design_params$no_choice,
         label = design_params$label,
-        balance_by = NULL, # Not used for choice simulation
-        remove_dominant = FALSE, # Not needed for choice simulation
-        dominance_types = NULL, # Not needed for choice simulation
-        dominance_threshold = 0.8, # Not needed for choice simulation
-        max_dominance_attempts = 1, # Not needed for choice simulation
-        randomize_questions = TRUE, # Not used for choice simulation
-        randomize_alts = TRUE, # Not used for choice simulation
-        include_probs = FALSE, # Not used for choice simulation
-        use_idefix = FALSE # Not used for choice simulation
+        balance_by = NULL,
+        remove_dominant = FALSE,
+        dominance_types = NULL,
+        dominance_threshold = 0.8,
+        max_dominance_attempts = 1,
+        randomize_questions = TRUE,
+        randomize_alts = TRUE,
+        include_probs = FALSE,
+        use_idefix = FALSE,
+        coding = design_params$coding %||% "standard"
     )
 
     # Get design matrix from the design object
@@ -217,16 +221,16 @@ get_design_matrix_from_design_object <- function(design, opt_env) {
     # Fill matrix from profileID data
     for (obs in 1:n_questions) {
         obs_rows <- regular_design[regular_design$obsID == obs, ]
-        obs_rows <- obs_rows[order(obs_rows$altID), ] # Ensure proper order
+        obs_rows <- obs_rows[order(obs_rows$altID), ]
 
-        if (nrow(obs_rows) == n_alts) {
-            design_matrix[obs, ] <- obs_rows$profileID
-        } else {
+        if (nrow(obs_rows) != n_alts) {
             stop(sprintf(
-                "Inconsistent number of alternatives in observation %d",
-                obs
+                "Inconsistent number of alternatives in observation %d: expected %d, got %d",
+                obs, n_alts, nrow(obs_rows)
             ))
         }
+
+        design_matrix[obs, ] <- obs_rows$profileID
     }
 
     return(design_matrix)

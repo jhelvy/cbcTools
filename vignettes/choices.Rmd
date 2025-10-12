@@ -201,11 +201,11 @@ Based on the priors used, we expect:
 Examine aggregate choice patterns to validate simulation:
 
 ```{r}
-# Decode the choice data first to get categorical variables
-choices_decoded <- cbc_decode(choices_utility)
+# Convert to standard encoding to get categorical variables
+choices_standard <- cbc_encode(choices_utility, coding = "standard")
 
 # Aggregate attribute choices across all respondents
-choices <- choices_decoded
+choices <- choices_standard
 
 # Price choices
 price_choices <- aggregate(choice ~ price, data = choices, sum)
@@ -230,7 +230,9 @@ For random parameter models, examine variation across respondents:
 
 ```{r}
 # Create dataset with only chosen alternatives
-chosen_alts <- choices_mixed[choices_mixed$choice == 1, ]
+# Convert to dummy coding to more easily select individual levels
+chosen_alts <- choices_mixed[choices_mixed$choice == 1, ] |> 
+  cbc_encode('dummy')
 
 # Mean attribute levels chosen by each respondent
 resp_means <- aggregate(

@@ -178,7 +178,8 @@ validate_design_inputs <- function(
     dominance_threshold,
     max_dominance_attempts,
     include_probs,
-    use_idefix
+    use_idefix,
+    coding
 ) {
     # Validate profiles
     validate_profiles(profiles)
@@ -191,6 +192,12 @@ validate_design_inputs <- function(
     valid_methods <- get_methods_all()
     if (!method %in% valid_methods) {
         stop("method must be one of: ", paste(valid_methods, collapse = ", "))
+    }
+
+    # Validate coding
+    valid_coding <- c("effects", "dummy", "standard")
+    if (!coding %in% valid_coding) {
+        stop("coding must be one of: ", paste(valid_coding, collapse = ", "))
     }
 
     # CEA-specific validation: requires full factorial profiles
@@ -325,45 +332,50 @@ validate_design_inputs <- function(
             ))
         }
     }
-    
+
     # Validate balance_by constraints
     if (!is.null(balance_by)) {
         # Check that balance_by attributes exist in profiles
         missing_attrs <- setdiff(balance_by, names(profiles))
         if (length(missing_attrs) > 0) {
             stop(sprintf(
-                "balance_by attributes not found in profiles: %s", 
+                "balance_by attributes not found in profiles: %s",
                 paste(missing_attrs, collapse = ", ")
             ))
         }
-        
+
         # Check that balance_by doesn't include profileID
         if ("profileID" %in% balance_by) {
             stop("balance_by cannot include 'profileID'")
         }
-        
+
         # Validate that balance_by creates meaningful groups
         balance_key <- do.call(paste, c(profiles[balance_by], sep = "|"))
         n_balance_groups <- length(unique(balance_key))
-        
+
         if (n_balance_groups == 1) {
-            stop("balance_by attributes create only one group. All profiles have identical values for the specified attributes.")
+            stop(
+                "balance_by attributes create only one group. All profiles have identical values for the specified attributes."
+            )
         }
-        
+
         if (n_balance_groups > nrow(profiles) / 2) {
             warning(
                 sprintf(
                     "balance_by creates %d groups from %d profiles. This may not provide meaningful balance.",
-                    n_balance_groups, nrow(profiles)
-                ), 
+                    n_balance_groups,
+                    nrow(profiles)
+                ),
                 call. = FALSE
             )
         }
     }
-    
+
     # Check for conflicts between label and balance_by
     if (!is.null(label) && !is.null(balance_by)) {
-        stop("Cannot use both 'label' and 'balance_by' arguments simultaneously. Use one or the other.")
+        stop(
+            "Cannot use both 'label' and 'balance_by' arguments simultaneously. Use one or the other."
+        )
     }
 
     # Check method compatibility with balance_by
@@ -373,7 +385,10 @@ validate_design_inputs <- function(
             stop(sprintf(
                 "balance_by is not supported with method '%s'. Compatible methods are: %s",
                 method,
-                paste(c("random", "shortcut", "minoverlap", "balanced"), collapse = ", ")
+                paste(
+                    c("random", "shortcut", "minoverlap", "balanced"),
+                    collapse = ", "
+                )
             ))
         }
     }

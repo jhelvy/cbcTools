@@ -206,6 +206,8 @@ cbc_design <- function(
         use_idefix <- FALSE
     }
 
+    coding <- 'standard' # Hard-coded for now
+
     # Validate inputs
     validate_design_inputs(
         profiles,
@@ -225,7 +227,8 @@ cbc_design <- function(
         dominance_threshold,
         max_dominance_attempts,
         include_probs,
-        use_idefix
+        use_idefix,
+        coding
     )
 
     # Set up the optimization environment
@@ -251,7 +254,8 @@ cbc_design <- function(
         randomize_questions,
         randomize_alts,
         include_probs,
-        use_idefix
+        use_idefix,
+        coding
     )
 
     design_result <- generate_design(opt_env)
@@ -268,6 +272,11 @@ cbc_design <- function(
         design_result,
         opt_env
     )
+
+    # Apply requested encoding if not standard
+    if (coding != "standard") {
+        final <- cbc_encode(final, coding)
+    }
 
     return(final)
 }
@@ -295,7 +304,8 @@ setup_optimization_environment <- function(
     randomize_questions,
     randomize_alts,
     include_probs,
-    use_idefix
+    use_idefix,
+    coding
 ) {
     # Auto-generate zero priors for CEA/Modfed with idefix if none provided
     if (
@@ -545,7 +555,8 @@ setup_optimization_environment <- function(
         randomize_questions = randomize_questions,
         randomize_alts = randomize_alts,
         include_probs = include_probs,
-        use_idefix = use_idefix
+        use_idefix = use_idefix,
+        coding = coding
     ))
 }
 
@@ -951,12 +962,22 @@ sample_balanced_profiles <- function(opt_env) {
 # Convert profileID design matrix to full design data frame using existing encoded matrix
 construct_final_design <- function(design_matrix, opt_env) {
     n <- opt_env$n
+
+    # Add no-choice column to design matrix if needed
+    # This adds a column with (n$profiles + 1) for the no-choice alternative
     if (opt_env$no_choice) {
         design_matrix <- design_matrix_no_choice(design_matrix, opt_env)
     }
 
-    # Initialize design data frame
+    # Initialize design data frame with profileID
     design <- data.frame(profileID = as.vector(t(design_matrix)))
+
+    # Convert no-choice profileID from n$profiles + 1 to 0
+    if (opt_env$no_choice) {
+        design$profileID[design$profileID == (n$profiles + 1)] <- 0
+    }
+
+    # Add metadata columns based on method
     if (!opt_env$method_optimal) {
         design <- add_metadata(design, n$resp, n$alts_total, n$q)
         id_cols <- c("profileID", "respID", "qID", "altID", "obsID")
@@ -965,50 +986,52 @@ construct_final_design <- function(design_matrix, opt_env) {
         id_cols <- c("profileID", "blockID", "qID", "altID", "obsID")
     }
 
-    # Create lookup table from the MAIN X_matrix (without interactions for the final design)
-    X_df <- as.data.frame(opt_env$X_matrix) # This is the main matrix
-    X_df$profileID <- opt_env$profiles$profileID
+    # Join with original profiles to get STANDARD (categorical) values
+    profiles_standard <- opt_env$profiles
 
-    # Handle no-choice option if present
+    # Handle no-choice option - add no-choice profile to lookup table
     if (opt_env$no_choice) {
-        # Add no-choice row (all parameters = 0)
-        no_choice_row <- as.data.frame(matrix(
-            0,
-            nrow = 1,
-            ncol = ncol(opt_env$X_matrix)
-        ))
-        names(no_choice_row) <- names(X_df)[1:ncol(opt_env$X_matrix)]
-        no_choice_row$profileID <- n$profiles + 1
-        no_choice_row$no_choice <- 1 # Add no_choice indicator
+        # Create a no-choice profile with NA values for all attributes
+        # Use profileID = 0 for no-choice
+        no_choice_profile <- profiles_standard[1, ]
+        no_choice_profile$profileID <- 0
+        attr_cols <- setdiff(names(no_choice_profile), "profileID")
+        no_choice_profile[, attr_cols] <- NA
 
-        # Add no_choice column to regular profiles (set to 0)
-        X_df$no_choice <- 0
-
-        # Combine
-        X_df <- rbind(X_df, no_choice_row)
+        profiles_standard <- rbind(profiles_standard, no_choice_profile)
     }
 
-    # Join design with encoded attributes (main effects only, no interactions in final design)
-    design <- merge(design, X_df, by = "profileID", sort = FALSE)
+    # Join design with profiles to get categorical attributes
+    design <- merge(design, profiles_standard, by = "profileID", sort = FALSE)
+
+    # Add no_choice indicator if applicable
+    if (opt_env$no_choice) {
+        design$no_choice <- as.integer(design$profileID == 0)
+    }
 
     # Reorder columns and rows
-    attr_cols <- setdiff(names(design), id_cols)
-    design <- design[, c(id_cols, attr_cols)]
+    attr_cols <- setdiff(names(design), c(id_cols, "no_choice"))
+    if (opt_env$no_choice) {
+        design <- design[, c(id_cols, attr_cols, "no_choice")]
+    } else {
+        design <- design[, c(id_cols, attr_cols)]
+    }
     design <- design[order(design$obsID, design$altID), ]
     row.names(design) <- NULL
 
     # Compute and add probabilities if desired
     if (opt_env$include_probs) {
+        # Design matrix already has no-choice if needed
         design$prob <- get_probs(design_matrix, opt_env)
     }
 
-    # Store categorical structure for potential decoding
+    # Store categorical structure for encoding/decoding
     categorical_structure <- get_categorical_structure_from_profiles(
         opt_env$profiles,
         opt_env$attr_names
     )
     attr(design, "categorical_structure") <- categorical_structure
-    attr(design, "is_dummy_coded") <- TRUE
+    attr(design, "encoding") <- "standard" # NEW: mark as standard encoding
 
     if (opt_env$method_optimal) {
         # Repeat and randomize across respondents
@@ -1067,32 +1090,51 @@ get_categorical_structure_from_profiles <- function(profiles, attr_names) {
 }
 
 compute_design_efficiency_metrics <- function(design) {
+    # Convert to standard encoding for accurate metrics
+    design_standard <- get_standard_encoding(design)
+
     # Balance metrics
-    balance_result <- compute_balance_metrics_internal(design)
+    balance_result <- compute_balance_metrics_internal(design_standard)
 
     # Overlap metrics
-    overlap_result <- compute_overlap_metrics_internal(design)
+    overlap_result <- compute_overlap_metrics_internal(design_standard)
 
     return(list(
         balance_score = balance_result$overall_balance,
         balance_details = balance_result$balance_metrics,
         overlap_score = overlap_result$overall_overlap,
         overlap_details = overlap_result$overlap_metrics,
-        profiles_used = length(unique(design$profileID[design$profileID != 0])),
-        profiles_available = max(design$profileID, na.rm = TRUE)
+        profiles_used = length(unique(design_standard$profileID[
+            design_standard$profileID != 0
+        ])),
+        profiles_available = max(design_standard$profileID, na.rm = TRUE)
     ))
 }
 
 # Internal function for balance computation
 compute_balance_metrics_internal <- function(design) {
-    # Get attribute columns
+    # Ensure we're working with standard encoding
+    design_standard <- get_standard_encoding(design)
+
+    # Get attribute columns (exclude no_choice if present)
     atts <- setdiff(
-        names(design),
-        c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+        names(design_standard),
+        c(
+            "respID",
+            "qID",
+            "altID",
+            "obsID",
+            "profileID",
+            "blockID",
+            "no_choice",
+            "prob"
+        )
     )
 
-    # Get counts of each individual attribute
-    counts <- lapply(atts, function(attr) table(design[[attr]]))
+    # Get counts of each individual attribute (handles NA from no-choice)
+    counts <- lapply(atts, function(attr) {
+        table(design_standard[[attr]], useNA = "no") # Exclude NA values
+    })
     names(counts) <- atts
 
     # Calculate balance metrics for each attribute
@@ -1112,20 +1154,35 @@ compute_balance_metrics_internal <- function(design) {
 
 # Internal function for overlap computation
 compute_overlap_metrics_internal <- function(design) {
-    # Get attribute columns
+    # Ensure we're working with standard encoding
+    design_standard <- get_standard_encoding(design)
+
+    # Get attribute columns (exclude no_choice if present)
     atts <- setdiff(
-        names(design),
-        c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+        names(design_standard),
+        c(
+            "respID",
+            "qID",
+            "altID",
+            "obsID",
+            "profileID",
+            "blockID",
+            "no_choice",
+            "prob"
+        )
     )
 
     # Calculate overlap for each attribute
     overlap_counts <- lapply(atts, function(attr) {
-        get_att_overlap_counts(attr, design)
+        get_att_overlap_counts(attr, design_standard)
     })
     names(overlap_counts) <- atts
 
     # Calculate overlap metrics
-    overlap_metrics <- calculate_overlap_metrics(overlap_counts, design)
+    overlap_metrics <- calculate_overlap_metrics(
+        overlap_counts,
+        design_standard
+    )
 
     # Calculate overall overlap score (average of complete overlap rates)
     overall_overlap <- mean(sapply(overlap_metrics, function(x) {
@@ -1143,14 +1200,7 @@ compute_overlap_metrics_internal <- function(design) {
 finalize_design_object <- function(design, design_result, opt_env) {
     method <- opt_env$method
 
-    # Update profileID to 0 for no_choice (if present)
-    if (opt_env$no_choice) {
-        maxID <- max(design$profileID)
-        design$profileID[which(design$profileID == maxID)] <- 0
-    }
-
     # Store the design matrix for later use in cbc_choices
-    # This ensures exact consistency between design optimization and choice simulation
     attr(design, "design_matrix") <- design_result$design_matrix
 
     # Build design_params list
@@ -1183,11 +1233,11 @@ finalize_design_object <- function(design, design_result, opt_env) {
         } else {
             NULL
         },
-        dummy_coded = TRUE
+        encoding = attr(design, "encoding"),
+        coding = opt_env$coding
     )
 
     # Add D-error information (both null and prior-based)
-
     if (opt_env$method_optimal) {
         # For optimized designs, compute D-errors
 
@@ -1207,11 +1257,10 @@ finalize_design_object <- function(design, design_result, opt_env) {
         }
     }
 
-    # Pre-compute efficiency metrics
+    # Pre-compute efficiency metrics (uses standard encoding internally)
     efficiency_metrics <- compute_design_efficiency_metrics(design)
 
     # Store metadata including the optimization environment
-    # This allows cbc_choices to recreate the exact same utility calculations
     attr(design, "profiles") <- opt_env$profiles
     attr(design, "priors") <- opt_env$priors
     attr(design, "optimization_environment") <- list(
@@ -1234,7 +1283,7 @@ finalize_design_object <- function(design, design_result, opt_env) {
     # Calculate summary statistics
     n_profiles_used <- length(unique(design$profileID[design$profileID != 0]))
     if (opt_env$no_choice) {
-        n_profiles_used <- n_profiles_used - 1
+        n_profiles_used <- n_profiles_used
     }
 
     attr(design, "design_summary") <- list(
@@ -1345,7 +1394,11 @@ compute_partial_utilities <- function(X_matrix, priors) {
         return(partials / n_draws)
     }
     # Otherwise just compute direct partial utility using prior pars (without no_choice)
-    return(compute_partial_utility_single(X_matrix, pars_without_no_choice, n_profiles))
+    return(compute_partial_utility_single(
+        X_matrix,
+        pars_without_no_choice,
+        n_profiles
+    ))
 }
 
 compute_partial_utility_single <- function(X_matrix, pars, n_profiles) {

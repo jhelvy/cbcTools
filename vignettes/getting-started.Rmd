@@ -89,7 +89,7 @@ See the [Specifying Priors](priors.html) article for more details and options on
 
 ## Step 3: Generate Designs
 
-Create the set of choice questions that respondents will see. By default, all categorical variables are dummy-coded in the resulting design (you can convert the design back to categorical formatting with `cbc_decode()`):
+Create the set of choice questions that respondents will see. Designs are created with standard encoding (categorical variables). You can convert to dummy or effects coding using `cbc_encode()`:
 
 ```{r}
 design <- cbc_design(
@@ -148,10 +148,10 @@ choices <- cbc_choices(design, priors = priors)
 choices
 ```
 
-Taking a look at some quick summaries, you can see that the simulated choice patterns align with our priors - lower prices, preferred apple types, and better freshness should be chosen more often (not always for all levels though as there is some level of randomness involved). To do this, it's often easier to work with the design with categorical coding instead of dummy coding: 
+Taking a look at some quick summaries, you can see that the simulated choice patterns align with our priors - lower prices, preferred apple types, and better freshness should be chosen more often (not always for all levels though as there is some level of randomness involved):
 
 ```{r}
-choices_cat <- cbc_decode(choices)
+choices_cat <- choices
 
 # Filter for the chosen rows only
 choices_cat <- choices_cat[which(choices_cat$choice == 1), ]

@@ -460,9 +460,9 @@ repeat_design_across_respondents <- function(base_design, opt_env) {
         return(base_design) # No need to repeat
     }
 
-    # {reserve important attributes from base design
-    is_dummy_coded_attr <- attr(base_design, "is_dummy_coded")
+    # Preserve important attributes from base design
     categorical_structure_attr <- attr(base_design, "categorical_structure")
+    encoding_attr <- attr(base_design, "encoding")
 
     # For multi-block designs, allocate respondents to blocks
     if (n$blocks > 1) {
@@ -557,8 +557,8 @@ repeat_design_across_respondents <- function(base_design, opt_env) {
     full_design <- full_design[, c(get_id_names(), get_var_names(full_design))]
 
     # Restore important attributes to the final design
-    attr(full_design, "is_dummy_coded") <- is_dummy_coded_attr
     attr(full_design, "categorical_structure") <- categorical_structure_attr
+    attr(full_design, "encoding") <- encoding_attr
 
     return(full_design)
 }

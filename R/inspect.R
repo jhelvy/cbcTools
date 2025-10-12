@@ -4,7 +4,7 @@
 #' across multiple dimensions including design structure, efficiency metrics,
 #' attribute balance, overlap patterns, and variable encoding.
 #'
-#' @param design A `cbc_design` object created by `cbc_design()`
+#' @param design A `cbc_design` or `cbc_choices` object created by `cbc_design()`
 #' @param sections Character vector specifying which sections to show.
 #'   Options: "structure", "efficiency", "balance", "overlap", "encoding", or "all" (default).
 #'   Can specify multiple: `c("balance", "overlap")`
@@ -38,12 +38,13 @@
 #' # Verbose output with technical details
 #' cbc_inspect(design, verbose = TRUE)
 cbc_inspect <- function(design, sections = "all", verbose = FALSE) {
-  # Validate inputs
-  if (!inherits(design, "cbc_design") && !inherits(design, "cbc_choices")) {
-    stop(
-      "design must be a cbc_design object created by cbc_design() or a cbc_choices object created by cbc_choices()"
-    )
-  }
+  # Validate and potentially reconstruct design object
+  design <- validate_or_reconstruct(
+    design,
+    require_class = FALSE,
+    allow_choices = TRUE,
+    context = "cbc_inspect()"
+  )
 
   # Handle "all" sections
   if ("all" %in% sections) {
@@ -68,7 +69,7 @@ cbc_inspect <- function(design, sections = "all", verbose = FALSE) {
     )
   }
 
-  # Extract design information
+  # Extract design information (may be NULL if reconstructed)
   params <- attr(design, "design_params")
   summary_info <- attr(design, "design_summary")
 
@@ -114,11 +115,27 @@ cbc_inspect <- function(design, sections = "all", verbose = FALSE) {
   results$sections_requested <- sections
   results$verbose <- verbose
   results$design_info <- list(
-    method = params$method,
-    d_error = params$d_error_prior %||% params$d_error_null,
-    n_choice_sets = summary_info$n_choice_sets,
-    profiles_used = summary_info$n_profiles_used,
-    profiles_available = summary_info$n_profiles_available
+    method = if (!is.null(params)) params$method else "unknown",
+    d_error = if (!is.null(params)) {
+      params$d_error_prior %||% params$d_error_null
+    } else {
+      NA
+    },
+    n_choice_sets = if (!is.null(summary_info)) {
+      summary_info$n_choice_sets
+    } else {
+      max(design$obsID, na.rm = TRUE)
+    },
+    profiles_used = if (!is.null(summary_info)) {
+      summary_info$n_profiles_used
+    } else {
+      length(unique(design$profileID[design$profileID != 0]))
+    },
+    profiles_available = if (!is.null(summary_info)) {
+      summary_info$n_profiles_available
+    } else {
+      max(design$profileID, na.rm = TRUE)
+    }
   )
 
   class(results) <- c("cbc_inspection", "list")
@@ -128,9 +145,39 @@ cbc_inspect <- function(design, sections = "all", verbose = FALSE) {
 # Helper functions for each section
 
 inspect_structure_section <- function(design, params, summary_info, verbose) {
+  # Handle missing params gracefully
+  if (is.null(params)) {
+    # Infer basic structure from data
+    has_resp_id <- "respID" %in% names(design)
+    has_block_id <- "blockID" %in% names(design)
+
+    n_resp <- if (has_resp_id) max(design$respID, na.rm = TRUE) else 1
+    n_blocks <- if (has_block_id) max(design$blockID, na.rm = TRUE) else 1
+    n_q <- max(design$qID, na.rm = TRUE)
+    n_alts <- max(design$altID, na.rm = TRUE)
+    n_profiles_used <- length(unique(design$profileID[design$profileID != 0]))
+    n_profiles_available <- max(design$profileID, na.rm = TRUE)
+
+    return(list(
+      method = "unknown",
+      created_at = NA,
+      generation_time = NA,
+      n_resp = n_resp,
+      n_q = n_q,
+      n_alts = n_alts,
+      n_blocks = n_blocks,
+      n_choice_sets = max(design$obsID, na.rm = TRUE),
+      n_profiles_used = n_profiles_used,
+      n_profiles_available = n_profiles_available,
+      profile_usage_rate = n_profiles_used / n_profiles_available,
+      features = character(0),
+      optimization_attempts = NA
+    ))
+  }
+
   # Special features
   features <- c()
-  if (params$no_choice) {
+  if (!is.null(params$no_choice) && params$no_choice) {
     features <- c(features, "No-choice option")
   }
   if (!is.null(params$label)) {
@@ -164,20 +211,51 @@ inspect_structure_section <- function(design, params, summary_info, verbose) {
 }
 
 inspect_efficiency_section <- function(design, params, summary_info, verbose) {
+  # Handle missing params/summary_info
+  if (is.null(params)) {
+    return(list(
+      method = "unknown",
+      d_error_prior = NA,
+      d_error_null = NA,
+      balance_score = NA,
+      overlap_score = NA,
+      profiles_used = length(unique(design$profileID[design$profileID != 0])),
+      profiles_available = max(design$profileID, na.rm = TRUE)
+    ))
+  }
+
   return(list(
     method = params$method,
     d_error_prior = params$d_error_prior,
     d_error_null = params$d_error_null,
-    balance_score = summary_info$efficiency$balance_score %||% NA,
-    overlap_score = summary_info$efficiency$overlap_score %||% NA,
-    profiles_used = summary_info$efficiency$profiles_used %||% NA,
-    profiles_available = summary_info$efficiency$profiles_available %||% NA
+    balance_score = if (!is.null(summary_info)) {
+      summary_info$efficiency$balance_score
+    } else {
+      NA
+    },
+    overlap_score = if (!is.null(summary_info)) {
+      summary_info$efficiency$overlap_score
+    } else {
+      NA
+    },
+    profiles_used = if (!is.null(summary_info)) {
+      summary_info$efficiency$profiles_used
+    } else {
+      NA
+    },
+    profiles_available = if (!is.null(summary_info)) {
+      summary_info$efficiency$profiles_available
+    } else {
+      NA
+    }
   ))
 }
 
 inspect_balance_section <- function(design, summary_info, verbose) {
   # Use pre-computed metrics if available
-  if (!is.null(summary_info$efficiency$balance_score)) {
+  if (
+    !is.null(summary_info) && !is.null(summary_info$efficiency$balance_score)
+  ) {
     balance_details <- summary_info$efficiency$balance_details
     result <- inspect_balance_detailed(design, balance_details, verbose)
     result$overall_balance <- summary_info$efficiency$balance_score
@@ -191,7 +269,9 @@ inspect_balance_section <- function(design, summary_info, verbose) {
 
 inspect_overlap_section <- function(design, summary_info, verbose) {
   # Use pre-computed metrics if available
-  if (!is.null(summary_info$efficiency$overlap_score)) {
+  if (
+    !is.null(summary_info) && !is.null(summary_info$efficiency$overlap_score)
+  ) {
     overlap_details <- summary_info$efficiency$overlap_details
     result <- inspect_overlap_detailed(design, overlap_details, verbose)
     result$overall_overlap <- summary_info$efficiency$overlap_score
@@ -204,9 +284,7 @@ inspect_overlap_section <- function(design, summary_info, verbose) {
 }
 
 inspect_encoding_section <- function(design, params, verbose) {
-  is_dummy_coded <- attr(design, "is_dummy_coded") %||%
-    params$dummy_coded %||%
-    TRUE
+  encoding <- attr(design, "encoding") %||% "standard"
   categorical_structure <- attr(design, "categorical_structure")
 
   categorical_variables <- NULL
@@ -231,32 +309,158 @@ inspect_encoding_section <- function(design, params, verbose) {
     }
   }
 
+  # Handle missing params
+  no_choice <- if (!is.null(params)) {
+    params$no_choice
+  } else {
+    ("no_choice" %in% names(design))
+  }
+
   return(list(
-    is_dummy_coded = is_dummy_coded,
+    encoding = encoding,
     categorical_variables = categorical_variables,
     categorical_details = categorical_details,
-    no_choice = params$no_choice
+    no_choice = no_choice
   ))
 }
 
-# Detailed balance inspection
+# UPDATE: compute_design_efficiency_metrics to convert to standard first
+compute_design_efficiency_metrics <- function(design) {
+  # Convert to standard encoding for accurate metrics
+  design_standard <- get_standard_encoding(design)
+
+  # Balance metrics
+  balance_result <- compute_balance_metrics_internal(design_standard)
+
+  # Overlap metrics
+  overlap_result <- compute_overlap_metrics_internal(design_standard)
+
+  return(list(
+    balance_score = balance_result$overall_balance,
+    balance_details = balance_result$balance_metrics,
+    overlap_score = overlap_result$overall_overlap,
+    overlap_details = overlap_result$overlap_metrics,
+    profiles_used = length(unique(design_standard$profileID[
+      design_standard$profileID != 0
+    ])),
+    profiles_available = max(design_standard$profileID, na.rm = TRUE)
+  ))
+}
+
+# UPDATE: Internal function for balance computation
+compute_balance_metrics_internal <- function(design) {
+  # Ensure we're working with standard encoding
+  design_standard <- get_standard_encoding(design)
+
+  # Get attribute columns (exclude no_choice if present)
+  atts <- setdiff(
+    names(design_standard),
+    c(
+      "respID",
+      "qID",
+      "altID",
+      "obsID",
+      "profileID",
+      "blockID",
+      "no_choice",
+      "prob"
+    )
+  )
+
+  # Get counts of each individual attribute (handles NA from no-choice)
+  counts <- lapply(atts, function(attr) {
+    table(design_standard[[attr]], useNA = "no") # Exclude NA values
+  })
+  names(counts) <- atts
+
+  # Calculate balance metrics for each attribute
+  balance_metrics <- calculate_balance_metrics(counts)
+
+  # Calculate overall balance score
+  overall_balance <- mean(sapply(balance_metrics, function(x) {
+    x$balance_score
+  }))
+
+  return(list(
+    individual_counts = counts,
+    balance_metrics = balance_metrics,
+    overall_balance = overall_balance
+  ))
+}
+
+# UPDATE: Internal function for overlap computation
+compute_overlap_metrics_internal <- function(design) {
+  # Ensure we're working with standard encoding
+  design_standard <- get_standard_encoding(design)
+
+  # Get attribute columns (exclude no_choice if present)
+  atts <- setdiff(
+    names(design_standard),
+    c(
+      "respID",
+      "qID",
+      "altID",
+      "obsID",
+      "profileID",
+      "blockID",
+      "no_choice",
+      "prob"
+    )
+  )
+
+  # Calculate overlap for each attribute
+  overlap_counts <- lapply(atts, function(attr) {
+    get_att_overlap_counts(attr, design_standard)
+  })
+  names(overlap_counts) <- atts
+
+  # Calculate overlap metrics
+  overlap_metrics <- calculate_overlap_metrics(overlap_counts, design_standard)
+
+  # Calculate overall overlap score (average of complete overlap rates)
+  overall_overlap <- mean(sapply(overlap_metrics, function(x) {
+    x$complete_overlap_rate
+  }))
+
+  return(list(
+    overlap_counts = overlap_counts,
+    overlap_metrics = overlap_metrics,
+    overall_overlap = overall_overlap
+  ))
+}
+
+# UPDATE: inspect_balance_detailed
 inspect_balance_detailed <- function(
   design,
   balance_details = NULL,
   verbose = FALSE
 ) {
+  # Convert to standard encoding first
+  design_standard <- get_standard_encoding(design)
+
   if (is.null(balance_details)) {
     # Compute balance metrics
-    balance_result <- compute_balance_metrics_internal(design)
+    balance_result <- compute_balance_metrics_internal(design_standard)
     counts <- balance_result$individual_counts
     balance_metrics <- balance_result$balance_metrics
   } else {
     # Use pre-computed data - need to recompute counts for display
     atts <- setdiff(
-      names(design),
-      c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+      names(design_standard),
+      c(
+        "respID",
+        "qID",
+        "altID",
+        "obsID",
+        "profileID",
+        "blockID",
+        "no_choice",
+        "prob"
+      )
     )
-    counts <- lapply(atts, function(attr) table(design[[attr]]))
+    counts <- lapply(atts, function(attr) {
+      table(design_standard[[attr]], useNA = "no")
+    })
     names(counts) <- atts
     balance_metrics <- balance_details
   }
@@ -268,31 +472,43 @@ inspect_balance_detailed <- function(
   ))
 }
 
-# Detailed overlap inspection
+# UPDATE: inspect_overlap_detailed
 inspect_overlap_detailed <- function(
   design,
   overlap_details = NULL,
   verbose = FALSE
 ) {
+  # Convert to standard encoding first
+  design_standard <- get_standard_encoding(design)
+
   if (is.null(overlap_details)) {
     # Compute overlap metrics
-    overlap_result <- compute_overlap_metrics_internal(design)
+    overlap_result <- compute_overlap_metrics_internal(design_standard)
     overlap_counts <- overlap_result$overlap_counts
     overlap_metrics <- overlap_result$overlap_metrics
   } else {
     # Use pre-computed data - need to recompute counts for display
     atts <- setdiff(
-      names(design),
-      c("respID", "qID", "altID", "obsID", "profileID", "blockID")
+      names(design_standard),
+      c(
+        "respID",
+        "qID",
+        "altID",
+        "obsID",
+        "profileID",
+        "blockID",
+        "no_choice",
+        "prob"
+      )
     )
     overlap_counts <- lapply(atts, function(attr) {
-      get_att_overlap_counts(attr, design)
+      get_att_overlap_counts(attr, design_standard)
     })
     names(overlap_counts) <- atts
     overlap_metrics <- overlap_details
   }
 
-  total_questions <- max(design$obsID, na.rm = TRUE)
+  total_questions <- max(design_standard$obsID, na.rm = TRUE)
 
   return(list(
     overlap_counts = overlap_counts,
