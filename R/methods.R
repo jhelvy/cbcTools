@@ -192,6 +192,17 @@ print.cbc_priors <- function(x, ...) {
 #' @return Returns the input `cbc_design` object invisibly (class: c("cbc_design", "data.frame")). This function is called for its side effect of printing a concise summary of the CBC design to the console, including design method, structure, D-error metrics, profile usage, and a preview of the design data.
 #' @export
 print.cbc_design <- function(x, ...) {
+    # Check if this looks like actual design data or a transformed data frame
+    # If key columns are missing, just print as data frame
+    has_required_cols <- all(c("obsID", "altID") %in% names(x))
+
+    if (!has_required_cols) {
+        # This is a transformed data frame (e.g., from dplyr operations)
+        # Print as a regular data frame
+        class(x) <- setdiff(class(x), "cbc_design")
+        return(print(x, ...))
+    }
+
     # Extract basic information (may be NULL if reconstructed)
     params <- attr(x, "design_params")
     summary_info <- attr(x, "design_summary")
@@ -303,6 +314,17 @@ print.cbc_design <- function(x, ...) {
 #' @return Returns the input `cbc_choices` object invisibly (class: c("cbc_choices", "data.frame")). This function is called for its side effect of printing a formatted summary of the CBC choice data to the console, including choice task structure, simulation details, choice rates by alternative, and a preview of the choice data.
 #' @export
 print.cbc_choices <- function(x, ...) {
+    # Check if this looks like actual choice data or a transformed data frame
+    # If key columns are missing, just print as data frame
+    has_required_cols <- all(c("obsID", "choice") %in% names(x))
+
+    if (!has_required_cols) {
+        # This is a transformed data frame (e.g., from dplyr operations)
+        # Print as a regular data frame
+        class(x) <- setdiff(class(x), "cbc_choices")
+        return(print(x, ...))
+    }
+
     cat("CBC Choice Data\n")
     cat("===============\n")
 
