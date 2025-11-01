@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -373,7 +373,7 @@ ensures maximum diversity but may be less statistically efficient.</p>
 <span><span class="co">#&gt; STRUCTURE</span></span>
 <span><span class="co">#&gt; ================</span></span>
 <span><span class="co">#&gt; Method: random</span></span>
-<span><span class="co">#&gt; Created: 2025-10-12 18:05:45</span></span>
+<span><span class="co">#&gt; Created: 2025-11-01 00:55:39</span></span>
 <span><span class="co">#&gt; Respondents: 100</span></span>
 <span><span class="co">#&gt; Questions per respondent: 6</span></span>
 <span><span class="co">#&gt; Alternatives per question: 2</span></span>
@@ -558,9 +558,9 @@ D-error, overlap, and balance.</p>
 <span><span class="co">#&gt;          CEA        cea       0.858174        1.043690   0.867   0.000</span></span>
 <span><span class="co">#&gt;   Stochastic stochastic       1.203841        1.485359   0.759   0.056</span></span>
 <span><span class="co">#&gt;       Random     random             NA              NA   0.965   0.277</span></span>
-<span><span class="co">#&gt;     Shortcut   shortcut             NA              NA   0.993   0.000</span></span>
-<span><span class="co">#&gt;  Min Overlap minoverlap             NA              NA   0.981   0.000</span></span>
-<span><span class="co">#&gt;     Balanced   balanced             NA              NA   0.992   0.000</span></span>
+<span><span class="co">#&gt;     Shortcut   shortcut             NA              NA   0.995   0.000</span></span>
+<span><span class="co">#&gt;  Min Overlap minoverlap             NA              NA   0.957   0.000</span></span>
+<span><span class="co">#&gt;     Balanced   balanced             NA              NA   0.984   0.000</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Interpretation:</span></span>
 <span><span class="co">#&gt; - D-Error: Lower is better (design efficiency)</span></span>
@@ -610,18 +610,18 @@ priors in your design (optional), then you must also provide a
 <span><span class="co">#&gt; Design method: stochastic</span></span>
 <span><span class="co">#&gt; Encoding: standard</span></span>
 <span><span class="co">#&gt; Structure: 100 respondents × 6 questions × 2 alternatives</span></span>
-<span><span class="co">#&gt; Profile usage: 12/45 (26.7%)</span></span>
-<span><span class="co">#&gt; D-error: 0.785412</span></span>
+<span><span class="co">#&gt; Profile usage: 11/45 (24.4%)</span></span>
+<span><span class="co">#&gt; D-error: 0.802195</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; 💡 Use cbc_inspect() for a more detailed summary</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows of design:</span></span>
 <span><span class="co">#&gt;   profileID blockID respID qID altID obsID price       type freshness no_choice</span></span>
-<span><span class="co">#&gt; 1        22       1      1   1     1     1   1.5       Gala   Average         0</span></span>
-<span><span class="co">#&gt; 2        44       1      1   1     2     1   2.5 Honeycrisp Excellent         0</span></span>
+<span><span class="co">#&gt; 1        21       1      1   1     1     1   1.0       Gala   Average         0</span></span>
+<span><span class="co">#&gt; 2        20       1      1   1     2     1   3.0       Fuji   Average         0</span></span>
 <span><span class="co">#&gt; 3         0       1      1   1     3     1    NA       &lt;NA&gt;      &lt;NA&gt;         1</span></span>
 <span><span class="co">#&gt; 4        19       1      1   2     1     2   2.5       Fuji   Average         0</span></span>
-<span><span class="co">#&gt; 5        37       1      1   2     2     2   1.5       Gala Excellent         0</span></span>
+<span><span class="co">#&gt; 5        42       1      1   2     2     2   1.5 Honeycrisp Excellent         0</span></span>
 <span><span class="co">#&gt; 6         0       1      1   2     3     2    NA       &lt;NA&gt;      &lt;NA&gt;         1</span></span></code></pre></div>
 <p>Notice that the “no_choice” row contains <code>NA</code> values for
 all other attributes. This is the default behavior when using standard
@@ -634,26 +634,26 @@ attribute:</p>
 <span><span class="co">#&gt; Design method: stochastic</span></span>
 <span><span class="co">#&gt; Encoding: dummy</span></span>
 <span><span class="co">#&gt; Structure: 100 respondents × 6 questions × 2 alternatives</span></span>
-<span><span class="co">#&gt; Profile usage: 12/45 (26.7%)</span></span>
-<span><span class="co">#&gt; D-error: 0.785412</span></span>
+<span><span class="co">#&gt; Profile usage: 11/45 (24.4%)</span></span>
+<span><span class="co">#&gt; D-error: 0.802195</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; 💡 Use cbc_inspect() for a more detailed summary</span></span>
 <span><span class="co">#&gt; 💡 Use cbc_encode(design, 'standard') to view categorical format</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows of design:</span></span>
 <span><span class="co">#&gt;   profileID blockID respID qID altID obsID price no_choice typeGala</span></span>
-<span><span class="co">#&gt; 1        22       1      1   1     1     1   1.5         0        1</span></span>
-<span><span class="co">#&gt; 2        44       1      1   1     2     1   2.5         0        0</span></span>
+<span><span class="co">#&gt; 1        21       1      1   1     1     1   1.0         0        1</span></span>
+<span><span class="co">#&gt; 2        20       1      1   1     2     1   3.0         0        0</span></span>
 <span><span class="co">#&gt; 3         0       1      1   1     3     1   0.0         1        0</span></span>
 <span><span class="co">#&gt; 4        19       1      1   2     1     2   2.5         0        0</span></span>
-<span><span class="co">#&gt; 5        37       1      1   2     2     2   1.5         0        1</span></span>
+<span><span class="co">#&gt; 5        42       1      1   2     2     2   1.5         0        0</span></span>
 <span><span class="co">#&gt; 6         0       1      1   2     3     2   0.0         1        0</span></span>
 <span><span class="co">#&gt;   typeHoneycrisp freshnessAverage freshnessExcellent</span></span>
 <span><span class="co">#&gt; 1              0                1                  0</span></span>
-<span><span class="co">#&gt; 2              1                0                  1</span></span>
+<span><span class="co">#&gt; 2              0                1                  0</span></span>
 <span><span class="co">#&gt; 3              0                0                  0</span></span>
 <span><span class="co">#&gt; 4              0                1                  0</span></span>
-<span><span class="co">#&gt; 5              0                0                  1</span></span>
+<span><span class="co">#&gt; 5              1                0                  1</span></span>
 <span><span class="co">#&gt; 6              0                0                  0</span></span>
 <span><span class="co">#&gt; ... and 1794 more rows</span></span></code></pre></div>
 <p>With “dummy” coding, the “no_choice” row contains <code>0</code> for
@@ -945,7 +945,7 @@ details and options on defining priors with interactions.</p>
 <span><span class="co">#&gt; STRUCTURE</span></span>
 <span><span class="co">#&gt; ================</span></span>
 <span><span class="co">#&gt; Method: stochastic</span></span>
-<span><span class="co">#&gt; Created: 2025-10-12 18:05:47</span></span>
+<span><span class="co">#&gt; Created: 2025-11-01 00:55:42</span></span>
 <span><span class="co">#&gt; Respondents: 100</span></span>
 <span><span class="co">#&gt; Questions per respondent: 6</span></span>
 <span><span class="co">#&gt; Alternatives per question: 2</span></span>

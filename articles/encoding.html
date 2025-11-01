@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cbcTools</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -361,14 +361,14 @@ dummy coding before power analysis or model estimation:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">choices_nc</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CBC Choice Data</span></span>
 <span><span class="co">#&gt; ===============</span></span>
-<span><span class="co">#&gt; Encoding: standard</span></span>
+<span><span class="co">#&gt; Encoding: dummy</span></span>
 <span><span class="co">#&gt; Observations: 2 choice tasks</span></span>
 <span><span class="co">#&gt; Alternatives per task: 3</span></span>
 <span><span class="co">#&gt; Total choices made: 2</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Simulation method: utility_based</span></span>
 <span><span class="co">#&gt; Priors: Used for utility-based simulation</span></span>
-<span><span class="co">#&gt; Simulated at: 2025-10-12 18:06:01</span></span>
+<span><span class="co">#&gt; Simulated at: 2025-11-01 00:55:56</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Choice rates by alternative:</span></span>
 <span><span class="co">#&gt;   Alt 1: 50.0% (1 choices)</span></span>
@@ -377,14 +377,16 @@ dummy coding before power analysis or model estimation:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; No-choice rate: 0.0%</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; 💡 Use cbc_encode(choices, 'standard') to view categorical format</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; First few rows:</span></span>
-<span><span class="co">#&gt;   profileID respID qID altID obsID price quality no_choice choice</span></span>
-<span><span class="co">#&gt; 1         2      1   1     1     1     2     Low         0      0</span></span>
-<span><span class="co">#&gt; 2         6      1   1     2     1     3    High         0      1</span></span>
-<span><span class="co">#&gt; 3         0      1   1     3     1    NA    &lt;NA&gt;         1      0</span></span>
-<span><span class="co">#&gt; 4         6      1   2     1     2     3    High         0      1</span></span>
-<span><span class="co">#&gt; 5         1      1   2     2     2     1     Low         0      0</span></span>
-<span><span class="co">#&gt; 6         0      1   2     3     2    NA    &lt;NA&gt;         1      0</span></span></code></pre></div>
+<span><span class="co">#&gt;   profileID respID qID altID obsID price no_choice qualityHigh choice</span></span>
+<span><span class="co">#&gt; 1         2      1   1     1     1     2         0           0      0</span></span>
+<span><span class="co">#&gt; 2         6      1   1     2     1     3         0           1      1</span></span>
+<span><span class="co">#&gt; 3         0      1   1     3     1     0         1           0      0</span></span>
+<span><span class="co">#&gt; 4         6      1   2     1     2     3         0           1      1</span></span>
+<span><span class="co">#&gt; 5         1      1   2     2     2     1         0           0      0</span></span>
+<span><span class="co">#&gt; 6         0      1   2     3     2     0         1           0      0</span></span></code></pre></div>
 <p>For modeling or power analysis with no-choice data, convert to dummy
 or effects coding:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
