@@ -1,3 +1,19 @@
+# Helper function to auto-encode data with no_choice option
+auto_encode_no_choice <- function(data, context = "operation") {
+    has_no_choice <- "no_choice" %in% names(data)
+    current_encoding <- attr(data, "encoding") %||% "standard"
+
+    if (has_no_choice && current_encoding != "dummy") {
+        message(
+            "Data has a no_choice option and is not dummy coded. ",
+            "Automatically converting to dummy coding for ", context, "."
+        )
+        data <- cbc_encode(data, coding = "dummy")
+    }
+
+    return(data)
+}
+
 #' Simulate choices for a survey design
 #'
 #' Simulate choices for a survey design, either randomly or according to a
@@ -45,6 +61,9 @@ cbc_choices <- function(design, priors = NULL) {
     if (!inherits(design, "cbc_design")) {
         stop("design must be a cbc_design object created by cbc_design()")
     }
+
+    # Check for no_choice and auto-encode to dummy if needed
+    design <- auto_encode_no_choice(design, context = "choice simulation")
 
     # Store original encoding
     original_encoding <- attr(design, "encoding") %||% "standard"

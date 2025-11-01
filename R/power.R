@@ -83,6 +83,9 @@ cbc_power <- function(
         stop("n_breaks must be a single numeric value >= 2")
     }
 
+    # Check for no_choice and auto-encode to dummy if needed
+    data <- auto_encode_no_choice(data, context = "model estimation")
+
     # Auto-detect parameters for cbc_choices objects
     if (is.null(pars) && !inherits(data, "cbc_choices")) {
         stop(

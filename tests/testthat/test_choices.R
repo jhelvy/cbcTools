@@ -55,11 +55,11 @@ validate_choice_structure <- function(choices, design, has_nochoice = FALSE) {
   if (has_nochoice) {
     expect_true("no_choice" %in% names(choices))
     expect_true(all(choices$no_choice %in% c(0, 1)))
+  } else {
+    # Should preserve all design columns
+    design_cols <- setdiff(names(design), "choice")
+    expect_true(all(design_cols %in% names(choices)))
   }
-
-  # Should preserve all design columns
-  design_cols <- setdiff(names(design), "choice")
-  expect_true(all(design_cols %in% names(choices)))
 }
 
 # Statistical test for parameter recovery

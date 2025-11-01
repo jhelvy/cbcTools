@@ -293,6 +293,23 @@ priors_nochoice_random <- cbc_priors(
 priors_nochoice_fixed
 ```
 
+## Suggested Priors
+
+If you're unsure where to start, you can use the `cbc_suggest_priors()` function to get a starting set of priors. The function prints out suggested code to use for defining a set of priors:
+
+```{r}
+cbc_suggest_priors(profiles)
+```
+
+You can also specify the direction of the prior by attribute name:
+
+```{r}
+cbc_suggest_priors(
+  profiles, 
+  direction = list(price = 'negative')
+)
+```
+
 # Parameter Draws for Bayesian Analysis
 
 When you specify random parameters, `cbc_priors()` automatically generates parameter draws for Bayesian D-error calculation. You can conrol both the draw type with the `draw_type` argument (`"halton"` or `"sobol"`) and the number of draws with the `n_draws` argument, e.g.:
