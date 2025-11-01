@@ -59,6 +59,7 @@ reference:
   desc: "Functions for generating prior (assumed) coefficients."
   contents:
   - cbc_priors
+  - cbc_suggest_priors
   - rand_spec
   - cor_spec
   - int_spec

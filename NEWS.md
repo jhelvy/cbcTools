@@ -1,5 +1,9 @@
 # cbcTools (development version)
 
+# cbcTools 0.7.2
+
+- Added `cbc_suggest_priors()` function to make it easier to get a starting point for priors based on attribute levels in the profiles object.
+
 # cbcTools 0.7.1
 
 - Auto-encoding to dummy coding occurs for `cbc_choices` and `cbc_power` if the design is detected to have a no_choice option.
