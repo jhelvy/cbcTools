@@ -1,0 +1,38 @@
+# Plot method for cbc_power objects
+
+Plot method for cbc_power objects
+
+## Usage
+
+``` r
+# S3 method for class 'cbc_power'
+plot(x, type = "power", power_threshold = 0.8, ...)
+```
+
+## Arguments
+
+- x:
+
+  A cbc_power object
+
+- type:
+
+  Type of plot: "power" for power curves or "se" for standard error
+  curves
+
+- power_threshold:
+
+  Power threshold for horizontal reference line (only for power plots).
+  Defaults to 0.8
+
+- ...:
+
+  Additional arguments passed to ggplot
+
+## Value
+
+Returns a ggplot2 object (class: "gg", "ggplot") that can be further
+customized, saved, or displayed. The plot visualizes either statistical
+power curves or standard error curves across different sample sizes for
+each parameter in the power analysis, with appropriate axis labels,
+legends, and reference lines.
