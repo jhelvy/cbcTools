@@ -297,6 +297,46 @@ test_that("Optimal methods work with simple priors", {
   }
 })
 
+test_that("modfed works with discrete-only attributes (issue #49)", {
+  skip_on_cran() # Skip on CRAN due to computation time
+  skip_if_not_installed("idefix")
+
+  # No continuous attributes: c.lvls is empty and must be passed to
+  # idefix::Profiles() as NULL rather than an empty list
+  profiles <- cbc_profiles(
+    type = c("Fuji", "Gala", "Honeycrisp"),
+    brand = c("A", "B", "C")
+  )
+  priors <- cbc_priors(
+    profiles = profiles,
+    type = c("Gala" = 0.2, "Honeycrisp" = 0.3),
+    brand = c("B" = 0.1, "C" = 0.2)
+  )
+
+  expect_no_error(
+    design <- cbc_design(
+      profiles = profiles,
+      priors = priors,
+      method = "modfed",
+      n_alts = fast_params$n_alts,
+      n_q = fast_params$n_q,
+      n_resp = fast_params$n_resp,
+      max_iter = fast_params$max_iter,
+      n_start = fast_params$n_start,
+      use_idefix = TRUE
+    )
+  )
+
+  expected <- list(
+    n_alts = fast_params$n_alts,
+    n_q = fast_params$n_q,
+    n_resp = fast_params$n_resp,
+    no_choice = FALSE
+  )
+  validate_design_structure(design, expected)
+  expect_equal(attr(design, "design_params")$method, "modfed")
+})
+
 # =============================================================================
 # FEATURE-SPECIFIC TESTS
 # =============================================================================

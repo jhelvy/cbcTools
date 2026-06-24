@@ -1,5 +1,7 @@
 # cbcTools (development version)
 
+- Fixed error in `cbc_design()` with `method = "modfed"` when using discrete-only attributes (no continuous variables) (#49).
+
 # cbcTools 0.7.2
 
 - Added `cbc_suggest_priors()` function to make it easier to get a starting point for priors based on attribute levels in the profiles object.

@@ -277,6 +277,12 @@ convert_to_idefix_format <- function(opt_env) {
         }
     }
 
+    # idefix::Profiles() expects c.lvls to be NULL (not an empty list)
+    # when there are no continuous attributes
+    if (length(c.lvls) == 0) {
+        c.lvls <- NULL
+    }
+
     # Handle candidate set creation
     if (opt_env$method == "cea") {
         # CEA doesn't use candidate set, needs full factorial
@@ -319,7 +325,7 @@ convert_to_idefix_format <- function(opt_env) {
     return(list(
         lvls = lvls,
         coding = coding,
-        c.lvls = if (length(c.lvls) > 0) c.lvls else NULL,
+        c.lvls = c.lvls,
         cand_set = cand_set,
         par_draws = idefix_priors$par_draws,
         n_alts = alt_cte_info$n_alts,
